@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #12 — The derivative is a linear map</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-12-the-derivative-is-a-linear-map">riktig #12 — The
+derivative is a linear map</h1>
+<p><em>Twelfth post documenting the <strong>riktig</strong> project; the
+linear-algebra thread (posts <a
+href="0009-linear-algebra-without-coordinates.html">#9</a>, <a
+href="0010-matrices-are-a-representation.html">#10</a>) and the analysis
+thread (<a href="0011-the-first-epsilon.html">#11</a>) meet. Proofs
+shown blackboard-style and as they live in the repository.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Post #9 built the space Hom(U,V) of linear
+maps; post #10 showed matrices merely <em>represent</em> them; post #11
+defined limits with ε and a norm. Today those threads braid: <strong>the
+derivative of a function at a point is a linear map</strong> — an
+element of the Hom-space — and the chain rule is composition. When we
+later write the Jacobian, it will be post #10’s <code>mat_of</code>
+applied to today’s object, and the chain rule for Jacobians will
+<em>already be proved</em>: it is <code>mat_of_comp</code>.</p>
+</blockquote>
+<h2 id="what-differentiable-says">What “differentiable” says</h2>
+<p>Forget slopes. The derivative answers: <em>which linear map best
+approximates f near a?</em> In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Derivative.v"><code>Theory/Derivative.v</code></a>:</p>
+<pre class="coq"><code>Definition is_deriv (f : U -&gt; V) (a : U) (L : LinearMap F U V) : Prop :=
+  lm_bounded L /\
+  forall eps, 0 &lt; eps -&gt; exists delta, 0 &lt; delta /\
+    forall h, ‖ h ‖ &lt; delta -&gt; ‖ f (a + h) + - (f a + L h) ‖ &lt;= eps * ‖ h ‖.</code></pre>
+<p>Three deliberate choices, each with a story:</p>
+<p><strong>No division.</strong> The textbook says
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>L</mi><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mi>/</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>→</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\|f(a+h) - f(a) - Lh\| / \|h\|
+\to 0</annotation></semantics></math>, which forces the annoying side
+condition
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">h \neq 0</annotation></semantics></math>.
+The equivalent form
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>r</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|r(h)\| \le \varepsilon \|h\|</annotation></semantics></math>
+is division-free and at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">h = 0</annotation></semantics></math>
+is simply true. Fewer side conditions, shorter rewrites.</p>
+<p><strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is a <code>LinearMap</code></strong> — a citizen of post #9’s Hom-space.
+So “derivative of a sum” can <em>literally say</em> <code>Lf + Lg</code>
+using Hom’s addition, and does:
+<code>deriv_add : is_deriv f a Lf -&gt; is_deriv g a Lg -&gt; is_deriv (fun u =&gt; f u + g u) a (Lf + Lg)</code>.</p>
+<p><strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is bounded</strong>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∃</mo><mi>C</mi><mo>,</mo><mspace width="0.222em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>L</mi><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mi>C</mi><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\exists C,\ \|Lu\| \le C\|u\|</annotation></semantics></math>).
+In finite dimension every linear map is bounded, so courses never
+mention it — but the chain rule <em>uses</em> it, silently. Watch it
+appear below.</p>
+<h2 id="uniqueness-and-an-honest-constructive-wrinkle">Uniqueness — and
+an honest constructive wrinkle</h2>
+<p><strong>Blackboard.</strong> If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mo>,</mo><msub><mi>L</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">L_1, L_2</annotation></semantics></math>
+both approximate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+then for small
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mn>2</mn><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|(L_1 - L_2)h\| \le 2\varepsilon\|h\|</annotation></semantics></math>.
+Take
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mi>t</mi><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">h = t\,u</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">t &gt; 0</annotation></semantics></math>
+tiny:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mn>2</mn><mi>ε</mi><mspace width="0.167em"></mspace><mi>t</mi><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">t\|(L_1-L_2)u\| \le 2\varepsilon\, t\|u\|</annotation></semantics></math>,
+cancel
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|(L_1-L_2)u\|</annotation></semantics></math>
+is below
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">2\varepsilon\|u\|</annotation></semantics></math>
+for every ε — hence zero, hence
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mi>u</mi><mo>=</mo><msub><mi>L</mi><mn>2</mn></msub><mi>u</mi></mrow><annotation encoding="application/x-tex">L_1 u = L_2 u</annotation></semantics></math>
+for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.
+∎</p>
+<p>The machine proof follows exactly this shape, and the “take
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+tiny” step is a lemma with a name and a life of its own —
+<code>small_scale_exists : 0 &lt; d -&gt; 0 &lt;= c -&gt; exists t, 0 &lt; t /\ t * c &lt; d</code>
+in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Order.v"><code>Theory/Order.v</code></a>
+— no Archimedean axiom needed, just halving. The final squeeze is post
+#11’s <code>nonneg_below_all_pos_is_zero</code>, and the cancellation of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+is <code>mul_le_cancel_l</code>. Every wave leaves the order-arithmetic
+toolbox a little richer.</p>
+<h2 id="the-chain-rule">The chain rule</h2>
+<p><strong>Blackboard.</strong> Let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">k(h) = f(a+h) - f(a)</annotation></semantics></math>,
+the increment. Then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mi>g</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mi>f</mi></msub><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><munder><munder><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mi>g</mi></msub><mi>k</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo></mrow><mo accent="true">⏟</mo></munder><mrow><mrow><mtext mathvariant="normal">g’s remainder at </mtext><mspace width="0.333em"></mspace></mrow><mi>k</mi></mrow></munder><mo>+</mo><munder><munder><mrow><msub><mi>L</mi><mi>g</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mi>k</mi><mo>−</mo><msub><mi>L</mi><mi>f</mi></msub><mi>h</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo></mrow><mo accent="true">⏟</mo></munder><mrow><msub><mi>L</mi><mi>g</mi></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> of f’s remainder</mtext></mrow></mrow></munder><mi>.</mi></mrow><annotation encoding="application/x-tex">g(f(a+h)) - g(f(a)) - L_g(L_f h)
+  = \underbrace{\big[g(f(a)+k) - g(f(a)) - L_g k\big]}_{\text{g&#39;s remainder at } k}
+  + \underbrace{L_g\big[k - L_f h\big]}_{L_g \text{ of f&#39;s remainder}}.</annotation></semantics></math></p>
+<p>Bound the two pieces: the second is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><msub><mi>C</mi><mi>g</mi></msub><mo>⋅</mo><msub><mi>ε</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\le C_g \cdot \varepsilon_1\|h\|</annotation></semantics></math>
+— <strong>there is the boundedness of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mi>g</mi></msub><annotation encoding="application/x-tex">L_g</annotation></semantics></math></strong>,
+doing the work your lecturer waved through. The first is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><msub><mi>ε</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">∥</mo><mi>k</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\le \varepsilon_2 \|k\|</annotation></semantics></math>,
+and the increment itself satisfies
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>k</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>C</mi><mi>f</mi></msub><mo>+</mo><msub><mi>ε</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|k\| \le (C_f + \varepsilon_1)\|h\|</annotation></semantics></math>
+—
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is locally Lipschitz-ish <em>because</em> it is differentiable,
+boundedness of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mi>f</mi></msub><annotation encoding="application/x-tex">L_f</annotation></semantics></math>
+again. Add up, choose the ε’s to share the budget. ∎</p>
+<pre class="coq"><code>Theorem deriv_comp : forall (f : U -&gt; V) (g : V -&gt; W) a Lf Lg,
+  Proper (equ ==&gt; equ) g -&gt;
+  is_deriv f a Lf -&gt; is_deriv g (f a) Lg -&gt;
+  is_deriv (fun u =&gt; g (f u)) a (lm_comp Lg Lf).</code></pre>
+<p>The repository proof is the blackboard split, factored: the algebraic
+identity is <code>comp_remainder_split</code> (whose engine is a new
+AbGroup telescope,
+<code>sub_mid_cancel : (p - (q + x)) + (x - y) == p - (q + y)</code>),
+the increment estimate is <code>deriv_increment_bound</code>, and the
+ε-budget is the <code>half</code> toolbox. One honest deviation from the
+classical statement, worn openly: <code>g</code> must respect equality
+(<code>Proper</code>) — setoid discipline demands it, every actual
+function has it, and the header documents why.</p>
+<p>And the derivative <em>of the composition</em> is
+<code>lm_comp Lg Lf</code> — the composition in Hom. Apply post #10’s
+<code>mat_of</code> to both sides of that statement and
+<code>mat_of_comp</code> turns it into: <strong>the Jacobian of a
+composition is the product of the Jacobians.</strong> No new proof will
+be needed. That sentence is the whole architecture in miniature.</p>
+<h2 id="also-in-this-wave">Also in this wave</h2>
+<ul>
+<li><strong>Trace</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>):
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{tr}(AB) = \mathrm{tr}(BA)</annotation></semantics></math>
+by swapping a double sum, change of basis as conjugation, and the
+theorem that the trace of a linear map <em>does not depend on the basis
+used to write it down</em> — the representation philosophy paying rent
+again.</li>
+<li><strong>The integral, specified</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Integral.v"><code>Interface/Integral.v</code></a>):
+linearity, interval additivity, the constant rule and a norm bound —
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>a</mi></msubsup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\int_a^a = 0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mo>=</mo><mi>−</mi><msubsup><mo>∫</mo><mi>b</mi><mi>a</mi></msubsup></mrow><annotation encoding="application/x-tex">\int_a^b = -\int_b^a</annotation></semantics></math>
+<em>derived from the laws alone</em>, before any construction exists.
+Programs will integrate against the spec; Riemann sums arrive later as
+one Impl among several. FTC is written on the box as the top law to
+come.</li>
+<li><strong>ℚ ordered and formally real</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Qof.v"><code>Impl/Qof.v</code></a>):
+the first <code>OrderedField</code> instance — and with it, post #8’s
+complex construction snaps shut over the rationals:
+<code>Field (C Q) := _</code> assembles by instance resolution
+alone.</li>
+</ul>
+<p><em>Next: determinants — how a map scales alternating volume — and
+the first Fundamental Theorem of Calculus groundwork.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Derivative.v"><code>Theory/Derivative.v</code></a>
+(is_deriv, uniqueness, chain rule) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Continuity.v"><code>Theory/Continuity.v</code></a>
+(limit_at, continuity, bounded ⇒ continuous) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>
+(tr(AB)=tr(BA), basis independence) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Integral.v"><code>Interface/Integral.v</code></a>
+(the integral as a spec).</p>
+</main>
+</body>
+</html>
