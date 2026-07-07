@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #9 — Linear algebra without coordinates</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-9-linear-algebra-without-coordinates">riktig #9 — Linear
+algebra without coordinates</h1>
+<p><em>Ninth post in the series documenting the <strong>riktig</strong>
+project. This one is a little different: it teaches a piece of a linear
+algebra course, with each proof shown twice — once as you’d write it on
+a blackboard, once as it lives in the repository — so you can check,
+line by line, that the machine proof is the human proof.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved in Coq, aiming for <em>modifiability</em>:
+change something, re-establish a few local facts, trust the rest. In <a
+href="0008-the-shopping-list-for-analysis.html">post #8</a> we bought
+the algebra that analysis needs. Now we start the linear algebra course
+proper — and we do it <strong>without coordinates</strong>. No matrices
+in this post. A matrix, when it finally appears, will be a
+<em>representation</em> of a linear map, never the definition of
+one.</p>
+</blockquote>
+<h2 id="the-cast-linear-maps">The cast: linear maps</h2>
+<p>A linear map between vector spaces is a function that respects the
+structure. In the repository (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>)
+it is a record: a function <code>lm_fun</code>, respect for equality
+(<code>lm_proper</code>), and two laws</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">f(u + v) = f(u) + f(v) \qquad f(a\,u) = a\,f(u).</annotation></semantics></math></p>
+<h2 id="theorem-1-a-linear-map-sends-zero-to-zero">Theorem 1: a linear
+map sends zero to zero</h2>
+<p>Every course proves this first, and the proof is a small gem because
+it <em>doesn’t</em> use what you’d expect — no scaling by 0, just
+additivity and cancellation.</p>
+<p><strong>Blackboard.</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(0) = f(0+0) = f(0) + f(0)</annotation></semantics></math>.
+Now cancel one
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(0)</annotation></semantics></math>
+from both sides of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f(0) + f(0) = f(0) + 0</annotation></semantics></math>…
+wait, that’s the trick: rewrite the goal
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f(0) = 0</annotation></semantics></math>
+as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f(0) + f(0) = f(0) + 0</annotation></semantics></math>
+and cancel on the left. ∎</p>
+<p><strong>Repository</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Group.v"><code>Theory/Group.v</code></a>
+— note it’s proved for <em>any</em> additive map between groups; vector
+spaces inherit it):</p>
+<pre class="coq"><code>Theorem hom_zero : f 0 == 0.
+Proof.
+  apply (cancel_l (f 0)).
+  rewrite &lt;- fadd, idl, idr.
+  reflexivity.
+Qed.</code></pre>
+<p>To check the Coq proof against the blackboard, you need the types of
+the pieces:</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>statement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cancel_l</code></td>
+<td><code>forall a b c, a + b == a + c -&gt; b == c</code></td>
+</tr>
+<tr>
+<td><code>fadd</code></td>
+<td><code>forall a b, f (a + b) == f a + f b</code> (the map’s
+additivity)</td>
+</tr>
+<tr>
+<td><code>idl</code>, <code>idr</code></td>
+<td><code>0 + a == a</code>, <code>a + 0 == a</code></td>
+</tr>
+</tbody>
+</table>
+<p>Read it backwards, the way <code>apply</code> works: to show
+<code>f 0 == 0</code>, by <code>cancel_l</code> it suffices to show
+<code>f 0 + f 0 == f 0 + 0</code>. Rewriting right-to-left with
+<code>fadd</code> turns the left side into <code>f (0 + 0)</code>;
+<code>idl</code> collapses the inner <code>0 + 0</code>;
+<code>idr</code> collapses the right side; both sides are now
+<code>f 0</code>. That <em>is</em> the blackboard proof, with the
+bookkeeping made honest.</p>
+<h2 id="the-twist-the-maps-themselves-form-a-vector-space">The twist:
+the maps themselves form a vector space</h2>
+<p>Here is where the course usually gets interesting. Define, for linear
+maps
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>,</mo><mi>g</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">f, g : U \to V</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>+</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(f + g)(u) = f(u) + g(u), \qquad (a\,f)(u) = a\,f(u).</annotation></semantics></math></p>
+<p><strong>Claim:</strong> with these operations,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,V)</annotation></semantics></math>
+— the set of all linear maps
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">U \to V</annotation></semantics></math>
+— is itself a vector space.</p>
+<p>There are two things to prove, and they are different in kind:</p>
+<p><strong>Closure</strong> (the interesting part):
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>+</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">f + g</annotation></semantics></math>
+must again be <em>linear</em>. Blackboard, for additivity:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>+</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mover><mo>=</mo><mo accent="false">!</mo></mover><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(f+g)(u+v) = f(u+v) + g(u+v) = \big(f(u)+f(v)\big) + \big(g(u)+g(v)\big)
+\stackrel{!}{=} \big(f(u)+g(u)\big) + \big(f(v)+g(v)\big)</annotation></semantics></math></p>
+<p>The marked step is the <strong>interchange law</strong> — swapping
+the middle two summands — which holds in any abelian group. In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/HomVS.v"><code>Impl/HomVS.v</code></a>:</p>
+<pre class="coq"><code>Lemma hom_plus_add : forall u v : U,
+  f (u + v) + g (u + v) == (f u + g u) + (f v + g v).
+Proof.
+  intros u v.
+  rewrite (lm_add f u v), (lm_add g u v).
+  apply add_interchange.
+Qed.</code></pre>
+<p>with
+<code>add_interchange : (a + b) + (c + d) == (a + c) + (b + d)</code>
+doing exactly the marked step. Closure of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi></mrow><annotation encoding="application/x-tex">a\,f</annotation></semantics></math>
+under the scale law is the one place a <em>commutativity</em> of scalars
+sneaks in:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mi>b</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a\,f(b\,u) = ab\,f(u) = ba\,f(u) = b\,(a\,f(u))</annotation></semantics></math>
+— in the repo this is the lemma <code>scale_swap</code>, and it is why
+Hom over a <em>noncommutative</em> ring would be a subtler story.</p>
+<p><strong>Laws</strong> (the boring part, and that’s the point):
+associativity, identities, inverses for <code>+</code> on maps all hold
+<em>because they hold at every point</em> <code>u</code>. Each proof in
+the repository is three lines of “apply the pointwise law”. We built
+this pattern once, as the pointwise construction of post #6; Hom just
+rides it through <code>lm_fun</code>.</p>
+<h2 id="dual-space-measurements-are-vectors-too">Dual space:
+measurements are vectors too</h2>
+<p>A special case with a famous name (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Hom.v"><code>Theory/Hom.v</code></a>):</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>V</mi><mo>*</mo></msup><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>V</mi><mo>,</mo><mi>F</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">V^* \;=\; \mathrm{Hom}(V, F)</annotation></semantics></math></p>
+<p>the <strong>dual space</strong> — linear “measurements” of vectors.
+Since scalars form a (one-dimensional) vector space over themselves,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>V</mi><mo>*</mo></msup><annotation encoding="application/x-tex">V^*</annotation></semantics></math>
+is a vector space by the theorem above, with <em>nothing new to
+prove</em>: in the repository the instance resolves automatically:</p>
+<pre class="coq"><code>Example dual_vs_check : VectorSpace F (Dual F V) := _.</code></pre>
+<p>That underscore is Coq assembling the whole proof by instance
+search.</p>
+<p>And now the most elegant map in this post. Every vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+<em>is</em> a measurement of measurements: feed it a functional, it
+returns the functional’s value on it:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ι</mi><mo>:</mo><mi>V</mi><mo>→</mo><msup><mi>V</mi><mrow><mi>*</mi><mo>*</mo></mrow></msup><mo>,</mo><mspace width="2.0em"></mspace><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\iota : V \to V^{**}, \qquad \iota(v)(\varphi) = \varphi(v).</annotation></semantics></math></p>
+<p>Note what is <strong>not</strong> in that definition: no basis, no
+coordinates, no choices. Its linearity is, satisfyingly, each
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>φ</mi><annotation encoding="application/x-tex">\varphi</annotation></semantics></math>’s
+own linearity read backwards —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\iota(u+v)(\varphi) = \varphi(u+v) = \varphi(u)+\varphi(v) =
+\big(\iota(u)+\iota(v)\big)(\varphi)</annotation></semantics></math> —
+and in the repository the middle equality is literally
+<code>lm_add φ</code>, each functional testifying for the map. (That
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ι</mi><annotation encoding="application/x-tex">\iota</annotation></semantics></math>
+is an <em>isomorphism</em> when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+is finite-dimensional is a later theorem; it needs bases, which is
+exactly why it’s later.)</p>
+<h2 id="why-this-ordering-pays">Why this ordering pays</h2>
+<p>Post #6 ended with “the representation is a degree of freedom”. This
+post built the space where representations of <em>operations</em> will
+live: in wave L2 (in progress as this posts), choosing bases for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>U</mi><annotation encoding="application/x-tex">U</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+gives an isomorphism</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><msup><mi>F</mi><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,V) \;\cong\; F^{m \times n}</annotation></semantics></math></p>
+<p>and the punchline theorem
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo>∘</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\![g \circ f]\!] = [\![g]\!]\,[\![f]\!]</annotation></semantics></math>:
+<strong>matrix multiplication is function composition, transported along
+that isomorphism.</strong> Every matrix identity you’ve ever memorized
+will be a one-line rewrite along a representation change. The blackboard
+and the kernel agree; bring your own coordinates, or don’t.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Group.v"><code>Theory/Group.v</code></a>
+(hom_zero, cancel_l) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/HomVS.v"><code>Impl/HomVS.v</code></a>
+(Hom is a vector space, End a ring) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Hom.v"><code>Theory/Hom.v</code></a>
+(dual, double dual, curry/uncurry) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Bilinear.v"><code>Interface/Bilinear.v</code></a>
+(bilinear and multilinear maps).</p>
+</main>
+</body>
+</html>

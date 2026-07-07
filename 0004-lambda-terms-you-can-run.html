@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #4 — Lambda terms you can run: de Bruijn, combinators,
+CPS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="riktig-4-lambda-terms-you-can-run-de-bruijn-combinators-cps">riktig
+#4 — Lambda terms you can run: de Bruijn, combinators, CPS</h1>
+<p><em>Fourth post in the series documenting the <strong>riktig</strong>
+project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in the Coq proof assistant.
+The goal is <em>modifiability</em>: code where a change only obliges you
+to re-establish a few local facts. Every post starts from zero. <a
+href="0003-structures-grow-arrows.html">Post #3</a> ended on a
+cliffhanger: cartesian closed categories are exactly the worlds where
+lambda calculus makes sense. Today we build the lambda calculus itself —
+as a datatype you can compute with, not just admire.</p>
+</blockquote>
+<p>The lambda calculus is the smallest programming language that is
+still a programming language: variables, functions, application — three
+constructions, nothing else, Turing-complete. Formalizing it forces one
+famous question first.</p>
+<h2 id="variables-are-not-names-they-are-distances">Variables are not
+names — they are distances</h2>
+<p>Textbook lambda terms use names: <code>λx. λy. x y</code>. Names are
+treacherous. Is <code>λx.x</code> the same program as <code>λy.y</code>?
+(Yes — but now “same” needs a definition, α-equivalence.) Worse,
+substituting under a binder can <em>capture</em> a variable that just
+happened to share a name — the oldest bug in the book, and one that
+still bites real macro systems and compilers.</p>
+<p><strong>De Bruijn’s move: delete the names.</strong> A variable is a
+number — <em>how many binders up is my λ?</em></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mspace width="1.0em"></mspace><mo>⇝</mo><mspace width="1.0em"></mspace><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mn>1</mn><mspace width="0.278em"></mspace><mn>0</mn></mrow><annotation encoding="application/x-tex">\lambda x.\, \lambda y.\, x\, y \quad\rightsquigarrow\quad \lambda.\, \lambda.\, 1\; 0</annotation></semantics></math></p>
+<p><code>0</code> means “the nearest binder”, <code>1</code> the one
+above it. In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>theories/Lambda/Syntax.v</code></a>
+the whole language is three lines:</p>
+<pre class="coq"><code>Inductive tm : Type :=
+  | Var (n : nat)
+  | Abs (b : tm)
+  | App (f a : tm).</code></pre>
+<p>What did the numbers buy us?</p>
+<ul>
+<li><strong>α-equivalence becomes <code>=</code>.</strong>
+<code>λx.x</code> and <code>λy.y</code> are both
+<code>Abs (Var 0)</code> — <em>the same term</em>, structurally. A whole
+equivalence relation evaporates.</li>
+<li><strong>Capture becomes arithmetic.</strong> Substitution must
+adjust indices when it walks under a binder (<code>lift</code> — shift
+free variables up) — a bookkeeping function with a two-line invariant,
+instead of a side-condition (“provided x is not free in N…”) that every
+proof must drag along. The file’s <code>subst</code>/<code>lift</code>
+are the textbook twenty lines, and a capture-avoidance
+<code>Example</code> checks the classic trap by
+<code>reflexivity</code>.</li>
+</ul>
+<p>The price is honesty about arithmetic; the prize is that every proof
+about terms is structural induction with no naming side-conditions.
+Machines love it. (Humans get used to it.)</p>
+<h2 id="terms-you-can-run">Terms you can run</h2>
+<p>A calculus is not a programming language until it <em>runs</em>.
+<code>Syntax.v</code> gives evaluation twice, and proves the two
+agree:</p>
+<ul>
+<li>a <strong>relation</strong>
+<code>step : tm -&gt; tm -&gt; Prop</code> — call-by-value β-reduction
+with its congruence rules; good for proofs;</li>
+<li>a <strong>function</strong>
+<code>step_fn : tm -&gt; option tm</code> — executable; good for
+running; with <code>step_fn_sound</code> and
+<code>step_fn_complete</code> tying them together, and a fuelled driver
+<code>eval : nat -&gt; tm -&gt; tm</code> on top
+(<code>eval_sound : star t (eval fuel t)</code>).</li>
+</ul>
+<p>So inside Coq, <code>Compute (eval 100 some_term)</code> evaluates
+lambda code — and because the examples in the file are stated with
+<code>= … := eq_refl</code>, the <em>type checker itself</em> runs the
+programs when it checks the file. Evaluation is not something we argue
+about; it is something the kernel performs. (A standalone extracted
+evaluator — lambda code running as a native binary — is the queued next
+step, the same extraction pipeline the memory-DSL uses.)</p>
+<h2 id="three-combinators-are-enough-ski-and-bckw">Three combinators are
+enough: SKI, and BCKW</h2>
+<p>Here is a magic trick, formalized in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/SKI.v"><code>theories/Lambda/SKI.v</code></a>:
+you can delete <em>variables themselves</em>. Three closed
+combinators</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mo>=</mo><mi>x</mi><mspace width="2.0em"></mspace><mi>I</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">S\,f\,g\,x = f\,x\,(g\,x) \qquad K\,x\,y = x \qquad I\,x = x</annotation></semantics></math></p>
+<p>suffice to express every lambda term. The file defines them as an
+inductive (<code>CS</code>, <code>CK</code>, <code>CI</code>,
+application <code>@@</code>), gives them an executable reduction
+normalizer, and implements <strong>bracket abstraction</strong> — the
+algorithm that eliminates a variable — with the general theorem</p>
+<pre class="coq"><code>babs_correct : forall t u, cstar (babs t @@ u) (csub u t)</code></pre>
+<p><em>“the abstracted term, applied, reduces to the substitution”</em>
+— which is β-reduction rebuilt without any binders at all.</p>
+<p>The classic alternative basis <strong>B, C, K, W</strong>
+(composition, swap, discard, duplicate) is derived and <em>verified by
+computation</em>: <code>B</code>, <code>C</code>, <code>W</code> are
+defined from <code>S</code> and <code>K</code>, their specifications
+(<code>B x y z ⟶ x (y z)</code>, <code>C f x y ⟶ f y x</code>,
+<code>W f x ⟶ f x x</code>) are <code>Example</code>s discharged by
+running the normalizer — and, pleasingly, <code>S</code> is recovered
+from <code>B</code>, <code>C</code>, <code>W</code> alone. Combinators
+are the assembly language of functional programming; we will meet them
+again when the lambda track meets the machine-code track.</p>
+<h2 id="continuation-passing-style-the-three-rules">Continuation-passing
+style: the three rules</h2>
+<p>CPS is the transformation compilers use to make control flow — “what
+happens next” — into an explicit argument, the <em>continuation</em>
+<code>k</code>. Three rules define it (Fischer/Plotkin,
+call-by-value):</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">[\![x]\!] = \lambda k.\, k\, x</annotation></semantics></math>
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![\lambda x.E]\!] = \lambda k.\, k\, (\lambda x.\, [\![E]\!])</annotation></semantics></math>
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>F</mi><mspace width="0.167em"></mspace><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>F</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>f</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>e</mi><mspace width="0.167em"></mspace><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![F\,E]\!] = \lambda k.\, [\![F]\!]\,(\lambda f.\, [\![E]\!]\,(\lambda e.\, f\, e\, k))</annotation></semantics></math></p>
+<p>Read the third: to run an application, first run <code>F</code>, hand
+its value <code>f</code> to a continuation that runs <code>E</code>,
+hand <em>its</em> value <code>e</code> to a continuation that finally
+calls <code>f e</code> — with the original <code>k</code> as what
+happens after. Every intermediate value gets a name; evaluation order
+becomes syntax.</p>
+<p>In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/CPS.v"><code>theories/Lambda/CPS.v</code></a>
+these three lines become one <code>Fixpoint cps</code> — plus the de
+Bruijn accounting the pretty rules hide: each rule inserts binders, so
+the payloads are <code>lift</code>ed to keep their free variables
+pointing home (the file’s header comment does the index bookkeeping in
+public).</p>
+<p>One genuinely subtle point, caught and documented while proving the
+examples: a CPS program does not hand your continuation the original
+value — it hands it the value’s <strong>CPS-converted twin</strong>
+(<code>Ψ(λ.E) = λ.[[E]]</code>). The verification examples state exactly
+that, and are checked <em>by running both sides through the
+evaluator</em>: CPS-transform the program, apply it to the identity
+continuation, <code>eval</code> — out comes <code>Ψ</code> of what
+direct evaluation produces, by <code>reflexivity</code>. The
+transformation and the machine agree, mechanically.</p>
+<h2 id="where-the-two-posts-meet">Where the two posts meet</h2>
+<p>Post #3 built categories; this post built programs. The junction is
+<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>theories/Impl/StlcCat.v</code></a>:
+simply-typed lambda terms, <em>quotiented by β/η-conversion</em>, form a
+<code>Category</code> — objects are types, an arrow is a program,
+composition is <code>λx. g (f x)</code>, and the category laws are
+conversion facts. This is what the hom-setoid design was built for:
+“equality” of arrows is <em>programs behave alike</em>, and the whole
+categorical toolkit from post #3 now applies to syntax.</p>
+<p>Next: conversion becomes a first-class rewriting relation — so that
+<code>IF b THEN g ELSE h</code> with <code>b == TRUE</code> rewrites to
+<code>g</code> in one step, partial evaluation as algebra. The lambda
+calculus stops being an object of study and becomes a tool.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+(terms, evaluation) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/SKI.v"><code>Lambda/SKI.v</code></a>
+(combinators, bracket abstraction) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/CPS.v"><code>Lambda/CPS.v</code></a>
+(the three rules) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>Impl/StlcCat.v</code></a>
+(programs form a category).</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #5 — Partial evaluation is algebra</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-5-partial-evaluation-is-algebra">riktig #5 — Partial
+evaluation is algebra</h1>
+<p><em>Fifth post in the series documenting the <strong>riktig</strong>
+project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in Coq. The goal is
+<em>modifiability</em>: a change only obliges you to re-establish a few
+local facts. Every post starts from zero. In <a
+href="0001-what-is-a-mathematical-structure.html">post #1</a> we proved
+group equations by chaining rewrites; in <a
+href="0004-lambda-terms-you-can-run.html">post #4</a> we built the
+lambda calculus as a runnable datatype. Today the two collide:
+<strong>programs become one more algebraic structure</strong>, and
+compiler transformations — unfolding, inlining, simplifying an
+<code>if</code> — become the same rewrite chains we used on groups.</p>
+</blockquote>
+<p>Every compiler you have ever used performs equational reasoning it
+never writes down: <em>this call can be inlined; this branch is dead;
+this expression is that constant.</em> Each of those is a claim that two
+programs are interchangeable. Today we give that claim a symbol, laws,
+and machine-checked proofs — for the lambda calculus of post #4.</p>
+<h2 id="making-mean-behaves-alike">Making <code>==</code> mean “behaves
+alike”</h2>
+<p>Post #1’s structures all began the same way: a carrier, an equality
+<code>==</code> chosen for the job, laws as equations. The move (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Conv.v"><code>theories/Lambda/Conv.v</code></a>)
+is to do <em>exactly that</em> for the type <code>tm</code> of lambda
+terms:</p>
+<pre class="coq"><code>Inductive conv : tm -&gt; tm -&gt; Prop :=
+  | conv_step  : forall t t&#39;, step t t&#39; -&gt; conv t t&#39;   (* running is equal    *)
+  | conv_abs   : ...   (* equal bodies, equal functions                       *)
+  | conv_appl  | conv_appr : ...  (* equals applied to equals stay equal      *)
+  | conv_refl  | conv_sym | conv_trans : ...            (* it&#39;s an equivalence *)
+
+#[global] Instance Tm_EqRel : EqRel tm := conv.</code></pre>
+<p>That last line is the whole point: <code>tm</code> now has a
+<code>==</code>, the same <code>==</code> as monoids and vector spaces,
+with the same consequences — the <code>Proper</code> instances for
+<code>Abs</code> and <code>App</code> mean <code>rewrite</code> descends
+into programs like it descends into sums. <strong>Program syntax is now
+a setoid, and program transformation is setoid rewriting.</strong></p>
+<p>Two design notes. First, <code>conv</code> deliberately contains more
+than execution: <code>step</code> only reduces in call-by-value
+positions, but <code>conv_abs</code> lets us rewrite <em>under a
+binder</em> — an optimizer transforms function bodies without calling
+the function. Second, equality-by- running comes with a bridge that
+turns the evaluator into a proof engine:</p>
+<pre class="coq"><code>conv_by_eval : forall n m s t, eval n s = eval m t -&gt; s == t</code></pre>
+<p><em>If two terms compute to the same normal form, they are
+convertible.</em> Proofs of program equations become
+<code>apply (conv_by_eval 10 10). reflexivity.</code> — the kernel runs
+both programs and compares. We prove by <em>executing</em>.</p>
+<h2 id="booleans-without-booleans">Booleans without booleans</h2>
+<p>The lambda calculus has no <code>if</code>, no <code>true</code>, no
+<code>false</code> — and needs none. Church’s encoding: a boolean
+<em>is</em> the choice it would make.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">R</mi><mi mathvariant="normal">U</mi><mi mathvariant="normal">E</mi></mrow><mo>=</mo><mi>λ</mi><mi>t</mi><mi>.</mi><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>t</mi><mspace width="2.0em"></mspace><mrow><mi mathvariant="normal">F</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mo>=</mo><mi>λ</mi><mi>t</mi><mi>.</mi><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>e</mi></mrow><annotation encoding="application/x-tex">\mathrm{TRUE} = \lambda t.\lambda e.\, t \qquad \mathrm{FALSE} = \lambda t.\lambda e.\, e</annotation></semantics></math></p>
+<p><code>TRUE</code> applied to two arguments keeps the first;
+<code>FALSE</code> keeps the second — your <code>if</code> is just
+application: <code>IFB b g h = (b\; g)\; h</code>. In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Church.v"><code>theories/Lambda/Church.v</code></a>
+the branch-simplification laws every compiler applies are theorems:</p>
+<pre class="coq"><code>IF_TRUE  : forall g h, value g -&gt; value h -&gt; IFB TRUE  g h == g
+IF_FALSE : forall g h, value g -&gt; value h -&gt; IFB FALSE g h == h</code></pre>
+<p>(The <code>value</code> hypotheses are call-by-value’s honesty: you
+may only discard a branch you were allowed not to evaluate.) Pairs come
+from the same trick — a pair is a function awaiting a selector, and the
+projection laws <code>FST_PAIR</code>, <code>SND_PAIR</code> literally
+<em>reduce to the boolean laws</em> in their proofs, because a
+projection is an applied boolean. The encoding’s elegance shows up as
+proof reuse.</p>
+<h2 id="the-punchline-dead-branch-elimination-is-a-two-line-proof">The
+punchline: dead-branch elimination is a two-line proof</h2>
+<p>Here is the theorem this post exists for, exactly as it appears in
+the repository:</p>
+<pre class="coq"><code>Lemma if_of_true : forall b g h,
+  value g -&gt; value h -&gt; b == TRUE -&gt; IFB b g h == g.
+Proof.
+  intros b g h Hg Hh Hb.
+  rewrite Hb.
+  apply IF_TRUE; assumption.
+Qed.</code></pre>
+<p>Read it slowly: we <em>know</em> the condition is (equivalent to)
+<code>TRUE</code> — perhaps an analysis proved it, perhaps it came from
+a constant — so we <strong>rewrite the condition inside the
+program</strong> (<code>rewrite Hb</code>, which works because
+<code>IFB</code> respects <code>==</code>), and then the branch law
+finishes. Compare with <code>cancel_l</code> from post #1: same shape,
+same tactic vocabulary, same reading experience. Group elements,
+vectors, programs — one discipline.</p>
+<p>This is the bridge to where the project began. The memprog vision was
+a <em>rewrite pipeline</em>: a program refined step by step — inline
+this, specialize that, lower arithmetic, introduce a stack — with every
+step meaning-preserving. What was missing was the substrate: what
+<em>is</em> a meaning-preserving step, formally? Answer, now on disk: an
+<code>==</code> on programs, with <code>Proper</code> instances so steps
+compose and localize. Unfold, inline, partially evaluate — each is a
+named lemma, each application is one <code>rewrite</code>, and the chain
+of them is a verified compilation.</p>
+<p><em>Next: instances and representation isomorphisms — swapping a list
+of records for columnar arrays with a rewrite, and why <code>()</code>
+is a vector space.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Conv.v"><code>Lambda/Conv.v</code></a>
+(programs become a setoid) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Church.v"><code>Lambda/Church.v</code></a>
+(booleans, pairs, the branch laws) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+(the evaluator behind <code>conv_by_eval</code>).</p>
+</main>
+</body>
+</html>

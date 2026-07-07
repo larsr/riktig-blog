@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #3 — Structures grow arrows: category theory up to
+CCC</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="riktig-3-structures-grow-arrows-category-theory-up-to-ccc">riktig #3
+— Structures grow arrows: category theory up to CCC</h1>
+<p><em>Third post in the series documenting the <strong>riktig</strong>
+project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in the Coq proof assistant
+— algebra at the bottom, then category theory, and on top of those:
+sorting algorithms, protocol parsers, a small OS kernel. The goal is
+<em>modifiability</em>: code where a change only obliges you to
+re-establish a few local facts, and the structure of the system
+guarantees the rest. Every post starts from zero. <a
+href="0001-what-is-a-mathematical-structure.html">Post #1</a> introduced
+mathematical structures — interfaces with laws. Today the structures
+grow arrows.</p>
+</blockquote>
+<p>In post #1 we studied structures from the <em>inside</em>: a group is
+a set with <code>+</code>, <code>0</code>, <code>-</code> obeying laws.
+Category theory makes one radical move: it forgets the inside. You are
+not allowed to ask what an object <em>contains</em> — only how it
+<em>connects</em>. Everything must be said with arrows.</p>
+<p>The surprise, and the reason a software project cares: this austerity
+is not a loss. Products, function types, truth values, lambda calculus —
+all of it can be reconstructed from arrows alone, and anything
+reconstructed this way transports to <em>every</em> world that has the
+right arrows. It is the “prove once, hold everywhere” trick from post
+#1, applied one level up: not laws about elements, but laws about
+<em>composition itself</em>. (Our tour follows the classic route of
+Bartosz Milewski’s <a
+href="https://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/"><em>Category
+Theory for Programmers</em></a>, which is the recommended companion
+reading.)</p>
+<h2 id="a-category-the-algebra-of-composition">A category: the algebra
+of composition</h2>
+<p>A category has objects and arrows (<em>morphisms</em>) between them.
+Arrows compose associatively, and every object has a do-nothing arrow.
+That’s all. In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>theories/Interface/Category.v</code></a>:</p>
+<pre class="coq"><code>Class Category (obj : Type) := {
+  hom : obj -&gt; obj -&gt; Type;
+  cat_id : forall {x : obj}, hom x x;
+  comp : forall {x y z : obj}, hom y z -&gt; hom x y -&gt; hom x z;
+  cat_idl : forall x y (f : hom x y), comp cat_id f == f;
+  cat_idr : forall x y (f : hom x y), comp f cat_id == f;
+  cat_assoc : forall w x y z (f : hom y z) (g : hom x y) (h : hom w x),
+      comp f (comp g h) == comp (comp f g) h
+  (* ... hom-equality is a setoid, composition respects it ... *)
+}.
+
+Notation &quot;x ~&gt; y&quot; := (hom x y).
+Infix &quot;∘&quot; := comp.</code></pre>
+<p>Squint and you’ll recognize post #1’s monoid laws — associativity and
+two identities — except <code>∘</code> is only defined when the arrows
+fit end-to-end. A category is a <em>typed</em> monoid; a monoid is a
+category with one object. The two posts are studying the same phenomenon
+at different resolutions.</p>
+<p>One Coq detail is load-bearing: equality of arrows (<code>==</code>)
+is a <em>setoid</em> per hom — chosen equality, not built-in equality.
+That choice is why, later in this post’s companion, <strong>programs
+modulo equivalence</strong> can be the arrows of a category. Wire
+equality in too tightly and syntax categories become impossible.</p>
+<p>Two categories we now own, machine-checked:</p>
+<ul>
+<li><strong>Coq’s own types and functions</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>Impl/CoqCat.v</code></a>):
+objects are types, arrows are functions, <code>==</code> is pointwise
+equality. This is Milewski’s <em>Set</em>, the category programmers
+secretly live in.</li>
+<li><strong>Lambda terms modulo conversion</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>Impl/StlcCat.v</code></a>):
+objects are simple types, an arrow <code>A ~&gt; B</code> is a
+<em>program</em> of type <code>A → B</code>, and two arrows are equal
+when β/η-conversion says the programs behave alike. Composition is
+<code>λx. g (f x)</code>. The category laws are conversion facts. More
+on this in post #4.</li>
+</ul>
+<h2 id="the-needs-a-theorem-initial-and-terminal-objects">“The” needs a
+theorem: initial and terminal objects</h2>
+<p>With arrows only, how do you point at a <em>specific</em> object? By
+a property of its arrows. A <strong>terminal</strong> object has exactly
+one arrow coming in from everywhere; an <strong>initial</strong> object
+exactly one going out to everywhere (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Terminal.v"><code>Interface/Terminal.v</code></a>,
+<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Initial.v"><code>Interface/Initial.v</code></a>).
+In Coq-types: <code>unit</code> is terminal (every type has exactly one
+function into it), the empty type is initial.</p>
+<p>But saying “<strong>the</strong> terminal object” is an obligation:
+what if there are two? The first real theorem of the category track (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InitialTerminal.v"><code>Theory/InitialTerminal.v</code></a>)
+discharges it: any two terminal objects are <strong>isomorphic</strong>
+— there are arrows both ways composing to identities — and the
+isomorphism is itself unique. Uniqueness-up-to-iso is category theory’s
+notion of “the”, and from here on the project earns every definite
+article it uses.</p>
+<h2
+id="products-and-exponentials-data-and-functions-from-arrows-alone">Products
+and exponentials: data and functions, from arrows alone</h2>
+<p>A <strong>product</strong> of <code>a</code> and <code>b</code> is an
+object with projections <code>pi1</code>, <code>pi2</code> such that any
+object mapping into both <code>a</code> and <code>b</code> factors
+through it, uniquely (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Product.v"><code>Interface/Product.v</code></a>):</p>
+<pre class="coq"><code>pair_pi1 : pi1 ∘ pair_mor f g == f
+pair_pi2 : pi2 ∘ pair_mor f g == g
+pair_unique : pi1 ∘ h == f -&gt; pi2 ∘ h == g -&gt; h == pair_mor f g</code></pre>
+<p>No mention of “pairs of elements” — yet in Coq-types this is exactly
+<code>prod</code>/<code>fst</code>/<code>snd</code>, and the theory file
+derives the working algebra (<code>pair_eta</code>,
+<code>pair_comp</code>, commutativity of <code>×</code> up to iso — <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Product.v"><code>Theory/Product.v</code></a>).</p>
+<p><strong>Exponentials</strong> are the same game played on function
+types (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Exponential.v"><code>Interface/Exponential.v</code></a>):
+<code>exp_obj a b</code> <em>internalizes</em> the arrows
+<code>a ~&gt; b</code> as an object, with</p>
+<pre class="coq"><code>eval_mor : prod_obj (exp_obj a b) a ~&gt; b          (* apply *)
+curry    : (prod_obj x a ~&gt; b) -&gt; (x ~&gt; exp_obj a b)
+curry_beta : eval_mor ∘ (curry h ×× cat_id) == h</code></pre>
+<p>Read <code>curry_beta</code> aloud: <em>currying then applying is the
+original function</em>. Every functional programmer has used this fact;
+here it is an axiom about arrows, and <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Exponential.v"><code>Theory/Exponential.v</code></a>
+proves the inverse direction (<code>curry_uncurry</code>,
+<code>uncurry_curry</code>) in the usual few rewrite lines.</p>
+<h2 id="cartesian-closed-categories">Cartesian closed categories</h2>
+<p>A category with a terminal object, all products, and all exponentials
+is <strong>cartesian closed</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/CCC.v"><code>Interface/CCC.v</code></a>)
+— three capabilities bundled:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="bold">𝐂𝐂𝐂</mtext><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">nothing</mtext><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">pairing</mtext><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">function types</mtext></mrow><annotation encoding="application/x-tex">\textbf{CCC} \;=\; \text{nothing} \;+\; \text{pairing} \;+\; \text{function types}</annotation></semantics></math></p>
+<p>And the tower’s capstone instance, at the bottom of <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>Impl/CoqCat.v</code></a>:</p>
+<pre class="coq"><code>#[global] Instance CoqCCC : CCC CoqCat := ...</code></pre>
+<p>Coq’s own types form a cartesian closed category, machine-checked, no
+axioms added. Why this is the right stopping point for today:
+<strong>CCCs are exactly the worlds where lambda calculus makes
+sense.</strong> The <code>curry</code>/<code>eval</code> algebra
+<em>is</em> the typing of <code>λ</code> and application;
+<code>Impl/StlcCat.v</code> is the syntactic side of that same coin.
+Which is the cliffhanger for post #4: lambda terms as a formal,
+executable object — with variables done right.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Product.v"><code>Interface/Product.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Exponential.v"><code>Interface/Exponential.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/CCC.v"><code>Interface/CCC.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Theory"><code>Theory/</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>Impl/CoqCat.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>Impl/StlcCat.v</code></a>.</p>
+</main>
+</body>
+</html>

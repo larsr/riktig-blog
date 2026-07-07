@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #7 — The evaluator leaves the building</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-7-the-evaluator-leaves-the-building">riktig #7 — The
+evaluator leaves the building</h1>
+<p><em>Seventh post in the series documenting the
+<strong>riktig</strong> project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in Coq, so that a change
+only obliges you to re-establish a few local facts. Every post starts
+from zero. In <a href="0004-lambda-terms-you-can-run.html">post #4</a>
+we built the lambda calculus as a Coq datatype with a small-step
+evaluator and <em>proved</em> the evaluator correct; in <a
+href="0005-partial-evaluation-is-algebra.html">post #5</a> we turned
+program transformation into setoid rewriting. But everything so far ran
+inside Coq. Today the evaluator becomes an <strong>ordinary executable
+on your shell</strong> — same code, same proofs, new habitat.</p>
+</blockquote>
+<h2 id="extraction-proofs-stay-code-leaves">Extraction: proofs stay,
+code leaves</h2>
+<p>Coq’s <em>extraction</em> mechanism translates a Coq function into a
+functional language — here Haskell — erasing everything that was only
+there for the proving. The recipe lives in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Extract.v"><code>Lambda/Extract.v</code></a>
+and is startlingly short: name the functions you want
+(<code>step_fn</code>, <code>eval</code>, the CPS translator
+<code>cps</code> from <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/CPS.v"><code>Lambda/CPS.v</code></a>),
+and say how to render the primitive types:</p>
+<pre class="coq"><code>Extract Inductive nat =&gt; &quot;Prelude.Integer&quot; [&quot;0&quot; &quot;(Prelude.+) 1&quot;] ...</code></pre>
+<p>That last line matters for more than cosmetics. Inside Coq,
+<code>nat</code> is unary — <code>3</code> is <code>S (S (S O))</code> —
+which is wonderful for induction and terrible for arithmetic at scale.
+Extraction maps it to Haskell’s arbitrary-precision
+<code>Integer</code>, so de Bruijn indices cost machine words, not
+linked lists. The theorems were proved about the inductive structure;
+the running code gets the efficient representation. (A small, honest
+instance of post #6’s slogan: change the representation, keep the
+theorems.)</p>
+<h2 id="the-binary">The binary</h2>
+<p>Around the extracted core (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/programs/lambda-eval/Eval.hs"><code>programs/lambda-eval/Eval.hs</code></a>)
+sits a thin hand-written CLI (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/programs/lambda-eval/Main.hs"><code>Main.hs</code></a>):
+a parser from <code>\x. x</code> syntax to de Bruijn terms, and a
+printer back. <code>make lambda-eval</code> builds it; then:</p>
+<pre><code>$ ./programs/lambda-eval/lambda-eval &#39;(\x. x x) (\y. y)&#39;
+\x. x
+$ ./programs/lambda-eval/lambda-eval --cps &#39;\x. x&#39;
+\k. k (\x. \k. k x)</code></pre>
+<p>The first line is the self-application classic reducing to the
+identity; the second shows the CPS translation from post #4 — the very
+<code>Fixpoint cps</code> we proved things about — rewriting a program
+into continuation-passing style on demand.</p>
+<h2 id="what-is-proved-what-is-trusted">What is proved, what is
+trusted</h2>
+<p>Honesty section. The <strong>evaluator</strong> is the verified
+article: post #4 proved <code>step_fn</code> sound and complete against
+the reduction relation, and <code>eval</code> is just iterated
+<code>step_fn</code> with fuel. The <strong>parser and printer</strong>
+are trusted, unverified Haskell — about eighty lines. So is GHC, and
+extraction itself. The trusted surface is real but small, boring, and —
+crucially — <em>localized at the boundary</em>: exactly the architecture
+we keep advocating, where the interesting invariants live behind a typed
+interface and the unproved code is a thin shell around it.</p>
+<p>This is also the first end-to-end pass of the whole riktig
+pipeline:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">interface</mtext><mo>→</mo><mtext mathvariant="normal">theory</mtext><mo>→</mo><mtext mathvariant="normal">instance</mtext><mo>→</mo><mtext mathvariant="normal">extraction</mtext><mo>→</mo><mtext mathvariant="normal">binary</mtext></mrow><annotation encoding="application/x-tex">\text{interface} \longrightarrow \text{theory} \longrightarrow
+\text{instance} \longrightarrow \text{extraction} \longrightarrow
+\text{binary}</annotation></semantics></math></p>
+<p>Small, yes. But the same road is the one the bigger cargo will
+travel: the channel codecs, the protocol state machines, eventually
+pieces of the kernel-to-be (working name <strong>riskabel</strong>;
+stability target, of course, <strong>oriskabel</strong>). Each will be a
+Coq structure with laws, a proof, and an extraction — and a shell
+command you can run.</p>
+<p><em>Next: order and norms landed as interfaces, complex numbers as a
+field construction, and finite bases as coordinate isomorphisms — the
+algebra shopping list for analysis.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Extract.v"><code>Lambda/Extract.v</code></a>
+(the extraction recipe) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/programs/lambda-eval"><code>programs/lambda-eval/</code></a>
+(CLI, parser, extracted core) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+(the verified evaluator itself).</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #6 — Choose your representation, keep your
+theorems</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-6-choose-your-representation-keep-your-theorems">riktig
+#6 — Choose your representation, keep your theorems</h1>
+<p><em>Sixth post in the series documenting the <strong>riktig</strong>
+project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in Coq. The goal is
+<em>modifiability</em>: a change only obliges you to re-establish a few
+local facts. Every post starts from zero. In <a
+href="0001-what-is-a-mathematical-structure.html">post #1</a> we defined
+mathematical structures — a carrier, an equality <code>==</code> chosen
+for the job, operations, laws — and proved things once, abstractly.
+Today the abstractions meet concrete data: integers, rationals,
+functions, pairs, lists. And we cash the first big cheque: <strong>two
+representations of the same data are connected by an isomorphism, so you
+can swap one for the other with a rewrite.</strong></p>
+</blockquote>
+<h2 id="instances-the-laws-land-on-real-carriers">Instances: the laws
+land on real carriers</h2>
+<p>An interface is a promise; an <em>instance</em> is a proof that some
+concrete type keeps it. <code>Z</code> keeps the Ring promise (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Zr.v"><code>Impl/Zr.v</code></a>)
+— every law is a stdlib equality, wrapped where the orientation differs.
+More interesting is <code>Q</code> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Qf.v"><code>Impl/Qf.v</code></a>):
+rational numbers as fractions, where <code>1/2</code> and
+<code>2/4</code> are <em>different data</em> representing the <em>same
+number</em>. The instance simply declares</p>
+<pre class="coq"><code>#[global] Instance Q_EqRel : EqRel Q := Qeq.</code></pre>
+<p>and every generic theorem — cancellation, <code>0 * a == 0</code>,
+the lot — holds <em>up to <code>Qeq</code></em>, automatically. Choosing
+<code>==</code> is a design act. Hold that thought; it returns twice
+below.</p>
+<p>The workhorse is <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Pointwise.v"><code>Impl/Pointwise.v</code></a>:
+if <code>V</code> is a vector space, then <strong>functions into
+<code>V</code></strong> form one — operations act at each point, laws
+hold because they hold at each point. One file, infinitely many spaces:
+<code>nat -&gt; Q</code>, <code>bool -&gt; V</code>,
+<code>string -&gt; (nat -&gt; Q)</code>… and the classic (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/FinVec.v"><code>Impl/FinVec.v</code></a>):</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>F</mi><mi>n</mi></msup><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">F</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow><mspace width="0.222em"></mspace><mi>n</mi><mo>→</mo><mi>F</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">F^n \;=\; (\mathrm{Fin}\ n \to F)</annotation></semantics></math></p>
+<p>n-dimensional coordinate space is <em>the special case</em>
+<code>X := Fin n</code>, inheriting everything, plus a dot product
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>u</mi><mi>i</mi></msub><msub><mi>v</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\langle u , v \rangle = \sum_i u_i v_i</annotation></semantics></math>
+by finite summation.</p>
+<p>(War story, briefly: this file OOM-killed the compiler for a day. The
+instance search “find me a vector space structure on <code>?M</code>” —
+carrier <em>unknown</em> — matches the pointwise instance forever:
+<code>?M := ?X -&gt; ?M'</code>, recurse. The fix,
+<code>Hint Mode</code>, tells Coq an instance may only fire once the
+carrier is known. Infinite loops in <em>proof search</em>, too, are a
+thing one designs against.)</p>
+<h2 id="yes-is-a-vector-space">Yes, <code>()</code> is a vector
+space</h2>
+<p>The type <code>unit</code> has one inhabitant, <code>tt</code>. Can
+it be a vector space? It sounds like a joke question; it is
+load-bearing. Set every operation to the only thing it can be, and
+declare <em>everything equal</em>:</p>
+<pre class="coq"><code>#[global] Instance Unit_EqRel : EqRel unit := fun _ _ =&gt; True.</code></pre>
+<p>Every law is trivially true (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/UnitVS.v"><code>Impl/UnitVS.v</code></a>).
+The point of the one-point space: it is the <strong>unit of the
+product</strong>, the empty record, the zero-column table — and in the
+category of vector spaces it is the <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/VectZero.v">zero
+object</a>: exactly one linear map in, exactly one out, from anywhere.
+Products themselves are <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ProdVS.v"><code>Impl/ProdVS.v</code></a>:
+<code>A * B</code> with componentwise everything.</p>
+<h2 id="lists-modulo-trailing-zeros">Lists modulo trailing zeros</h2>
+<p>Third appearance of “choosing <code>==</code> is a design act” (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ListVS.v"><code>Impl/ListVS.v</code></a>):
+growable coefficient lists, where <code>[1; 0; 0]</code> and
+<code>[1]</code> should be the same vector. Define lookup-with-default —
+<code>nth0 xs i</code> is <code>0</code> past the end — and let
+<code>==</code> compare lookups:</p>
+<pre class="coq"><code>Instance LV_EqRel : EqRel (list F) := fun xs ys =&gt; forall i, nth0 xs i == nth0 ys i.</code></pre>
+<p>Trailing zeros vanish <em>by definition of equality</em>; over
+<code>Q</code> the equation <code>[1; 0; 0] == [1]</code> is proved by
+computing three lookups. The laws? Three little lemmas relate lookup to
+add/neg/scale, and then every vector-space law is the pointwise argument
+again. A <code>list F</code> is a finitely-supported
+<code>nat -&gt; F</code> wearing different clothes — which is precisely
+an <em>isomorphism claim</em>. So let us make those first-class.</p>
+<h2 id="isomorphisms-swap-representations-with-a-rewrite">Isomorphisms:
+swap representations with a rewrite</h2>
+<p><a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>
+packages a <strong>representation change</strong> as two
+structure-preserving maps that undo each other:</p>
+<pre class="coq"><code>Record VSIso F U V ... := {
+  vsi_to   : LinearMap F U V;
+  vsi_from : LinearMap F V U;
+  vsi_fromto : forall u, vsi_from (vsi_to u) == u;
+  vsi_tofrom : forall v, vsi_to (vsi_from v) == v
+}.</code></pre>
+<p>The starter kit: <code>A × () ≅ A</code> (drop the empty column),
+<code>A × B ≅ B × A</code> (reorder fields),
+<code>(A × B) × C ≅ A × (B × C)</code> (regroup nesting — so
+<em>any</em> tree of pairs normalizes to a right-nested list, by
+chaining). Each is two evidently-linear maps and round trips that hold
+by <code>reflexivity</code>-grade rewriting.</p>
+<p>And the one this post exists for. A table of records is a record of
+columns:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo>×</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(X \to A \times B) \;\cong\; (X \to A) \times (X \to B)</annotation></semantics></math></p>
+<pre class="coq"><code>Definition vsiso_soa : VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) := ...</code></pre>
+<p>Take <code>X := Fin n</code> and read it in engineering:
+<strong>array-of-structs ≅ struct-of-arrays</strong> — the memory-layout
+transformation behind columnar databases, SIMD kernels, and
+cache-friendly attention implementations — with a machine-checked
+guarantee that nothing about the data changes. Splitting is linear,
+merging is linear, and the round trips are laws you can
+<code>rewrite</code> with. This is the modifiability thesis in its
+purest form so far: the <em>representation</em> is a degree of freedom,
+and the proofs travel with the data.</p>
+<p><em>Next: the lambda evaluator leaves the building — Coq extraction
+to a real binary you can run on your shell. And after that: order,
+norms, bases, and complex numbers, because analysis is
+knocking.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Pointwise.v"><code>Impl/Pointwise.v</code></a>
+(functions inherit structure) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/UnitVS.v"><code>Impl/UnitVS.v</code></a>
+/ <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ProdVS.v"><code>Impl/ProdVS.v</code></a>
+(unit and product spaces) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ListVS.v"><code>Impl/ListVS.v</code></a>
+(the trailing-zeros setoid) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>
+(unitor, braiding, associator, AoS ≅ SoA).</p>
+</main>
+</body>
+</html>

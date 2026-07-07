@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #1 — What is a mathematical structure?</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-1-what-is-a-mathematical-structure">riktig #1 — What is a
+mathematical structure?</h1>
+<p><em>This is the first post in a series documenting the
+<strong>riktig</strong> project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in the Coq proof assistant
+— sorting algorithms down to machine code, a small operating-system
+kernel, network protocols generated from their grammars. The goal is not
+proof for its own sake: it is <em>modifiability</em>. In ordinary code,
+changing anything means fearing everything, because any line may depend
+on an assumption made somewhere else. We want code where a change only
+obliges you to re-establish a few <em>local</em> facts, and the
+structure of the system guarantees the rest. Every post starts from
+zero; you need no Coq background, only patience for a little
+algebra.</p>
+</blockquote>
+<p>Today: the bottom layer of the whole tower — <em>mathematical
+structures</em> — what they are, why a software project should care, and
+how we wrote the first ones.</p>
+<h2 id="structures-are-interfaces-with-laws">Structures are interfaces
+with laws</h2>
+<p>Programmers already know half of the idea. An <em>interface</em> says
+which operations exist: this thing can be compared, that thing can be
+concatenated. What an interface does <strong>not</strong> say is what
+the operations <em>mean</em>. A <code>sort</code> function that returns
+its input unsorted satisfies the interface <code>list → list</code>
+perfectly.</p>
+<p>A mathematical structure is the missing half: a vocabulary of
+operations <strong>plus the laws those operations must obey</strong>.
+Not “there is a <code>+</code>”, but “there is a <code>+</code>, and it
+never matters how you parenthesize it”. The laws are the meaning. Two
+structures with the same operations but different laws are different
+worlds.</p>
+<p>The classic first example. Lots of things can be <em>combined</em>:
+numbers add, strings concatenate, program fragments sequence, rotations
+compose. Superficially unrelated — but in each case, combining is
+<strong>associative</strong></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>⋅</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a \cdot b) \cdot c \;=\; a \cdot (b \cdot c)</annotation></semantics></math></p>
+<p>and there is a <strong>do-nothing element</strong> (zero, the empty
+string, the no-op, the identity rotation) that combines invisibly. That
+pair of laws has a name: a <strong>monoid</strong>. The payoff of naming
+it: anything you prove <em>from the two laws alone</em> is instantly
+true for numbers, strings, programs, and rotations — and for every
+combinable thing anyone invents later. Prove once, hold everywhere. That
+is the entire business model of algebra, and it is precisely the “don’t
+re-verify the world after every change” property we want for
+software.</p>
+<p>Structures then stack, each adding vocabulary and laws to the
+last:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Structure</th>
+<th>Adds</th>
+<th>New laws (typeset the way we state them)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Monoid</strong></td>
+<td><code>+</code>, <code>0</code></td>
+<td><code>(a + b) + c == a + (b + c)</code>, <code>0 + a == a</code>,
+<code>a + 0 == a</code></td>
+</tr>
+<tr>
+<td><strong>Group</strong></td>
+<td><code>- a</code></td>
+<td><code>(- a) + a == 0</code>, <code>a + (- a) == 0</code> — every
+action can be undone</td>
+</tr>
+<tr>
+<td><strong>Abelian group</strong></td>
+<td>—</td>
+<td><code>a + b == b + a</code> — order of combination is
+irrelevant</td>
+</tr>
+<tr>
+<td><strong>Ring</strong></td>
+<td><code>*</code>, <code>1</code></td>
+<td><code>*</code> is an (associative, unital) second operation, tied to
+the first by distributivity:
+<code>a * (b + c) == a * b + a * c</code></td>
+</tr>
+<tr>
+<td><strong>Field</strong></td>
+<td><code>inv</code></td>
+<td>nonzero elements can be divided: <code>inv a * a == 1</code> (for
+<code>a =/= 0</code>)</td>
+</tr>
+<tr>
+<td><strong>Vector space</strong></td>
+<td><code>*:</code></td>
+<td>vectors form an abelian group, scalars from a field act on them:
+<code>(a + b) *: u == a *: u + b *: u</code>,
+<code>1 *: u == u</code></td>
+</tr>
+<tr>
+<td><strong>Inner product</strong></td>
+<td><code>⟨u, v⟩</code></td>
+<td>a symmetric, bilinear pairing: <code>⟨u, v⟩ == ⟨v, u⟩</code>,
+<code>⟨u + v, w⟩ == ⟨u, w⟩ + ⟨v, w⟩</code></td>
+</tr>
+<tr>
+<td><strong>Geometric algebra</strong></td>
+<td><code>ga_vec</code></td>
+<td>vectors become <em>multipliable</em>: embed <code>V</code> in a ring
+where <code>v * v == ⟨v, v⟩ *: 1</code> — a vector squared is its
+length²</td>
+</tr>
+</tbody>
+</table>
+<p>Read the table top to bottom and you can watch capability accumulate:
+combine → undo → reorder → multiply → divide → scale → measure →
+multiply <em>geometry itself</em>. Each row inherits every law above it.
+(Topology does the same trick with a different vocabulary — instead of
+<code>+</code> and its laws, it is “open sets” and laws about how they
+union and intersect. Same idea: vocabulary plus laws; only the subject
+changes.)</p>
+<h2 id="how-this-looks-in-coq">How this looks in Coq</h2>
+<p>Our encoding keeps four things in four kinds of files, and the
+separation is the point.</p>
+<p><strong>1. The vocabulary</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Ops.v"><code>theories/Ops.v</code></a>)
+— one tiny typeclass per symbol, no laws at all:</p>
+<pre class="coq"><code>Class HasAdd T := add : BinOp T.
+Infix &quot;+&quot; := add.
+
+Class Zero T := zero : T.
+Notation &quot;&#39;0&#39;&quot; := zero.</code></pre>
+<p>This is what lets every later law be <em>written in notation</em>:
+once a structure provides <code>HasAdd</code>, the literal symbol
+<code>+</code> works for it.</p>
+<p><strong>2. The single laws</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Props.v"><code>theories/Props.v</code></a>)
+— one class per law, so a law is a first-class, nameable thing:</p>
+<pre class="coq"><code>Class Assoc T (e : EqRel T) (op : BinOp T) :=
+  assoc : forall a b c, op (op a b) c == op a (op b c).</code></pre>
+<p><strong>3. The structures</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Interface"><code>theories/Interface/</code></a>)
+— bundles of vocabulary and laws, <em>axioms only</em>, no theorems.
+Inheritance is containment: a group literally contains a monoid.</p>
+<pre class="coq"><code>Class Monoid T := {
+  mon_equ   :: EqRel T;
+  mon_zero  :: Zero T;
+  mon_add   :: HasAdd T;
+  mon_assoc : forall a b c, (a + b) + c == a + (b + c);
+  mon_idl   : forall a, 0 + a == a;
+  mon_idr   : forall a, a + 0 == a;
+  (* ... *)
+}.
+
+Class Group G := {
+  grp_monoid :: Monoid G;          (* a Group *is* a Monoid... *)
+  grp_neg    :: HasNeg G;          (* ...plus undo... *)
+  grp_invl   : forall a, (- a) + a == 0;   (* ...and its laws *)
+  grp_invr   : forall a, a + (- a) == 0;
+  (* ... *)
+}.</code></pre>
+<p>The <code>::</code> marks a field as visible to Coq’s inference, so
+anything that knows “G is a Group” automatically knows “G is a Monoid” —
+the inheritance in the table is these three characters.</p>
+<p><strong>4. The consequences</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Theory"><code>theories/Theory/</code></a>)
+— theorems derived from the laws alone, valid for every instance
+forever. Here is a real one, exactly as it appears in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Group.v"><code>theories/Theory/Group.v</code></a>.
+In a group, cancelling on the left is legitimate:</p>
+<pre class="coq"><code>Theorem cancel_l : forall a b c : G, a + b == a + c -&gt; b == c.
+Proof.
+  intros a b c Heq.
+  rewrite &lt;- (idl b), &lt;- (invl a), assoc, Heq, &lt;- assoc, invl, idl.
+  reflexivity.
+Qed.</code></pre>
+<p>Read the <code>rewrite</code> line as a calculation, one comma per
+step:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mo>+</mo><mi>b</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mover><mo>=</mo><mtext mathvariant="normal">Heq</mtext></mover><mspace width="0.278em"></mspace><mo>−</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mo>+</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>c</mi></mrow><annotation encoding="application/x-tex">b \;=\; 0+b \;=\; (-a+a)+b \;=\; -a+(a+b) \;\overset{\text{Heq}}{=}\; -a+(a+c) \;=\; (-a+a)+c \;=\; 0+c \;=\; c</annotation></semantics></math></p>
+<p>That is the entire proof style of this project: <strong>every proof
+is a chain of rewrites by named laws</strong> — the same equational
+reasoning you did in school algebra, machine-checked. No proof scripts
+full of tactic incantations; if a step doesn’t have a name, we factor it
+out as a lemma and <em>give</em> it a name. The test we hold ourselves
+to: the <code>Proof</code> block should read like the calculation you
+would write on paper.</p>
+<p>The chain culminates (for now) in geometric algebra, where the axiom
+“a vector squares to its length” makes the whole preceding tower earn
+its keep. From just that axiom and bilinearity, a few rewrites derive
+the <strong>polarization identity</strong></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">uv + vu \;=\; (\langle u,v\rangle + \langle v,u\rangle)\,1</annotation></semantics></math></p>
+<p>— the fact that the <em>symmetric part of the geometric product is
+the inner product</em>, which is the seed of everything geometric
+algebra is good for (rotations, reflections, and eventually the
+matrix-reordering proofs we have planned). One axiom in the interface,
+one short calculation in the theory file, true in every model anyone
+ever builds.</p>
+<h2 id="why-a-software-project-starts-here">Why a software project
+starts here</h2>
+<p>Because everything upstream <em>is</em> this pattern. “A kernel
+scheduler never runs one process on two CPUs” is a law over a vocabulary
+(processes, CPUs, <code>schedule</code>). “Encoding then decoding a
+protocol message is the identity” is a law over a vocabulary
+(<code>encode</code>, <code>decode</code>). The discipline we practiced
+on monoids — vocabulary in one file, laws in another, consequences
+proved once from laws alone, implementations plugged in underneath — is
+exactly how we will state what a syscall, a network layer, or a memory
+allocator <em>means</em>. The algebra files are the training ground
+where the style is cheap to get right.</p>
+<p><em>Next in the series: we start documenting our little
+operating-system kernel — which will exist in an x86 and a RISC-V
+variant and is therefore, obviously, named <strong>riskabel</strong>
+(Swedish: “risky”). Development proceeds toward the long-awaited stable
+release, <strong>oriskabel</strong>.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Ops.v"><code>Ops.v</code></a>
+(the vocabulary) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Props.v"><code>Props.v</code></a>
+(the single laws) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Interface"><code>Interface/</code></a>
+(the structures) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Theory"><code>Theory/</code></a>
+(the consequences) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Zr.v"><code>Impl/Zr.v</code></a>
+(Z instantiates it all). Start from <a
+href="https://git.ri.se/lars.rasmusson/riktig">the repository</a> and
+its README.</p>
+</main>
+</body>
+</html>

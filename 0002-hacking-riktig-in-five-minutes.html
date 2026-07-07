@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #2 — Hacking on riktig in five minutes</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-2-hacking-on-riktig-in-five-minutes">riktig #2 — Hacking
+on riktig in five minutes</h1>
+<p><em>Second post in the series documenting the <strong>riktig</strong>
+project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in the Coq proof assistant
+— algebra and category theory at the bottom, sorting algorithms,
+protocol parsers, and eventually a small OS kernel on top. The goal is
+<em>modifiability</em>: code where a change only obliges you to
+re-establish a few local facts, and the structure of the system
+guarantees the rest. Every post starts from zero. Today’s post is the
+most from-zero of all: how to get a working development environment
+without installing anything but Docker and VS Code.</p>
+</blockquote>
+<p>A proof project has a bootstrapping problem: Coq, the right Coq
+<em>version</em>, coq-lsp matched to that version, GHC for the Haskell
+side, and an editor that speaks to all of them. Ask a colleague to “just
+install” that stack and you have lost them for an afternoon — and their
+build still won’t match yours.</p>
+<p>Our answer is a <strong>dev container</strong>: the repository
+carries a complete description of its own development environment, and
+VS Code builds and enters it for you. The recipe:</p>
+<pre><code>git clone git@git.ri.se:lars.rasmusson/riktig.git
+code riktig            # open the folder in VS Code</code></pre>
+<p>VS Code notices <code>.devcontainer/</code> and offers
+<strong>“Reopen in Container”</strong>. Click it. The first launch takes
+a few minutes (it is building the environment); every launch after that
+is seconds. That is the whole tutorial. You now have:</p>
+<ul>
+<li><strong>Coq 8.20 with coq-lsp</strong>, so opening any
+<code>theories/*.v</code> file gives you live proof goals — put the
+cursor after a <code>rewrite</code> and see the goal change (the
+<code>ejgallego.coq-lsp</code> extension is preinstalled; it is the Coq
+plugin we prefer of the two that exist, because it checks the file
+continuously instead of stepping a fragile focus point).</li>
+<li><strong>The Haskell extension</strong>, ready for the Haskell
+programs as they move into <code>programs/</code>.</li>
+<li><strong>direnv + nix pre-wired</strong>: any terminal you open
+inside the container is already in the project’s Nix shell —
+<code>make</code> builds all the theories, <code>coqc</code> is the
+right version, no activation commands.</li>
+</ul>
+<h2 id="whats-in-the-box-and-why-it-just-works">What’s in the box, and
+why it “just works”</h2>
+<p>Three small files in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/.devcontainer"><code>.devcontainer/</code></a>
+do all the work, and each one solves one specific failure mode of shared
+dev environments:</p>
+<p><strong><a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/Dockerfile"><code>Dockerfile</code></a>
+— the environment is pinned.</strong> A Debian base with a non-root
+<code>vscode</code> user, plus the <a
+href="https://determinate.systems">Determinate Nix</a> installer. Every
+tool version is fixed by the repository’s <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/flake.nix"><code>flake.nix</code></a>
+and <code>flake.lock</code>, so your container and mine resolve to
+<em>bit-identical</em> toolchains. “Works on my machine” becomes a
+theorem with a proof.</p>
+<p><strong>A named volume for <code>/nix</code> — rebuilds don’t
+recompile the world.</strong> Coq and GHC toolchains are gigabytes. The
+container mounts a Docker volume (<code>riktig-nix-store</code>) at
+<code>/nix</code>, so everything Nix ever downloads or builds survives
+container rebuilds. Delete the container, change the Dockerfile, reopen
+— the cache is still there. This is the single most important line in
+the setup; without it, every rebuild costs you the afternoon we were
+trying to save.</p>
+<p><strong><a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/start-nix-daemon.sh"><code>start-nix-daemon.sh</code></a>
++ <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/devcontainer.json">lifecycle
+hooks</a> — no ceremony.</strong> The Nix daemon starts when the
+container starts (<code>postStartCommand</code>), VS Code waits for it
+(<code>waitFor</code>), and the first-ever launch pre-warms the
+development shell (<code>onCreateCommand</code>) so that by the time you
+see a terminal, <code>coqc</code> answers. direnv is pre-trusted for
+<code>/workspaces</code>, so there is no <code>direnv allow</code>
+ritual either.</p>
+<h2 id="try-it-your-first-proof-interaction">Try it: your first proof
+interaction</h2>
+<p>Open <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Group.v"><code>theories/Theory/Group.v</code></a>.
+Find <code>cancel_l</code>:</p>
+<pre class="coq"><code>Theorem cancel_l : forall a b c : G, a + b == a + c -&gt; b == c.
+Proof.
+  intros a b c Heq.
+  rewrite &lt;- (idl b), &lt;- (invl a), assoc, Heq, &lt;- assoc, invl, idl.
+  reflexivity.
+Qed.</code></pre>
+<p>Click anywhere inside the <code>rewrite</code> chain. The coq-lsp
+panel shows the goal <em>at that point</em> — delete the last two
+rewrites and watch the goal become <code>0 + b == 0 + c</code>… wait,
+no: try it and see what it actually becomes. That one-click what-if loop
+is the entire reason we insist on proofs being rewrite chains: every
+comma is a checkpoint you can inspect, and the proof state between any
+two steps is a legible algebra goal, not a tactic soup.</p>
+<p>If it builds in the container, it builds for everyone. That property
+— the environment as a checked, versioned artifact — is the same
+philosophy as the proofs themselves, applied to the toolchain: make the
+implicit explicit, and let a machine verify it.</p>
+<p><em>Next in the series: mathematical structures grow arrows —
+categories, functors, and why the humble function type makes a category
+“cartesian closed”.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/.devcontainer"><code>.devcontainer/</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/flake.nix"><code>flake.nix</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/Makefile"><code>Makefile</code></a>
+· <a href="https://git.ri.se/lars.rasmusson/riktig">the
+repository</a>.</p>
+</main>
+</body>
+</html>
