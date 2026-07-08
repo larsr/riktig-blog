@@ -12,17 +12,15 @@
 <h1 id="riktig-13-cauchyschwarz-without-case-splits">riktig #13 —
 Cauchy–Schwarz without case splits</h1>
 <p><em>Thirteenth post documenting the <strong>riktig</strong> project;
-the linear-algebra course thread continues alongside the opening of a
-new one: channels. Proofs shown blackboard-style and as they live in the
-repository.</em></p>
+the linear-algebra course thread continues. Proofs shown
+blackboard-style and as they live in the repository.</em></p>
 <blockquote>
 <p><strong>What we are doing, and why.</strong> Verified software in
 Coq, built for modifiability. This wave adds the geometry an inner
-product buys you — Cauchy–Schwarz, projections — a determinant you can
-compute, and the first stone of an entirely different building:
-fault-tolerant channels for telecom protocols. Three unrelated-looking
-topics, one discipline: define the honest general statement, then prove
-it with only the tools the definition allows.</p>
+product buys you: Cauchy–Schwarz and projections. One discipline
+throughout: define the honest general statement, then prove it with only
+the tools the definition allows — no hidden hypotheses, no case split on
+something that can’t be decided.</p>
 </blockquote>
 <h2 id="positivity-is-a-choice-not-a-given">Positivity is a choice, not
 a given</h2>
@@ -138,53 +136,16 @@ Theorem best_approx : forall c, norm2 (u + - proj v u) &lt;= norm2 (u + - (c *: 
 is perpendicular to it</em> — the Gram–Schmidt engine, one theorem short
 of orthogonal bases (queued: the loop over <code>Fin n</code> that
 iterates this per basis vector).</p>
-<h2 id="also-in-this-wave">Also in this wave</h2>
-<ul>
-<li><strong>A determinant you can compute</strong> (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>):
-first-column Laplace expansion over <code>Matrix n n F</code>, with
-<code>det_id</code> and linearity in that column proved.
-Multiplicativity waits for elementary matrices (soon); the
-<em>coordinate-free</em> determinant — “the scalar by which a map scales
-any top alternating form” — is a distinct, still-queued theorem that
-will <em>use</em> this file as its computation lemma, not the other way
-around.</li>
-<li><strong>Trace, basis-independent</strong> (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>):
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{tr}(AB) = \mathrm{tr}(BA)</annotation></semantics></math>
-by swapping a double sum, and change of basis as conjugation — so trace,
-defined via <em>some</em> basis, is proved not to care <em>which</em>
-one.</li>
-<li><strong>A new building begins</strong> (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>):
-the telecom leg of riktig. A faulty channel is modeled as a
-<em>relation</em> between what was sent and what arrived — no
-probabilities, just possibility. <code>lossy</code> (dropped packets, as
-a subsequence relation), <code>dup</code> (duplication),
-<code>lossy_dup</code> (both — the wire a real retransmission protocol
-faces), <code>reorder</code> (via the standard library’s
-<code>Permutation</code>). The file proves these form a lattice —
-perfect ⊂ lossy ⊂ lossy+dup, perfect ⊂ reorder — and, just as
-importantly, proves the missing arrows really are missing:
-<code>~ lossy_dup [0;1] [1;0]</code> (a wire that only drops and
-duplicates can never reorder). Next: protocol endpoints as Mealy
-machines, then the alternating-bit protocol’s safety theorem — proved
-<em>unconditionally</em>, over every possible sequence of losses.</li>
-</ul>
-<p><em>Next: orthogonal/self-adjoint endomorphisms, Gram–Schmidt as a
-loop, and the groundwork for T2’s protocol machines.</em></p>
+<p><em>Next: a determinant you can actually compute, and a trace that
+doesn’t care which basis you used — then a proper introduction to the
+channels leg of the project, before it starts proving things about
+protocols.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/PosInner.v"><code>Interface/PosInner.v</code></a>
 / <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InnerGeometry.v"><code>Theory/InnerGeometry.v</code></a>
-(Cauchy–Schwarz, Pythagoras, projection) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>
-(Laplace expansion) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>
-(tr(AB)=tr(BA), basis independence) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>
-(fault classes as trace relations).</p>
+(Cauchy–Schwarz, Pythagoras, projection).</p>
 </main>
 </body>
 </html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #14 — A determinant you can compute, and a trace that
+doesn't care about your basis</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="riktig-14-a-determinant-you-can-compute-and-a-trace-that-doesnt-care-about-your-basis">riktig
+#14 — A determinant you can compute, and a trace that doesn’t care about
+your basis</h1>
+<p><em>Fourteenth post documenting the <strong>riktig</strong> project;
+the linear-algebra course continues. Proofs shown blackboard-style and
+as they live in the repository.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. <a
+href="0010-matrices-are-a-representation.html">Post #10</a> proved a
+matrix is a <em>representation</em> of a linear map, chosen by a basis —
+never the definition of the map itself. Today two of the classical
+invariants of a matrix, trace and determinant, get built on exactly that
+foundation: computed via <em>some</em> basis, then proved not to depend
+on <em>which</em> one. That independence is the entire content of
+calling them “invariants” — usually assumed, here proved.</p>
+</blockquote>
+<h2 id="the-determinant-by-the-formula-you-learned">The determinant, by
+the formula you learned</h2>
+<p>Every course teaches determinant by <em>expansion</em>: pick a
+column, for each entry multiply by its cofactor (the determinant of the
+matrix with that row and column struck out), alternate signs, sum. In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>
+that recipe is executable code, expanding along the first column:</p>
+<pre class="coq"><code>Fixpoint detM {n} (A : Matrix n n F) : F :=
+  match n with
+  | 0   =&gt; 1
+  | S _ =&gt; bigopF (fun i =&gt; sign_at i * (A i F1 * detM (minor A i)))
+  end.</code></pre>
+<p><code>minor A i</code> deletes row <code>i</code> and column
+<code>F1</code>; <code>sign_at i</code> alternates
+<code>1, -1, 1, …</code> down the column. The bookkeeping to make this
+precise in Coq — an injection <code>skip</code> that “increases past” a
+deleted row, so <code>minor</code>’s type is honest about being one row
+and one column smaller — is real work, but it’s <em>engineering</em>,
+not mathematics: once it’s right, the two theorems that matter fall out
+cleanly:</p>
+<pre class="coq"><code>Theorem det_id : detM mat_id == 1.
+Theorem det_col1_add : detM (upd_col1 A (c1 + c2)) ==
+  detM (upd_col1 A c1) + detM (upd_col1 A c2).</code></pre>
+<p><em>The identity matrix has determinant 1, and the determinant is
+additive in its first column</em> — because that column’s contribution
+to every term of the sum is <em>literally</em> the entry
+<code>A i F1</code>, and the minors (which don’t touch column F1 at all)
+don’t change. This is exactly what you’d expect a Laplace expansion to
+make easy, and it does.</p>
+<p>What it does <strong>not</strong> make easy — deliberately left for
+later — is <em>multiplicativity</em>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(A)\det(B)</annotation></semantics></math>.
+Proving that from this recursive formula wants a genuinely different
+technique (elementary row operations, coming in a future wave); the
+file’s own header says so, in plain language, rather than hiding the
+gap.</p>
+<h2 id="trace-the-sum-youd-compute-either-way">Trace: the sum you’d
+compute either way</h2>
+<p>The trace of a square matrix — sum the diagonal — looks even simpler,
+and the classical fact about it is almost never proved in an
+undergraduate course, just asserted: <strong>trace doesn’t care which
+basis you wrote the matrix in.</strong> In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>
+that assertion becomes a genuine theorem, and it’s worth watching how
+it’s built, because the route is the whole point of this project.</p>
+<p><strong>Step one, a fact about sums.</strong> For any two
+matrices,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{tr}(AB) = \mathrm{tr}(BA)</annotation></semantics></math></p>
+<p>— provable directly, by expanding both sides into a double sum over
+<code>i</code> and <code>j</code> and noting they’re the <em>same</em>
+double sum, summed in the other order (<code>bigopF_swap</code>, a
+genuine Fubini theorem for finite sums, proved once in
+<code>Theory/BigOp.v</code> and reused everywhere a double sum needs
+reordering).</p>
+<p><strong>Step two, change of basis is conjugation.</strong> Post #10
+already proved that switching bases transports a linear map’s matrix by
+conjugation:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><msup><mi>B</mi><mo>′</mo></msup></msub><mo>=</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mi>B</mi></msub><mi>P</mi></mrow><annotation encoding="application/x-tex">[\![f]\!]_{B&#39;} = P^{-1} [\![f]\!]_B P</annotation></semantics></math>
+for the change-of-basis matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>.
+Combine the two facts:</p>
+<pre class="coq"><code>Theorem tr_basis_indep : forall B B&#39; f,
+  trM (mat_of B&#39; B&#39; f) == trM (mat_of B B f).</code></pre>
+<p>Read the proof route in English:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mi>A</mi><mi>P</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>P</mi><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{tr}(P^{-1}AP) =
+\mathrm{tr}(A P P^{-1}) = \mathrm{tr}(A)</annotation></semantics></math>
+— cycle the product using step one, then cancel
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">P P^{-1}</annotation></semantics></math>
+back to the identity. Every piece of that sentence is a named lemma
+already sitting in the repository (<code>mat_of_conj</code> for the
+conjugation, <code>tr_mul_comm</code> for the cycling,
+<code>cob_inv</code> for the cancellation) — the theorem
+<em>assembles</em>, it doesn’t need new machinery.</p>
+<pre class="coq"><code>Definition tr (B : Basis n F U) (f : LinearMap F U U) : F :=
+  trM (mat_of B B f).</code></pre>
+<p><code>tr_basis_indep</code> says the basis argument to
+<code>tr</code> is immaterial — you may compute it in <em>any</em> basis
+and get the same answer, and now you know why: because the two matrices
+that different bases produce are always similar, and similar matrices
+always have the same diagonal sum, for the two structural reasons above
+and no others.</p>
+<p><em>Next: a proper introduction to channels — how do you even talk
+about a wire that loses and duplicates packets, before you can prove
+anything about a protocol running over one?</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>
+(Laplace expansion, <code>det_id</code>, column linearity) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>
+(<code>tr_mul_comm</code>, change of basis as conjugation,
+<code>tr_basis_indep</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/BigOp.v"><code>Theory/BigOp.v</code></a>
+(the finite-sum Fubini lemma both proofs lean on).</p>
+</main>
+</body>
+</html>

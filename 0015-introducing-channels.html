@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #15 — Introducing channels: possibilistic, not
+probabilistic</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="riktig-15-introducing-channels-possibilistic-not-probabilistic">riktig
+#15 — Introducing channels: possibilistic, not probabilistic</h1>
+<p><em>Fifteenth post documenting the <strong>riktig</strong> project,
+and the proper opening of a new thread: communication channels, the
+telecom leg of the work. Every post starts from zero, so does this
+one.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. So far the project has proved things about
+numbers, vector spaces, and programs. Today it starts proving things
+about <strong>wires</strong> — the physical or logical links that carry
+messages between machines, and that lose them, duplicate them, and
+reorder them, because that is simply what real networks do. The goal is
+the same as everywhere else in riktig: state the honest general fact,
+prove it, and let real protocols (TCP’s retransmission logic, QUIC’s
+per-stream reliability) inherit it instead of re-deriving it by hand
+each time.</p>
+</blockquote>
+<h2 id="the-modeling-decision-that-shapes-everything-downstream">The
+modeling decision that shapes everything downstream</h2>
+<p>Ask an engineer to describe a lossy channel and they’ll usually reach
+for a number: “packet loss rate is 2%.” That’s the right tool for
+<em>capacity planning</em> — but it is the wrong tool for a
+<em>correctness proof</em>. A probability doesn’t tell you what your
+protocol must do when the 2% case actually happens; it just tells you
+how often to worry about it. Worse, reasoning about probabilities forces
+you to pick a probability <em>space</em> — independence assumptions,
+distributions — baggage a correctness argument shouldn’t need to
+carry.</p>
+<p>riktig makes a different choice, and it’s the choice this whole
+thread is built on: <strong>a channel is a relation between what was
+sent and what arrived.</strong> Not a number, not a distribution — a set
+of possible outcomes. “This channel might deliver the messages
+untouched, or drop some, or duplicate some, or all three” is captured
+completely by <em>which pairs (sent, received) the relation
+contains</em> — no probabilities anywhere.</p>
+<p>This buys two things, and they’re the two things a communications
+engineer actually wants:</p>
+<ul>
+<li><strong>Safety proofs become unconditional.</strong> “The
+application never sees a corrupted or duplicated message” can be proved
+for <em>every</em> possible behavior in the relation — you don’t need to
+know how <em>likely</em> bad behavior is, only that your protocol
+handles it when it occurs.</li>
+<li><strong>Liveness proofs get an honest hypothesis.</strong>
+“Everything sent is eventually delivered” genuinely cannot be
+unconditional — a channel that eats every packet forever really does
+deliver nothing. So liveness proofs state exactly the assumption they
+need (a <em>fairness</em> condition — future posts), and probability, if
+it ever shows up again, only enters to <em>justify</em> that the
+fairness assumption holds in practice. It never touches the correctness
+argument itself.</li>
+</ul>
+<h2 id="the-fault-classes-as-relations-on-lists">The fault classes, as
+relations on lists</h2>
+<p>A conversation is a list of messages. In <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>
+every fault class is an inductively-defined relation between the sent
+list and the received list — literally a specification of which
+transformations the channel is allowed to perform.</p>
+<p><strong>Perfect</strong> — the trivial case, everything arrives
+exactly as sent:</p>
+<pre class="coq"><code>Definition perfect s r : Prop := r = s.</code></pre>
+<p><strong>Lossy</strong> — the received list is a <em>subsequence</em>
+of the sent one (elements kept in order, some dropped):</p>
+<pre class="coq"><code>Inductive subseq : list M -&gt; list M -&gt; Prop :=
+  | subseq_nil  : subseq [] []
+  | subseq_keep : forall x r s, subseq r s -&gt; subseq (x :: r) (x :: s)
+  | subseq_drop : forall x r s, subseq r s -&gt; subseq r (x :: s).
+
+Definition lossy s r : Prop := subseq r s.</code></pre>
+<p>Read the three constructors as the three things a lossy wire can do
+at each step: deliver nothing more (<code>nil</code>), deliver the next
+message and continue (<code>keep</code>), or silently swallow the next
+message and continue (<code>drop</code>). That’s a complete description
+of “arbitrary packet loss, order preserved” — no counting, no
+probability, just which sequences of keep/drop are
+<em>possible</em>.</p>
+<p><strong>Duplicating</strong> — every received element traces back, in
+order, to a sent element, but a sent element may show up more than
+once:</p>
+<pre class="coq"><code>Inductive dup : list M -&gt; list M -&gt; Prop :=
+  | dup_nil     : dup [] []
+  | dup_keep    : forall x s r, dup s r -&gt; dup (x :: s) (x :: r)
+  | dup_stutter : forall x s r, dup s (x :: r) -&gt; dup s (x :: x :: r).</code></pre>
+<p><strong>Lossy and duplicating together</strong> — the wire a real
+retransmission protocol actually faces, combining <code>drop</code> and
+<code>stutter</code>:</p>
+<pre class="coq"><code>Inductive lossy_dup : list M -&gt; list M -&gt; Prop :=
+  | lossy_dup_nil     : lossy_dup [] []
+  | lossy_dup_keep    : forall x s r, lossy_dup s r -&gt; lossy_dup (x :: s) (x :: r)
+  | lossy_dup_drop    : forall x s r, lossy_dup s r -&gt; lossy_dup (x :: s) r
+  | lossy_dup_stutter : forall x s r, lossy_dup s (x :: r) -&gt; lossy_dup s (x :: x :: r).</code></pre>
+<p><strong>Reordering</strong> — no need to invent anything; this is
+exactly the standard library’s <code>Permutation</code>, wearing the
+domain’s name:</p>
+<pre class="coq"><code>Definition reorder s r : Prop := Permutation s r.</code></pre>
+<h2 id="a-lattice-and-the-arrows-that-are-genuinely-missing">A lattice,
+and the arrows that are genuinely missing</h2>
+<p>These classes aren’t independent — they nest. Every perfect run is
+also a lossy run (drop nothing); every lossy run and every duplicating
+run is also a lossy-and-duplicating run. The file proves the whole
+inclusion lattice as small lemmas — <code>perfect_lossy</code>,
+<code>lossy_lossy_dup</code>, <code>dup_lossy_dup</code> — each a short
+induction, each doing exactly what its name says.</p>
+<p>The more interesting proofs are the ones showing an arrow is
+<strong>genuinely absent</strong> — that the lattice isn’t secretly a
+total order in disguise. Reordering is not a special case of
+losing-and-duplicating:</p>
+<pre class="coq"><code>Example reorder_not_lossy_dup : ~ lossy_dup [0; 1] [1; 0].</code></pre>
+<p>Sending <code>[0; 1]</code> and receiving <code>[1; 0]</code> swaps
+their order — and a wire that can only drop and duplicate, never
+reorder, cannot produce a swap: once <code>0</code> is gone (dropped),
+it’s gone for good; <code>stutter</code> can only repeat something
+already delivered, never conjure <code>0</code> back after
+<code>1</code>. The proof is a finite, mechanical case analysis (every
+branch of <code>lossy_dup</code>’s definition either doesn’t apply or
+leads to a contradiction), but the <em>statement</em> is the valuable
+part: it confirms <code>lossy_dup</code> really is a distinct, weaker
+notion than <code>reorder</code>, not an accident of how the lemmas
+happened to get proved.</p>
+<h2 id="what-this-sets-up">What this sets up</h2>
+<p>Every one of these relations is now available as a hypothesis. A
+protocol’s safety theorem will read almost exactly like “for any
+<code>wire</code> such that
+<code>lossy_dup (sender's packets) wire</code>, the receiver never
+delivers anything corrupted” — a single <code>forall</code> over every
+possible bad thing the wire could do, proved once, holding forever. That
+is genuinely the whole plan for the rest of this thread: define what a
+channel is allowed to do, and let every protocol’s correctness proof be
+a statement about <em>all</em> the things in that set at once.</p>
+<p><em>Next: protocol endpoints as state machines, composed through a
+channel relation into one end-to-end trace — and then the first real
+payoff, the alternating-bit protocol’s safety theorem.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>
+(the fault-class relations, the lattice, the strictness
+counterexamples).</p>
+</main>
+</body>
+</html>
