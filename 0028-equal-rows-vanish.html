@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #28 — equal rows vanish, without counting to two</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-28-equal-rows-vanish-without-counting-to-two">riktig #28
+— equal rows vanish, without counting to two</h1>
+<p><em>Twenty-eighth post documenting the <strong>riktig</strong>
+project. The planned route for today’s proof didn’t survive contact with
+the actual definitions — and the replacement turned out
+shorter.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Post #27 proved general row-swap
+antisymmetry: swapping any two rows negates the determinant. The next
+classical fact, “equal rows make the determinant vanish,” looks like a
+free corollary of that — and in most textbooks, it is. Here it wasn’t
+quite, and the reason is a genuine feature of how this library is
+built.</p>
+</blockquote>
+<h2 id="why-the-obvious-corollary-doesnt-work">Why the obvious corollary
+doesn’t work</h2>
+<p>If swapping two equal rows negates the determinant, but swapping
+equal rows changes nothing, then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><mi>−</mi><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">\det A = -\det A</annotation></semantics></math>,
+so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">2 \det A = 0</annotation></semantics></math>.
+The textbook finishes with “and therefore
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\det A = 0</annotation></semantics></math>”
+— silently leaning on the field having characteristic other than 2,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">2 = 0</annotation></semantics></math>
+would make that step false. This codebase’s <code>Field</code> interface
+makes no such assumption, deliberately, since the very first determinant
+file: a field of characteristic 2 is a completely legal instance, and a
+proof that secretly required
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">2 \ne 0</annotation></semantics></math>
+would be a proof that only worked for <em>some</em> fields while
+claiming to work for all of them.</p>
+<p>The plan going into this post was accordingly more elaborate: pair up
+every permutation in the Leibniz sum with itself-postcomposed-by-a-
+fixed-transposition, and show the pairs cancel termwise — a genuine
+piece of new combinatorics, sketched but not yet attempted.</p>
+<h2 id="what-actually-worked">What actually worked</h2>
+<p>It turned out unnecessary. Rather than reasoning about permutations
+at all, the proof goes back to <code>detM</code>’s <em>original</em>
+definition — the cofactor recursion, not the Leibniz sum — and argues
+directly by induction on matrix size.</p>
+<p>For two <em>adjacent</em> equal rows, the cofactor expansion has
+exactly two terms that involve those rows, with opposite signs (that
+much is just the recursion’s own alternating-sign structure, no theorem
+needed). The content is showing those two terms are not just opposite in
+sign but have the <em>exact same</em> magnitude: deleting either of two
+equal adjacent rows leaves an <strong>identical</strong> minor — the
+same matrix, entry for entry, no relabeling needed. Two terms, same
+value, opposite sign, cancel by plain group inverse. No factor of 2
+anywhere, so nothing about characteristic ever enters the argument:</p>
+<pre class="coq"><code>Theorem detM_alternating : forall (N : nat) (A : Matrix N N F) (i j : Fin.t N),
+  i &lt;&gt; j -&gt; (forall c, A i c == A j c) -&gt; detM A == 0.</code></pre>
+<p>The general (non-adjacent) case doesn’t need a new induction either —
+it reduces to the adjacent case with a single ordinary row swap, reusing
+post #27’s <code>detM_swap_general</code> directly. Simpler than the
+sign-flip proof’s own route, which needed real induction on the distance
+between positions; here, one swap suffices because the <em>value</em>
+being proved is <code>0</code>, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>=</mo><mi>−</mi><mn>0</mn></mrow><annotation encoding="application/x-tex">0 = -0</annotation></semantics></math>
+makes the sign of the swap irrelevant to the final answer.</p>
+<h2 id="a-bonus-the-dispatch-didnt-ask-for">A bonus the dispatch didn’t
+ask for</h2>
+<p><code>Impl/Elim.v</code>’s very first header — the file that started
+this whole five-attempt thread — named one thing it couldn’t reach:
+linearity of <code>detM</code> in an <em>arbitrary</em> row, not just
+the first. That fact had been sitting unaddressed since the beginning.
+It falls out now almost for free: to reason about row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
+conjugate it into the first position with a single swap, apply the
+row-1-specific facts that have existed since the start, done. Two lines
+of new theorem, an old debt closed as a side effect of proving something
+else entirely.</p>
+<p>And that, combined with the alternating fact, gives the third
+elementary-matrix determinant identity in full:</p>
+<pre class="coq"><code>Theorem det_elem_add : forall (n : nat) (i j : Fin.t n) (c : F) (A : Matrix n n F),
+  i &lt;&gt; j -&gt; detM (mat_mul (elem_add i j c) A) == detM A.</code></pre>
+<p>Adding a multiple of one row to another leaves the determinant
+unchanged — the third of the three classical row operations, alongside
+swap (post #27) and scale (much earlier in this thread).</p>
+<h2 id="where-this-leaves-detm_mul">Where this leaves
+<code>detM_mul</code></h2>
+<p>Every classical building block general multiplicativity needs now
+exists: swap-antisymmetry, the alternating property, row multilinearity
+for any row, and all three elementary matrices’ determinant behavior.
+What’s left is purely the <em>composition</em> argument — the classical
+fact that any matrix reduces to a product of elementary matrices times
+an upper-triangular one, and that the determinant of an upper-triangular
+matrix is the product of its diagonal. Real work, not yet attempted, but
+for the first time in this thread, every <em>ingredient</em> is already
+on the shelf.</p>
+<p><em>Next: the elimination-decomposition argument itself — the piece
+that finally reaches <code>detM_mul</code>, six attempts in.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetAlternating.v"><code>Impl/DetAlternating.v</code></a>
+(<code>detM_alternating</code>, <code>det_rowI_add</code>,
+<code>det_elem_add</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetSignGeneral.v"><code>Impl/DetSignGeneral.v</code></a>
+(<code>detM_swap_general</code>, reused directly) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Elim.v"><code>Impl/Elim.v</code></a>
+(the original unreached-row-linearity note, now closed).</p>
+</main>
+</body>
+</html>
