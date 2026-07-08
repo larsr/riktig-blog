@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #24 — multiplication is differentiable</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-24-multiplication-is-differentiable">riktig #24 —
+multiplication is differentiable</h1>
+<p><em>Twenty-fourth post documenting the <strong>riktig</strong>
+project. A confirmation, not a discovery: a fact the analysis roadmap
+assumed was cheap turns out to need one genuine piece of new
+mathematics, cleanly separated from the bookkeeping around it.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Every transformer layer that multiplies an
+input by a weight matrix is, mathematically, a bilinear map applied to a
+pair — the input, and the weights, treated as two arguments to the same
+multiplication. <code>docs/ANALYSIS-ROADMAP.md</code>’s Stage 6½ flagged
+this as something that “should already work for free,” with the caveat
+“worth a concrete worked example to confirm rather than assume.” Today’s
+post is that confirmation.</p>
+</blockquote>
+<h2 id="the-claim">The claim</h2>
+<p>If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+is a bilinear map — linear in each argument separately, like matrix
+multiplication or scalar-times-vector — then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>,
+viewed as a function of <em>both</em> arguments together (a function on
+the product space
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>×</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">U \times V</annotation></semantics></math>),
+is differentiable everywhere, with the familiar product-rule
+derivative:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>,</mo><msub><mi>v</mi><mn>0</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>B</mi><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><msub><mi>v</mi><mn>0</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">D B(u_0, v_0)(du, dv) = B(du, v_0) + B(u_0, dv)</annotation></semantics></math></p>
+<p>Every calculus student has seen this for ordinary multiplication
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>x</mi><mi>y</mi></mrow><annotation encoding="application/x-tex">f(x,y) = xy</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mi>f</mi><mo>=</mo><mi>y</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>x</mi><mo>+</mo><mi>x</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>y</mi></mrow><annotation encoding="application/x-tex">Df = y\,dx + x\,dy</annotation></semantics></math>).
+The content of today’s theorem is that it holds for <em>any</em>
+bilinear map into <em>any</em> vector space, proved once,
+generically:</p>
+<pre class="coq"><code>Theorem bilinear_is_deriv : bm_bounded B -&gt;
+  is_deriv (fun p : U * V =&gt; B (fst p) (snd p)) (u0, v0) bilinear_deriv_lm.</code></pre>
+<p>Matmul is the instance that matters for transformers — multiply an
+activation by a weight matrix, and you’re applying <code>mat_mul</code>
+as a bilinear map. Get the general theorem once, and every “multiply
+input by weights” layer inherits its derivative for free, no separate
+proof needed per layer.</p>
+<h2 id="what-had-to-be-built-just-to-state-it">What had to be built just
+to <em>state</em> it</h2>
+<p>Two gaps, found rather than assumed, before any differentiation could
+happen at all:</p>
+<p><strong>No norm on a product space existed.</strong>
+<code>is_deriv</code> needs its domain to carry a
+<code>NormedSpace</code>. The domain here is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>×</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">U \times V</annotation></semantics></math>
+— a product — and nothing in the tree said how to measure the size of a
+pair. The fix, <code>Impl/ProdVS.v</code>’s new
+<code>Prod_NormedSpace</code>, uses the sum norm
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mo>:=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|(u,v)\| := \|u\| + \|v\|</annotation></semantics></math>,
+chosen deliberately over the more common max norm because it makes every
+downstream inequality a one-line <code>add_interchange</code> rewrite
+instead of a case split on which coordinate is larger.</p>
+<p><strong>No boundedness notion existed for a
+<code>BilinearMap</code>.</strong> <code>LinearMap</code> already had
+one (<code>lm_bounded</code>, living in <code>Theory/Continuity.v</code>
+as a <em>hypothesis</em> some theorems assume, not a field baked into
+the record — <code>Interface/LinearMap.v</code> stays norm-free by
+design). The bilinear analogue,
+<code>bm_bounded B := exists C, forall u v, ‖B u v‖ &lt;= C * ‖u‖ * ‖v‖</code>,
+follows the identical pattern: a hypothesis
+<code>bilinear_is_deriv</code> takes, not a new field forced onto every
+bilinear map whether or not anyone needs an estimate.</p>
+<h2 id="the-one-genuine-piece-of-analysis">The one genuine piece of
+analysis</h2>
+<p>Expand
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo>,</mo><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">B(u_0+du,\,v_0+dv)</annotation></semantics></math>
+by bilinearity and four terms fall out. Three of them assemble into
+exactly the claimed value plus the claimed linear approximation; the
+fourth — the <strong>cross term</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">B(du, dv)</annotation></semantics></math>
+— is what’s left over, and it doesn’t cancel:</p>
+<pre class="coq"><code>Lemma bilinear_remainder_eq : forall (du : U) (dv : V),
+  B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)) == B du dv.</code></pre>
+<p>This is the one place bilinearity is a genuinely harder hypothesis
+than plain linearity. Post #12’s chain rule (linear maps compose,
+remainders add) never had to fight this — a sum of two small things is
+small, full stop, zero-cost bookkeeping. But
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">B(du,dv)</annotation></semantics></math>
+is bounded by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mi>⋅</mi><mo stretchy="false" form="postfix">∥</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mi>⋅</mi><mo stretchy="false" form="postfix">∥</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">C \cdot
+\|du\| \cdot \|dv\|</annotation></semantics></math> — the
+<em>product</em> of two small things, which is quadratic in the combined
+size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|h\| = \|du\|+\|dv\|</annotation></semantics></math>,
+not linear. A quadratic bound isn’t automatically
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">o(\|h\|)</annotation></semantics></math>;
+it takes a genuine squeeze to make it one, in the same spirit as post
+#13’s Cauchy-Schwarz epsilon-padding: choose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>:=</mo><mi>ε</mi><mi>/</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>C</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\delta := \varepsilon / (1+C)</annotation></semantics></math>,
+and for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>δ</mi></mrow><annotation encoding="application/x-tex">\|h\| &lt; \delta</annotation></semantics></math>
+the bound
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">C\|h\|^2</annotation></semantics></math>
+collapses to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\varepsilon\|h\|</annotation></semantics></math>
+exactly. Algebra gets you three of the four terms for free; analysis
+earns the fourth.</p>
+<h2 id="whats-confirmed-and-whats-still-owed">What’s confirmed, and
+what’s still owed</h2>
+<p>The theorem is unconditional given <code>bm_bounded</code> — no
+missing cases, no deferred sorry. What’s <em>not</em> done yet,
+honestly: nothing in the tree currently packages <code>mat_mul</code>
+itself as a <code>BilinearMap</code> witness, so matmul’s
+differentiability — the whole point — is a corollary one step away
+rather than a theorem already stated. That’s a small, mechanical gap
+(build the witness, show it’s bounded — true for any finite-dimensional
+bilinear map, itself a fact not yet formalized) and the natural next
+step once Stage B moves to matmul specifically. Today bought the hard
+part: the general theorem, proved once, that every future
+weight-multiplication layer will just inherit.</p>
+<p><em>Next: either matmul’s own <code>BilinearMap</code> witness,
+closing this loop, or back to the determinant — a fourth attempt has the
+row-swap gap narrowed to a single classical fact (sign flips under
+transposition), closer than it’s been all roadmap.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/BilinearDeriv.v"><code>Theory/BilinearDeriv.v</code></a>
+(<code>bilinear_is_deriv</code>, <code>bm_bounded</code>,
+<code>bilinear_remainder_eq</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ProdVS.v"><code>Impl/ProdVS.v</code></a>
+(<code>Prod_NormedSpace</code>, the sum norm) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/ANALYSIS-ROADMAP.md"><code>docs/ANALYSIS-ROADMAP.md</code></a>
+(Stage 6½, “multi-argument functions should already work for free”).</p>
+</main>
+</body>
+</html>
