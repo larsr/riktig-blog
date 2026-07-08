@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #13 — Cauchy–Schwarz without case splits</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-13-cauchyschwarz-without-case-splits">riktig #13 —
+Cauchy–Schwarz without case splits</h1>
+<p><em>Thirteenth post documenting the <strong>riktig</strong> project;
+the linear-algebra course thread continues alongside the opening of a
+new one: channels. Proofs shown blackboard-style and as they live in the
+repository.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. This wave adds the geometry an inner
+product buys you — Cauchy–Schwarz, projections — a determinant you can
+compute, and the first stone of an entirely different building:
+fault-tolerant channels for telecom protocols. Three unrelated-looking
+topics, one discipline: define the honest general statement, then prove
+it with only the tools the definition allows.</p>
+</blockquote>
+<h2 id="positivity-is-a-choice-not-a-given">Positivity is a choice, not
+a given</h2>
+<p><a href="0008-the-shopping-list-for-analysis.html">Post #8</a> built
+<code>InnerProduct</code> <em>without</em> assuming
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle u,u\rangle \ge 0</annotation></semantics></math>
+— deliberately, because Minkowski space-time’s inner product is
+indefinite, and we want that as a legal instance later. Today’s addition
+is the missing piece as an opt-in mixin (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/PosInner.v"><code>Interface/PosInner.v</code></a>):</p>
+<pre class="coq"><code>Class PosInner (F V : Type) ... := {
+  pi_nonneg   : forall u : V, 0 &lt;= ⟨ u , u ⟩;
+  pi_definite : forall u : V, ⟨ u , u ⟩ == 0 -&gt; u == 0
+}.</code></pre>
+<p>Euclidean geometry is <code>InnerProduct</code> <em>plus</em>
+<code>PosInner</code>; Minkowski geometry is <code>InnerProduct</code>
+alone. One flag, two geometries, no duplicated machinery.</p>
+<h2 id="cauchyschwarz-the-theorem-and-the-trap">Cauchy–Schwarz — the
+theorem, and the trap</h2>
+<p><strong>Blackboard, the fast way.</strong> For any
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u, v</annotation></semantics></math>
+and scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>−</mo><mi>t</mi><mi>v</mi><mo>,</mo><mi>u</mi><mo>−</mo><mi>t</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>−</mo><mn>2</mn><mi>t</mi><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><msup><mi>t</mi><mn>2</mn></msup><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">0 \le \langle u - tv, u - tv\rangle = \langle u,u\rangle -
+2t\langle u,v\rangle + t^2\langle v,v\rangle.</annotation></semantics></math>
+Minimize over
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+by setting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mi>/</mi><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">t = \langle u,v\rangle / \langle v,v\rangle</annotation></semantics></math>
+and simplify to get
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">⟩</mo><mn>2</mn></msup><mo>≤</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle^2 \le \langle u,u\rangle\langle v,v\rangle</annotation></semantics></math>.
+∎</p>
+<p>Every textbook proof does exactly this — and every textbook proof
+<strong>divides by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle v,v\rangle</annotation></semantics></math></strong>.
+If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v = 0</annotation></semantics></math>,
+that division is nonsense, so the textbook adds a throat-clear: <em>“if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v \ne 0</annotation></semantics></math>…”</em>
+handled as a trivial separate case <em>“…and if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v=0</annotation></semantics></math>
+both sides are zero.”</em> Two cases, decided by asking “is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle v,v\rangle</annotation></semantics></math>
+zero?”</p>
+<p>Here is the trap for us: <strong>that question is not
+decidable.</strong> Our scalars are an abstract ordered field — think
+computable reals — and
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">x = 0</annotation></semantics></math>
+or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">x \ne 0</annotation></semantics></math>”
+is exactly the law of excluded middle applied to something we cannot
+compute. A proof that case-splits on it isn’t a Coq proof of the general
+theorem; it’s a proof with an invisible extra hypothesis.</p>
+<h2 id="the-constructive-route-dont-ask-pad-instead">The constructive
+route: don’t ask, pad instead</h2>
+<p><strong>The idea.</strong> Never test
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle v,v\rangle</annotation></semantics></math>
+for zero. Instead prove a <em>slightly weaker</em> statement for every
+positive slack
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>,
+then let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo>→</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\varepsilon \to 0</annotation></semantics></math>
+do the work that division was doing.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">⟩</mo><mn>2</mn></msup><mo>≤</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mi>ε</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mspace width="2.0em"></mspace><mrow><mtext mathvariant="normal">for every </mtext><mspace width="0.333em"></mspace></mrow><mi>ε</mi><mo>&gt;</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">\langle u,v\rangle^2 \le \big(\langle v,v\rangle + \varepsilon\big)\langle u,u\rangle
+\qquad \text{for every } \varepsilon &gt; 0.</annotation></semantics></math></p>
+<p>This one is provable with a <em>positive</em> divisor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>s</mi><mi>ε</mi></msub><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mi>ε</mi></mrow><annotation encoding="application/x-tex">s_\varepsilon = \langle v,v\rangle + \varepsilon</annotation></semantics></math>,
+always safely positive (<code>add_nonneg_pos</code>, using only
+<code>pi_nonneg</code> — no test needed). Substitute
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mi>/</mi><msub><mi>s</mi><mi>ε</mi></msub></mrow><annotation encoding="application/x-tex">t = \langle u,v\rangle / s_\varepsilon</annotation></semantics></math>
+into the same blackboard expansion, multiply through by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>s</mi><mi>ε</mi></msub><annotation encoding="application/x-tex">s_\varepsilon</annotation></semantics></math>,
+and it falls out with no case split. In the repository, this padded
+version is its own named lemma (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InnerGeometry.v"><code>Theory/InnerGeometry.v</code></a>):</p>
+<pre class="coq"><code>Lemma cs_padded : forall (u v : V) (eps : F), 0 &lt; eps -&gt;
+  ⟨u,v⟩ * ⟨u,v⟩ &lt;= (norm2 v + eps) * norm2 u.</code></pre>
+<p>Then the general theorem is one squeeze away:</p>
+<pre class="coq"><code>Theorem cauchy_schwarz : forall u v : V,
+  ⟨ u , v ⟩ * ⟨ u , v ⟩ &lt;= norm2 u * norm2 v.</code></pre>
+<p>using a new, reusable order lemma — <em>“below
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>+</mo><mi>c</mi><mi>ε</mi></mrow><annotation encoding="application/x-tex">b + c\varepsilon</annotation></semantics></math>
+for every positive
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>
+implies below
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>”</em>
+— proved once in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Order.v"><code>Theory/Order.v</code></a>:</p>
+<pre class="coq"><code>le_of_le_add_all_eps_mul :
+  0 &lt;= c -&gt; (forall eps, 0 &lt; eps -&gt; a &lt;= b + eps * c) -&gt; a &lt;= b</code></pre>
+<p>This is the <em>same</em> squeeze technique post #11 used for limit
+uniqueness and post #12 used for the chain rule — Cauchy–Schwarz turns
+out to be an analysis theorem in algebra’s clothing, and the tree’s
+shared toolbox proves it for free.</p>
+<p><strong>The payoff:</strong> <code>cauchy_schwarz</code> in the
+repository carries <em>no side condition</em>. Not
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v \ne 0</annotation></semantics></math>”
+as a hypothesis, not a disjunction to case on afterward. Read the type
+and it is exactly the sentence from the blackboard — the constructive
+discipline cost real proof effort, and bought back the clean statement
+everyone actually wants to quote.</p>
+<h2 id="what-it-buys-projection">What it buys: projection</h2>
+<p>With Cauchy–Schwarz-grade machinery in hand, projecting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+onto a nonzero
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+—
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">j</mi></mrow><mi>v</mi></msub><mi>u</mi><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow></mfrac></mstyle><mi>v</mi></mrow><annotation encoding="application/x-tex">\mathrm{proj}_v u = \dfrac{\langle u,v\rangle}{\langle v,v\rangle}v</annotation></semantics></math>
+— comes with its defining property for free:</p>
+<pre class="coq"><code>Theorem proj_orthogonal : orthogonal (u + - proj v u) v.
+Theorem best_approx : forall c, norm2 (u + - proj v u) &lt;= norm2 (u + - (c *: v)).</code></pre>
+<p><em>The projection is the closest point on the line, and the residual
+is perpendicular to it</em> — the Gram–Schmidt engine, one theorem short
+of orthogonal bases (queued: the loop over <code>Fin n</code> that
+iterates this per basis vector).</p>
+<h2 id="also-in-this-wave">Also in this wave</h2>
+<ul>
+<li><strong>A determinant you can compute</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>):
+first-column Laplace expansion over <code>Matrix n n F</code>, with
+<code>det_id</code> and linearity in that column proved.
+Multiplicativity waits for elementary matrices (soon); the
+<em>coordinate-free</em> determinant — “the scalar by which a map scales
+any top alternating form” — is a distinct, still-queued theorem that
+will <em>use</em> this file as its computation lemma, not the other way
+around.</li>
+<li><strong>Trace, basis-independent</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>):
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{tr}(AB) = \mathrm{tr}(BA)</annotation></semantics></math>
+by swapping a double sum, and change of basis as conjugation — so trace,
+defined via <em>some</em> basis, is proved not to care <em>which</em>
+one.</li>
+<li><strong>A new building begins</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>):
+the telecom leg of riktig. A faulty channel is modeled as a
+<em>relation</em> between what was sent and what arrived — no
+probabilities, just possibility. <code>lossy</code> (dropped packets, as
+a subsequence relation), <code>dup</code> (duplication),
+<code>lossy_dup</code> (both — the wire a real retransmission protocol
+faces), <code>reorder</code> (via the standard library’s
+<code>Permutation</code>). The file proves these form a lattice —
+perfect ⊂ lossy ⊂ lossy+dup, perfect ⊂ reorder — and, just as
+importantly, proves the missing arrows really are missing:
+<code>~ lossy_dup [0;1] [1;0]</code> (a wire that only drops and
+duplicates can never reorder). Next: protocol endpoints as Mealy
+machines, then the alternating-bit protocol’s safety theorem — proved
+<em>unconditionally</em>, over every possible sequence of losses.</li>
+</ul>
+<p><em>Next: orthogonal/self-adjoint endomorphisms, Gram–Schmidt as a
+loop, and the groundwork for T2’s protocol machines.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/PosInner.v"><code>Interface/PosInner.v</code></a>
+/ <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InnerGeometry.v"><code>Theory/InnerGeometry.v</code></a>
+(Cauchy–Schwarz, Pythagoras, projection) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>
+(Laplace expansion) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>
+(tr(AB)=tr(BA), basis independence) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>
+(fault classes as trace relations).</p>
+</main>
+</body>
+</html>
