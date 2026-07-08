@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #18 — The shape of the library</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-18-the-shape-of-the-library">riktig #18 — The shape of
+the library</h1>
+<p><em>Eighteenth post documenting the <strong>riktig</strong> project.
+Not a new proof this time — a look at </em>how the proofs are
+organized<em>, and an honest account of where that organization has held
+and where it has slipped.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Every post so far has been about a
+theorem. This one is about the <em>filing system</em> the theorems live
+in — because a proof assistant repository isn’t just a pile of true
+statements; it’s supposed to be organized so that a change in one place
+only obliges you to revisit a few others. That promise depends entirely
+on keeping three different <em>kinds</em> of content apart. This post
+explains the separation, shows where it earns its keep, and — because
+pretending everything is tidy would defeat the point of the project —
+reports honestly on where seventeen posts’ worth of fast, parallel work
+let it slip.</p>
+</blockquote>
+<h2 id="three-questions-three-directories">Three questions, three
+directories</h2>
+<p>Every piece of mathematics in this library answers one of three
+questions, and the directory it lives in <em>is</em> the answer:</p>
+<ul>
+<li><strong><code>Interface/</code></strong> — <em>what must be
+true?</em> A typeclass or record stating operations and axioms. Nothing
+here is proved; it’s promised.
+<code>Class Monoid T := { mon_assoc : ...; mon_idl : ...; ... }</code>
+is a contract, not a theorem.</li>
+<li><strong><code>Theory/</code></strong> — <em>what follows, for
+anything that keeps the promise?</em> Lemmas proved generically —
+<code>Context {G}</code>{Group G}` — using only the Interface’s axioms.
+A Theory file never invents a new concrete type; it only ever says
+“given <em>any</em> group, here is a fact about it.”</li>
+<li><strong><code>Impl/</code></strong> — <em>does this specific thing
+keep the promise?</em> A concrete carrier, concrete operations, and a
+proof that the Interface’s axioms hold for them. <code>Z</code> is a
+<code>Ring</code>; <code>Q</code> is a <code>Field</code>;
+<code>Fin n -&gt; F</code> is a <code>VectorSpace</code>.</li>
+</ul>
+<p><code>docs/DESIGN.md</code> states the rule in one line: <strong>a
+file does exactly one of these jobs.</strong> The payoff is real and
+it’s the whole reason to bother: prove <code>cancel_l</code> once,
+generically, for <code>Group</code>, and it is available —
+unconditionally, no re-proving — for integers, rationals, complex
+numbers, linear maps, matrices, and everything else that ever becomes a
+group. Post #1 built this idea from nothing; by post #9 it was letting
+whole theorems fall out “by pure instance search.”</p>
+<h2 id="where-it-holds-cleanly">Where it holds — cleanly</h2>
+<p>Go back to the beginning and it’s exactly as advertised.
+<code>Interface/Monoid.v</code> through
+<code>Interface/VectorSpace.v</code> contain nothing but classes,
+axioms, and <code>Hint Mode</code> declarations.
+<code>Theory/Group.v</code>’s <code>cancel_l</code>,
+<code>Theory/InnerProduct.v</code>’s bilinear-expansion lemmas,
+<code>Theory/Order.v</code>’s whole ε-argument toolbox — all of it
+proved generically, none of it tied to a concrete carrier.
+<code>Impl/Zr.v</code>, <code>Impl/Qf.v</code>,
+<code>Impl/Complex.v</code>’s <code>C F</code> instance — concrete
+types, discharging axioms, nothing more. The core algebra tower — the
+part of the library doing the most foundational work — keeps the
+discipline all the way through.</p>
+<h2 id="where-it-slipped">Where it slipped</h2>
+<p>Here is the honest part. A sweep through every file in
+<code>Interface/</code>, <code>Theory/</code>, and <code>Impl/</code> —
+78 files, checked one by one against what its directory promises —
+turned up real drift, concentrated almost entirely in the faster-moving
+linear-algebra wave (posts #9 through #17), exactly where you’d expect
+discipline to erode under the pressure of many parallel changes landing
+quickly.</p>
+<p><strong>The “one accepted exception” quietly became several
+unacknowledged ones.</strong> <code>Interface/LinearMap.v</code>’s
+header states, in so many words: <em>“the Theory.Group import is this
+file’s one accepted exception.”</em> That sentence excuses an
+<em>import</em>. It says nothing about the fact that the file goes on to
+prove <code>lm_zero</code>, <code>lm_neg</code>, and to define
+<code>lm_id</code>, <code>lm_comp</code>, <code>lm_const0</code> — real
+Theory-shaped content, sitting in <code>Interface/</code>. And it’s not
+alone: <code>Interface/Basis.v</code> proves four <code>lincomb</code>
+lemmas; <code>Interface/Bilinear.v</code> proves the zero-bilinear-map
+laws and — more than that — builds a <strong>concrete instance</strong>
+(<code>bm_zero_map</code>) inside a file that is supposed to contain
+nothing but promises. <code>Interface/Integral.v</code> proves
+<code>int_empty</code>, <code>int_rev</code>, <code>int_zero_fn</code> —
+and doesn’t even have a header disclaimer. Four files, one drift
+pattern, only one of them honest about it.</p>
+<p><strong>A missing spec forced generality into the wrong
+directory.</strong> There is no <code>Interface/Determinant.v</code>.
+<code>detM</code> (the Laplace-expansion formula in
+<code>Impl/Det.v</code>) was never given an abstract contract to satisfy
+— it was simply <em>defined</em>, and then proved to have properties.
+That’s fine in isolation, but it meant <code>Impl/Det.v</code> had
+nowhere to put general facts like “the determinant is linear in column
+1” except inside itself, and <code>Impl/Elim.v</code> inherited the same
+problem at larger scale: more than half of that 1,266-line file —
+<code>unskip</code>, the row-surgery lemmas, “swapping any two rows
+negates the determinant” — is genuinely general reasoning about
+<em>any</em> matrix, sitting in <code>Impl/</code> only because there
+was no <code>Theory/</code> file naturally waiting to receive it.</p>
+<p><strong>Two files import in the wrong direction, and cite each
+other.</strong> <code>docs/DESIGN.md</code> states dependencies point
+one way: implementations import theories, theories import structures,
+never backwards. <code>Theory/Hom.v</code> and
+<code>Theory/VSIso.v</code> both import <code>Impl/</code> modules
+directly — and each one’s comment justifies it by pointing at the other
+file doing the same thing. Two files normalizing an exception between
+themselves is a quieter, more insidious kind of drift than one
+undisclosed lemma: it looks like precedent, which is exactly what makes
+it easy to not notice.</p>
+<p><strong>A few files are honestly ambiguous, not really
+wrong.</strong> <code>Theory/BigOp.v</code> defines the
+<code>bigop</code>/<code>bigopF</code> summation <em>algorithm</em> — a
+<code>Fixpoint</code>, not a derived theorem. So does
+<code>Theory/GramSchmidt.v</code>’s orthogonalization procedure.
+Strictly, “Theory only derives consequences” says these don’t belong
+there. But there’s no natural Interface for “summation” to satisfy, and
+no natural Impl carrier either — the algorithm <em>is</em> the
+mathematical content being studied, generic over any <code>Monoid</code>
+or <code>PosInner</code> space. This might not be a bug so much as a
+fourth pattern the original three-way split never named: <em>a Theory
+file may define the canonical generic construction for the thing it
+studies.</em> Worth writing down as a rule rather than quietly treating
+as an exception.</p>
+<h2 id="what-isnt-drift-channel-and-lambda">What isn’t drift: Channel/
+and Lambda/</h2>
+<p>One more finding, and it’s reassuring rather than concerning:
+<code>theories/Channel/</code> and <code>theories/Lambda/</code> don’t
+follow the Interface/Theory/Impl split <em>at all</em> — and that’s on
+purpose, correctly. <code>Channel/ABP.v</code> doesn’t have a “spec” for
+the alternating-bit protocol that some other Impl might satisfy
+differently; there is exactly one alternating-bit protocol, and the file
+studies it directly, mixing its data (<code>Record Packet</code>), its
+algorithm (<code>Fixpoint deliver</code>), and its theorems in one
+place. The three-way split earns its keep precisely when many different
+things can satisfy one abstract contract — vector spaces,
+protocols-in-general. It has nothing to offer when the object of study
+is a single concrete thing you’re exploring for its own sake. The audit
+checked: every Channel and Lambda file keeps its own spec-like,
+algorithm-like, and theorem-like content in clearly ordered — usually
+explicitly numbered — sections internally. Different discipline, applied
+consistently, not absence of discipline.</p>
+<h2 id="what-happens-next">What happens next</h2>
+<p>None of this is urgent — every file still compiles, there isn’t a
+single <code>Admitted</code> or <code>Axiom</code> anywhere in the tree,
+and nothing here is a correctness bug. It’s quality debt:
+harder-to-navigate code, not wrong code. It’s now an itemized wave on
+the roadmap (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/LINALG-ROADMAP.md"><code>LINALG-ROADMAP.md</code></a>,
+Wave L8) rather than a vague unease — the biggest single fix being the
+missing <code>Interface/Determinant.v</code>, which alone would let
+<code>Impl/Det.v</code> and <code>Impl/Elim.v</code> shed most of their
+misplaced generality in one move.</p>
+<p>The instinct that prompted this post — “I sense there’s been a slide,
+or is there a well-thought-out organization I haven’t understood” — was
+the right question to ask, and the honest answer is <em>some of
+both</em>: the organization is real and it is understood, and it has
+also genuinely slipped in places, and both of those things are now
+written down instead of living only as a feeling.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/DESIGN.md"><code>docs/DESIGN.md</code></a>
+(the stated rule) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/LINALG-ROADMAP.md"><code>docs/LINALG-ROADMAP.md</code></a>
+(Wave L8 — the itemized cleanup) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/EQUIVALENCES.md"><code>docs/EQUIVALENCES.md</code></a>
+(every proven rewrite rule in the library, for reference).</p>
+</main>
+</body>
+</html>
