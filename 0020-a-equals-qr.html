@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #20 — A = QR, for real</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-20-a-qr-for-real">riktig #20 — A = QR, for real</h1>
+<p><em>Twentieth post documenting the <strong>riktig</strong> project;
+the linear-algebra course continues. A short one: one theorem, earned
+mostly by reuse.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Post #14 built Gram-Schmidt: turn a family
+of vectors into an orthogonal one by subtracting, at each step, the
+projections onto everything already processed. Today that construction
+gets packaged the way every linear algebra course eventually packages it
+— as a matrix factorization,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mi>Q</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">A = QR</annotation></semantics></math>
+— and the proof that the packaging is <em>correct</em> turns out to need
+almost no new mathematics, because the mathematics was already done.</p>
+</blockquote>
+<h2 id="what-the-pieces-mean">What the pieces mean</h2>
+<p>Take
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+vectors, the columns of a matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
+columns are those same vectors, orthogonalized by Gram-Schmidt.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+records, for each original column, how to rebuild it from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
+columns — and because Gram-Schmidt only ever subtracts <em>earlier</em>
+projections,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+is upper triangular: column
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+only ever needs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
+columns
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>.</p>
+<pre class="coq"><code>Theorem qr_factorization : forall (v : Fin.t n -&gt; V),
+  (forall k, norm2 (gs_fin v k) =/= 0) -&gt;
+  qr_A B v == mat_mul (qr_Q B v) (qr_R v).
+
+Theorem qr_R_upper : forall i j,
+  fin_to_nat j &lt; fin_to_nat i -&gt; qr_R v i j == 0.</code></pre>
+<p><code>qr_R_upper</code> is a genuine theorem, not something true by
+definition — it says the entries above the diagonal are provably zero,
+which is the honest content of “upper triangular.”</p>
+<h2 id="the-one-surprise-rs-diagonal-isnt-the-norm">The one surprise:
+R’s diagonal isn’t the norm</h2>
+<p>Every textbook picture has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>’s
+diagonal holding the <em>lengths</em> of the orthogonalized vectors, so
+that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
+ends up orthonormal. Here it doesn’t — and the reason is worth sitting
+with, because it’s not a bug, it’s what the construction is actually
+doing. Post #14’s Gram-Schmidt never normalizes;
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
+columns are orthogonal, not unit-length (normalizing needs a square
+root, and this project doesn’t have one yet — it’s deliberately deferred
+to the interval-refinement track, where “square root” gets an honest
+constructive meaning). Since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+column <em>is</em> the raw Gram-Schmidt output, reconstructing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>’s
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+column from it needs coefficient exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+on the matching column — not the norm, which would only be the right
+coefficient if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
+had already been normalized to length one. So:</p>
+<pre class="coq"><code>Theorem qr_R_diag_nonzero : forall i, qr_R v i i =/= 0.</code></pre>
+<p>proved <em>unconditionally</em> — no hypothesis needed, because the
+diagonal is forced to be the multiplicative identity, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1 \ne 0</annotation></semantics></math>
+is just what it means to be a field. A stronger, cleaner fact than the
+textbook version, and it falls out for free from being honest about what
+“orthogonal, not orthonormal” QR actually looks like.</p>
+<h2 id="why-the-proof-was-mostly-reuse">Why the proof was mostly
+reuse</h2>
+<p>The interesting engineering wasn’t the theorem — it was
+<em>fitting</em> post #14’s list-based Gram-Schmidt to matrices, which
+need columns indexed by <code>Fin n</code>, not an unindexed list. The
+tempting route — convert the indexed family to a list, run
+<code>gs</code>, convert back — turns out to lose exactly the
+information the orthogonality proof needs: list-level Gram-Schmidt’s own
+orthogonality theorem only concludes <em>“orthogonal, or the same
+vector”</em> (a disjunction), because a list forgets which position
+produced which output. Matrices need to know <em>which column</em>. So
+the fix re-expresses Gram-Schmidt directly at <code>Fin</code>-indexed
+families and proves, as a bridge lemma, that this re-expression computes
+the <em>same</em> thing post #14’s construction does — letting every
+hard-won property from that file (orthogonality, the
+projection-subtraction structure) transfer across untouched. The
+representation changed; the theorems didn’t need to be re-proved. That
+sentence could be this whole project’s motto.</p>
+<p><em>Next: back to the open mathematics — general row/column swap
+invariance for the determinant, or a fresh front on Wave L8’s
+architecture cleanup.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/QR.v"><code>Impl/QR.v</code></a>
+(<code>qr_factorization</code>, <code>qr_R_upper</code>,
+<code>qr_R_diag_nonzero</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/GramSchmidt.v"><code>Theory/GramSchmidt.v</code></a>
+(the construction QR packages).</p>
+</main>
+</body>
+</html>
