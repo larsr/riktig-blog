@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #26 — any adjacent pair</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-26-any-adjacent-pair">riktig #26 — any adjacent pair</h1>
+<p><em>Twenty-sixth post documenting the <strong>riktig</strong>
+project. The determinant thread continues: a fourth attempt narrows the
+gap further, proving something strictly stronger than what came before
+it, while the very last piece keeps its precise shape.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Post #23 reformulated the determinant as a
+sum over permutations to sidestep a row-relocation obstruction that had
+stalled two earlier attempts, and proved the row-swap half of general
+antisymmetry. What was still missing was the harder half: showing the
+permutation’s <em>sign</em> itself flips under a swap. This post gets
+that, for adjacent rows — genuinely, not just as a repeat of an old
+special case.</p>
+</blockquote>
+<h2 id="what-adjacent-already-meant-and-what-changed">What “adjacent”
+already meant, and what changed</h2>
+<p>Back in the original cofactor-recursion attempt
+(<code>Impl/Elim.v</code>), <code>det_swap_F1_FS2</code> proved that
+swapping <em>the first two rows specifically</em> negates the
+determinant — useful, but pinned to one fixed pair, because the
+recursion’s own structure made every other pair much harder to track.
+Today’s result removes that restriction entirely:</p>
+<pre class="coq"><code>Theorem perm_sign_postcompose_adj : (* for ANY adjacent pair, at ANY level *)
+  ...
+
+Theorem detM_swap_adjacent : forall (A : Matrix n n F) (k : Fin.t n),
+  (* swapping rows k and k+1 of A, for ANY k, negates detM *)
+  ...</code></pre>
+<p>Any adjacent pair, anywhere in the matrix — not just the top two. The
+smoke test checks this on a concrete
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
+matrix by swapping the <em>middle</em> two rows, deliberately not the
+pair every earlier version of this fact was limited to.</p>
+<h2 id="why-the-permutation-sum-representation-makes-this-tractable">Why
+the permutation-sum representation makes this tractable</h2>
+<p>Post #23 explained why <code>perm_prod</code>, the flat
+permutation-indexed product, lets a row swap act by pure postcomposition
+— no relocation surgery. Sign is the harder half because
+<code>perm_sign</code> isn’t read off the matrix at all; it’s a property
+of the <em>permutation itself</em>, computed by its own recursive
+structure (choose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma(1)</annotation></semantics></math>,
+recurse on the rest). To show sign flips under postcomposition by a
+transposition, you first need to construct
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>,
+then apply
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>”
+<em>as an actual permutation value</em> your recursion can compute on —
+not just as an equation about where things end up.</p>
+<p>That construction, <code>perm_postcompose</code>, is the piece that
+had to exist before sign’s behavior could even be asked about. Once it
+does, sign’s recursive definition gives a clean case split: postcompose
+by a transposition, peel one level of the recursion, and ask what
+happens to the <em>remaining</em> transposition at the smaller instance.
+For an <em>adjacent</em> pair, the answer is either “it vanishes” (if
+the peeled position was one of the two swapped) or “it survives,
+relocated” (otherwise) — both clean, both closing by structural
+induction.</p>
+<h2 id="where-it-stops-precisely">Where it stops, precisely</h2>
+<p>For a <em>non-adjacent</em> pair, the same peeling produces something
+else entirely: a genuine 3-cycle on the remaining positions, not a
+transposition. The induction that closes the adjacent case simply
+doesn’t apply to a 3-cycle — it’s the wrong shape of object. This isn’t
+a proof-search failure; it’s confirmed by direct hand computation and
+recorded as such.</p>
+<p>The classical fix is well known and doesn’t need new ideas, just more
+of the same kind of work: any transposition of two positions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i, j</annotation></semantics></math>
+factors as an odd-length chain of <em>adjacent</em> transpositions (the
+textbook “bubble” identity, recursed on the distance
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>i</mi><mo>−</mo><mi>j</mi><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">|i-j|</annotation></semantics></math>),
+and sign’s flip under an adjacent transposition — now proved — pushes
+through that chain by induction. What’s needed to make the push-through
+work is one more composition lemma, showing sign behaves correctly when
+two postcompositions are chained rather than just one — a precise,
+identified, one-more-induction task, not a new kind of difficulty.</p>
+<h2 id="four-attempts-strictly-narrowing">Four attempts, strictly
+narrowing</h2>
+<p>It’s worth naming the shape of this whole effort plainly, because
+it’s not the usual “tried, failed, moved on” story. Four attempts have
+now gone into general determinant multiplicativity:</p>
+<ol type="1">
+<li>Direct row-relocation via the cofactor recursion — stalled on
+simultaneous two-row tracking.</li>
+<li>A second direct attempt at the same route — same wall.</li>
+<li>The permutation-sum reformulation (post #23) — sidestepped the
+relocation problem entirely, reached the row-swap half of antisymmetry
+unconditionally, for <em>any</em> pair.</li>
+<li>Today: the sign half, for adjacent pairs — a strict generalization
+of the one special case the <em>first</em> attempt ever reached.</li>
+</ol>
+<p>Each attempt made real, kept progress, even the ones that didn’t
+finish — nothing here was thrown away and redone. The remaining gap is
+smaller and more precisely shaped than at any earlier point: one
+composition lemma, one factorization argument, both with their proof
+route already sketched.</p>
+<p><em>Next: <code>perm_postcompose_compose</code>, the composition
+lemma that chains adjacent transpositions into arbitrary ones — attempt
+#5, or a pivot to Stage B’s softmax/ReLU if that keeps for another
+round.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetSign.v"><code>Impl/DetSign.v</code></a>
+(<code>perm_sign_postcompose_adj</code>,
+<code>detM_swap_adjacent</code>, and the precise gap in its header) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetLeibniz.v"><code>Impl/DetLeibniz.v</code></a>
+(the permutation-sum reformulation this builds on) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Elim.v"><code>Impl/Elim.v</code></a>
+(<code>det_swap_F1_FS2</code>, the fixed-pair special case now strictly
+generalized).</p>
+</main>
+</body>
+</html>
