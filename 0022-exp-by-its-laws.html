@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #22 — exp, by its laws</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-22-exp-by-its-laws">riktig #22 — exp, by its laws</h1>
+<p><em>Twenty-second post documenting the <strong>riktig</strong>
+project. A short one: the first transcendental function enters the tree,
+and it enters as a spec, not a formula.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Post #21 proved backprop and forward-mode
+AD compute the same Jacobian — the first payoff of the ML roadmap (post
+#20-and- a-half’s <code>docs/ML-ROADMAP.md</code>). Today is the
+roadmap’s Stage A: <code>exp</code>, the function nearly everything
+downstream needs — softmax, Gaussian densities, diffusion’s score
+function — and, until now, a function that simply didn’t exist anywhere
+in this codebase.</p>
+</blockquote>
+<h2 id="what-was-missing">What was missing</h2>
+<p>Search the tree before today and you find field operations, order,
+limits — and no <code>exp</code>, no <code>log</code>, nothing
+transcendental. That’s not an oversight so much as an honest gap: every
+course builds <code>exp</code> from a power series or a limit, both of
+which need real analysis machinery (convergence, completeness) this
+project has been careful to introduce only as needed. But softmax needs
+<code>exp</code> today, and the project’s own rule for exactly this
+situation already exists — write the spec first, defer the
+construction:</p>
+<pre class="coq"><code>Class Exp (F : Type) `{OrderedField F} := {
+  exp_fn   : F -&gt; F;
+  exp_zero : exp_fn 0 == 1;
+  exp_add  : forall a b : F, exp_fn (a + b) == exp_fn a * exp_fn b;
+  exp_pos  : forall a : F, 0 &lt;= exp_fn a;
+  exp_mono : forall a b : F, a &lt; b -&gt; exp_fn a &lt; exp_fn b
+}.</code></pre>
+<p>Four laws. <code>exp</code> is a monotone homomorphism from the
+additive group
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mo>,</mo><mi>+</mi><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(F,+,0)</annotation></semantics></math>
+to the multiplicative monoid
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mo>,</mo><mi>×</mi><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(F,\times,1)</annotation></semantics></math>,
+landing in the nonnegative numbers. Nothing here says how to
+<em>compute</em> it — a power-series or limit-based construction is
+separate, later work, the same relationship
+<code>Interface/Reals.v</code> has to its eventual Cauchy-sequence
+build. Anything satisfying these four laws is legally “an exp” for every
+theorem downstream, whether it’s ever been <em>evaluated</em>.</p>
+<h2 id="what-four-laws-buy-for-free">What four laws buy for free</h2>
+<p>Small, cheap corollaries, all proved generically — no construction,
+no concrete <code>F</code>, just algebra:</p>
+<pre class="coq"><code>Lemma exp_neg : forall a : F, exp_fn (- a) == inv (exp_fn a).
+Lemma exp_nonzero : forall a : F, exp_fn a =/= 0.
+Lemma exp_strict_pos : forall a : F, 0 &lt; exp_fn a.
+Lemma exp_injective : forall a b : F, exp_fn a == exp_fn b -&gt; a == b.</code></pre>
+<p>The nonvanishing fact is the nicest of these, because it comes free
+from a law that looks unrelated:
+<code>exp a * exp (-a) == exp 0 == 1</code> exhibits <code>exp a</code>
+as invertible directly, so if it were <code>0</code> the field would be
+forced to satisfy <code>0 == 1</code> — impossible in any field worth
+the name. No case split, no separate axiom; the homomorphism law alone
+makes <code>exp a</code> a unit.</p>
+<p><code>exp_injective</code> is the more interesting one to sit with,
+because it’s <em>half</em> of the fact that makes <code>log</code>
+possible at all: <code>exp : F -&gt; F</code> is a bijection onto the
+positive elements. Injectivity — different inputs give different outputs
+— falls out of strict monotonicity with no extra assumptions.
+Surjectivity — every positive element is <em>some</em>
+<code>exp a</code> — is the harder half, and it needs completeness (the
+least- upper-bound property <code>Interface/Reals.v</code> states but
+doesn’t yet build a witness for). So <code>log</code> waits, honestly,
+for that piece; today’s file gets you exactly as far as the algebra
+allows and stops there rather than assuming ahead.</p>
+<h2 id="the-one-thing-deliberately-left-out">The one thing deliberately
+left out</h2>
+<p>Every calculus class’s favorite fact about <code>exp</code> — that
+it’s its own derivative — is <em>not</em> in this file, and the reason
+is worth stating plainly rather than glossing over. To even write down
+“exp′ = exp” you need <code>exp_fn : F -&gt; F</code> to be checked
+against <code>Theory/Derivative.v</code>’s <code>is_deriv</code>, which
+asks the codomain to carry a <code>NormedSpace</code> structure. Nobody
+has yet built the norm that turns a bare <code>OrderedField</code> into
+a normed space over <em>itself</em> (the obvious candidate is the
+field’s own <code>abs</code>, but that instance doesn’t exist in the
+tree today). So rather than force that construction into this file — or
+worse, quietly skip the fact and hope nobody notices — the file ends
+with a precise TODO naming exactly what’s missing and sketching the
+class that will carry it once it exists:</p>
+<pre class="coq"><code>Class ExpDeriv (F : Type) `{OrderedField F}
+    {NSF : NormedSpace F F} `{Exp F} := {
+  exp_is_deriv : forall a : F,
+    is_deriv exp_fn a (lm_scale (exp_fn a))
+}.</code></pre>
+<p>kept separate from <code>Exp</code> itself deliberately: softmax
+never differentiates, so it shouldn’t have to drag a
+<code>NormedSpace</code>-over- itself instance along for the ride just
+to typecheck.</p>
+<h2 id="where-this-sits-on-the-roadmap">Where this sits on the
+roadmap</h2>
+<p><code>docs/ML-ROADMAP.md</code> staged the path to transformers,
+flash attention, and diffusion by difficulty; Stage A was flagged as
+blocking almost everything below it, and cheap — reusing machinery that
+already exists rather than building new foundations. That held: four
+laws, a handful of one-paragraph corollaries, no new proof techniques.
+Softmax is next.</p>
+<p><em>Next: Wave L5’s determinant multiplicativity — the one remaining
+hard blocker, now under a fresh attempt via a Leibniz permutation-sum
+reformulation rather than the row-swap route that stalled twice — or, if
+that lands first, Stage B’s concrete differentiable layers.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Exp.v"><code>Interface/Exp.v</code></a>
+(<code>Exp</code>, the four laws) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Exp.v"><code>Theory/Exp.v</code></a>
+(<code>exp_neg</code>, <code>exp_nonzero</code>,
+<code>exp_injective</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/ML-ROADMAP.md"><code>docs/ML-ROADMAP.md</code></a>
+(the six-stage plan this post is Stage A of).</p>
+</main>
+</body>
+</html>
