@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #19 — Getting started: five imports, five domains</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-19-getting-started-five-imports-five-domains">riktig #19
+— Getting started: five imports, five domains</h1>
+<p><em>Nineteenth post documenting the <strong>riktig</strong> project.
+Not a new theorem — a practical guide to actually </em>using* the
+library, written after discovering the hard way that “no
+<code>Require Export</code>” has a real cost for a newcomer.*</p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Eighteen posts have shown proofs; none
+have shown what it’s like to sit down and write your own. This one does
+— five short, working examples, one per major area of the library, each
+following the same shape the library itself is built on: state something
+<strong>abstractly</strong>, against an interface, then prove a
+<strong>concrete instance</strong> satisfies it. Every snippet below
+compiled before it was written down here.</p>
+</blockquote>
+<h2 id="why-this-needed-writing">Why this needed writing</h2>
+<p>Early development of this project’s predecessor used
+<code>Require Export</code> liberally: import one file, transitively get
+everything it depends on, start proving. Convenient — and a name-clash
+time bomb, since two unrelated files can easily define a lemma called
+<code>assoc</code> or <code>refl</code>. riktig deliberately does the
+opposite: every file states exactly what it needs with
+<code>Require Import</code>, nothing more, and gets away with it because
+of a naming convention — each <code>Impl/</code> file prefixes its
+instance names (<code>PW_</code> for Pointwise, <code>LV_</code> for
+ListVS, <code>C_</code> for Complex, <code>Hom_</code> for HomVS…). No
+clashes, ever.</p>
+<p>The cost lands on the reader. <code>Require Import</code> is
+<strong>not transitive</strong> — importing a <code>Theory/</code> file
+does not hand you the <code>Ops</code> notations it used internally; you
+must ask for <code>Ops</code> yourself, every time, in every file.
+That’s a real, if small, tax on every new proof you write, and it isn’t
+obvious in advance which files you need. So: a cheat sheet, proven by
+actually writing the code.</p>
+<h2 id="algebra">1. Algebra</h2>
+<p><strong>Abstract statement</strong>, over any abelian group:</p>
+<pre class="coq"><code>From Riktig Require Import Ops Props Interface.AbGroup Theory.AbGroup.
+
+Section Generic.
+  Context {G : Type} `{AbGroup G}.
+
+  Theorem swap_cancel : forall a b c : G, (a + b) + (c + - a) == b + c.
+  Proof.
+    intros a b c.
+    rewrite (comm a b), assoc, (add_swap_l a c (- a)), invr, idr.
+    reflexivity.
+  Qed.
+End Generic.</code></pre>
+<p><strong>Concrete instance</strong>, over ℤ:</p>
+<pre class="coq"><code>From Coq Require Import ZArith.
+From Riktig Require Import Impl.Zr.
+
+Example z_swap_cancel : (3 + 5 + (7 + - 3))%Z = (5 + 7)%Z.
+Proof. exact (swap_cancel (G := Z) 3%Z 5%Z 7%Z). Qed.</code></pre>
+<p><strong>The non-obvious import:</strong> <code>Props</code>. Nothing
+in the <em>type</em> of <code>swap_cancel</code> mentions
+<code>Props</code> — but <code>comm</code>, <code>assoc</code>,
+<code>invr</code>, <code>idr</code> are lemma names that live there, not
+in <code>Interface.AbGroup</code>, which only <em>instantiates</em>
+those properties without re-exporting their names. Skip
+<code>Props</code> and you get
+<code>The variable comm was not found</code> — correct, but not
+obviously pointing at the fix.</p>
+<h2 id="linear-algebra">2. Linear algebra</h2>
+<p><strong>Abstract statement</strong>, over any linear map:</p>
+<pre class="coq"><code>From Coq Require Import Morphisms QArith.
+From Coq.Vectors Require Fin.
+From Riktig Require Import Ops Interface.Field Interface.VectorSpace
+  Interface.LinearMap Impl.Qf Impl.FinVec.
+
+Section Generic.
+  Context {F U V : Type} {FF : Field F}
+          {VU : VectorSpace F U} {VV : VectorSpace F V}.
+
+  Theorem lm_combo : forall (f : LinearMap F U V) (a b : F) (u v : U),
+    f (a *: u + b *: v) == a *: f u + b *: f v.
+  Proof.
+    intros f a b u v.
+    rewrite (lm_add f), (lm_scale f), (lm_scale f).
+    reflexivity.
+  Qed.
+End Generic.</code></pre>
+<p><strong>Concrete instance</strong>: a scaling map on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ℚ</mi><mn>2</mn></msup><annotation encoding="application/x-tex">\mathbb{Q}^2</annotation></semantics></math>
+(<code>Fin.t 2 -&gt; Q</code>), built from the field’s own scale
+laws:</p>
+<pre class="coq"><code>Definition scale_map {F V} {FF : Field F} {VV : VectorSpace F V} (c : F)
+  : LinearMap F V V := (* ... three law proofs, then Build_LinearMap *) .
+
+Definition triple : LinearMap Q (Fin.t 2 -&gt; Q) (Fin.t 2 -&gt; Q) :=
+  scale_map (3#1)%Q.
+
+Example fin2_combo : forall u v : Fin.t 2 -&gt; Q,
+  triple (2 *: u + 5 *: v) == 2 *: triple u + 5 *: triple v.
+Proof. exact (lm_combo triple (2#1)%Q (5#1)%Q u v). Qed.</code></pre>
+<p><strong>The non-obvious pitfall:</strong> import <em>order</em>, not
+import <em>contents</em>. Writing
+<code>Impl.Qf</code>/<code>Impl.FinVec</code> <em>after</em> the generic
+<code>Section</code> (rather than at the top of the file) made scalar
+multiplication resolve to the field’s self-scaling instance before the
+vector type was pinned down — a flexible-carrier typeclass search
+picking the wrong instance silently, producing a baffling type mismatch
+on a line that looked completely correct. Moving every import above
+every <code>Section</code> fixed it outright. <strong>Rule of thumb: all
+imports first, always</strong> — this codebase’s <code>Hint Mode</code>
+discipline (documented in project memory as the fix for a much worse
+historical bug — a compiler-crashing search divergence) depends on the
+carrier being syntactically pinned down before instance search fires,
+and import order can undermine that even when every individual import is
+correct.</p>
+<h2 id="category-theory">3. Category theory</h2>
+<p><strong>Abstract statement</strong>, over any category, about
+isomorphisms:</p>
+<pre class="coq"><code>From Riktig Require Import Ops Interface.Category Theory.Category.
+
+Section Generic.
+  Context {O : Type} `{Category O}.
+
+  Theorem iso_absorb : forall (x y : O) (f : Iso x y),
+    (iso_from f ∘ iso_to f) ∘ iso_from f == iso_from f.
+  Proof.
+    intros x y f.
+    rewrite (iso_fromto f), cat_idl.
+    reflexivity.
+  Qed.
+End Generic.</code></pre>
+<p><strong>Concrete instance</strong>: <code>bool</code> is isomorphic
+to itself via <code>negb</code> (types-as-objects,
+<code>Impl/CoqCat.v</code>):</p>
+<pre class="coq"><code>From Coq Require Import Bool.
+From Riktig Require Import Impl.CoqCat.
+
+Definition negb_negb_iso : @Iso Type CoqCat bool bool := {|
+  iso_to := negb; iso_from := negb;
+  iso_fromto := negb_involutive; iso_tofrom := negb_involutive
+|}.
+
+Example negb_absorb : forall b : bool, negb (negb (negb b)) = negb b.
+Proof. exact (iso_absorb _ _ negb_negb_iso). Qed.</code></pre>
+<p><strong>The sharpest gotcha of this whole post</strong>, and a real
+bug this exercise found and fixed: <code>Theory/Category.v</code>
+declared <code>Arguments iso_to {x y}.</code> <em>inside</em> a
+<code>Section</code>, without the <code>Global</code> keyword. A plain,
+non-<code>Global</code> <code>Arguments</code> directive is
+section-local — it silently reverts the moment the section closes, so
+anyone who just <code>Require Import</code>s the file gets back the
+fully-explicit signature, no warning given. The symptom isn’t a clean
+“wrong number of arguments” — it’s a bizarre type mismatch buried in
+typeclass elaboration, because Coq inserts fresh implicits for the
+class’s own parameters and then feeds your argument into the wrong slot.
+It took <code>Print Implicit iso_from</code> to even see what had
+happened. <strong>Now fixed</strong> — <code>Global Arguments</code>, as
+it should have been from the start — but it’s a sharp enough trap to
+name here for the general lesson: if you write
+<code>Arguments {x y}.</code> inside a <code>Section</code> and mean for
+it to survive export, say <code>Global Arguments</code>.</p>
+<h2 id="lambda-calculus">4. Lambda calculus</h2>
+<p><strong>Abstract fact</strong> (post #5’s
+<code>if_of_true</code>-style branch law), instantiated at two concrete
+closed terms:</p>
+<pre class="coq"><code>From Riktig Require Import Ops Lambda.Syntax Lambda.Conv Lambda.Church.
+
+Example ifb_true_idt_k : IFB TRUE idt k == idt.
+Proof.
+  apply IF_TRUE.
+  - apply value_abs.
+  - apply value_abs.
+Qed.
+
+(* Cross-check: the same fact, by running the evaluator on both sides
+   and comparing normal forms. *)
+Example ifb_true_idt_k_by_eval : IFB TRUE idt k == idt.
+Proof. apply (conv_by_eval 20 5). reflexivity. Qed.</code></pre>
+<p>Two independent proofs of the same statement — one by the algebraic
+law, one by brute-force evaluation — agreeing, is itself a small sanity
+check on the whole <code>conv</code> setoid from post #5. No import
+surprises here: <code>Lambda/Church.v</code> carries its own comment
+naming exactly what it needs from <code>Ops</code>.</p>
+<h2 id="channels">5. Channels</h2>
+<p><strong>A concrete fact about a specific loss pattern</strong>, then
+the same fact via a general lattice lemma:</p>
+<pre class="coq"><code>From Coq Require Import List.
+Import ListNotations.
+From Riktig Require Import Channel.Trace.
+
+Example drop_middle : lossy [1; 2; 3] [1; 3].
+Proof. apply subseq_keep, subseq_drop, subseq_keep, subseq_nil. Qed.
+
+Example perfect_is_lossy_123 : lossy [1; 2; 3] [1; 2; 3].
+Proof. apply perfect_lossy. reflexivity. Qed.</code></pre>
+<p><strong>The non-obvious import, in the <em>other</em> direction from
+example 2:</strong> <code>Channel/Trace.v</code> itself does
+<code>Import ListNotations.</code> at its own top — but a plain
+<code>Import</code> (unlike <code>Export</code>) does not propagate to a
+client file. You have to re-<code>Import ListNotations</code> yourself,
+even though the library file you’re building on visibly already did.
+Small, but it’s exactly the shape of surprise the whole “no
+<code>Require Export</code>” policy produces, working as designed:
+nothing is handed to you implicitly, which is safe, and occasionally
+means repeating one line.</p>
+<h2 id="the-cheat-sheet">The cheat sheet</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>I want to…</th>
+<th>Import</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>use <code>==</code>, <code>+</code>, <code>*:</code>, <code>-</code>
+notations at all</td>
+<td><code>Ops</code></td>
+</tr>
+<tr>
+<td>name a law like
+<code>comm</code>/<code>assoc</code>/<code>invr</code> directly</td>
+<td><code>Props</code></td>
+</tr>
+<tr>
+<td>state something over an abstract
+<code>Monoid</code>/<code>Group</code>/<code>AbGroup</code>/<code>Ring</code>/<code>Field</code></td>
+<td><code>Interface.&lt;Name&gt;</code></td>
+</tr>
+<tr>
+<td>use derived facts (<code>cancel_l</code>, <code>mul_0_l</code>,
+…)</td>
+<td><code>Theory.&lt;Name&gt;</code></td>
+</tr>
+<tr>
+<td>work with vectors/linear maps abstractly</td>
+<td><code>Interface.VectorSpace</code>,
+<code>Interface.LinearMap</code></td>
+</tr>
+<tr>
+<td>a concrete field to compute in</td>
+<td><code>Impl.Qf</code> (ℚ), <code>Impl.Zr</code> (ℤ),
+<code>Impl.Complex</code> (ℂ)</td>
+</tr>
+<tr>
+<td>a concrete finite-dimensional space</td>
+<td><code>Impl.FinVec</code> (<code>Fin n -&gt; F</code> with its dot
+product)</td>
+</tr>
+<tr>
+<td>categories, functors, isomorphisms</td>
+<td><code>Interface.Category</code>, <code>Theory.Category</code></td>
+</tr>
+<tr>
+<td>Coq’s own types as a category</td>
+<td><code>Impl.CoqCat</code></td>
+</tr>
+<tr>
+<td>the lambda calculus, runnable</td>
+<td><code>Lambda.Syntax</code> (eval), <code>Lambda.Conv</code> (the
+<code>==</code> setoid), <code>Lambda.Church</code>
+(booleans/pairs)</td>
+</tr>
+<tr>
+<td>channel fault models</td>
+<td><code>Channel.Trace</code></td>
+</tr>
+</tbody>
+</table>
+<p>And the two rules that generalize past this list: <strong>put every
+import before every <code>Section</code></strong> (order can silently
+redirect instance search), and <strong><code>Require Import</code> never
+re-exports transitively</strong> — if a file you depend on used a
+notation or a name, and you want to use it too, ask for it yourself.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/EQUIVALENCES.md"><code>docs/EQUIVALENCES.md</code></a>
+(every proven rewrite rule, for when you need to find a lemma by name) ·
+<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Category.v"><code>theories/Theory/Category.v</code></a>
+(the <code>Global Arguments</code> fix from example 3).</p>
+</main>
+</body>
+</html>
