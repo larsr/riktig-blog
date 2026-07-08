@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #29 — decidable if-then-else</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-29-decidable-if-then-else">riktig #29 — decidable
+if-then-else</h1>
+<p><em>Twenty-ninth post documenting the <strong>riktig</strong>
+project. A change of register: instead of the algebra tower’s
+setoid-heavy proof style, four small, recognizable programs written in a
+style meant to read like ordinary code.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Every post so far in this series has come
+from the algebra/analysis tower —
+<code>Interface</code>/<code>Theory</code>/<code>Impl</code>,
+<code>==</code> instead of <code>=</code>, a deliberately narrow tactic
+set. <code>docs/DESIGN.md</code> names a second, separate style contract
+for actual programs — “top level reads in the domain’s language,” errors
+as values, no boilerplate — that hadn’t yet been realized in any Coq
+code in this repository. Today’s post introduces the concrete pattern
+that fills that gap: <code>if dec (P) then .. else ..</code>, plus
+<code>Fix</code>/<code>Fix_eq</code> for recursion that doesn’t fit a
+structural mold, applied to four well-known algorithms.</p>
+</blockquote>
+<h2 id="the-one-idea-underneath-everything-below">The one idea
+underneath everything below</h2>
+<p>Ordinary Coq forces a choice whenever a condition isn’t a plain
+<code>bool</code>: either work with <code>bool</code> and lose the
+connection to the proposition you actually care about, or
+<code>destruct</code>/<code>case</code> on a <code>Prop</code> and
+accept that every branch needs its own tactic block. The
+<code>Decidable</code> typeclass sidesteps that trade-off entirely:</p>
+<pre class="coq"><code>Class Decidable (P : Prop) := dec : {P} + {~ P}.</code></pre>
+<p>An instance of <code>Decidable P</code> is a computable proof that
+<code>P</code> holds or doesn’t — and Coq’s <code>if</code> already
+knows how to branch on a <code>{P} + {~ P}</code> value. Write
+<code>if dec (a &lt; b) then .. else ..</code>, and each branch receives
+the actual proposition (<code>a &lt; b</code>, or its negation) in the
+local context, ready to feed straight into a later termination argument
+or correctness lemma. <code>Programs/Decidable.v</code> collects the
+instances needed below: decidable equality on
+<code>nat</code>/<code>bool</code>/<code>list</code>/ products,
+decidable order on <code>nat</code>, and the expected logic combinators
+(<code>and_dec</code>, <code>or_dec</code>, <code>not_dec</code>, …) so
+compound conditions compose the same way compound booleans would.</p>
+<h2 id="recursion-that-doesnt-fit-a-structural-mold">Recursion that
+doesn’t fit a structural mold</h2>
+<p>Structural recursion — recurse on a literal sub-part of the input —
+is what plain <code>Fixpoint</code> checks for automatically. Plenty of
+natural recursions aren’t structural: quicksort recurses on the
+<em>result</em> of partitioning, not a sub-list of the input; binary
+search recurses on a shrinking numeric range, not a shrinking list.
+Coq’s standard-library <code>Fix</code> combinator handles this general
+case, given a well-founded order and a proof that each recursive call’s
+argument is smaller. The practical friction is that
+<code>Fix</code>-defined functions don’t unfold the way a
+<code>Fixpoint</code> does — reasoning about them needs one lemma,
+proved once per function, that states the one-step unfolding
+explicitly:</p>
+<pre class="coq"><code>Lemma gcd_step a b :
+  gcd a b = if dec (b = 0) then a else gcd b (a mod b).
+Proof. unfold gcd. apply gcd_aux_step. Qed.</code></pre>
+<p>Once that lemma exists, later reasoning treats <code>gcd</code>
+exactly like an ordinary recursive function — the <code>Fix</code>
+machinery itself never needs touching again.</p>
+<h2 id="four-examples">Four examples</h2>
+<p><strong>Euclid’s algorithm</strong> (<code>Programs/Gcd.v</code>) is
+the smallest complete demonstration: one decidable condition, one
+recursive call, well-founded on the shrinking divisor.</p>
+<pre class="coq"><code>Definition gcd_aux : nat -&gt; nat -&gt; nat.
+refine (Fix lt_wf (fun _ =&gt; nat -&gt; nat)
+  (fun b rec a =&gt;
+     if dec (b = 0)
+     then a
+     else rec (a mod b) _ b)).
+abstract (apply Nat.mod_upper_bound; assumption).
+Defined.</code></pre>
+<p><strong>Binary search</strong> (<code>Programs/BinarySearch.v</code>)
+generalizes over an abstract read interface rather than committing to
+<code>list</code>, the same move quicksort below makes, and needs one
+supporting fact <code>lia</code> can’t discharge unaided: a bound on
+integer division (<code>(n-1)/2 &lt;= n-1</code>), needed to show the
+left half of a search range is always strictly smaller than the
+whole.</p>
+<p><strong>Merge sort</strong> (<code>Programs/MergeSort.v</code>) is
+the clearest illustration of where <code>Fix</code> is and isn’t needed.
+<code>split</code> and <code>merge</code> both recurse on a literal
+sub-list, so plain <code>Fixpoint</code> is the right tool for them — no
+well-founded machinery, no unfolding lemma required. <code>msort</code>
+is different: it recurses on <code>split</code>’s <em>output</em>, which
+Coq’s structural checker cannot see as smaller than the input, so
+<code>msort</code> alone needs <code>Fix</code>, well-founded on list
+length.</p>
+<pre class="coq"><code>Fixpoint merge (l1 l2 : list nat) : list nat :=
+  match l1 with
+  | [] =&gt; l2
+  | x :: xs =&gt;
+      let fix merge_r (l2 : list nat) : list nat :=
+        match l2 with
+        | [] =&gt; l1
+        | y :: ys =&gt;
+            if dec (Nat.leb x y = true)
+            then x :: merge xs l2
+            else y :: merge_r ys
+        end
+      in merge_r l2
+  end.</code></pre>
+<p><strong>Quicksort</strong> (<code>Programs/Quicksort.v</code>) is the
+most substantial of the four, ported closely from
+<code>~/coq-memprog</code>’s reference implementation — the source this
+whole style is drawn from. It works over an abstract memory interface
+(<code>read</code>/<code>swap</code> on an opaque <code>mem</code> type,
+rather than a concrete array), with the Lomuto partition scheme as the
+inner <code>Fix</code> and the recursive sort itself as the outer
+one:</p>
+<pre class="coq"><code>Definition part (m0 : mem) (store0 i0 hi : nat) : mem * nat.
+refine (Fix (well_founded_ltof _ (fun i =&gt; hi - i)) (fun _ =&gt; mem -&gt; nat -&gt; mem * nat)
+  (fun i rec m store =&gt;
+    if dec (i &lt; hi)
+    then if dec (leb (read m i) (read m hi) = true)
+         then rec (S i) _ (swap m i store) (S store)
+         else rec (S i) _ m store
+    else (swap m store hi, store))
+  i0 m0 store0).
+all: unfold ltof; abstract lia.
+Defined.</code></pre>
+<h2 id="what-these-four-programs-are-and-arent-verified-to-do">What
+these four programs are, and aren’t, verified to do</h2>
+<p>Every function above is checked to actually compute the right answer
+— each file ends with a short block of
+<code>Check Logic.eq_refl : .. = ..</code> statements that Coq accepts
+only if both sides genuinely reduce to the same value:</p>
+<pre class="coq"><code>Check Logic.eq_refl : gcd 48 18 = 6.
+Check Logic.eq_refl : msort [5;3;8;1;9;2;7] = [1;2;3;5;7;8;9].</code></pre>
+<p>That’s real evidence the definitions typecheck and reduce correctly —
+but it is not a correctness proof. None of these four files show that
+<code>msort</code> produces a sorted permutation of its input, or that
+<code>bsearch</code> returns <code>None</code> only when the target is
+genuinely absent. Matching the scope of the reference implementation
+exactly, what’s here is the recursion pattern and its unfolding lemma —
+the infrastructure a correctness proof would build on, not the proof
+itself. Each file names this explicitly as the natural next step, rather
+than leaving it an unstated gap.</p>
+<h2 id="why-this-belongs-in-riktig">Why this belongs in riktig</h2>
+<p><code>docs/DESIGN.md</code>’s “Program style” section has existed
+since before this determinant-and-derivative-heavy stretch of posts
+began, inherited from a sibling project, describing how riktig’s actual
+verified <em>programs</em> (as opposed to its verified
+<em>mathematics</em>) should read. It had no code behind it yet.
+<code>theories/Programs/</code> is a deliberately separate track from
+the <code>Interface</code>/<code>Theory</code>/<code>Impl</code>
+trichotomy that governs the rest of the tree — plain <code>=</code>
+instead of <code>==</code>, no restriction on which tactics are in play
+— matching how <code>Channel/</code> and <code>Lambda/</code> already
+keep their own internal conventions rather than forcing every file in
+the repository into one mold.</p>
+<p><em>Next: back to the determinant thread’s remaining
+elimination-composition argument, or a correctness proof for one of
+today’s four programs.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/Decidable.v"><code>Programs/Decidable.v</code></a>
+(<code>Decidable</code>, <code>EqDec</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/Gcd.v"><code>Programs/Gcd.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/BinarySearch.v"><code>Programs/BinarySearch.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/MergeSort.v"><code>Programs/MergeSort.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/Quicksort.v"><code>Programs/Quicksort.v</code></a>.</p>
+</main>
+</body>
+</html>
