@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #14 — A protocol that cannot lie to you</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-14-a-protocol-that-cannot-lie-to-you">riktig #14 — A
+protocol that cannot lie to you</h1>
+<p><em>Fourteenth post documenting the <strong>riktig</strong> project.
+The channels thread opened in <a
+href="0013-cauchy-schwarz-without-case-splits.html">post #13</a> reaches
+its first real payoff; the linear-algebra course also closes out
+inner-product geometry. Proofs shown at the level of “here is the
+theorem and why it is true,” in the project’s usual style.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> Verified software in
+Coq, built for modifiability. Post #13 modeled a faulty channel as a
+<em>relation</em> between what was sent and what arrived — no
+probabilities, just possibility. Today that relation earns its keep:
+<strong>the alternating-bit protocol</strong>, the oldest trick in
+telecom for talking reliably over an unreliable wire, gets a safety
+proof that holds unconditionally — for <em>any</em> pattern of loss and
+duplication, <em>any</em> number of retransmissions.</p>
+</blockquote>
+<h2 id="the-protocol-in-one-paragraph">The protocol, in one
+paragraph</h2>
+<p>You want to send messages
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><msub><mi>m</mi><mn>2</mn></msub><mo>,</mo><msub><mi>m</mi><mn>3</mn></msub><mo>,</mo><mi>…</mi></mrow><annotation encoding="application/x-tex">m_1, m_2, m_3, \dots</annotation></semantics></math>
+over a wire that can drop packets and duplicate them. Tag each message
+with a single bit that <em>alternates</em>:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>m</mi><mn>1</mn></msub><annotation encoding="application/x-tex">m_1</annotation></semantics></math>
+goes out tagged 0,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>m</mi><mn>2</mn></msub><annotation encoding="application/x-tex">m_2</annotation></semantics></math>
+tagged 1,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>m</mi><mn>3</mn></msub><annotation encoding="application/x-tex">m_3</annotation></semantics></math>
+tagged 0 again, and so on — retransmitting the current message (same
+tag) until you’re satisfied it arrived. The receiver expects a bit,
+starting at 0; when a packet with the expected bit shows up, it’s
+delivered and the expectation flips; anything with the <em>wrong</em>
+bit is silently discarded. That’s the whole protocol. The bit’s only
+job: let the receiver recognize a stale duplicate of the message it
+already has, and throw it away.</p>
+<h2 id="the-theorem">The theorem</h2>
+<pre class="coq"><code>Theorem abp_safety : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
+  lossy_dup (sender_stream b0 ms k) wire -&gt;
+  subseq (deliver b0 wire) ms.</code></pre>
+<p>Read it in English: <em>whatever the wire delivers — for any channel
+behavior in the <code>lossy_dup</code> class, any retransmission budget
+<code>k</code>, any message list <code>ms</code> — the sequence of
+messages the receiver actually accepts is a subsequence of what was
+sent.</em> No duplicates get through that were never sent. No
+reordering. No message the application never wrote gets fabricated. This
+is the entire safety contract of a reliable-delivery protocol, and it is
+a <strong>theorem</strong>, not a hope.</p>
+<p>Notice what’s absent: no assumption that packets eventually get
+through. If the channel drops <em>everything</em>, <code>deliver</code>
+returns the empty list — still, trivially, a subsequence of
+<code>ms</code>. That’s honest: safety (nothing bad happens) and
+liveness (something good eventually happens) are different properties,
+and this theorem only claims the first. Liveness needs a
+<em>fairness</em> hypothesis — “the channel doesn’t drop forever” —
+which is deliberately not assumed here; it’s queued as the next stage
+(T4) of the roadmap, precisely so today’s theorem stays this strong and
+this simple.</p>
+<h2 id="why-the-proof-needed-a-detour-through-channels-themselves">Why
+the proof needed a detour through channels themselves</h2>
+<p>The interesting lemma isn’t about ABP at all — it’s about
+<code>lossy_dup</code> alone:</p>
+<pre class="coq"><code>Lemma lossy_dup_app_split : forall s1 s2 r,
+  lossy_dup (s1 ++ s2) r -&gt;
+  exists r1 r2, r = r1 ++ r2 /\ lossy_dup s1 r1 /\ lossy_dup s2 r2.</code></pre>
+<p><em>If the channel acted on a sent list that happens to be a
+concatenation <code>s1 ++ s2</code>, then the received list splits to
+match — a <code>lossy_dup</code>-behavior on the first part, followed by
+one on the second.</em> This sounds obvious and is not: the
+<code>stutter</code> constructor (duplication) can re-emit the
+<em>front</em> of what’s already been received without consuming
+anything more from the sent side, so a run of duplicates near the
+boundary could, in principle, straddle it in an awkward way. The proof
+goes by induction on the <code>lossy_dup</code> <em>derivation
+itself</em> — not on the lists — precisely to track that possibility
+honestly.</p>
+<p>Once that lemma exists, ABP’s own proof is short: split the sent wire
+trace at each message’s retransmission burst, note that a whole burst
+(all copies carrying the same bit) contributes <strong>at most
+one</strong> delivered message no matter how the channel maims it —
+duplicates all carry the identical bit and get rejected after the first
+— and induct over the message list.</p>
+<p>This is the project’s recurring shape again: a hard, general fact
+about the substrate (<code>lossy_dup_app_split</code>, purely about
+relations on lists) makes the domain-specific theorem
+(<code>abp_safety</code>) almost fall out. The next protocols in the
+roadmap — Go-Back-N, selective repeat, the mechanism at the heart of TCP
+— will reuse this exact lemma; a new retransmission scheme only ever
+owes its <em>own</em> burst-delivery argument, not a new proof that
+channels behave sanely.</p>
+<h2 id="also-in-this-wave-inner-product-geometry-finished">Also in this
+wave: inner-product geometry, finished</h2>
+<p>Two theorems complete <a
+href="0013-cauchy-schwarz-without-case-splits.html">post #13</a>’s
+geometry:</p>
+<p><strong>Adjoints reverse order.</strong> For linear maps
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>,</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">f, g</annotation></semantics></math>
+satisfying
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>g</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle f u, w\rangle = \langle u, g w\rangle</annotation></semantics></math>
+(the defining property of
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>’s
+adjoint”), composition behaves like the transpose of a product:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>∘</mo><mi>h</mi><msup><mo stretchy="false" form="postfix">)</mo><mo>*</mo></msup><mo>=</mo><msup><mi>h</mi><mo>*</mo></msup><mo>∘</mo><msup><mi>f</mi><mo>*</mo></msup></mrow><annotation encoding="application/x-tex">(f \circ h)^* = h^* \circ f^*</annotation></semantics></math>
+— the <em>order flips</em>. It’s a five-line proof once you have the
+definition, and it’s the fact every student memorizes without ever
+seeing <em>why</em> the order has to flip; here it’s just what the
+defining equation forces.</p>
+<p><strong>Gram–Schmidt, honestly scoped.</strong> Turning a family of
+vectors into an orthogonal one by iteratively subtracting projections
+onto everything already processed (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/GramSchmidt.v"><code>Theory/GramSchmidt.v</code></a>)
+needs one explicit assumption spelled out in the theorem statement, not
+swept under the rug: every vector produced along the way must be nonzero
+— the constructive, honest way of saying “the input was linearly
+independent.” Classical courses wave this away as “assume general
+position”; here it’s a hypothesis you can see. What comes out is the
+<em>full</em> pairwise orthogonality — not just “each vector is
+orthogonal to its immediate predecessor” but every pair, proved by an
+invariant threaded through the whole induction.</p>
+<p><em>Next: liveness for ABP under a fairness hypothesis (T4), and — on
+the algebra side — the coordinate-free determinant proper, riding on the
+alternating-forms machinery from post #9.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/ABP.v"><code>Channel/ABP.v</code></a>
+(the safety theorem) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Trace.v"><code>Channel/Trace.v</code></a>
+(the fault-class relations) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Adjoint.v"><code>Theory/Adjoint.v</code></a>
+(adjoints, isometries) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/GramSchmidt.v"><code>Theory/GramSchmidt.v</code></a>
+(orthogonalization).</p>
+</main>
+</body>
+</html>
