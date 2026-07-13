@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #32 — merge sort, correct</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-32-merge-sort-correct">riktig #32 — merge sort,
+correct</h1>
+<p><em>Thirty-second post in the series documenting the
+<strong>riktig</strong> project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved in Coq. <a
+href="0029-decidable-if-then-else.html">Post #29</a> introduced the
+<code>Programs/</code> track: algorithms written with
+<code>if dec (..) then .. else ..</code> for decidable conditions and
+the standard library’s <code>Fix</code> for recursion that isn’t
+structural, each <code>Fix</code>-defined function coming with one
+<em>unfolding lemma</em> proved once via <code>Fix_eq</code>. That post
+was honest about its scope: the four programs were checked to compute
+correct answers on examples, but none carried a correctness proof — “the
+infrastructure a correctness proof would build on, not the proof
+itself.” Today the first such proof: <strong>merge sort sorts.</strong>
+The output of <code>msort</code> is sorted and is a permutation of the
+input — and the proof never touches <code>Fix</code> at all, which is
+the point of this post: <strong>the unfolding lemma is the whole
+interface.</strong></p>
+</blockquote>
+<h2 id="what-was-proved">What was proved</h2>
+<pre class="coq"><code>Theorem msort_perm : forall l : list nat, Permutation l (msort l).
+
+Theorem msort_sorted : forall l : list nat, Sorted le (msort l).
+
+Corollary msort_correct : forall l : list nat,
+  Permutation l (msort l) /\ Sorted le (msort l).</code></pre>
+<p><code>Permutation</code> and <code>Sorted</code> are the standard
+library’s own predicates (<code>Coq.Sorting</code>), so these statements
+mean exactly what any Coq user expects: no element gained or lost, and
+every adjacent pair in the output in order. Together they pin down
+sorting completely — a permutation of the input that is sorted
+<em>is</em> the sorted rearrangement.</p>
+<h2
+id="the-one-idea-reason-through-the-step-lemma-never-through-fix">The
+one idea: reason through the step lemma, never through Fix</h2>
+<p>Recall the situation from post #29: <code>msort</code> recurses on
+the <em>outputs</em> of <code>split</code>, which Coq’s structural
+checker cannot accept, so it is defined with <code>Fix</code> over
+well-founded induction on list length. A <code>Fix</code>-defined
+function does not unfold by <code>simpl</code> — but it has
+<code>msort_step</code>, proved once:</p>
+<pre class="coq"><code>msort l = match l with
+          | [] =&gt; l
+          | [_] =&gt; l
+          | x :: y :: rest =&gt;
+              merge (msort (fst (split (x :: y :: rest))))
+                    (msort (snd (split (x :: y :: rest))))
+          end</code></pre>
+<p>The correctness proof uses this and <em>only</em> this. Three small
+“match-free” corollaries first — <code>msort_nil</code>,
+<code>msort_single</code>, <code>msort_cons2</code>, one per branch, so
+later rewriting never leaves a <code>match</code> in the goal — and then
+both main theorems have the same five-line shape: well-founded induction
+on <code>length l</code> (the very measure <code>msort</code> recurses
+on), the three-way case split matching <code>msort_step</code>’s
+branches, and the file’s existing <code>split_length_lt</code> to
+discharge the induction hypotheses on the two halves. From
+<code>msort_sorted</code>, the whole inductive step is:</p>
+<pre class="coq"><code>- pose proof (split_length_lt x y rest) as [H1 H2].
+  rewrite msort_cons2.
+  apply merge_sorted; apply IH; [exact H1 | exact H2].</code></pre>
+<p><code>Fix</code>, <code>Fix_eq</code>, functional extensionality —
+none of it appears. Once the step lemma exists, a
+<code>Fix</code>-defined function is reasoned about exactly like a
+<code>Fixpoint</code>.</p>
+<h2 id="the-supporting-lemmas-briefly">The supporting lemmas,
+briefly</h2>
+<p>The real content sits in three places, each matching the shape of the
+definition it is about.</p>
+<p><strong><code>split</code> loses nothing.</strong>
+<code>split_perm : Permutation l (fst (split l) ++ snd (split l))</code>.
+<code>split</code> consumes two elements at a time, so plain structural
+induction doesn’t fit; the proof reuses the file’s existing
+bounded-induction pattern (induction on a bound <code>n</code> with
+<code>length l &lt;= n</code>), and the inductive step is
+<code>perm_skip</code> twice plus <code>Permutation_middle</code> to
+move <code>y</code> past the first half.</p>
+<p><strong><code>merge</code> loses nothing.</strong>
+<code>merge_perm : Permutation (l1 ++ l2) (merge l1 l2)</code>, by the
+induction that mirrors <code>merge</code>’s own nested structure — outer
+on <code>l1</code>, inner on <code>l2</code>. Two computation-only
+unfolding equations (<code>merge_nil_r</code>,
+<code>merge_cons_cons</code>) are named first so the nested inner fix
+never appears raw in a goal.</p>
+<p><strong><code>merge</code> preserves sortedness.</strong> The pivot
+is a lemma about heads:</p>
+<pre class="coq"><code>Lemma merge_hdrel (a : nat) (l1 l2 : list nat) :
+  HdRel le a l1 -&gt; HdRel le a l2 -&gt; HdRel le a (merge l1 l2).</code></pre>
+<p>— the head of a merge is the head of one of its arguments, so a bound
+dominating both heads dominates the merge; case analysis only, no
+induction. <code>merge_sorted</code> then follows the same two-level
+induction as <code>merge_perm</code>, and this is where the
+<code>dec</code> style pays its way: the guard
+<code>dec (Nat.leb x y = true)</code> puts the actual boolean fact in
+the context, translated to the order by <code>Nat.leb_le</code> in the
+true branch and <code>Nat.leb_gt</code> (giving <code>y &lt; x</code>,
+hence <code>y &lt;= x</code>) in the false one.</p>
+<h2 id="what-was-proved-plainly-and-what-wasnt">What was proved, plainly
+— and what wasn’t</h2>
+<ul>
+<li><code>msort</code> returns a sorted permutation of its input, for
+every list (<code>msort_correct</code>), with <code>Sorted</code> and
+<code>Permutation</code> from the standard library. The computation
+tests from post #29 still stand and are now corollaries of something
+stronger.</li>
+<li>The proof pattern — step lemma, match-free branch corollaries,
+well-founded induction on the function’s own measure — used nothing
+specific to sorting, and is the template for the track’s remaining
+debts.</li>
+<li>Not proved, honestly: the other three programs from post #29.
+<code>gcd</code> correctness (divides both, greatest),
+<code>bsearch</code> soundness and completeness on sorted ranges, and
+quicksort’s version of today’s theorem are all still open, and
+quicksort’s will be harder — its recursion goes through an abstract
+mutable memory rather than lists.</li>
+</ul>
+<p><em>Next: the determinant’s last open ingredient — multiplicativity
+via triangular decomposition — or another entry from the
+<code>Programs/</code> debt list.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/MergeSort.v"><code>Programs/MergeSort.v</code></a>
+(<code>msort_perm</code>, <code>msort_sorted</code>,
+<code>msort_correct</code>, and all supporting lemmas) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/Decidable.v"><code>Programs/Decidable.v</code></a>
+(the <code>dec</code> style).</p>
+</main>
+</body>
+</html>
