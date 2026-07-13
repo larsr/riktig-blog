@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #30 — a matrix is an operator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-30-a-matrix-is-an-operator">riktig #30 — a matrix is an
+operator</h1>
+<p><em>Thirtieth post in the series documenting the
+<strong>riktig</strong> project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved in Coq, structure by structure — carriers, a
+task-appropriate equality <code>==</code>, operations, laws. <a
+href="0010-matrices-are-a-representation.html">Post #10</a> proved the
+abstract fact that a matrix <em>represents</em> a linear map between
+finite-dimensional spaces, and that under this representation
+composition of maps is matrix multiplication (<code>mat_of_comp</code>,
+<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatRep.v"><code>Theory/MatRep.v</code></a>).
+Today the same idea in its concrete, computable form: <strong>a matrix
+applied to a coordinate vector is a linear operator, and multiplying
+matrices is composing those operators.</strong> One definition, one
+packaging, one theorem — and a practical consequence the next post
+builds on: to apply a <em>product</em> of matrices you never need to
+form the product.</p>
+</blockquote>
+<h2 id="the-definition">The definition</h2>
+<p>A <code>Matrix m n F</code> in this repository is just a rectangle of
+scalars, <code>Fin.t m -&gt; Fin.t n -&gt; F</code> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v"><code>Impl/Matrix.v</code></a>).
+A coordinate vector is a function <code>Fin.t n -&gt; F</code> — already
+a vector space, for free, by the pointwise construction of <a
+href="0006-representations-are-isomorphisms.html">post #6</a>. What a
+matrix <em>does</em> is one line (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Attention.v"><code>Impl/Attention.v</code></a>,
+where today’s whole story lives):</p>
+<pre class="coq"><code>Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
+    : Fin.t m -&gt; F :=
+  fun i =&gt; bigopF (fun j =&gt; A i j * v j).</code></pre>
+<p>Entry <code>i</code> of <code>A·v</code> is the dot product of row
+<code>i</code> with <code>v</code> — the textbook definition, as a sum
+<code>bigopF</code> over the shared index.</p>
+<h2 id="the-operator-is-linear">The operator is linear</h2>
+<p>“Operator” is earned, not assumed: <code>mat_vec A</code> must
+commute with the vector algebra. Additivity is distributivity pushed
+under the sum, homogeneity is a commutativity swap under the sum:</p>
+<pre class="coq"><code>Lemma mat_vec_add : forall (m n : nat) (A : Matrix m n F)
+    (v w : Fin.t n -&gt; F),
+  mat_vec A (v + w) == mat_vec A v + mat_vec A w.
+
+Lemma mat_vec_scale : forall (m n : nat) (A : Matrix m n F) (a : F)
+    (v : Fin.t n -&gt; F),
+  mat_vec A (a *: v) == a *: mat_vec A v.</code></pre>
+<p>With properness for <code>==</code>, that is exactly the content of
+the <code>LinearMap</code> record (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>),
+so the file packages it:
+<code>mat_vec_lm A : LinearMap F (Fin.t n -&gt; F) (Fin.t m -&gt; F)</code>.
+A matrix <em>denotes</em> a linear map between coordinate spaces — as a
+value you can hand to every Hom-space theorem the library already
+has.</p>
+<h2 id="the-theorem-multiplication-is-composition">The theorem:
+multiplication is composition</h2>
+<pre class="coq"><code>Theorem mat_vec_mul : forall (m n p : nat) (A : Matrix m n F)
+    (B : Matrix n p F) (v : Fin.t p -&gt; F),
+  mat_vec (mat_mul A B) v == mat_vec A (mat_vec B v).</code></pre>
+<p>Applying the product is applying the factors in turn. The proof is a
+small pleasure: view <code>v</code> as a one-<em>column</em> matrix
+<code>fun k _ =&gt; v k : Matrix p 1 F</code>. Then both sides of the
+goal are, definitionally, one entry of the two associations of a triple
+matrix product — and <code>mat_mul_assoc</code> (the Fubini argument
+proved once in <code>Impl/Matrix.v</code>) closes it. No sum is
+manipulated twice. The same one-column view gives the identity law from
+<code>mat_mul_1l</code>:</p>
+<pre class="coq"><code>Theorem mat_vec_id : forall (n : nat) (v : Fin.t n -&gt; F),
+  mat_vec mat_id v == v.</code></pre>
+<p>And at the <code>LinearMap</code> level,
+<code>mat_vec_lm (mat_mul A B) == lm_comp (mat_vec_lm A) (mat_vec_lm B)</code>
+(<code>mat_vec_lm_mul</code>): the packaging sends <code>mat_mul</code>
+to composition, which is the concrete coordinate-space face of post
+#10’s representation theorem.</p>
+<h2 id="what-this-buys">What this buys</h2>
+<p>Read <code>mat_vec_mul</code> right to left and it is an
+<em>algorithm choice</em>: to compute <code>(A·B)·v</code> you may
+instead compute <code>A·(B·v)</code> — two matrix-vector applications,
+no matrix product, no <code>m × p</code> intermediate. For one vector
+this drops the multiplication count from <code>m·n·p + m·p</code> to
+<code>n·p + m·n</code>. The equality is a theorem, so the cheap order is
+not an approximation; it is the same value, with a machine-checked
+proof.</p>
+<h2 id="what-was-proved-plainly">What was proved, plainly</h2>
+<ul>
+<li><code>mat_vec A</code> is a linear operator on coordinate spaces,
+packaged as a <code>LinearMap</code> (<code>mat_vec_lm</code>), for
+every field <code>F</code> and every shape.</li>
+<li>The identity matrix acts as the identity operator
+(<code>mat_vec_id</code>), and matrix multiplication is operator
+composition (<code>mat_vec_mul</code>,
+<code>mat_vec_lm_mul</code>).</li>
+<li>Not proved here, honestly: anything about <em>which</em> linear maps
+arise this way (that every linear map between finite-dimensional spaces
+has a matrix is post #10’s <code>Theory/MatRep.v</code>, over abstract
+spaces with chosen bases; today’s file works directly on
+<code>Fin.t n -&gt; F</code>), and anything about evaluation cost — that
+is the next post, where this theorem does real work.</li>
+</ul>
+<p><em>Next: the payoff — a linear-attention layer computed in two
+orders, equal by one associativity, with the multiplication counts
+proved.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Attention.v"><code>Impl/Attention.v</code></a>
+(<code>mat_vec</code>, <code>mat_vec_lm</code>,
+<code>mat_vec_mul</code>, <code>mat_vec_id</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v"><code>Impl/Matrix.v</code></a>
+(<code>mat_mul</code>, <code>mat_mul_assoc</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatRep.v"><code>Theory/MatRep.v</code></a>
+(the abstract representation theorem) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>.</p>
+</main>
+</body>
+</html>

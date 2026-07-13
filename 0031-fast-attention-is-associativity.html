@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #31 — fast attention is one associativity away</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-31-fast-attention-is-one-associativity-away">riktig #31 —
+fast attention is one associativity away</h1>
+<p><em>Thirty-first post in the series documenting the
+<strong>riktig</strong> project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved in Coq. <a
+href="0030-a-matrix-is-an-operator.html">Post #30</a> showed that a
+matrix applied to a coordinate vector is a linear operator, and that
+multiplying matrices is composing operators (<code>mat_vec_mul</code>) —
+so the <em>order</em> in which a chain of matrix products is evaluated
+is an algorithm choice that cannot change the value. Today that choice
+with money on it: <strong>a linear-attention layer computed left to
+right materializes an n×n matrix and costs 2n²d multiplications;
+computed right to left it materializes only d×d and costs 2nd². The two
+are equal by one application of associativity — and both the equality
+and the costs are machine-checked.</strong></p>
+</blockquote>
+<h2 id="the-layer-honestly-framed">The layer, honestly framed</h2>
+<p>An attention layer in a transformer takes three matrices of shape
+<code>n × d</code> — queries <code>Q</code>, keys <code>K</code>, values
+<code>V</code>, where <code>n</code> is the number of tokens and
+<code>d</code> the head dimension, with <code>d</code> much smaller than
+<code>n</code> — and computes <code>softmax(Q·Kᵀ/√d)·V</code>. What is
+formalized here is <strong>linear attention</strong>: the same shape
+with the softmax dropped, <code>(Q·Kᵀ)·V</code>. That is not a
+simplification made quietly for the proof’s sake; it is the whole point.
+Softmax is not linear, sits between the two products, and makes the
+reassociation below <em>invalid</em> — which is precisely why the
+fast-attention line of work (linear attention and its
+kernel-approximation relatives) removes or linearly approximates it,
+buying the right to reassociate. Nothing about softmax is defined or
+proved in this file; the header of <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Attention.v"><code>Impl/Attention.v</code></a>
+says so in as many words.</p>
+<h2 id="two-evaluation-orders-one-value">Two evaluation orders, one
+value</h2>
+<pre class="coq"><code>(* Left-to-right: materializes the n×n score matrix Q·Kᵀ.           *)
+Definition attn_naive : Matrix n d F := mat_mul (mat_mul Q (mat_tr K)) V.
+
+(* Right-to-left: materializes only the d×d matrix Kᵀ·V.            *)
+Definition attn_fast : Matrix n d F := mat_mul Q (mat_mul (mat_tr K) V).
+
+Theorem attn_assoc : attn_naive == attn_fast.
+Proof.
+  exact (mat_mul_assoc n d n d Q (mat_tr K) V).
+Qed.</code></pre>
+<p>That is the entire proof: associativity of matrix multiplication,
+proved once by a Fubini argument in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v"><code>Impl/Matrix.v</code></a>,
+instantiated at the shapes <code>(n×d)·(d×n)·(n×d)</code>. The naive
+order’s intermediate <code>Q·Kᵀ</code> has <code>n²</code> entries; the
+fast order’s <code>Kᵀ·V</code> has <code>d²</code> — and
+<code>d ≤ n</code> gives <code>d² ≤ n²</code>
+(<code>intermediate_smaller</code>). At n = 1024 tokens and d = 64 that
+is a million-entry score matrix against four thousand.</p>
+<h2 id="the-costs-machine-checked">The costs, machine-checked</h2>
+<p>Counting is proof too. <code>mulcost m n p := m*n*p</code> counts the
+scalar multiplications the <code>bigopF</code> definition of an
+<code>m×n</code> by <code>n×p</code> product performs — <code>m·p</code>
+entries, each a sum of <code>n</code> products. (A statement about the
+algorithm the definition <em>denotes</em>; Coq’s own evaluator is not
+being benchmarked.) Then:</p>
+<pre class="coq"><code>Definition cost_naive (n d : nat) : nat :=
+  (mulcost n d n + mulcost n n d)%nat.    (* = 2·n²·d *)
+
+Definition cost_fast (n d : nat) : nat :=
+  (mulcost d n d + mulcost n d d)%nat.    (* = 2·n·d² *)
+
+Lemma cost_fast_le : forall n d : nat,
+  (d &lt;= n)%nat -&gt; (cost_fast n d &lt;= cost_naive n d)%nat.</code></pre>
+<p>The inequality is nonlinear in <code>n</code> and <code>d</code>, so
+it is assembled from the monotonicity lemmas rather than handed to
+<code>lia</code>. At transformer scale the counts overflow what unary
+<code>nat</code> arithmetic can evaluate in memory, so the concrete
+corollaries go through two proved transfer lemmas into binary
+<code>N</code> — and there the numbers are checked by
+<code>reflexivity</code>:</p>
+<pre class="coq"><code>Example cost_naive_1024_64 : N.of_nat (cost_naive 1024 64) = 134217728%N.
+Example cost_fast_1024_64  : N.of_nat (cost_fast 1024 64)  = 8388608%N.</code></pre>
+<p>134 million multiplications against 8 million — a factor of exactly
+<code>n/d = 16</code>.</p>
+<h2 id="for-a-single-vector-no-product-at-all">For a single vector: no
+product at all</h2>
+<p>Post #30’s <code>mat_vec_mul</code>, applied twice, turns the whole
+layer into a pipeline of three matrix-vector applications:</p>
+<pre class="coq"><code>Theorem attn_pipeline : forall w : Fin.t d -&gt; F,
+  mat_vec attn_naive w == mat_vec Q (mat_vec (mat_tr K) (mat_vec V w)).</code></pre>
+<p>Feed a coordinate vector through <code>V</code>, then
+<code>Kᵀ</code>, then <code>Q</code>: no matrix product is formed
+anywhere — not even the d×d one.</p>
+<h2 id="checked-on-actual-numbers">Checked on actual numbers</h2>
+<p>The file closes with a concrete instance over <code>Q</code> (n = 3,
+d = 2, with small integer matrices). Both association orders are
+evaluated <em>independently</em>, entry by entry, against the
+hand-computed output</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mi>V</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>9</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd><mtd columnalign="center" style="text-align: center"><mi>−</mi><mn>2</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">(Q K^{\mathsf T})V \;=\; Q(K^{\mathsf T}V) \;=\;
+\begin{pmatrix} 9 &amp; 7 \\ 2 &amp; 3 \\ 3 &amp; -2 \end{pmatrix}</annotation></semantics></math></p>
+<p>each closed by <code>reflexivity</code> with no appeal to
+<code>attn_assoc</code> — the theorem is then applied to the same
+instance as a separate resolution check. The pipeline is likewise
+computed on a concrete vector, both ways, meeting at
+<code>(23, 8, -1)</code>.</p>
+<h2 id="what-was-proved-plainly">What was proved, plainly</h2>
+<ul>
+<li><code>attn_naive == attn_fast</code> for every field, every
+<code>n</code>, <code>d</code>, and every <code>Q</code>,
+<code>K</code>, <code>V</code> (<code>attn_assoc</code>) — the
+reassociation at the heart of linear attention is exact, not
+approximate.</li>
+<li><code>cost_fast n d &lt;= cost_naive n d</code> whenever
+<code>d &lt;= n</code> (<code>cost_fast_le</code>), with the concrete
+16× count at n = 1024, d = 64 verified by computation; the fast order’s
+intermediate is smaller (<code>intermediate_smaller</code>).</li>
+<li>Applied to one vector, the layer needs no matrix product at all
+(<code>attn_pipeline</code>).</li>
+<li>Not proved, honestly: anything about softmax (its presence breaks
+the reassociation — that is why fast attention drops it), anything about
+memory hierarchies or actual hardware, and the cost model describes the
+denoted algorithm, not Coq’s evaluation.</li>
+</ul>
+<p><em>Next: back to the determinant’s last open ingredient — the
+triangular-decomposition argument for <code>detM_mul</code> — or a
+correctness proof for one of the <code>Programs/</code>
+algorithms.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Attention.v"><code>Impl/Attention.v</code></a>
+(<code>attn_naive</code>, <code>attn_fast</code>,
+<code>attn_assoc</code>, <code>attn_pipeline</code>, the cost model, the
+Q tests) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v"><code>Impl/Matrix.v</code></a>
+(<code>mat_mul_assoc</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatMulBilinear.v"><code>Theory/MatMulBilinear.v</code></a>
+(matmul as a bounded bilinear map — the analysis face of the same
+object).</p>
+</main>
+</body>
+</html>
