@@ -45,23 +45,26 @@ and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
 <em>land</em> inside the smaller matrix, which needs the computational
 inverse of the recursion’s own row-deletion function.</p>
-<p>That inverse (<code>unskip</code>) got built, and it made the
-<em>single</em>-row case easy: <code>Impl/Elim.v</code> proves general
-linearity in one arbitrary row unconditionally. But antisymmetry needs
-to track <em>two</em> rows through the same deletion simultaneously, and
-the two relocated positions interact — one can land on the other, or on
-the deleted row, in enough combinations that the argument stopped being
-“one clean induction” and turned into a real case-work explosion. Not a
-proof-search problem — a combinatorial one. <code>Elim.v</code>’s header
-names the next move precisely: either push the general case through
-anyway, or reformulate <code>detM</code> entirely as a sum over
-permutations, the textbook’s other definition, where antisymmetry is
-closer to definitional.</p>
+<p>That inverse (<code>unskip</code>) got built, and the single-row case
+that never needs it got proved: <code>Impl/Elim.v</code> establishes
+linearity in the <em>first</em> row unconditionally — row F1 stays put
+when any other row is deleted, so there is nothing to relocate. Its own
+header records that linearity in an <em>arbitrary</em> row resisted a
+clean proof within that session’s budget. And antisymmetry is harder
+still: it needs to track <em>two</em> rows through the same deletion
+simultaneously, and the two relocated positions interact — one can land
+on the other, or on the deleted row, in enough combinations that the
+argument stopped being “one clean induction” and turned into a real
+case-work explosion. Not a proof-search problem — a combinatorial one.
+<code>Elim.v</code>’s header names the next move precisely: either push
+the general case through anyway, or reformulate <code>detM</code>
+entirely as a sum over permutations, the textbook’s other definition,
+where antisymmetry is closer to definitional.</p>
 <h2 id="the-reformulation">The reformulation</h2>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><munder><mo>∑</mo><mrow><mi>σ</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∏</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\det A = \sum_{\sigma \in S_n} \operatorname{sign}(\sigma)
   \prod_j A_{\sigma(j),\,j}</annotation></semantics></math></p>
-<pre class="coq"><code>Definition detM_leibniz (A : Matrix n n F) :=
-  psum (fun sigma =&gt; perm_sign sigma * perm_prod A sigma).</code></pre>
+<pre class="coq"><code>Definition detM_leibniz {n : nat} (A : Matrix n n F) : F :=
+  psum (fun sigma : Perm n =&gt; perm_sign sigma * perm_prod A sigma).</code></pre>
 <p>The point of this definition isn’t elegance for its own sake — it’s
 that swapping two rows of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
@@ -69,9 +72,16 @@ now acts on the formula by <strong>postcomposing</strong>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>’s
 <em>values</em> with the transposition, a pointwise rewrite with no
 recursion to track at all:</p>
-<pre class="coq"><code>Theorem perm_prod_row_swap : forall (A : Matrix n n F) (i j : Fin.t n) tau,
-  perm_prod (row_swap_matrix A i j) sigma
-    == perm_prod A (fun k =&gt; tau (sigma k)).</code></pre>
+<pre class="coq"><code>Theorem perm_prod_row_swap : forall (n : nat) (A : Matrix n n F)
+    (i j : Fin.t n) (sigma : Perm n),
+  perm_prod (row_swap A i j) sigma
+    == prodF (fun c : Fin.t n =&gt; A (swap_fin i j (perm_apply sigma c)) c).</code></pre>
+<p>Read the right-hand side carefully: it’s a pointwise rewrite of the
+product through the transposition <code>swap_fin i j</code>,
+<em>not</em> yet <code>perm_prod A</code> applied to some permutation
+<em>value</em> — packaging that postcomposition as an actual
+<code>Perm n</code> the sum can be reindexed over is exactly the gap the
+final section describes.</p>
 <p>No <code>unskip</code>, no relocation, no case-work — the obstruction
 that stopped the direct route simply isn’t present in this
 representation. That’s the whole idea of a representation change: the
@@ -80,11 +90,13 @@ same mathematical fact, restated so that the hard part becomes easy and
 <h2 id="whats-now-proved-unconditionally">What’s now proved,
 unconditionally</h2>
 <p>Two real theorems, general in both the field and the matrix size:</p>
-<pre class="coq"><code>Theorem detM_leibniz_eq_detM : forall (A : Matrix n n F),
+<pre class="coq"><code>Theorem detM_leibniz_eq_detM : forall (n : nat) (A : Matrix n n F),
   detM_leibniz A == detM A.
 
-Theorem perm_prod_row_swap : forall (A : Matrix n n F) (i j : Fin.t n) tau,
-  ... (* postcomposition commutes with a row swap, for ANY i, j *)</code></pre>
+Theorem perm_prod_row_swap : forall (n : nat) (A : Matrix n n F)
+    (i j : Fin.t n) (sigma : Perm n),
+  perm_prod (row_swap A i j) sigma
+    == prodF (fun c : Fin.t n =&gt; A (swap_fin i j (perm_apply sigma c)) c).</code></pre>
 <p>The first is the classical “cofactor expansion equals the permutation
 sum” theorem — proved by induction, matching the permutation encoding’s
 own recursive structure (<code>Perm_S c p</code>, choosing

@@ -22,11 +22,15 @@ as they live in the repository.</em></p>
 Coq, built for modifiability. <a
 href="0010-matrices-are-a-representation.html">Post #10</a> proved a
 matrix is a <em>representation</em> of a linear map, chosen by a basis —
-never the definition of the map itself. Today two of the classical
-invariants of a matrix, trace and determinant, get built on exactly that
-foundation: computed via <em>some</em> basis, then proved not to depend
-on <em>which</em> one. That independence is the entire content of
-calling them “invariants” — usually assumed, here proved.</p>
+never the definition of the map itself. Today two classical invariants
+of a matrix get built on that foundation, at two different stages of the
+same program. For the <strong>trace</strong> the program is carried out
+in full: computed via <em>some</em> basis, then proved not to depend on
+<em>which</em> one — the independence that is the entire content of
+calling it an “invariant,” usually assumed, here proved. For the
+<strong>determinant</strong> today delivers the computation and its
+first properties; its basis-independence story needs multiplicativity,
+and is deliberately deferred to a later wave.</p>
 </blockquote>
 <h2 id="the-determinant-by-the-formula-you-learned">The determinant, by
 the formula you learned</h2>
@@ -36,10 +40,14 @@ matrix with that row and column struck out), alternate signs, sum. In <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>
 that recipe is executable code, expanding along the first column:</p>
 <pre class="coq"><code>Fixpoint detM {n} (A : Matrix n n F) : F :=
-  match n with
+  match n with  (* dependent-match boilerplate elided *)
   | 0   =&gt; 1
   | S _ =&gt; bigopF (fun i =&gt; sign_at i * (A i F1 * detM (minor A i)))
   end.</code></pre>
+<p>(The real definition threads <code>A</code> through a dependent
+<code>match n as n0 return Matrix n0 n0 F -&gt; F</code> so each branch
+sees the matrix at its refined size — noise for reading, necessary for
+typechecking.)</p>
 <p><code>minor A i</code> deletes row <code>i</code> and column
 <code>F1</code>; <code>sign_at i</code> alternates
 <code>1, -1, 1, …</code> down the column. The bookkeeping to make this

@@ -198,17 +198,102 @@ full of tactic incantations; if a step doesn’t have a name, we factor it
 out as a lemma and <em>give</em> it a name. The test we hold ourselves
 to: the <code>Proof</code> block should read like the calculation you
 would write on paper.</p>
+<h2 id="what-is-proved-so-far">What is proved so far</h2>
+<p>So that “consequences derived from the laws alone” is not left
+abstract, here is the actual inventory of the first three theory files —
+small enough to read in one sitting. <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Monoid.v"><code>Theory/Monoid.v</code></a>
+proves the identity element is unique (<code>id_unique</code>, and the
+specializations <code>zero_unique_l</code>, <code>zero_unique_r</code>).
+<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Group.v"><code>Theory/Group.v</code></a>
+proves inverses are unique (<code>neg_unique_l</code>,
+<code>neg_unique_r</code>), that negation is an involution and injective
+(<code>neg_involutive</code>, <code>neg_inj</code>),
+<code>- 0 == 0</code> (<code>neg_zero</code>),
+<code>- (a + b) == - b + - a</code> (<code>neg_add_flip</code>), both
+cancellation laws (<code>cancel_l</code>, <code>cancel_r</code>), and
+two telescoping facts (<code>add_neg_telescope</code>,
+<code>sub_eq_zero</code>); it closes with a section showing that any map
+<code>f</code> preserving <code>+</code> between groups automatically
+preserves <code>0</code> and <code>-</code> (<code>hom_zero</code>,
+<code>hom_neg</code>). <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/AbGroup.v"><code>Theory/AbGroup.v</code></a>
+adds the reshuffling kit that commutativity makes available: moving a
+summand past a sum (<code>add_swap_l</code>, <code>add_swap_r</code>),
+the interchange law <code>(a + b) + (c + d) == (a + c) + (b + d)</code>
+(<code>add_interchange</code>, with <code>add_rotate</code> as a
+variant), <code>- (a + b) == - a + - b</code> (<code>neg_add</code>),
+and a family of cancellation-in-context lemmas
+(<code>add_sub_cancel</code>, <code>sub_pair</code>,
+<code>add_neg_cancel_l</code>, and friends) — each stated because some
+later proof needs exactly that shape of shuffle, and naming it keeps
+that proof a one-line rewrite.</p>
+<h2 id="the-payoff-at-the-top-of-the-tower">The payoff at the top of the
+tower</h2>
 <p>The chain culminates (for now) in geometric algebra, where the axiom
 “a vector squares to its length” makes the whole preceding tower earn
-its keep. From just that axiom and bilinearity, a few rewrites derive
-the <strong>polarization identity</strong></p>
+its keep. The interface (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/GeometricAlgebra.v"><code>Interface/GeometricAlgebra.v</code></a>)
+embeds a vector space <code>V</code> into a ring <code>A</code> by a
+linear map <code>ga_vec</code> with one law beyond linearity, the
+contraction axiom:</p>
+<pre class="coq"><code>ga_contract : forall u : V, ga_vec u * ga_vec u == norm2 u *: 1</code></pre>
+<p>— a vector squared is its length². From just that and the bilinearity
+of the inner product, <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/GeometricAlgebra.v"><code>Theory/GeometricAlgebra.v</code></a>
+derives the <strong>polarization identity</strong></p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">uv + vu \;=\; (\langle u,v\rangle + \langle v,u\rangle)\,1</annotation></semantics></math></p>
 <p>— the fact that the <em>symmetric part of the geometric product is
 the inner product</em>, which is the seed of everything geometric
 algebra is good for (rotations, reflections, and eventually the
-matrix-reordering proofs we have planned). One axiom in the interface,
-one short calculation in the theory file, true in every model anyone
-ever builds.</p>
+matrix-reordering proofs we have planned). Since this is where the tower
+pays off, the proof deserves the same slow walk as
+<code>cancel_l</code>.</p>
+<p><strong>On paper.</strong> Square the sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u + v</annotation></semantics></math>
+two ways. Expanding the product,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>=</mo><msup><mi>u</mi><mn>2</mn></msup><mo>+</mo><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo>+</mo><msup><mi>v</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(u+v)^2 = u^2 + uv + vu + v^2</annotation></semantics></math>,
+and the contraction axiom turns the two squares into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2)\,1</annotation></semantics></math>.
+Contracting <em>directly</em>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(u+v)^2 = \|u+v\|^2\,1</annotation></semantics></math>,
+and bilinearity expands
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\|u+v\|^2 = \|u\|^2 + \|v\|^2 + \langle u,v\rangle + \langle v,u\rangle</annotation></semantics></math>.
+Equate the two computations and cancel
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2)\,1</annotation></semantics></math>
+from both sides — with exactly the <code>cancel_l</code> proved
+above.</p>
+<p><strong>In the repository</strong>, exactly as it appears (a helper
+lemma <code>contract_add</code> packages the first computation):</p>
+<pre class="coq"><code>Theorem polarization : forall u v : V,
+  ga_vec u * ga_vec v + ga_vec v * ga_vec u
+  == (⟨ u , v ⟩ + ⟨ v , u ⟩) *: (1 : A).
+Proof.
+  intros u v.
+  apply (cancel_l (norm2 u *: (1 : A) + norm2 v *: 1)).
+  rewrite contract_add, norm2_add,
+    (sc_add_scale (norm2 u + norm2 v)), (sc_add_scale (norm2 u) (norm2 v)).
+  reflexivity.
+Qed.</code></pre>
+<p>Read it step by step. <code>apply (cancel_l …)</code> is the “cancel
+from both sides” move — this post’s own first theorem, already earning
+reuse. The goal is now the two squarings equated, with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2)\,1</annotation></semantics></math>
+added on both sides. <code>contract_add</code> is the helper: it
+contracts both squares and collects the cross terms (itself a rewrite
+chain through <code>add_rotate</code> and distributivity — the
+abelian-group inventory above at work). <code>norm2_add</code> is the
+bilinear expansion of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u+v\|^2</annotation></semantics></math>,
+proved one file down in <code>Theory/InnerProduct.v</code>. The two
+<code>sc_add_scale</code> rewrites split
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">(x+y) \mathbin{*:} 1</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mi>y</mi><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">x \mathbin{*:} 1 + y \mathbin{*:} 1</annotation></semantics></math>
+so both sides have the same shape, and <code>reflexivity</code> closes.
+One axiom in the interface, a dozen lines of named rewrites in the
+theory file, true in every model anyone ever builds.</p>
 <h2 id="why-a-software-project-starts-here">Why a software project
 starts here</h2>
 <p>Because everything upstream <em>is</em> this pattern. “A kernel

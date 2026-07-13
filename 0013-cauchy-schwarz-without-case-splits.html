@@ -125,13 +125,23 @@ everyone actually wants to quote.</p>
 <h2 id="what-it-buys-projection">What it buys: projection</h2>
 <p>With Cauchy–Schwarz-grade machinery in hand, projecting
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
-onto a nonzero
+onto
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
 —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">j</mi></mrow><mi>v</mi></msub><mi>u</mi><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow></mfrac></mstyle><mi>v</mi></mrow><annotation encoding="application/x-tex">\mathrm{proj}_v u = \dfrac{\langle u,v\rangle}{\langle v,v\rangle}v</annotation></semantics></math>
 — comes with its defining property for free:</p>
-<pre class="coq"><code>Theorem proj_orthogonal : orthogonal (u + - proj v u) v.
-Theorem best_approx : forall c, norm2 (u + - proj v u) &lt;= norm2 (u + - (c *: v)).</code></pre>
+<pre class="coq"><code>Theorem proj_orthogonal : forall u v : V,
+  norm2 v =/= 0 -&gt; orthogonal (u + - proj v u) v.
+Theorem best_approx : forall (u v : V) (c : F), norm2 v =/= 0 -&gt;
+  norm2 (u + - proj v u) &lt;= norm2 (u + - (c *: v)).</code></pre>
+<p>Note the hypothesis both carry: <code>norm2 v =/= 0</code>, not
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v \ne 0</annotation></semantics></math>”.
+In the general <code>InnerProduct</code> section, where
+<code>proj_orthogonal</code> lives, that is strictly <em>stronger</em>
+than nonzeroness — a Minkowski null vector is nonzero yet has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle v,v\rangle = 0</annotation></semantics></math>,
+and you genuinely cannot project onto it; under <code>PosInner</code>
+the two conditions coincide (<code>norm2_neq_0_iff</code>).</p>
 <p><em>The projection is the closest point on the line, and the residual
 is perpendicular to it</em> — the Gram–Schmidt engine, one theorem short
 of orthogonal bases (queued: the loop over <code>Fin n</code> that

@@ -12,17 +12,21 @@
 <h1 id="riktig-28-equal-rows-vanish-without-counting-to-two">riktig #28
 — equal rows vanish, without counting to two</h1>
 <p><em>Twenty-eighth post documenting the <strong>riktig</strong>
-project. The planned route for today’s proof didn’t survive contact with
-the actual definitions — and the replacement turned out
-shorter.</em></p>
+project. Three results in one file — the last three ingredients
+<code>detM_mul</code> still needed — with the alternating property at
+the center, proved by a shorter route than the one planned.</em></p>
 <blockquote>
 <p><strong>What we are doing, and why.</strong> Verified software in
 Coq, built for modifiability. Post #27 proved general row-swap
-antisymmetry: swapping any two rows negates the determinant. The next
-classical fact, “equal rows make the determinant vanish,” looks like a
-free corollary of that — and in most textbooks, it is. Here it wasn’t
-quite, and the reason is a genuine feature of how this library is
-built.</p>
+antisymmetry: swapping any two rows negates the determinant. What
+<code>detM_mul</code> — general multiplicativity, the fact this whole
+thread is building toward — still needed after that was three classical
+ingredients: the alternating property (“equal rows make the determinant
+vanish”), linearity in an arbitrary row, and the determinant of the
+third elementary matrix. This post gets all three. The first is the
+centerpiece: it looks like a free corollary of antisymmetry — and in
+most textbooks, it is. Here it wasn’t quite, and the reason is a genuine
+feature of how this library is built.</p>
 </blockquote>
 <h2 id="why-the-obvious-corollary-doesnt-work">Why the obvious corollary
 doesn’t work</h2>
@@ -71,20 +75,40 @@ between positions; here, one swap suffices because the <em>value</em>
 being proved is <code>0</code>, and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>=</mo><mi>−</mi><mn>0</mn></mrow><annotation encoding="application/x-tex">0 = -0</annotation></semantics></math>
 makes the sign of the swap irrelevant to the final answer.</p>
-<h2 id="a-bonus-the-dispatch-didnt-ask-for">A bonus the dispatch didn’t
-ask for</h2>
+<h2 id="the-second-ingredient-linearity-in-any-row">The second
+ingredient: linearity in any row</h2>
 <p><code>Impl/Elim.v</code>’s very first header — the file that started
 this whole five-attempt thread — named one thing it couldn’t reach:
 linearity of <code>detM</code> in an <em>arbitrary</em> row, not just
-the first. That fact had been sitting unaddressed since the beginning.
-It falls out now almost for free: to reason about row
+the first. That fact had been sitting open since the beginning, and
+<code>detM_mul</code> needs it. It falls out now almost for free: to
+reason about row
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
-conjugate it into the first position with a single swap, apply the
-row-1-specific facts that have existed since the start, done. Two lines
-of new theorem, an old debt closed as a side effect of proving something
-else entirely.</p>
-<p>And that, combined with the alternating fact, gives the third
-elementary-matrix determinant identity in full:</p>
+conjugate it into the first position with a single swap — each side of
+the equation picks up the same negation sign, which cancels — then apply
+the row-1-specific facts that have existed since the start:</p>
+<pre class="coq"><code>Theorem det_rowI_add : forall (p : nat) (i : Fin.t (S p)) (A : Matrix (S p) (S p) F)
+    (r1 r2 : Fin.t (S p) -&gt; F),
+  detM (upd_row A i (fun k =&gt; r1 k + r2 k))
+    == detM (upd_row A i r1) + detM (upd_row A i r2).
+
+Theorem det_rowI_scale : forall (p : nat) (i : Fin.t (S p)) (A : Matrix (S p) (S p) F)
+    (c : F) (r0 : Fin.t (S p) -&gt; F),
+  detM (upd_row A i (fun k =&gt; c * r0 k)) == c * detM (upd_row A i r0).</code></pre>
+<p>(<code>upd_row A i r</code> overwrites row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+with the row function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>.)
+An old gap closed almost as a side effect of the swap machinery.</p>
+<h2
+id="the-third-ingredient-adding-a-multiple-of-one-row-to-another">The
+third ingredient: adding a multiple of one row to another</h2>
+<p>Chaining the new
+row-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+linearity with the alternating fact gives the third elementary-matrix
+determinant identity in full:</p>
 <pre class="coq"><code>Theorem det_elem_add : forall (n : nat) (i j : Fin.t n) (c : F) (A : Matrix n n F),
   i &lt;&gt; j -&gt; detM (mat_mul (elem_add i j c) A) == detM A.</code></pre>
 <p>Adding a multiple of one row to another leaves the determinant
@@ -107,7 +131,7 @@ that finally reaches <code>detM_mul</code>, six attempts in.</em></p>
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetAlternating.v"><code>Impl/DetAlternating.v</code></a>
 (<code>detM_alternating</code>, <code>det_rowI_add</code>,
-<code>det_elem_add</code>) · <a
+<code>det_rowI_scale</code>, <code>det_elem_add</code>) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetSignGeneral.v"><code>Impl/DetSignGeneral.v</code></a>
 (<code>detM_swap_general</code>, reused directly) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Elim.v"><code>Impl/Elim.v</code></a>

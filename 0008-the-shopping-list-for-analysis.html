@@ -23,20 +23,23 @@ algebraic structures as interfaces with laws; in <a
 href="0006-representations-are-isomorphisms.html">post #6</a> the
 structures met concrete data and representation isomorphisms. Where this
 is all heading is <em>analysis</em>: limits, derivatives, integrals —
-verified numerics. Today we buy everything on the shopping list that
-analysis will ask for: <strong>order, absolute value, norms, bases, the
-real numbers as a specification, and complex numbers as a
-construction.</strong></p>
+verified numerics. Today we buy the items on the shopping list that
+analysis will ask for — <strong>order, absolute value, norms, bases, the
+real numbers as a specification</strong> — and then spend the second
+half on this wave’s one substantial theorem: <strong>complex numbers
+over any formally real field form a field.</strong></p>
 </blockquote>
-<h2 id="order-first-and-an-honest-absolute-value">Order first, and an
-honest absolute value</h2>
-<p>Analysis begins with “smaller than”. <a
+<h2 id="the-list-item-by-item">The list, item by item</h2>
+<p><strong>Order, and an honest absolute value</strong> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Order.v"><code>Interface/Order.v</code></a>
-adds <code>&lt;=</code> as opt-in vocabulary and states an
-<code>OrderedField</code>: a field whose order is reflexive, transitive,
-antisymmetric <em>up to <code>==</code></em>, total, respects
-<code>+</code>, and keeps products of nonnegatives nonnegative.</p>
-<p>The interesting choice is <code>abs</code>. Defining
+/ <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Order.v"><code>Theory/Order.v</code></a>).
+Analysis begins with “smaller than”: <code>&lt;=</code> arrives as
+opt-in vocabulary, and <code>OrderedField</code> states a field whose
+order is reflexive, transitive, antisymmetric <em>up to
+<code>==</code></em>, total, respects <code>+</code>, and keeps products
+of nonnegatives nonnegative. The design choice worth pausing on is
+<code>abs</code>: defining
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">|a|</annotation></semantics></math>
 as “if
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a \ge 0</annotation></semantics></math>
@@ -45,102 +48,129 @@ then
 else
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">-a</annotation></semantics></math>”
 needs to <em>decide</em> the order — something real-number programs
-cannot generally do. So <code>abs</code> is an <strong>operation with
-laws</strong>, not a construction:</p>
+cannot generally do — so <code>abs</code> is an <strong>operation with
+laws</strong>, not a construction. The headline three:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="prefix">|</mo><mo>=</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>b</mi><mo stretchy="false" form="prefix">|</mo><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="prefix">|</mo><mo>≤</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mi>+</mi><mo stretchy="false" form="prefix">|</mo><mi>b</mi><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">0 \le |a|, \qquad |ab| = |a|\,|b|, \qquad |a+b| \le |a| + |b|</annotation></semantics></math></p>
-<p>No decidability assumed, and yet the laws already <em>prove</em>
-things — <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Order.v"><code>Theory/Order.v</code></a>
-derives
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="prefix">|</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">|1| = 1</annotation></semantics></math>
-(because
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">|1|</annotation></semantics></math>
-solves
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mi>x</mi><mo>⋅</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">x = x\cdot x</annotation></semantics></math>
-and isn’t zero), and from that a small gem:
+<p>(an abridged list — the interface states seven <code>abs</code> laws
+in all, the others being properness,
+<code>abs a == 0 &lt;-&gt; a == 0</code>,
+<code>abs (- a) == abs a</code>, and
+<code>0 &lt;= a -&gt; abs a == a</code>). Proved from the laws alone, in
+<code>Theory/Order.v</code>:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="prefix">|</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">|1| = 1</annotation></semantics></math>,
+and from that a small gem —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0 \le 1</annotation></semantics></math>
-is a <em>theorem</em> — one is an absolute value, and absolute values
-are nonnegative.</p>
-<h2 id="norms-length-axiomatically">Norms: length, axiomatically</h2>
-<p>A norm is a ruler for a vector space (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Norm.v"><code>Interface/Norm.v</code></a>):
-<code>‖u‖</code> in the ordered scalar field, with the four classical
-laws — nonnegative, definite, homogeneous
+is a <em>theorem</em>, because one is an absolute value and absolute
+values are nonnegative.</p>
+<p><strong>Norms: length, axiomatically</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Norm.v"><code>Interface/Norm.v</code></a>
+/ <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Norm.v"><code>Theory/Norm.v</code></a>).
+A norm is a ruler for a vector space: <code>‖u‖</code> in the ordered
+scalar field, with the four classical laws — nonnegative, definite,
+homogeneous
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|a \cdot u\| = |a|\,\|u\|</annotation></semantics></math>
 — <em>this</em> is why we needed <code>abs</code>), and the triangle
-inequality. <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Norm.v"><code>Theory/Norm.v</code></a>
-starts collecting consequences:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mn>0</mn><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\|0\| = 0</annotation></semantics></math>,
+inequality. Proved:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mn>0</mn><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\|0\| = 0</annotation></semantics></math>
+and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo>−</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|-u\| = \|u\|</annotation></semantics></math>,
-each a one-line rewrite chain through the vector-space theory of post
-#6. When limits arrive, “within
+each a one-line rewrite chain. When limits arrive, “within
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>
 of” will be measured by exactly this <code>‖·‖</code>.</p>
-<h2 id="a-basis-is-a-coordinate-isomorphism">A basis is a coordinate
-isomorphism</h2>
-<p>Post #6 sold representations-as-isomorphisms; bases are the same idea
-wearing a math hat. What is a basis, really? <em>A way of assigning
-coordinates.</em> So <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Basis.v"><code>Interface/Basis.v</code></a>
-defines a finite basis of <code>V</code> as: basis vectors
-<code>b : Fin n -&gt; V</code> together with a <strong>linear</strong>
-coordinate map <code>coords : V -&gt; (Fin n -&gt; F)</code> such
-that</p>
+<p><strong>A basis is a coordinate isomorphism</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Basis.v"><code>Interface/Basis.v</code></a>).
+Post #6 sold representations-as-isomorphisms; a basis is the same idea
+wearing a math hat — <em>a way of assigning coordinates</em>: basis
+vectors <code>b : Fin n -&gt; V</code> plus a <strong>linear</strong>
+coordinate map <code>coords : V -&gt; (Fin n -&gt; F)</code> with two
+round-trip laws,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo>∑</mo><mi>i</mi></munder><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">s</mi></mrow><mspace width="0.167em"></mspace><mi>v</mi><msub><mo stretchy="false" form="postfix">)</mo><mi>i</mi></msub><mo>⋅</mo><msub><mi>b</mi><mi>i</mi></msub><mo>=</mo><mo>=</mo><mi>v</mi><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">s</mi></mrow><mrow><mo stretchy="true" form="prefix">(</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>b</mi><mi>i</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo>=</mo><mi>c</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\textstyle\sum_i (\mathrm{coords}\,v)_i \cdot b_i == v
 \qquad\text{and}\qquad
 \mathrm{coords}\left(\textstyle\sum_i c_i \cdot b_i\right) == c.</annotation></semantics></math></p>
-<p>Spanning and linear independence, packed into two round trips — “V
-has a basis” literally <em>is</em> “V ≅ its canonical representation
-<code>Fin n -&gt; F</code>”. And the sanity check is proved, not
-assumed: the standard basis
+<p>Spanning and linear independence, packed into round trips — “V has a
+basis” literally <em>is</em> “V ≅ <code>Fin n -&gt; F</code>”. Proved:
+the standard basis
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mi>i</mi></msub><annotation encoding="application/x-tex">e_i</annotation></semantics></math>
 really is a basis of <code>Fin n -&gt; F</code>, via the delta-collapse
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>=</mo><msub><mi>c</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i c_i \cdot e_i(j) == c_j</annotation></semantics></math>,
-by induction. (Infinite bases — finitely-supported coordinates over an
-arbitrary index — wait for the analysis track, where <code>ListVS</code>
-from post #6 is already the warm-up.)</p>
-<h2 id="the-reals-a-specification-not-a-construction">The reals: a
-specification, not a construction</h2>
-<p>Here is the stance that shapes everything downstream (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Reals.v"><code>Interface/Reals.v</code></a>):
-we do not <em>build</em> ℝ out of Cauchy sequences or cuts. We state
-what any implementation must provide — ordered-field laws plus
-<strong>completeness</strong>: every nonempty, bounded-above predicate
-has a least upper bound. Programs will be written against this interface
-and then <em>refined</em> to things a computer can hold: rationals for
-approximation, intervals <code>[a, b]</code> guaranteed to contain the
-true value. That is the Lagrangian plan from the roadmap — compute
-against the spec, run on a representation, carry the soundness proof
-across. (<code>Q</code> famously fails completeness — the supremum of
-“squares to less than 2” is missing — which is precisely why the
-interface earns its keep.)</p>
-<h2 id="complex-numbers-and-the-law-that-makes-division-work">Complex
-numbers, and the law that makes division work</h2>
-<p>Finally, a genuinely new field from an old one (<a
+by induction. (Infinite bases wait for the analysis track;
+<code>ListVS</code> from post #6 is the warm-up.)</p>
+<p><strong>The reals: a specification, not a construction</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Reals.v"><code>Interface/Reals.v</code></a>).
+The stance that shapes everything downstream: we do not <em>build</em> ℝ
+out of Cauchy sequences or cuts. We state what any implementation must
+provide — ordered-field laws plus <strong>completeness</strong>: every
+nonempty, bounded-above predicate has a least upper bound. Programs get
+written against this interface and then <em>refined</em> to things a
+computer can hold: rationals for approximation, intervals guaranteed to
+contain the true value. That is the Lagrangian plan from the roadmap.
+(<code>Q</code> famously fails completeness — the supremum of “squares
+to less than 2” is missing — which is precisely why the interface earns
+its keep. Nothing is “proved:” here on purpose; a specification’s
+theorems belong to its implementations.)</p>
+<h2
+id="the-centerpiece-complex-numbers-and-the-law-that-makes-division-work">The
+centerpiece: complex numbers, and the law that makes division work</h2>
+<p>Now the construction the list was leading to (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Complex.v"><code>Impl/Complex.v</code></a>):
-pairs
+a genuinely new field from an old one. The carrier is a record of two
+components,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a, b)</annotation></semantics></math>
 read as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mi>i</mi></mrow><annotation encoding="application/x-tex">a + bi</annotation></semantics></math>,
-with the Gaussian product
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>c</mi><mo>−</mo><mi>b</mi><mi>d</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mi>d</mi><mo>+</mo><mi>b</mi><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a,b)(c,d) = (ac - bd,\ ad + bc)</annotation></semantics></math>.
-Addition is componentwise (post #6’s product space, again), and every
-ring law reduces to two component equations proved by rewriting.</p>
-<p>The crux is division:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>z</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mover><mi>z</mi><mo accent="true">‾</mo></mover><mi>/</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">z^{-1} = \bar z / (a^2 + b^2)</annotation></semantics></math>
-needs
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a^2 + b^2 \neq 0</annotation></semantics></math>
-whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mi>i</mi></mrow><annotation encoding="application/x-tex">a + bi</annotation></semantics></math>;
+equality and addition are componentwise (post #6’s product pattern,
+again), and multiplication is the Gaussian product, exactly as written
+in the file:</p>
+<pre class="coq"><code>#[global] Instance C_Mult : HasMult (C F) :=
+  fun z w =&gt; mkC (re z * re w + - (im z * im w))
+                 (re z * im w + im z * re w).</code></pre>
+<p><strong>The ring is routine, by design.</strong> Every ring law
+reduces to two component equations over <code>F</code>; the file states
+one helper lemma per component — pure <code>F</code>-algebra, proved by
+post-#1 rewrite chains through distributivity and the abelian-group
+interchange laws — and each <code>C</code>-level law is then a two-line
+<code>split</code> into the helpers. So far, any field <code>F</code>
+would do.</p>
+<p><strong>Division is where the construction must pay.</strong> The
+candidate inverse is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>z</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mover><mi>z</mi><mo accent="true">‾</mo></mover><mi>/</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">z^{-1} = \bar z / (a^2 + b^2)</annotation></semantics></math>:</p>
+<pre class="coq"><code>#[global] Instance C_Inv : HasInv (C F) :=
+  fun z =&gt; mkC (re z * inv (norm2 z)) (- im z * inv (norm2 z)).</code></pre>
+<p>and the field law <code>inv z * z == 1</code> needs
+<code>norm2 z</code>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">= a^2 + b^2</annotation></semantics></math>
+to be invertible whenever
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z \neq 0</annotation></semantics></math>.
-What makes that true? One assumption, with a classical name:</p>
-<pre class="coq"><code>Class FormallyReal F `{Field F} :=
+Over which fields is that true? Not all of them — over ℂ itself,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>1</mn><mn>2</mn></msup><mo>+</mo><msup><mi>i</mi><mn>2</mn></msup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1^2 + i^2 = 0</annotation></semantics></math>
+with neither summand zero. The exact assumption needed has a classical
+name (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/FormallyReal.v"><code>Interface/FormallyReal.v</code></a>):</p>
+<pre class="coq"><code>Class FormallyReal (F : Type) `{Field F} :=
   fr_sos : forall a b : F, a * a + b * b == 0 -&gt; a == 0.</code></pre>
-<p><em>Sums of squares vanish only trivially.</em> Over any formally
-real field — ℝ included, by the order axioms — <code>C F</code> is a
-<strong>Field</strong>, proved down to the last <code>Proper</code>. The
-imaginary unit exists precisely because we paid for it with an axiom
-about the reals; nothing is free, but everything is itemized.</p>
+<p><em>A sum of two squares vanishes only if each summand does</em> (the
+symmetric half, <code>fr_sos_r</code>, is derived in
+<code>Theory/Field.v</code>). That is precisely what
+<code>norm2_nonzero</code> consumes, and with it the wave’s theorem
+assembles:</p>
+<pre class="coq"><code>#[global] Instance C_Field : Field (C F) := ...</code></pre>
+<p><strong>Over any formally real field <code>F</code>, the complex
+numbers <code>C F</code> form a field</strong> — proved down to the last
+<code>Proper</code>.</p>
+<p>Two design notes. First, the hypothesis is <em>exactly</em> the debt:
+not “F is ordered”, not “equality is decidable” — one implication about
+sums of squares, the single fact complex inversion needs. The imaginary
+unit exists because we paid for it with an axiom about the scalars;
+nothing is free, but everything is itemized. Second, the file
+deliberately does <em>not</em> prove <code>FormallyReal Q</code>: that
+fact belongs to the order machinery (a sum of squares is nonnegative,
+and zero only at zero), so it lives with <code>Q</code>’s order instance
+— and once that lands, <code>Field (C Q)</code> assembles by instance
+resolution with no new proofs in <code>Complex.v</code>. The file ends
+with resolution checks pinning both halves: <code>Ring (C F)</code>
+needs only <code>Field F</code>; <code>Field (C F)</code> needs (and
+only needs) <code>FormallyReal F</code>.</p>
 <p>The shopping list is bought. Next stop on the analysis roadmap:
 sequences, limits, and the first
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
@@ -151,6 +181,10 @@ channels (lossy, reordering, duplicating — and the protocols that fix
 them), and the Lagrangian-by-refinement program.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Complex.v"><code>Impl/Complex.v</code></a>
+(C as a verified field) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/FormallyReal.v"><code>Interface/FormallyReal.v</code></a>
+(the one axiom division needs) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Order.v"><code>Interface/Order.v</code></a>
 / <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Order.v"><code>Theory/Order.v</code></a>
@@ -162,9 +196,7 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Norm.v
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Basis.v"><code>Interface/Basis.v</code></a>
 (bases as coordinate isos) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Reals.v"><code>Interface/Reals.v</code></a>
-(ℝ as a spec) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Complex.v"><code>Impl/Complex.v</code></a>
-(C as a verified field).</p>
+(ℝ as a spec).</p>
 </main>
 </body>
 </html>

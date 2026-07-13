@@ -60,14 +60,20 @@ do all the work, and each one solves one specific failure mode of shared
 dev environments:</p>
 <p><strong><a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/Dockerfile"><code>Dockerfile</code></a>
-— the environment is pinned.</strong> A Debian base with a non-root
-<code>vscode</code> user, plus the <a
-href="https://determinate.systems">Determinate Nix</a> installer. Every
-tool version is fixed by the repository’s <a
+— the proof environment is pinned.</strong> A Debian base with a
+non-root <code>vscode</code> user, plus the <a
+href="https://determinate.systems">Determinate Nix</a> installer. The
+Coq toolchain — Coq 8.20 and its matching coq-lsp — is fixed by the
+repository’s <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/flake.nix"><code>flake.nix</code></a>
 and <code>flake.lock</code>, so your container and mine resolve to
-<em>bit-identical</em> toolchains. “Works on my machine” becomes a
-theorem with a proof.</p>
+bit-identical <em>proof</em> toolchains: if the theories check here,
+they check there. “Works on my machine” becomes a theorem with a proof.
+(One deliberate exception: GHC is <em>not</em> pinned — the Makefile
+builds the one Haskell demo with a plain
+<code>nix shell nixpkgs#ghc</code>. Haskell only runs extracted code; no
+proof depends on it, so it doesn’t get the reproducibility
+ceremony.)</p>
 <p><strong>A named volume for <code>/nix</code> — rebuilds don’t
 recompile the world.</strong> Coq and GHC toolchains are gigabytes. The
 container mounts a Docker volume (<code>riktig-nix-store</code>) at

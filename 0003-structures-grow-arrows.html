@@ -32,14 +32,14 @@ a set with <code>+</code>, <code>0</code>, <code>-</code> obeying laws.
 Category theory makes one radical move: it forgets the inside. You are
 not allowed to ask what an object <em>contains</em> — only how it
 <em>connects</em>. Everything must be said with arrows.</p>
-<p>The surprise, and the reason a software project cares: this austerity
-is not a loss. Products, function types, truth values, lambda calculus —
-all of it can be reconstructed from arrows alone, and anything
-reconstructed this way transports to <em>every</em> world that has the
-right arrows. It is the “prove once, hold everywhere” trick from post
-#1, applied one level up: not laws about elements, but laws about
-<em>composition itself</em>. (Our tour follows the classic route of
-Bartosz Milewski’s <a
+<p>The surprise, and the reason a software project cares — the one idea
+of this post: <strong>products, function types, and lambda calculus can
+be reconstructed from arrows alone</strong>, and anything reconstructed
+this way transports to <em>every</em> world that has the right arrows.
+It is the “prove once, hold everywhere” trick from post #1, applied one
+level up: not laws about elements, but laws about <em>composition
+itself</em>. (Our tour follows the classic route of Bartosz Milewski’s
+<a
 href="https://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/"><em>Category
 Theory for Programmers</em></a>, which is the recommended companion
 reading.)</p>
@@ -83,60 +83,114 @@ secretly live in.</li>
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>Impl/StlcCat.v</code></a>):
 objects are simple types, an arrow <code>A ~&gt; B</code> is a
 <em>program</em> of type <code>A → B</code>, and two arrows are equal
-when β/η-conversion says the programs behave alike. Composition is
-<code>λx. g (f x)</code>. The category laws are conversion facts. More
-on this in post #4.</li>
+when a conversion relation says the programs behave alike. The file’s
+<code>conv</code> is deliberately a small <em>fragment</em> of full
+βη-conversion — three generators (<code>conv_beta_id</code>,
+<code>conv_beta_comp</code>, <code>conv_eta</code>) plus congruence and
+weakening, exactly the instances the category laws need; the file
+discloses the scope cut in its header. Composition is
+<code>λx. g (f x)</code>, and the category laws are conversion facts.
+More on this in post #4.</li>
 </ul>
 <h2 id="the-needs-a-theorem-initial-and-terminal-objects">“The” needs a
 theorem: initial and terminal objects</h2>
 <p>With arrows only, how do you point at a <em>specific</em> object? By
 a property of its arrows. A <strong>terminal</strong> object has exactly
 one arrow coming in from everywhere; an <strong>initial</strong> object
-exactly one going out to everywhere (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Terminal.v"><code>Interface/Terminal.v</code></a>,
-<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Initial.v"><code>Interface/Initial.v</code></a>).
-In Coq-types: <code>unit</code> is terminal (every type has exactly one
-function into it), the empty type is initial.</p>
+exactly one going out to everywhere. The whole interface (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Terminal.v"><code>Interface/Terminal.v</code></a>)
+is three fields:</p>
+<pre class="coq"><code>Class Terminal {O : Type} (C : Category O) := {
+  term : O;
+  bang : forall x : O, x ~&gt; term;
+  bang_unique : forall (x : O) (f : x ~&gt; term), f == bang x
+}.</code></pre>
+<p>In Coq-types: <code>unit</code> is terminal (every type has exactly
+one function into it), the empty type is initial (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Initial.v"><code>Interface/Initial.v</code></a>
+is the mirror image, with <code>init</code> and <code>emit</code>).</p>
 <p>But saying “<strong>the</strong> terminal object” is an obligation:
 what if there are two? The first real theorem of the category track (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InitialTerminal.v"><code>Theory/InitialTerminal.v</code></a>)
-discharges it: any two terminal objects are <strong>isomorphic</strong>
-— there are arrows both ways composing to identities — and the
-isomorphism is itself unique. Uniqueness-up-to-iso is category theory’s
+discharges it: any two terminal objects are <strong>isomorphic</strong>.
+It deserves the same slow walk that <code>cancel_l</code> got in post
+#1, because it is the first proof in the project conducted entirely with
+arrows — no elements anywhere.</p>
+<p>First, what is claimed. An <em>isomorphism</em> between objects
+<code>x</code> and <code>y</code> is a pair of arrows that undo each
+other (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Category.v"><code>Theory/Category.v</code></a>):</p>
+<pre class="coq"><code>Record Iso (x y : O) := {
+  iso_to : x ~&gt; y;
+  iso_from : y ~&gt; x;
+  iso_fromto : iso_from ∘ iso_to == cat_id;
+  iso_tofrom : iso_to ∘ iso_from == cat_id
+}.</code></pre>
+<p>Next, the only lemma the proof needs: <em>every endomorphism of a
+terminal object is the identity</em>. Why? Both <code>f</code> and
+<code>cat_id</code> are arrows into a terminal object, and
+<code>bang_unique</code> says there is only one of those:</p>
+<pre class="coq"><code>Lemma term_endo_id (T : Terminal C) :
+  forall f : term (Terminal:=T) ~&gt; term (Terminal:=T), f == cat_id.
+Proof.
+  intros f.
+  rewrite (bang_unique _ f).
+  symmetry.
+  apply bang_unique.
+Qed.</code></pre>
+<p>Read it: <code>f == bang term</code> (uniqueness, applied to
+<code>f</code>), and <code>cat_id == bang term</code> (uniqueness,
+applied to <code>cat_id</code>), hence <code>f == cat_id</code>. The
+proof never opens an object; it plays two uses of the same law against
+each other.</p>
+<p>Finally the theorem. Given two terminal objects <code>T1</code>,
+<code>T2</code>, where do the two arrows of the isomorphism come from?
+There is no choice to make: <code>T2</code>’s bang <em>at</em>
+<code>T1</code> is an arrow <code>T1 ~&gt; T2</code>, and vice versa.
+Their composites are endomorphisms of terminal objects — identities, by
+the lemma. The construction is the record filled in with the only
+inhabitants the types allow:</p>
+<pre class="coq"><code>Definition terminal_iso (T1 T2 : Terminal C) :
+  Iso (term (Terminal:=T1)) (term (Terminal:=T2)) := {|
+  iso_to := bang (Terminal:=T2) (term (Terminal:=T1));
+  iso_from := bang (Terminal:=T1) (term (Terminal:=T2));
+  iso_fromto := term_endo_id T1 _;
+  iso_tofrom := term_endo_id T2 _
+|}.</code></pre>
+<p>(<code>initial_iso</code> is the same proof with all arrows reversed.
+And since any arrow into a terminal object <em>is</em> the bang, the
+isomorphism could not have been anything else — that uniqueness is
+immediate from <code>bang_unique</code>, though the file does not state
+it as a separate theorem.) Uniqueness-up-to-iso is category theory’s
 notion of “the”, and from here on the project earns every definite
 article it uses.</p>
 <h2
-id="products-and-exponentials-data-and-functions-from-arrows-alone">Products
-and exponentials: data and functions, from arrows alone</h2>
-<p>A <strong>product</strong> of <code>a</code> and <code>b</code> is an
-object with projections <code>pi1</code>, <code>pi2</code> such that any
-object mapping into both <code>a</code> and <code>b</code> factors
-through it, uniquely (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Product.v"><code>Interface/Product.v</code></a>):</p>
-<pre class="coq"><code>pair_pi1 : pi1 ∘ pair_mor f g == f
-pair_pi2 : pi2 ∘ pair_mor f g == g
-pair_unique : pi1 ∘ h == f -&gt; pi2 ∘ h == g -&gt; h == pair_mor f g</code></pre>
-<p>No mention of “pairs of elements” — yet in Coq-types this is exactly
-<code>prod</code>/<code>fst</code>/<code>snd</code>, and the theory file
+id="products-exponentials-ccc-the-rest-of-the-reconstruction">Products,
+exponentials, CCC: the rest of the reconstruction</h2>
+<p>The remaining structures play the same game the terminal object just
+played — pick out an object by a universal property of its arrows — so
+we state them at a glance and let the files speak.</p>
+<p>A <strong>product</strong> of <code>a</code> and <code>b</code> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Product.v"><code>Interface/Product.v</code></a>)
+is an object with projections <code>pi1</code>, <code>pi2</code> through
+which any object mapping into both <code>a</code> and <code>b</code>
+factors, uniquely (<code>pair_pi1</code>, <code>pair_pi2</code>,
+<code>pair_unique</code>). No mention of “pairs of elements” — yet in
+Coq-types this is exactly
+<code>prod</code>/<code>fst</code>/<code>snd</code>, and <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Product.v"><code>Theory/Product.v</code></a>
 derives the working algebra (<code>pair_eta</code>,
-<code>pair_comp</code>, commutativity of <code>×</code> up to iso — <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Product.v"><code>Theory/Product.v</code></a>).</p>
-<p><strong>Exponentials</strong> are the same game played on function
-types (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Exponential.v"><code>Interface/Exponential.v</code></a>):
-<code>exp_obj a b</code> <em>internalizes</em> the arrows
-<code>a ~&gt; b</code> as an object, with</p>
-<pre class="coq"><code>eval_mor : prod_obj (exp_obj a b) a ~&gt; b          (* apply *)
-curry    : (prod_obj x a ~&gt; b) -&gt; (x ~&gt; exp_obj a b)
-curry_beta : eval_mor ∘ (curry h ×× cat_id) == h</code></pre>
-<p>Read <code>curry_beta</code> aloud: <em>currying then applying is the
-original function</em>. Every functional programmer has used this fact;
-here it is an axiom about arrows, and <a
+<code>pair_comp</code>, commutativity of <code>×</code> up to iso). An
+<strong>exponential</strong> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Exponential.v"><code>Interface/Exponential.v</code></a>)
+<em>internalizes</em> the arrows <code>a ~&gt; b</code> as an object
+<code>exp_obj a b</code>, with an application arrow
+<code>eval_mor</code> and a currying operation whose central law is</p>
+<pre class="coq"><code>curry_beta : eval_mor ∘ (curry h ×× cat_id) == h</code></pre>
+<p>— <em>currying then applying is the original function</em>; <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Exponential.v"><code>Theory/Exponential.v</code></a>
-proves the inverse direction (<code>curry_uncurry</code>,
+proves the inverse round trip (<code>curry_uncurry</code>,
 <code>uncurry_curry</code>) in the usual few rewrite lines.</p>
-<h2 id="cartesian-closed-categories">Cartesian closed categories</h2>
 <p>A category with a terminal object, all products, and all exponentials
 is <strong>cartesian closed</strong> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/CCC.v"><code>Interface/CCC.v</code></a>)

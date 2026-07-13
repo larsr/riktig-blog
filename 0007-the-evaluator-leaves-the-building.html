@@ -36,8 +36,9 @@ and is startlingly short: name the functions you want
 <code>cps</code> from <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/CPS.v"><code>Lambda/CPS.v</code></a>),
 and say how to render the primitive types:</p>
-<pre class="coq"><code>Extract Inductive nat =&gt; &quot;Prelude.Integer&quot; [&quot;0&quot; &quot;(Prelude.+) 1&quot;] ...</code></pre>
-<p>That last line matters for more than cosmetics. Inside Coq,
+<pre class="coq"><code>Extract Inductive nat =&gt; &quot;Prelude.Integer&quot; [&quot;0&quot; &quot;Prelude.succ&quot;]
+  &quot;(\fO fS n -&gt; if n Prelude.== 0 then fO () else fS (n Prelude.- 1))&quot;.</code></pre>
+<p>That line matters for more than cosmetics. Inside Coq,
 <code>nat</code> is unary — <code>3</code> is <code>S (S (S O))</code> —
 which is wonderful for induction and terrible for arithmetic at scale.
 Extraction maps it to Haskell’s arbitrary-precision
@@ -56,11 +57,17 @@ printer back. <code>make lambda-eval</code> builds it; then:</p>
 <pre><code>$ ./programs/lambda-eval/lambda-eval &#39;(\x. x x) (\y. y)&#39;
 \x. x
 $ ./programs/lambda-eval/lambda-eval --cps &#39;\x. x&#39;
-\k. k (\x. \k. k x)</code></pre>
+\x. \y. y x</code></pre>
 <p>The first line is the self-application classic reducing to the
-identity; the second shows the CPS translation from post #4 — the very
-<code>Fixpoint cps</code> we proved things about — rewriting a program
-into continuation-passing style on demand.</p>
+identity. The second runs the CPS translation from post #4 — the very
+<code>Fixpoint cps</code> we proved things about. Note what
+<code>--cps</code> does: it does not print the transformed term; it
+CPS-transforms the program, applies it to the identity continuation, and
+<em>evaluates</em>. What comes out is therefore the value’s
+CPS-converted twin from post #4: <code>Ψ(λx.x) = λx. λk. k x</code>,
+printed with fresh names as <code>\x. \y. y x</code>. The subtlety we
+could only state as a theorem back then is now observable at the
+shell.</p>
 <h2 id="what-is-proved-what-is-trusted">What is proved, what is
 trusted</h2>
 <p>Honesty section. The <strong>evaluator</strong> is the verified

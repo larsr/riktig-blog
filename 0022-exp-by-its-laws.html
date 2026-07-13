@@ -34,14 +34,18 @@ project has been careful to introduce only as needed. But softmax needs
 situation already exists — write the spec first, defer the
 construction:</p>
 <pre class="coq"><code>Class Exp (F : Type) `{OrderedField F} := {
-  exp_fn   : F -&gt; F;
+  exp_fn        : F -&gt; F;
+  #[global] exp_fn_proper :: Proper (equ ==&gt; equ) exp_fn;
+
   exp_zero : exp_fn 0 == 1;
   exp_add  : forall a b : F, exp_fn (a + b) == exp_fn a * exp_fn b;
   exp_pos  : forall a : F, 0 &lt;= exp_fn a;
   exp_mono : forall a b : F, a &lt; b -&gt; exp_fn a &lt; exp_fn b
 }.</code></pre>
-<p>Four laws. <code>exp</code> is a monotone homomorphism from the
-additive group
+<p>Four laws — the <code>Proper</code> field is setoid plumbing,
+recording that <code>exp_fn</code> respects <code>==</code> so it can be
+rewritten under, not a law about <code>exp</code> itself.
+<code>exp</code> is a monotone homomorphism from the additive group
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mo>,</mo><mi>+</mi><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(F,+,0)</annotation></semantics></math>
 to the multiplicative monoid
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mo>,</mo><mi>×</mi><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(F,\times,1)</annotation></semantics></math>,

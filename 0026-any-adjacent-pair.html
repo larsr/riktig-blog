@@ -32,12 +32,26 @@ swapping <em>the first two rows specifically</em> negates the
 determinant — useful, but pinned to one fixed pair, because the
 recursion’s own structure made every other pair much harder to track.
 Today’s result removes that restriction entirely:</p>
-<pre class="coq"><code>Theorem perm_sign_postcompose_adj : (* for ANY adjacent pair, at ANY level *)
-  ...
+<pre class="coq"><code>Theorem perm_sign_postcompose_adj : forall (n : nat) (k : Fin.t n) (sigma : Perm (S n)),
+  perm_sign (perm_postcompose sigma (swap_fin (fweaken k) (Fin.FS k))
+                                    (swap_fin (fweaken k) (Fin.FS k)))
+    == - perm_sign sigma.
 
-Theorem detM_swap_adjacent : forall (A : Matrix n n F) (k : Fin.t n),
-  (* swapping rows k and k+1 of A, for ANY k, negates detM *)
-  ...</code></pre>
+Theorem detM_swap_adjacent : forall (n : nat) (k : Fin.t n) (A : Matrix (S n) (S n) F),
+  detM (row_swap A (fweaken k) (Fin.FS k)) == - detM A.</code></pre>
+<p>Reading the notation: both <code>fweaken k</code> and
+<code>Fin.FS k</code> embed <code>k : Fin.t n</code> into
+<code>Fin.t (S n)</code> — the first keeping its value, the second
+shifting it by one — so together they denote positions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k+1</annotation></semantics></math>,
+and the pair ranges over <em>every</em> adjacent pair as <code>k</code>
+does. And <code>perm_postcompose sigma tau tau'</code> builds “apply
+<code>sigma</code>, then <code>tau</code>” as a permutation value,
+taking <code>tau</code> together with its inverse <code>tau'</code>; a
+transposition is its own inverse, which is why the same
+<code>swap_fin</code> appears twice.</p>
 <p>Any adjacent pair, anywhere in the matrix — not just the top two. The
 smoke test checks this on a concrete
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
@@ -52,8 +66,18 @@ permutation-indexed product, lets a row swap act by pure postcomposition
 of the <em>permutation itself</em>, computed by its own recursive
 structure (choose
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma(1)</annotation></semantics></math>,
-recurse on the rest). To show sign flips under postcomposition by a
-transposition, you first need to construct
+recurse on the rest). Concretely, a <code>Perm n</code> is a
+Lehmer-style encoding — <code>Perm_S c p</code> records the choice
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">\sigma(1) = c</annotation></semantics></math>
+and recurses with <code>p</code> on the remaining positions — and
+<code>perm_sign (Perm_S c p) == sign_at c * perm_sign p</code>, where
+<code>sign_at c</code> alternates
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><mi>−</mi><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi>…</mi></mrow><annotation encoding="application/x-tex">1, -1, 1, \dots</annotation></semantics></math>
+with the position chosen; multiplied out over all levels, that is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(-1)</annotation></semantics></math>
+raised to the sum of the chosen indices, the permutation’s inversion
+count. To show sign flips under postcomposition by a transposition, you
+first need to construct
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>,
 then apply
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>”
@@ -86,26 +110,11 @@ through that chain by induction. What’s needed to make the push-through
 work is one more composition lemma, showing sign behaves correctly when
 two postcompositions are chained rather than just one — a precise,
 identified, one-more-induction task, not a new kind of difficulty.</p>
-<h2 id="four-attempts-strictly-narrowing">Four attempts, strictly
-narrowing</h2>
-<p>It’s worth naming the shape of this whole effort plainly, because
-it’s not the usual “tried, failed, moved on” story. Four attempts have
-now gone into general determinant multiplicativity:</p>
-<ol type="1">
-<li>Direct row-relocation via the cofactor recursion — stalled on
-simultaneous two-row tracking.</li>
-<li>A second direct attempt at the same route — same wall.</li>
-<li>The permutation-sum reformulation (post #23) — sidestepped the
-relocation problem entirely, reached the row-swap half of antisymmetry
-unconditionally, for <em>any</em> pair.</li>
-<li>Today: the sign half, for adjacent pairs — a strict generalization
-of the one special case the <em>first</em> attempt ever reached.</li>
-</ol>
-<p>Each attempt made real, kept progress, even the ones that didn’t
-finish — nothing here was thrown away and redone. The remaining gap is
-smaller and more precisely shaped than at any earlier point: one
-composition lemma, one factorization argument, both with their proof
-route already sketched.</p>
+<p>Four attempts have now gone into general determinant multiplicativity
+— two direct ones that stalled, post #23’s reformulation, and today’s
+adjacent-pair sign flip — and each kept its progress; the remaining gap
+is one composition lemma and one factorization argument, both with their
+proof route already sketched.</p>
 <p><em>Next: <code>perm_postcompose_compose</code>, the composition
 lemma that chains adjacent transpositions into arbitrary ones — attempt
 #5, or a pivot to Stage B’s softmax/ReLU if that keeps for another

@@ -12,9 +12,11 @@
 <h1 id="riktig-17-everything-sent-eventually-arrives">riktig #17 —
 Everything sent eventually arrives</h1>
 <p><em>Seventeenth post documenting the <strong>riktig</strong> project.
-The channels thread closes its opening arc; the determinant, promised
-back in <a href="0014-a-determinant-you-can-compute.html">post #14</a>,
-gets its coordinate-free definition.</em></p>
+The channels thread closes its opening arc: <a
+href="0016-a-protocol-that-cannot-lie-to-you.html">post #16</a> proved
+the alternating-bit protocol </em>safe<em>; today it is proved
+</em>live<em> — under the one hypothesis an honest liveness theorem has
+to have.</em></p>
 <blockquote>
 <p><strong>What we are doing, and why.</strong> Verified software in
 Coq, built for modifiability. <a
@@ -23,9 +25,9 @@ the alternating-bit protocol never lets a corrupted or duplicated
 message through — <em>safety</em>, unconditional. Safety alone is a low
 bar: a protocol that discards every packet is perfectly safe. Today’s
 other half is <em>liveness</em> — does anything actually get through? —
-and, on the algebra side, the determinant finally means what it always
-should have: not a formula, but the number by which a map scales
-volume.</p>
+and the interesting part is not the proof but the hypothesis: what is
+the <em>weakest</em> assumption about the wire under which delivery can
+be guaranteed at all?</p>
 </blockquote>
 <h2 id="safety-was-free-liveness-has-a-price">Safety was free; liveness
 has a price</h2>
@@ -37,21 +39,39 @@ eats every packet forever really does deliver nothing, and no proof can
 say otherwise. So liveness needs a <strong>hypothesis</strong>, and the
 whole craft is finding the weakest one that’s still true of real
 networks.</p>
+<p>The hypothesis lives in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Fairness.v"><code>Channel/Fairness.v</code></a>,
+and it mirrors the sender’s own structure: the sender emits one
+<em>burst</em> of <code>k</code> identical copies per message, and the
+wire trace is required to split into per-burst fragments in lock-step
+with the message list —</p>
 <pre class="coq"><code>Fixpoint fair_wire (b : bit) (ms : list M) (k : nat) (wire : list Packet) : Prop :=
   match ms with
   | [] =&gt; wire = []
   | m :: ms&#39; =&gt;
-      exists w1 w2, wire = w1 ++ w2 /\
-        lossy_dup (sender_burst b m k) w1 /\ w1 &lt;&gt; [] /\
+      exists w1 w2,
+        wire = w1 ++ w2 /\
+        lossy_dup (sender_burst b m k) w1 /\
+        w1 &lt;&gt; [] /\
         fair_wire (negb b) ms&#39; k w2
   end.</code></pre>
 <p>Read the third conjunct: <code>w1 &lt;&gt; []</code> — <em>at least
 one copy of this message’s retransmission burst survives.</em> That’s
-the entire fairness assumption. Everything else is unchanged: the
-channel can still drop some copies, duplicate others, reorder within the
-burst — anything <code>lossy_dup</code> allows — as long as it doesn’t
-drop <em>all</em> of them.</p>
-<pre class="coq"><code>Theorem abp_liveness : forall k b0 ms wire,
+the entire fairness assumption. Everything else is unchanged: within
+each burst the channel can still drop some copies and duplicate others —
+anything <code>lossy_dup</code> allows — as long as it doesn’t drop
+<em>all</em> of them. (Reordering is not among <code>lossy_dup</code>’s
+powers — post #15 proved <code>reorder_not_lossy_dup</code> — and within
+a burst it would be invisible anyway, since every copy is the identical
+packet.) Fairness is not “no loss”; it is “not total loss.”</p>
+<p>And the hypothesis is not an unrelated model bolted onto the side: a
+sanity-check lemma, <code>fair_wire_lossy_dup</code>, shows every fair
+wire trace is in particular a <code>lossy_dup</code> mangling of the
+full sender stream — exactly the adversary class <code>abp_safety</code>
+already quantified over, now with per-burst survival added on top.
+Fairness <em>refines</em> the safety model; it doesn’t replace it.</p>
+<h2 id="the-theorem">The theorem</h2>
+<pre class="coq"><code>Theorem abp_liveness : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
   fair_wire b0 ms k wire -&gt; deliver b0 wire = ms.</code></pre>
 <p>Under that one assumption, delivery is <em>exactly</em> the sent list
 — no subsequence slack, no missing messages. Compare the two theorems
@@ -65,7 +85,7 @@ liveness proof is supposed to show you.</p>
 <p>A companion theorem confirms the endpoint everyone actually cares
 about: over the <strong>perfect</strong> channel (no loss at all),
 delivery is exact too —</p>
-<pre class="coq"><code>Theorem abp_collapse_perfect : forall k b0 ms wire,
+<pre class="coq"><code>Theorem abp_collapse_perfect : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
   k &gt; 0 -&gt; perfect (sender_stream b0 ms k) wire -&gt; deliver b0 wire = ms.</code></pre>
 <p>— with <code>k &gt; 0</code> earning its keep as a genuine, necessary
 hypothesis: with a retransmission budget of zero, nothing is ever sent,
@@ -75,6 +95,13 @@ so of course nothing arrives. (Small, honest detail:
 <em>unsatisfiable</em> for a nonempty message, since an empty burst can
 never contain a surviving packet. The right hypothesis makes the
 degenerate case impossible instead of needing a bolt-on exception.)</p>
+<p>One scope note, stated in the file’s own header rather than
+discovered later: this is <em>finite</em> fairness, over finite message
+lists and wire traces. The stream-level statement — “a message offered
+infinitely often is eventually delivered” — needs coinductive traces,
+and is deliberately deferred until the library models runs as streams.
+The finite setting turned out to admit a clean finitary hypothesis, so
+nothing weaker than the honest claim is being sold.</p>
 <p>This closes the arc the roadmap laid out: <strong>T1</strong> gave
 channels a vocabulary (relations, not probabilities),
 <strong>T2</strong> gave protocols a shape (state machines composed
@@ -84,63 +111,29 @@ actually satisfies. The next protocols on the roadmap — Go-Back-N,
 selective repeat, the reliability core of TCP — inherit this whole
 structure; a new retransmission scheme only ever owes its own
 burst-delivery argument.</p>
-<h2 id="the-determinant-defined-honestly">The determinant, defined
-honestly</h2>
-<p><a href="0014-a-determinant-you-can-compute.html">Post #14</a>
-computed the determinant by Laplace expansion (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>)
-— but “how a map scales alternating volume” is the real
-<em>definition</em>, with the Laplace formula demoted to a mere
-computation lemma. Delivering the coordinate-free version in full
-generality turns out to require a fact — <em>the space of alternating
-top-forms on an n-dimensional space is exactly one-dimensional</em> —
-that is itself a serious theorem, not yet in the tree. Rather than fake
-it, this wave draws the line exactly where the honest proof runs out,
-and says so in the code.</p>
-<p><strong>What’s unconditional:</strong> precomposing an alternating
-form with any linear map preserves alternation —</p>
-<pre class="coq"><code>Theorem fstar_alternating : Alternating omega -&gt; Alternating (fstar f omega).</code></pre>
-<p>a clean, fully general lemma for any dimension, with no gaps.</p>
-<p><strong>What’s basis-relative, and proved right:</strong> reusing
-L2’s representation theorem directly,</p>
-<pre class="coq"><code>Definition det (B : Basis n F U) (f : LinearMap F U U) : F := detM (mat_of B B f).
-
-Theorem det_id : forall B, det B lm_id == 1.  (* unconditional *)</code></pre>
-<p><strong>What’s conditional, and says so:</strong></p>
-<pre class="coq"><code>Section EndoDetConditional.
-  Context (detM_mul : forall A A&#39;, detM (mat_mul A A&#39;) == detM A * detM A&#39;).
-
-  Theorem det_basis_indep : forall B B&#39; f, det B&#39; f == det B f.
-  Theorem det_comp : forall B f g, det B (lm_comp f g) == det B f * det B g.
-End EndoDetConditional.</code></pre>
-<p><code>det_basis_indep</code> — the theorem that makes
-“coordinate-free” a fact and not a slogan — follows <a
-href="0014-a-determinant-you-can-compute.html">post #14</a>’s
-trace-basis-independence argument almost exactly: conjugate by a
-change-of-basis matrix, cancel. But cancelling needs <code>detM</code>
-to be <em>multiplicative</em>, and multiplicativity is the one fact this
-wave doesn’t yet have — proving it cleanly wants the elementary-matrix
-machinery of Gaussian elimination, queued for wave L5. So it enters as a
-<code>Context</code> hypothesis: a named, visible assumption sitting
-right in the theorem’s premises, not a silent gap and not a Coq
-<code>Axiom</code> either. When L5 lands, that hypothesis gets
-<em>discharged</em> — proved once, for real — and every theorem built on
-top of it becomes unconditional retroactively, for free. That’s the
-payoff of writing the dependency down instead of hiding it: the proof
-obligation is exactly one lemma, visible in the type, waiting to be
-paid.</p>
-<p><em>Next: Gaussian elimination (L5) — the wave that discharges
-today’s open hypothesis and, as a side effect, gives the library working
-<code>solve</code>/<code>invert</code>/<code>rank</code> programs you
-can extract and run.</em></p>
+<h2 id="also-in-this-wave-the-determinant-conditionally">Also in this
+wave: the determinant, conditionally</h2>
+<p>The algebra side of this wave produced the coordinate-free
+determinant <em>specification</em> (<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Determinant.v"><code>Theory/Determinant.v</code></a>):
+<code>det B f := detM (mat_of B B f)</code>, with <code>det_id</code>
+unconditional, and basis-independence and
+<code>det (f ∘ g) = det f · det g</code> proved under an explicitly
+named hypothesis — the multiplicativity of the matrix determinant —
+carried as a visible <code>Context</code> assumption rather than a
+hidden gap or an <code>Axiom</code>. Discharging that hypothesis is a
+genuine story of its own, and it is told properly in posts #23–#28.</p>
+<p><em>Next: a look at the shape of the library itself — where the
+Interface/Theory/Impl discipline has held, and where it has
+slipped.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Fairness.v"><code>Channel/Fairness.v</code></a>
-(liveness, perfect-channel collapse) · <a
+(fair_wire, abp_liveness, abp_collapse_perfect) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/ABP.v"><code>Channel/ABP.v</code></a>
 (the safety theorem this builds on) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Determinant.v"><code>Theory/Determinant.v</code></a>
-(the coordinate-free det, honestly scoped).</p>
+(the conditional coordinate-free determinant).</p>
 </main>
 </body>
 </html>
