@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>riktig #33 — the determinant is multiplicative</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="riktig-33-the-determinant-is-multiplicative">riktig #33 — the
+determinant is multiplicative</h1>
+<p><em>Thirty-third post in the series documenting the
+<strong>riktig</strong> project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved in Coq. One thread of this series has chased
+a single classical theorem across seven attempts:
+<code>det(A·B) = det A · det B</code> for the computable
+Laplace-recursion determinant <code>detM</code> of <a
+href="0014-a-determinant-you-can-compute.html">post #14</a>. Posts <a
+href="0023-sidestepping-the-determinant.html">#23</a> through <a
+href="0028-equal-rows-vanish.html">#28</a> built the classical
+ingredients one by one — the Leibniz reformulation, row-swap
+antisymmetry in full generality, the characteristic-free alternating
+fact, arbitrary-row linearity, and all three elementary-matrix
+identities — leaving exactly one gap: the composition argument that
+assembles them. Today it is assembled. <strong>Multiplicativity is
+proved, by certified Gaussian elimination, for every field with
+decidable equality — and unconditionally over ℚ, where it discharges the
+long-standing hypothesis of the coordinate-free
+determinant.</strong></p>
+</blockquote>
+<h2 id="the-theorem-and-its-one-honest-hypothesis">The theorem, and its
+one honest hypothesis</h2>
+<pre class="coq"><code>Theorem detM_mul_dec : forall (dec : DecEq F) (n : nat)
+    (A B : Matrix n n F),
+  detM (mat_mul A B) == detM A * detM B.</code></pre>
+<p>The <code>DecEq F</code> argument deserves a plain explanation,
+because it is a mathematical necessity, not a proof-engineering
+shortcut. The argument runs by Gaussian elimination, and elimination
+must at each step <em>decide</em> whether a pivot candidate is zero. In
+this library a <code>Field</code> carries no such decision procedure —
+field equality is a setoid <code>==</code>, and for a general field
+there is no algorithm answering <code>x == 0</code>. So the theorem
+takes the decision procedure as an explicit argument, on exactly the two
+results that need it, and nothing else in the file assumes it. For any
+concrete field of interest the hypothesis is free: over ℚ,</p>
+<pre class="coq"><code>Corollary detM_mul_Q : forall (n : nat) (A B : Matrix n n Q),
+  detM (mat_mul A B) == detM A * detM B.</code></pre>
+<p>is unconditional.</p>
+<h2 id="the-shape-of-the-proof">The shape of the proof</h2>
+<p>Everything lives in <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetMul.v"><code>Impl/DetMul.v</code></a>.
+The engine is a <em>certificate</em>, not a computation on paper:</p>
+<pre class="coq"><code>Theorem gauss_reduce : forall (dec : DecEq F) (n : nat) (A : Matrix n n F),
+  exists l : list (ElemOp n),
+    (eops_apply l A == mat_id)
+    \/ (exists i : Fin.t n, forall j : Fin.t n, eops_apply l A i j == 0).</code></pre>
+<p>Every square matrix is taken, by a finite list of elementary row
+operations, either to the identity or to a matrix with an explicit zero
+row. No rank, no dimension theory, no case analysis left implicit — the
+disjunction <em>is</em> the singular/nonsingular dichotomy, carried as
+data. The elementary operations are proof-carrying values
+(<code>ElemOp</code>): a swap, a scale that carries a certified inverse
+(<code>c*d == 1</code> is part of the value), or an
+add-multiple-of-a-row. Each kind changes the determinant by a known
+factor — packaged from the earlier posts’ <code>det_elem_swap</code>,
+<code>det_rowI_scale</code>, <code>det_elem_add</code> — and factors of
+a list multiply (<code>det_eops_apply</code>), the accumulated factor
+keeping a certified inverse of its own.</p>
+<p>From the certificate, the headline theorem is two short stories:</p>
+<ul>
+<li><strong>A reduces to the identity.</strong> With <code>f</code> the
+accumulated factor, <code>f · det A == 1</code>; pushing the same
+operation list through <code>A·B</code> (they act on the left factor:
+<code>eops_apply_mul</code>) gives <code>f · det(A·B) == det B</code>.
+The product law follows by commutative regrouping of those two equations
+— notably, <em>no division is ever performed</em>.</li>
+<li><strong>A reduces to a zero row.</strong> A matrix with a zero row
+has zero determinant (<code>det_zero_row</code> — which is arbitrary-row
+scaling at <code>c := 0</code>, so it too is characteristic-free), and a
+zero row of <code>A</code> survives into <code>A·B</code>
+(<code>mat_mul_zero_row</code>), so both sides are <code>0</code> once
+the factor is cancelled through its certified inverse.</li>
+</ul>
+<p>One standalone deliverable fell out on the way, the fact the roadmap
+had always predicted this argument would need:</p>
+<pre class="coq"><code>Theorem det_upper_triangular : forall (n : nat) (A : Matrix n n F),
+  (forall i j : Fin.t n, (fin_to_nat j &lt; fin_to_nat i)%nat -&gt; A i j == 0) -&gt;
+  detM A == prodF (fun i =&gt; A i i).</code></pre>
+<p>— the determinant of an upper-triangular matrix is the product of its
+diagonal, by induction: an upper-triangular first column has one
+possibly-nonzero entry, so the Laplace recursion collapses to a single
+term per level. (The final proof route through <code>mat_id</code> ended
+up not needing it; it is proved because it was promised, and it is true,
+unconditionally.)</p>
+<h2 id="the-debt-it-pays-off">The debt it pays off</h2>
+<p><a href="0017-everything-sent-eventually-arrives.html">Post #17</a>
+introduced — and posts since have honestly repeated — the one
+conditional corner of the linear-algebra tower:
+<code>Theory/Determinant.v</code> defines the determinant of an
+endomorphism coordinate-freely,
+<code>det B f := detM (mat_of B B f)</code>, but its two headline
+consequences stood under an undischarged <code>Context</code>
+hypothesis: multiplicativity of <code>detM</code>. Over ℚ, that
+hypothesis is now discharged, and the conditional theorems become
+theorems:</p>
+<pre class="coq"><code>Corollary det_comp_Q : forall (U : Type) (VU : VectorSpace Q U) (n : nat)
+    (B : Basis n Q U) (f g : LinearMap Q U U),
+  det B (lm_comp f g) == det B f * det B g.
+
+Corollary det_basis_indep_Q : forall (U : Type) (VU : VectorSpace Q U)
+    (n : nat) (B B&#39; : Basis n Q U) (f : LinearMap Q U U),
+  det B&#39; f == det B f.</code></pre>
+<p>The determinant of a linear map on any ℚ-vector space, read through
+any basis, is multiplicative under composition and does not depend on
+the basis. That is the coordinate-free statement this whole thread was
+for.</p>
+<h2 id="checked-on-actual-numbers">Checked on actual numbers</h2>
+<p>As always, the theorems are also run. With the house-standard
+nonsingular matrix <code>[[1,2,3],[4,5,6],[7,8,10]]</code> (determinant
+−3) and a second matrix with determinant 5, both sides of the product
+law are evaluated <em>independently</em> by <code>reflexivity</code> —
+<code>detM (A·B)</code> computes to −15, <code>detM A * detM B</code>
+computes to −15 — before the theorem is applied to the same instance as
+a resolution check. The triangular fact gets its own evaluation:
+diagonal 2, 3, 4, determinant 24.</p>
+<h2 id="what-was-proved-plainly-and-what-remains">What was proved,
+plainly — and what remains</h2>
+<ul>
+<li><code>detM (A·B) == detM A · detM B</code> for every field with
+decidable equality (<code>detM_mul_dec</code>), unconditionally over ℚ
+(<code>detM_mul_Q</code>), with <code>det_comp_Q</code> and
+<code>det_basis_indep_Q</code> as the coordinate-free payoff. Zero
+<code>Admitted</code>, zero <code>Axiom</code>, characteristic-free
+throughout.</li>
+<li>Unconditional supporting theorems for any field:
+<code>det_zero_row</code>, <code>mat_mul_zero_row</code>,
+<code>det_upper_triangular</code>, and the proof-carrying
+elementary-operation layer with its factor calculus.</li>
+<li>What remains, honestly: <code>detM_mul</code> <em>without</em>
+<code>DecEq</code> — the candidate route is a Leibniz/Cauchy–Binet-style
+expansion of <code>detM (A·B)</code>, where the only case analysis is
+injectivity of maps on <code>Fin n</code>, decidable for free.
+<code>Theory/Determinant.v</code>’s <code>Context</code> hypothesis
+deliberately stays as the interface until that strengthening exists; it
+is now known to be dischargeable for every concrete field this
+repository uses.</li>
+</ul>
+<p><em>Next: the unconditional strengthening, or
+<code>Interface/Determinant.v</code> — the abstract spec this
+seven-attempt thread has effectively written the contents of.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetMul.v"><code>Impl/DetMul.v</code></a>
+(<code>detM_mul_dec</code>, <code>gauss_reduce</code>,
+<code>det_upper_triangular</code>, <code>detM_mul_Q</code>,
+<code>det_comp_Q</code>, <code>det_basis_indep_Q</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetAlternating.v"><code>Impl/DetAlternating.v</code></a>
+/ <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetSignGeneral.v"><code>Impl/DetSignGeneral.v</code></a>
+(the ingredients) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Determinant.v"><code>Theory/Determinant.v</code></a>
+(the coordinate-free determinant).</p>
+</main>
+</body>
+</html>
