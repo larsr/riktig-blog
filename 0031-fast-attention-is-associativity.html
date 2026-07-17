@@ -18,8 +18,9 @@ fast attention is one associativity away</h1>
 whose correctness is proved in Coq. <a
 href="0030-a-matrix-is-an-operator.html">Post #30</a> showed that a
 matrix applied to a coordinate vector is a linear operator, and that
-multiplying matrices is composing operators (<code>mat_vec_mul</code>) —
-so the <em>order</em> in which a chain of matrix products is evaluated
+multiplying matrices is composing operators (<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>)
+— so the <em>order</em> in which a chain of matrix products is evaluated
 is an algorithm choice that cannot change the value. Today that choice
 with money on it: <strong>a linear-attention layer computed left to
 right materializes an n×n matrix and costs 2n²d multiplications;
@@ -62,16 +63,18 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v
 instantiated at the shapes <code>(n×d)·(d×n)·(n×d)</code>. The naive
 order’s intermediate <code>Q·Kᵀ</code> has <code>n²</code> entries; the
 fast order’s <code>Kᵀ·V</code> has <code>d²</code> — and
-<code>d ≤ n</code> gives <code>d² ≤ n²</code>
-(<code>intermediate_smaller</code>). At n = 1024 tokens and d = 64 that
-is a million-entry score matrix against four thousand.</p>
+<code>d ≤ n</code> gives <code>d² ≤ n²</code> (<a
+href="coqdoc/Riktig.Impl.Attention.html#intermediate_smaller"><code>intermediate_smaller</code></a>).
+At n = 1024 tokens and d = 64 that is a million-entry score matrix
+against four thousand.</p>
 <h2 id="the-costs-machine-checked">The costs, machine-checked</h2>
 <p>Counting is proof too. <code>mulcost m n p := m*n*p</code> counts the
-scalar multiplications the <code>bigopF</code> definition of an
-<code>m×n</code> by <code>n×p</code> product performs — <code>m·p</code>
-entries, each a sum of <code>n</code> products. (A statement about the
-algorithm the definition <em>denotes</em>; Coq’s own evaluator is not
-being benchmarked.) Then:</p>
+scalar multiplications the <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+definition of an <code>m×n</code> by <code>n×p</code> product performs —
+<code>m·p</code> entries, each a sum of <code>n</code> products. (A
+statement about the algorithm the definition <em>denotes</em>; Coq’s own
+evaluator is not being benchmarked.) Then:</p>
 <pre class="coq"><code>Definition cost_naive (n d : nat) : nat :=
   (mulcost n d n + mulcost n n d)%nat.    (* = 2·n²·d *)
 
@@ -93,8 +96,10 @@ Example cost_fast_1024_64  : N.of_nat (cost_fast 1024 64)  = 8388608%N.</code></
 <code>n/d = 16</code>.</p>
 <h2 id="for-a-single-vector-no-product-at-all">For a single vector: no
 product at all</h2>
-<p>Post #30’s <code>mat_vec_mul</code>, applied twice, turns the whole
-layer into a pipeline of three matrix-vector applications:</p>
+<p>Post #30’s <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>,
+applied twice, turns the whole layer into a pipeline of three
+matrix-vector applications:</p>
 <pre class="coq"><code>Theorem attn_pipeline : forall w : Fin.t d -&gt; F,
   mat_vec attn_naive w == mat_vec Q (mat_vec (mat_tr K) (mat_vec V w)).</code></pre>
 <p>Feed a coordinate vector through <code>V</code>, then
@@ -107,24 +112,27 @@ evaluated <em>independently</em>, entry by entry, against the
 hand-computed output</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mi>V</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>9</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd><mtd columnalign="center" style="text-align: center"><mi>−</mi><mn>2</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">(Q K^{\mathsf T})V \;=\; Q(K^{\mathsf T}V) \;=\;
 \begin{pmatrix} 9 &amp; 7 \\ 2 &amp; 3 \\ 3 &amp; -2 \end{pmatrix}</annotation></semantics></math></p>
-<p>each closed by <code>reflexivity</code> with no appeal to
-<code>attn_assoc</code> — the theorem is then applied to the same
-instance as a separate resolution check. The pipeline is likewise
-computed on a concrete vector, both ways, meeting at
-<code>(23, 8, -1)</code>.</p>
+<p>each closed by <code>reflexivity</code> with no appeal to <a
+href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>
+— the theorem is then applied to the same instance as a separate
+resolution check. The pipeline is likewise computed on a concrete
+vector, both ways, meeting at <code>(23, 8, -1)</code>.</p>
 <h2 id="what-was-proved-plainly">What was proved, plainly</h2>
 <ul>
 <li><code>attn_naive == attn_fast</code> for every field, every
 <code>n</code>, <code>d</code>, and every <code>Q</code>,
-<code>K</code>, <code>V</code> (<code>attn_assoc</code>) — the
-reassociation at the heart of linear attention is exact, not
+<code>K</code>, <code>V</code> (<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>)
+— the reassociation at the heart of linear attention is exact, not
 approximate.</li>
 <li><code>cost_fast n d &lt;= cost_naive n d</code> whenever
-<code>d &lt;= n</code> (<code>cost_fast_le</code>), with the concrete
-16× count at n = 1024, d = 64 verified by computation; the fast order’s
-intermediate is smaller (<code>intermediate_smaller</code>).</li>
-<li>Applied to one vector, the layer needs no matrix product at all
-(<code>attn_pipeline</code>).</li>
+<code>d &lt;= n</code> (<a
+href="coqdoc/Riktig.Impl.Attention.html#cost_fast_le"><code>cost_fast_le</code></a>),
+with the concrete 16× count at n = 1024, d = 64 verified by computation;
+the fast order’s intermediate is smaller (<a
+href="coqdoc/Riktig.Impl.Attention.html#intermediate_smaller"><code>intermediate_smaller</code></a>).</li>
+<li>Applied to one vector, the layer needs no matrix product at all (<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_pipeline"><code>attn_pipeline</code></a>).</li>
 <li>Not proved, honestly: anything about softmax (its presence breaks
 the reassociation — that is why fast attention drops it), anything about
 memory hierarchies or actual hardware, and the cost model describes the
@@ -137,11 +145,19 @@ algorithms.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Attention.v"><code>Impl/Attention.v</code></a>
-(<code>attn_naive</code>, <code>attn_fast</code>,
-<code>attn_assoc</code>, <code>attn_pipeline</code>, the cost model, the
-Q tests) · <a
+(<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_naive"><code>attn_naive</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_fast"><code>attn_fast</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_pipeline"><code>attn_pipeline</code></a>,
+the cost model, the Q tests) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v"><code>Impl/Matrix.v</code></a>
-(<code>mat_mul_assoc</code>) · <a
+(<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatMulBilinear.v"><code>Theory/MatMulBilinear.v</code></a>
 (matmul as a bounded bilinear map — the analysis face of the same
 object).</p>

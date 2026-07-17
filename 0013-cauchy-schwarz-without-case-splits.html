@@ -25,7 +25,9 @@ something that can’t be decided.</p>
 <h2 id="positivity-is-a-choice-not-a-given">Positivity is a choice, not
 a given</h2>
 <p><a href="0008-the-shopping-list-for-analysis.html">Post #8</a> built
-<code>InnerProduct</code> <em>without</em> assuming
+<a
+href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+<em>without</em> assuming
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle u,u\rangle \ge 0</annotation></semantics></math>
 — deliberately, because Minkowski space-time’s inner product is
 indefinite, and we want that as a legal instance later. Today’s addition
@@ -35,8 +37,12 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Pos
   pi_nonneg   : forall u : V, 0 &lt;= ⟨ u , u ⟩;
   pi_definite : forall u : V, ⟨ u , u ⟩ == 0 -&gt; u == 0
 }.</code></pre>
-<p>Euclidean geometry is <code>InnerProduct</code> <em>plus</em>
-<code>PosInner</code>; Minkowski geometry is <code>InnerProduct</code>
+<p>Euclidean geometry is <a
+href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+<em>plus</em> <a
+href="coqdoc/Riktig.Interface.PosInner.html#PosInner"><code>PosInner</code></a>;
+Minkowski geometry is <a
+href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
 alone. One flag, two geometries, no duplicated machinery.</p>
 <h2 id="cauchyschwarz-the-theorem-and-the-trap">Cauchy–Schwarz — the
 theorem, and the trap</h2>
@@ -88,8 +94,11 @@ do the work that division was doing.</p>
 \qquad \text{for every } \varepsilon &gt; 0.</annotation></semantics></math></p>
 <p>This one is provable with a <em>positive</em> divisor
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>s</mi><mi>ε</mi></msub><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mi>ε</mi></mrow><annotation encoding="application/x-tex">s_\varepsilon = \langle v,v\rangle + \varepsilon</annotation></semantics></math>,
-always safely positive (<code>add_nonneg_pos</code>, using only
-<code>pi_nonneg</code> — no test needed). Substitute
+always safely positive (<a
+href="coqdoc/Riktig.Theory.Order.html#add_nonneg_pos"><code>add_nonneg_pos</code></a>,
+using only <a
+href="coqdoc/Riktig.Interface.PosInner.html#pi_nonneg"><code>pi_nonneg</code></a>
+— no test needed). Substitute
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mi>/</mi><msub><mi>s</mi><mi>ε</mi></msub></mrow><annotation encoding="application/x-tex">t = \langle u,v\rangle / s_\varepsilon</annotation></semantics></math>
 into the same blackboard expansion, multiply through by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>s</mi><mi>ε</mi></msub><annotation encoding="application/x-tex">s_\varepsilon</annotation></semantics></math>,
@@ -115,8 +124,9 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Order.
 uniqueness and post #12 used for the chain rule — Cauchy–Schwarz turns
 out to be an analysis theorem in algebra’s clothing, and the tree’s
 shared toolbox proves it for free.</p>
-<p><strong>The payoff:</strong> <code>cauchy_schwarz</code> in the
-repository carries <em>no side condition</em>. Not
+<p><strong>The payoff:</strong> <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#cauchy_schwarz"><code>cauchy_schwarz</code></a>
+in the repository carries <em>no side condition</em>. Not
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v \ne 0</annotation></semantics></math>”
 as a hypothesis, not a disjunction to case on afterward. Read the type
 and it is exactly the sentence from the blackboard — the constructive
@@ -136,12 +146,17 @@ Theorem best_approx : forall (u v : V) (c : F), norm2 v =/= 0 -&gt;
   norm2 (u + - proj v u) &lt;= norm2 (u + - (c *: v)).</code></pre>
 <p>Note the hypothesis both carry: <code>norm2 v =/= 0</code>, not
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">v \ne 0</annotation></semantics></math>”.
-In the general <code>InnerProduct</code> section, where
-<code>proj_orthogonal</code> lives, that is strictly <em>stronger</em>
-than nonzeroness — a Minkowski null vector is nonzero yet has
+In the general <a
+href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+section, where <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#proj_orthogonal"><code>proj_orthogonal</code></a>
+lives, that is strictly <em>stronger</em> than nonzeroness — a Minkowski
+null vector is nonzero yet has
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle v,v\rangle = 0</annotation></semantics></math>,
-and you genuinely cannot project onto it; under <code>PosInner</code>
-the two conditions coincide (<code>norm2_neq_0_iff</code>).</p>
+and you genuinely cannot project onto it; under <a
+href="coqdoc/Riktig.Interface.PosInner.html#PosInner"><code>PosInner</code></a>
+the two conditions coincide (<a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#norm2_neq_0_iff"><code>norm2_neq_0_iff</code></a>).</p>
 <p><em>The projection is the closest point on the line, and the residual
 is perpendicular to it</em> — the Gram–Schmidt engine, one theorem short
 of orthogonal bases (queued: the loop over <code>Fin n</code> that

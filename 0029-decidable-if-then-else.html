@@ -12,10 +12,11 @@
 <h1 id="riktig-29-decidable-if-then-else">riktig #29 — decidable
 if-then-else</h1>
 <p><em>Twenty-ninth post documenting the <strong>riktig</strong>
-project. One small typeclass, <code>Decidable</code>, lets recursive
-programs be written as plain lambda terms with their conditions in
-ordinary if-then-else form — and hands every proof about them the branch
-facts for free.</em></p>
+project. One small typeclass, <a
+href="coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>,
+lets recursive programs be written as plain lambda terms with their
+conditions in ordinary if-then-else form — and hands every proof about
+them the branch facts for free.</em></p>
 <h2 id="the-idea">The idea</h2>
 <p>A condition in a program is a proposition; a condition a program can
 <em>run</em> is a decision procedure. One typeclass connects the two (<a
@@ -33,12 +34,20 @@ through it, and closed computations go through by
 <code>b = 0</code> and the other <code>b &lt;&gt; 0</code> — the branch
 condition is <em>in the context</em>, not lost in a boolean.</p>
 <p>The vocabulary is a small three-file family. The signature above is
-the whole of <code>Interface/Decidable.v</code>. What follows generally
-is <a
+the whole of <a
+href="coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>.
+What follows generally is <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Decidable.v"><code>Theory/Decidable.v</code></a>:
-decidability is closed under the connectives (<code>and_dec</code>,
-<code>or_dec</code>, <code>not_dec</code>, <code>impl_dec</code>),
-decidable equality transports to lists and pairs, and a <code>dec</code>
+decidability is closed under the connectives (<a
+href="coqdoc/Riktig.Theory.Decidable.html#and_dec"><code>and_dec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Decidable.html#or_dec"><code>or_dec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Decidable.html#not_dec"><code>not_dec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Decidable.html#impl_dec"><code>impl_dec</code></a>),
+decidable equality transports to lists and pairs, and a <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
 conditional can be read through any boolean that reflects its
 proposition. The concrete carriers — <code>nat</code> with its equality
 and order comparisons, <code>bool</code> with the <code>b = true</code>
@@ -46,7 +55,9 @@ test — are <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Decidable.v"><code>Impl/Decidable.v</code></a>.</p>
 <h2 id="a-whole-program-euclids-algorithm">A whole program: Euclid’s
 algorithm</h2>
-<p>Here is <code>gcd</code>, complete, from <a
+<p>Here is <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd"><code>gcd</code></a>,
+complete, from <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/Gcd.v"><code>Programs/Gcd.v</code></a>.
 The recursion is not structural (<code>a mod b</code> is not a subterm
 of anything), so it goes through the standard library’s well-founded
@@ -69,10 +80,11 @@ of anything), so it goes through the standard library’s well-founded
 <code>match</code>, an <code>if</code> — that reads as the two-line
 mathematical definition it is. The single <code>_</code> is the
 termination obligation, discharged by the one tactic line after the
-term. And this is where <code>dec</code> quietly earns its keep: the
-hole sits inside the <code>else</code> branch, so the context already
-contains <code>b &lt;&gt; 0</code> — exactly what
-<code>Nat.mod_upper_bound</code> needs to show
+term. And this is where <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+quietly earns its keep: the hole sits inside the <code>else</code>
+branch, so the context already contains <code>b &lt;&gt; 0</code> —
+exactly what <code>Nat.mod_upper_bound</code> needs to show
 <code>a mod b &lt; b</code>. The condition the program branched on is
 the fact the termination proof uses; nothing is stated twice.</p>
 <p>Because a <code>Fix</code>-defined function does not unfold like a
@@ -80,29 +92,36 @@ the fact the termination proof uses; nothing is stated twice.</p>
 via <code>Fix_eq</code>:</p>
 <pre class="coq"><code>Lemma gcd_step: forall a b : nat,
     gcd a b = if dec (b = 0) then a else gcd b (a mod b).</code></pre>
-<p>From here on, all reasoning goes through <code>gcd_step</code>; the
-<code>Fix</code> machinery is never touched again. And the definitions
-compute — Coq accepts these by reduction alone:</p>
+<p>From here on, all reasoning goes through <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd_step"><code>gcd_step</code></a>;
+the <code>Fix</code> machinery is never touched again. And the
+definitions compute — Coq accepts these by reduction alone:</p>
 <pre class="coq"><code>Check Logic.eq_refl : gcd 48 18 = 6.
 Check Logic.eq_refl : gcd 270 192 = 6.</code></pre>
 <h2 id="the-same-shape-everywhere">The same shape everywhere</h2>
 <p>The other programs in <code>theories/Programs/</code> are the same
 pattern with different measures. <code>merge</code> compares with the
-ordered-values class (<code>if dec (a0 &lt; b0)</code>, any
-<code>DecTotalOrder</code> carrier), well-founded on the sum of the two
-list lengths. Binary search shrinks a numeric range, quicksort recurses
-on partition sizes, merge sort on <code>split</code>’s output — none
-structural, all one <code>dec</code>-conditioned lambda term plus one
-derived <code>_step</code> equation.</p>
+ordered-values class (<code>if dec (a0 &lt; b0)</code>, any <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder"><code>DecTotalOrder</code></a>
+carrier), well-founded on the sum of the two list lengths. Binary search
+shrinks a numeric range, quicksort recurses on partition sizes, merge
+sort on <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>’s
+output — none structural, all one <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>-conditioned
+lambda term plus one derived <code>_step</code> equation.</p>
 <p>For programs whose conditions come from a boolean function (merge
-sort’s <code>Nat.leb</code>), one general lemma in
-<code>Theory/Decidable.v</code> bridges the two styles:</p>
+sort’s <code>Nat.leb</code>), one general lemma in <a
+href="coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>
+bridges the two styles:</p>
 <pre class="coq"><code>Lemma dec_if_bool (P : Prop) {DP : Decidable P} (b : bool) (A : Type) (a1 a2 : A) :
   (P &lt;-&gt; b = true) -&gt;
   (if dec P then a1 else a2) = (if b then a1 else a2).</code></pre>
-<p>so a clause equation stated with <code>dec</code> can be restated
-with <code>&lt;?</code> or <code>&lt;=?</code> in one line, and stdlib
-facts like <code>Nat.ltb_lt</code> plug in directly.</p>
+<p>so a clause equation stated with <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+can be restated with <code>&lt;?</code> or <code>&lt;=?</code> in one
+line, and stdlib facts like <code>Nat.ltb_lt</code> plug in
+directly.</p>
 <h2 id="what-is-proved-about-them">What is proved about them</h2>
 <p>The properties live in <code>theories/Theory/</code>, one file per
 program, reasoning only through the <code>_step</code> equations. For
@@ -112,10 +131,12 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Gcd.v"
 divides it — via a bridge lemma
 <code>gcd_eq_stdlib : gcd a b = Nat.gcd a b</code> identifying the
 program with the standard library’s function. Binary search returns an
-index holding the target and, on sorted ranges, cannot miss
-(<code>Theory/BinarySearch.v</code>); merge is a sorted permutation and
-commutative on sorted inputs (<code>Theory/Merge.v</code>); merge sort
-is correct (<code>Theory/MergeSort.v</code>).
+index holding the target and, on sorted ranges, cannot miss (<a
+href="coqdoc/Riktig.Theory.BinarySearch.html"><code>Theory/BinarySearch.v</code></a>);
+merge is a sorted permutation and commutative on sorted inputs (<a
+href="coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>);
+merge sort is correct (<a
+href="coqdoc/Riktig.Theory.MergeSort.html"><code>Theory/MergeSort.v</code></a>).
 <code>Print Assumptions</code> on the gcd chain answers
 <code>Closed under the global context</code> — with the flat tupled
 form, even <code>Fix_eq</code>’s extensionality premise closes
@@ -125,9 +146,15 @@ program correctness proofs.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Decidable.v"><code>Interface/Decidable.v</code></a>
-(<code>Decidable</code>, <code>EqDec</code>) · <a
+(<a
+href="coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Decidable.v"><code>Theory/Decidable.v</code></a>
-(combinators, <code>dec_if_bool</code>) · <a
+(combinators, <a
+href="coqdoc/Riktig.Theory.Decidable.html#dec_if_bool"><code>dec_if_bool</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Decidable.v"><code>Impl/Decidable.v</code></a>
 (nat, bool) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Programs/Gcd.v"><code>Programs/Gcd.v</code></a>

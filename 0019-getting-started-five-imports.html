@@ -23,22 +23,23 @@ have shown what it’s like to sit down and write your own. This one does
 following the same shape the library itself is built on: state something
 <strong>abstractly</strong>, against an interface, then prove a
 <strong>concrete instance</strong> satisfies it. The examples are
-checked in at <code>theories/Examples/GettingStarted.v</code> and
-rebuilt with the tree, so they keep compiling as the tree moves — if a
-library change breaks anything shown here, the build breaks there.</p>
+checked in at <a
+href="coqdoc/Riktig.Examples.GettingStarted.html"><code>theories/Examples/GettingStarted.v</code></a>
+and rebuilt with the tree, so they keep compiling as the tree moves — if
+a library change breaks anything shown here, the build breaks there.</p>
 </blockquote>
 <h2 id="why-this-needed-writing">Why this needed writing</h2>
 <p>Early development of this project’s predecessor used
 <code>Require Export</code> liberally: import one file, transitively get
 everything it depends on, start proving. Convenient — and a name-clash
-time bomb, since two unrelated files can easily define a lemma called
-<code>assoc</code> or <code>refl</code>. riktig deliberately does the
-opposite: every file states exactly what it needs with
-<code>Require Import</code>, nothing more, and gets away with it because
-of a naming convention — each <code>Impl/</code> file prefixes its
-instance names (<code>PW_</code> for Pointwise, <code>LV_</code> for
-ListVS, <code>C_</code> for Complex, <code>Hom_</code> for HomVS…). No
-clashes, ever.</p>
+time bomb, since two unrelated files can easily define a lemma called <a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a> or
+<code>refl</code>. riktig deliberately does the opposite: every file
+states exactly what it needs with <code>Require Import</code>, nothing
+more, and gets away with it because of a naming convention — each
+<code>Impl/</code> file prefixes its instance names (<code>PW_</code>
+for Pointwise, <code>LV_</code> for ListVS, <code>C_</code> for Complex,
+<code>Hom_</code> for HomVS…). No clashes, ever.</p>
 <p>The cost lands on the reader. <code>Require Import</code> is
 <strong>not transitive</strong> — importing a <code>Theory/</code> file
 does not hand you the <code>Ops</code> notations it used internally; you
@@ -67,12 +68,16 @@ From Riktig Require Import Impl.Zr.
 Example z_swap_cancel : (3 + 5 + (7 + - 3))%Z = (5 + 7)%Z.
 Proof. exact (swap_cancel (G := Z) 3%Z 5%Z 7%Z). Qed.</code></pre>
 <p><strong>The non-obvious import:</strong> <code>Props</code>. Nothing
-in the <em>type</em> of <code>swap_cancel</code> mentions
-<code>Props</code> — but <code>comm</code>, <code>assoc</code>,
-<code>invr</code>, <code>idr</code> are lemma names that live there, not
-in <code>Interface.AbGroup</code>, which only <em>instantiates</em>
-those properties without re-exporting their names. Skip
-<code>Props</code> and you get
+in the <em>type</em> of <a
+href="coqdoc/Riktig.Examples.GettingStarted.html#swap_cancel"><code>swap_cancel</code></a>
+mentions <code>Props</code> — but <a
+href="coqdoc/Riktig.Props.html#comm"><code>comm</code></a>, <a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>, <a
+href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a>, <a
+href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a> are lemma names
+that live there, not in <code>Interface.AbGroup</code>, which only
+<em>instantiates</em> those properties without re-exporting their names.
+Skip <code>Props</code> and you get
 <code>The variable comm was not found</code> — correct, but not
 obviously pointing at the fix.</p>
 <h2 id="linear-algebra">2. Linear algebra</h2>
@@ -139,8 +144,8 @@ Section Generic.
   Qed.
 End Generic.</code></pre>
 <p><strong>Concrete instance</strong>: <code>bool</code> is isomorphic
-to itself via <code>negb</code> (types-as-objects,
-<code>Impl/CoqCat.v</code>):</p>
+to itself via <code>negb</code> (types-as-objects, <a
+href="coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>):</p>
 <pre class="coq"><code>From Coq Require Import Bool.
 From Riktig Require Import Impl.CoqCat.
 
@@ -152,7 +157,8 @@ Definition negb_negb_iso : @Iso Type CoqCat bool bool := {|
 Example negb_absorb : forall b : bool, negb (negb (negb b)) = negb b.
 Proof. exact (iso_absorb _ _ negb_negb_iso). Qed.</code></pre>
 <p><strong>The sharpest gotcha of this whole post</strong>, and a real
-bug this exercise found and fixed: <code>Theory/Category.v</code>
+bug this exercise found and fixed: <a
+href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
 declared <code>Arguments iso_to {x y}.</code> <em>inside</em> a
 <code>Section</code>, without the <code>Global</code> keyword. A plain,
 non-<code>Global</code> <code>Arguments</code> directive is
@@ -169,9 +175,9 @@ name here for the general lesson: if you write
 <code>Arguments {x y}.</code> inside a <code>Section</code> and mean for
 it to survive export, say <code>Global Arguments</code>.</p>
 <h2 id="lambda-calculus">4. Lambda calculus</h2>
-<p><strong>Abstract fact</strong> (post #5’s
-<code>if_of_true</code>-style branch law), instantiated at two concrete
-closed terms:</p>
+<p><strong>Abstract fact</strong> (post #5’s <a
+href="coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>-style
+branch law), instantiated at two concrete closed terms:</p>
 <pre class="coq"><code>From Riktig Require Import Ops Lambda.Syntax Lambda.Conv Lambda.Church.
 
 Example ifb_true_idt_k : IFB TRUE idt k == idt.
@@ -188,8 +194,10 @@ Proof. apply (conv_by_eval 20 5). reflexivity. Qed.</code></pre>
 <p>Two independent proofs of the same statement — one by the algebraic
 law, one by brute-force evaluation — agreeing, is itself a small sanity
 check on the whole <code>conv</code> setoid from post #5. No import
-surprises here: <code>Lambda/Church.v</code> carries its own comment
-naming exactly what it needs from <code>Ops</code>.</p>
+surprises here: <a
+href="coqdoc/Riktig.Lambda.Church.html"><code>Lambda/Church.v</code></a>
+carries its own comment naming exactly what it needs from
+<code>Ops</code>.</p>
 <h2 id="channels">5. Channels</h2>
 <p><strong>A concrete fact about a specific loss pattern</strong>, then
 the same fact via a general lattice lemma:</p>
@@ -203,15 +211,16 @@ Proof. apply subseq_keep, subseq_drop, subseq_keep, subseq_nil. Qed.
 Example perfect_is_lossy_123 : lossy [1; 2; 3] [1; 2; 3].
 Proof. apply perfect_lossy. reflexivity. Qed.</code></pre>
 <p><strong>The non-obvious import, in the <em>other</em> direction from
-example 2:</strong> <code>Channel/Trace.v</code> itself does
-<code>Import ListNotations.</code> at its own top — but a plain
-<code>Import</code> (unlike <code>Export</code>) does not propagate to a
-client file. You have to re-<code>Import ListNotations</code> yourself,
-even though the library file you’re building on visibly already did.
-Small, but it’s exactly the shape of surprise the whole “no
-<code>Require Export</code>” policy produces, working as designed:
-nothing is handed to you implicitly, which is safe, and occasionally
-means repeating one line.</p>
+example 2:</strong> <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
+itself does <code>Import ListNotations.</code> at its own top — but a
+plain <code>Import</code> (unlike <code>Export</code>) does not
+propagate to a client file. You have to
+re-<code>Import ListNotations</code> yourself, even though the library
+file you’re building on visibly already did. Small, but it’s exactly the
+shape of surprise the whole “no <code>Require Export</code>” policy
+produces, working as designed: nothing is handed to you implicitly,
+which is safe, and occasionally means repeating one line.</p>
 <h2 id="the-cheat-sheet">The cheat sheet</h2>
 <table>
 <colgroup>
@@ -231,17 +240,26 @@ notations at all</td>
 <td><code>Ops</code></td>
 </tr>
 <tr>
-<td>name a law like
-<code>comm</code>/<code>assoc</code>/<code>invr</code> directly</td>
+<td>name a law like <a
+href="coqdoc/Riktig.Props.html#comm"><code>comm</code></a>/<a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>/<a
+href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> directly</td>
 <td><code>Props</code></td>
 </tr>
 <tr>
-<td>state something over an abstract
-<code>Monoid</code>/<code>Group</code>/<code>AbGroup</code>/<code>Ring</code>/<code>Field</code></td>
+<td>state something over an abstract <a
+href="coqdoc/Riktig.Interface.Monoid.html#Monoid"><code>Monoid</code></a>/<a
+href="coqdoc/Riktig.Interface.Group.html#Group"><code>Group</code></a>/<a
+href="coqdoc/Riktig.Interface.AbGroup.html#AbGroup"><code>AbGroup</code></a>/<a
+href="coqdoc/Riktig.Interface.Ring.html#Ring"><code>Ring</code></a>/<a
+href="coqdoc/Riktig.Interface.Field.html#Field"><code>Field</code></a></td>
 <td><code>Interface.&lt;Name&gt;</code></td>
 </tr>
 <tr>
-<td>use derived facts (<code>cancel_l</code>, <code>mul_0_l</code>,
+<td>use derived facts (<a
+href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a>,
 …)</td>
 <td><code>Theory.&lt;Name&gt;</code></td>
 </tr>

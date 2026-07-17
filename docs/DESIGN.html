@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design &amp; style</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="design--style">Design &amp; style</h1>
+<p><em>How code and proofs are written in this repo (riktig). What we
+aim for is in VISION.md; this document is the style contract.</em></p>
+<h2 id="program-style">Program style</h2>
+<ol type="1">
+<li><p><strong>Top level reads in the domain’s language.</strong> A
+program is a pipeline of named stages
+(<code>fetch url &gt;&gt;= decodeJson &gt;&gt;= traverse_ process</code>)
+readable as a description of what it does.</p></li>
+<li><p><strong>Program-as-data.</strong> Arg parsing produces one value
+— a <code>Plan</code> — that <em>defines</em> what the program does; a
+small interpreter executes it. No behavior decided by scattered
+if-statements mid-flow. (The free-monad DSLs are the formalized version
+of this same pattern.)</p></li>
+<li><p><strong>Errors are values; policy floats to the top.</strong>
+Lower layers never fudge (no <code>""</code> for a missing file). They
+return explicit failures; what to do about them (skip / retry / abort /
+default) is a field of the Plan, set at the top. Parse, don’t
+validate.</p></li>
+<li><p><strong>No layer leakage.</strong> Lower layers are named in
+their own vocabulary and stay parametrically polymorphic: a fetcher maps
+URL → bytes and cannot know upper datatypes — parametricity as
+architectural enforcement (the same trick that stops MemProg programs
+from forging addresses).</p></li>
+<li><p><strong>Short and clear; find the abstraction line.</strong>
+Every component is the <em>most general</em> program of its kind — a
+cache knows nothing about auth, an auth fetcher nothing about LLMs;
+expiry is part of what “cache” means, not a special case above it.
+Use-case knowledge exists only at the composition point, which then
+reads as one sentence (“get the cookie from the cache at xyz or else
+request-and-cache it; invoke the llm”). Boilerplate is a smell that a
+concept wasn’t factored out — refactor the concept, don’t elaborate the
+handler.</p></li>
+<li><p><strong>Recursive Coq programs: code once, as a plain lambda
+term; obligations after.</strong> (Adopted 2026-07-15; the model is <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>theories/Programs/Merge.v</code></a>.)
+The governing principle: do not stray from lambda calculus. A program is
+a plain CIC term — <code>fun</code>, <code>match</code>,
+<code>Fix</code>, application — that you could print and recognize as
+what you wrote; machinery that elaborates the source into something else
+(<code>Program Fixpoint</code>’s sigma-packed <code>_func</code>
+wrappers and subset types, the Equations plugin’s clause compilation) is
+out, however convenient. Concretely: a recursive program that is not
+structurally recursive is one <code>refine</code> whose body is a single
+ordinary ML-looking term:
+<code>uncurry ∘ Fix (well_founded_ltof _ &lt;measure&gt;)</code> turns
+the curried arguments into the one tuple the measure needs, the tuple is
+matched ONCE with flat, first-match clauses under a single
+<code>p = x</code> convoy, conditions are written
+<code>if dec (..) then .. else ..</code>, and every termination hole is
+discharged by one combined tactic line after the term
+(<code>(subst p; unfold ltof; simpl; abstract lia)</code>) —
+<code>abstract</code>, because lia’s generated proof terms get very
+large, and in a <code>Defined</code> (transparent) definition they would
+otherwise sit inside the program term itself and be re-typechecked at
+every unfolding; <code>abstract</code> hides them behind an opaque
+constant and keeps the lambda term small. The clause equations are then
+<em>derived</em> from the definition via <code>Fix_eq</code>, in the
+model file’s four-line shape:</p>
+<pre class="coq"><code>rewrite Fix_eq.
+- destruct dec; f_equal.
+- intros [[|x x&#39;] [|y y&#39;]] f g H; auto.
+  destruct dec; rewrite !H; f_equal.</code></pre>
+<p>— the equation branch is <code>destruct dec; f_equal</code>, and the
+extensionality premise closes by the pointwise <code>rewrite !H</code>,
+so no functional_extensionality: the model file’s
+<code>Print Assumptions</code> is closed under the global context. The
+<a
+href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>-vs-boolean
+bridge is a general lemma (<code>lem1</code> there), not per-proof
+gymnastics. Reasoning about the program goes through the derived
+equations, never by unfolding the fixpoint — the same rule as 3’s “never
+<code>unfold interp</code>”. (<code>Program Fixpoint</code> achieves
+code-once too but its generated obligations capture the recursive
+function inside subset proofs, making the derived equations need a
+<code>le_unique</code> detour — the <code>Fix</code> form above is both
+shorter and cleaner.)</p>
+<p>Two further rules, made explicit 2026-07-16. <strong>No auxiliary
+function that is the function</strong>: defining <code>f_aux</code> that
+differs from <code>f</code> only in argument order (to put the
+decreasing argument where <code>Fix</code> wants it) and then wrapping
+<code>f a b := f_aux b a</code> states the program twice and doubles the
+derived equations; the tupled <code>uncurry ∘ Fix</code> form with the
+right measure (<code>snd</code> for gcd) writes the program once in its
+conventional argument order. A worker with a genuinely different
+signature (a reparameterization the recursion needs, not a shuffle) is
+not covered by this rule, but prefer recursing on the caller’s own
+arguments with a measure when possible. <strong>No fuel</strong>:
+termination is always by a well-founded measure, never by a
+<code>fuel : nat</code> argument threaded through the recursion — fuel
+changes the function’s type, pollutes every equation with “enough fuel”
+side conditions, and proves nothing about the algorithm. The older
+<code>refine (Fix ...)</code> files (<code>BinarySearch.v</code>,
+<code>Quicksort.v</code>, <code>MergeSort.v</code>) predate the tupled
+form and stand as written until their scheduled rewrite;
+<code>Gcd.v</code> was converted 2026-07-16 (aux eliminated, and with it
+the file’s functional_extensionality import — the flat motive closes
+<code>Fix_eq</code>’s premise pointwise).</p></li>
+</ol>
+<h2 id="proof-style">Proof style</h2>
+<p>(The worked-out model is <code>enter-docker/math</code>; the
+discipline mirrors <code>lean-test/DESIGN.md</code>.)</p>
+<ol type="1">
+<li><p><strong>Four layers.</strong> <a
+href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> — operational
+typeclasses, one per symbol, no laws. <a
+href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> — single-law
+property classes (<a
+href="../coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>, <a
+href="../coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>, …).
+<code>Interface/</code> — structure classes bundling ops and laws,
+axioms only, stated as readable <code>forall</code>s, with
+<code>Instance</code> bindings connecting their axioms to the property
+classes. <code>Theory/</code> — lemmas derived generically via
+<code>Section</code>/<code>Context</code>, including the abstract
+structure-transfer constructions (a function space, product, Hom-space,
+or subspace inherits structure — instances with no data structure of
+their own). <code>Impl/</code> — data-structure realizations of the
+abstract structures, so one can compute with them: <code>Z</code>,
+<code>Q</code>, matrices as <code>Fin m -&gt; Fin n -&gt; F</code>,
+coefficient lists, the complex record — the mathematical analogue of
+<code>Programs/</code>, and usable by programs. A file does exactly one
+of these jobs. (Refined 2026-07-16: the transfer constructions
+<code>Pointwise</code>, <code>FieldVS</code>, <code>HomVS</code>,
+<code>ProdVS</code>, <code>UnitVS</code>, <code>Subspace</code> moved
+from <code>Impl/</code> to <code>Theory/</code> under this criterion —
+they are abstract theory, not representations; the test for
+<code>Impl/</code> is “does this file give you something to compute
+with”.)</p>
+<p><strong>Fourth pattern, blessed 2026-07-08:</strong> a
+<code>Theory/</code> file may define the canonical generic
+<em>algorithm</em> for the construction it studies — <a
+href="../coqdoc/Riktig.Theory.BigOp.html#bigop"><code>bigop</code></a>/<a
+href="../coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+in <a
+href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>,
+Gram-Schmidt’s <a
+href="../coqdoc/Riktig.Theory.GramSchmidt.html#gs_aux"><code>gs_aux</code></a>/<a
+href="../coqdoc/Riktig.Theory.GramSchmidt.html#gs"><code>gs</code></a>
+in <a
+href="../coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
+— when the algorithm has no separate abstract spec worth writing (there
+is no “Summation” or “Orthogonalization” Interface for it to satisfy)
+and is itself generic over an existing Interface (<a
+href="../coqdoc/Riktig.Interface.Monoid.html#Monoid"><code>Monoid</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.PosInner.html#PosInner"><code>PosInner</code></a>),
+not tied to one concrete carrier. The algorithm <em>is</em> the theory
+being studied. New operational vocabulary still belongs in
+<code>Interface/</code>; concrete data-structure representations still
+belong in <code>Impl/</code>. (The 2026-07-08 wording also excluded
+instance-minting from <code>Theory/</code>; the 2026-07-16 refinement
+above supersedes that — abstract structure-transfer instances are Theory
+content, and only computable representations are Impl content.)</p>
+<p><strong>Fifth pattern, blessed 2026-07-08, narrowed
+2026-07-16:</strong> a <code>Theory/</code> file may import a specific
+<code>Impl/</code> file when its content is <em>theory about that named
+representation itself</em>. The original motivating cases (<a
+href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>
+over <code>HomVS</code>/<code>FieldVS</code>, <a
+href="../coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>
+over <code>ProdVS</code>/<code>UnitVS</code>/<code>Pointwise</code>)
+dissolved when those constructions moved to <code>Theory/</code> — they
+are now ordinary Theory-imports-Theory. What remains under this pattern:
+theory about a genuine representation, e.g. <a
+href="../coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Trace.html"><code>Theory/Trace.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</code></a>,
+and <a
+href="../coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
+importing <a
+href="../coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>
+(their theorems are ABOUT the matrix representation), and <a
+href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
+importing <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+(properties of a named program). The test is unchanged: could the file’s
+theorems be stated without naming that specific representation? Rule 6
+still forbids the OTHER direction and the accidental case — a generic
+algorithm over an abstract <code>Interface</code> must still not import
+a concrete representation’s lemmas it doesn’t need to name.</p>
+<p><strong>Standing exception, recorded 2026-07-13:</strong> three
+directories sit deliberately <em>outside</em> the four-layer split
+altogether — <code>theories/Channel/</code>,
+<code>theories/Lambda/</code>, and <code>theories/Programs/</code>. Each
+is a self-contained track about concrete objects-of-study (traces and
+protocols; a calculus; executable example programs) rather than abstract
+structures-with-many-instances, so the Ops/Props/Interface/Theory/Impl
+decomposition would add layers without adding instances; internally each
+file keeps spec, theory and implementation content in clearly ordered,
+usually explicitly numbered sections. The Channel/ and Lambda/ exemption
+was examined and recorded in <code>docs/LINALG-ROADMAP.md</code>’s Wave
+L8 section (the 2026-07-08 audit); Programs/’s is stated in <a
+href="../coqdoc/Riktig.Interface.Decidable.html"><code>theories/Interface/Decidable.v</code></a>’s
+header (“plain Coq <code>=</code> and stdlib <code>sumbool</code>;
+nothing from the algebra tower”). Decidable itself is a full
+Interface/Theory/Impl family as of 2026-07-16: <a
+href="../coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>
+(the <a
+href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
+href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
+classes and the <a
+href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+vocabulary), <a
+href="../coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>
+(closure under the connectives, equality transported to lists and pairs,
+<a
+href="../coqdoc/Riktig.Theory.Decidable.html#dec_if_bool"><code>dec_if_bool</code></a>),
+<a
+href="../coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>
+(nat and bool). <code>theories/Examples/</code> is a fourth such track —
+compiled usage examples pinned from the blog, depending on everything,
+depended on by nothing. Two clarifications recorded 2026-07-16:
+<code>theories/Programs/</code> holds the <em>implementations</em> of
+algorithms and their derived clause equations; properties proved ABOUT a
+program (permutation, sortedness, correctness) go in
+<code>theories/Theory/</code> next to the rest of the proved mathematics
+(<a
+href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
+about <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+is the model). And <code>theories/Lib/</code> holds plain Coq
+conveniences that are part of no mathematical structure — the calc
+chains (<a
+href="../coqdoc/Riktig.Lib.Calc.html"><code>Lib/Calc.v</code></a>) and
+measure induction (<a
+href="../coqdoc/Riktig.Lib.MeasureInd.html"><code>Lib/MeasureInd.v</code></a>,
+a placeholder until a proper theory of induction replaces it); they may
+be used by any track and depend on nothing.</p></li>
+<li><p><strong>Operational typeclasses carry notation.</strong> <a
+href="../coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a>/<a
+href="../coqdoc/Riktig.Ops.html#Zero"><code>Zero</code></a>/<a
+href="../coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a> give
+<code>+</code>, <code>0</code>, <code>==</code> for any instance; proofs
+read like textbook derivations
+(<code>rewrite &lt;- assoc; rewrite invr; rewrite idr; reflexivity</code>).</p></li>
+<li><p><strong>Setoid discipline.</strong> Work over an equivalence
+<code>==</code> with <code>Equivalence</code> and <code>Proper</code>
+instances so <code>rewrite</code> works everywhere — including under
+binds, once program equivalence <code>===</code> exists for the memory
+DSL. Never prove a program property by
+<code>unfold interp; simpl</code>; if you are unfolding an interpreter,
+the missing piece is an equivalence lemma.</p></li>
+<li><p><strong>Each lemma is the most general statement of its
+fact</strong> (rule 5 above, applied to proofs). Arithmetic
+side-conditions get factored into named reusable lemmas rather than
+inline <code>lia</code> everywhere.</p></li>
+<li><p><strong>Honest incompleteness.</strong> No <code>Axiom</code>. An
+<code>Admitted</code> must carry a comment with a proof sketch — a
+roadmap, not a shrug. Specs owe an equivalence proof to a canonical
+formulation (a structural <code>Sorted</code> must be proven equivalent
+to pairwise <code>Ordered</code>).</p></li>
+<li><p><strong>Import discipline.</strong> Dependencies point one
+direction: implementations import theories, theories import structures,
+never the reverse; an algorithm written against an abstract interface
+must not import a concrete instance’s lemmas.</p></li>
+<li><p><strong>Interface record fields: <code>#[global]</code> locality,
+explicit carriers</strong> (decided 2026-07-03). Substructure and
+operational fields of a structure class are declared
+<code>#[global]</code> (<code>#[global] grp_monoid :: Monoid G</code>),
+not with the default export locality — precisely so that rule 6’s
+fine-grained <code>Require Import</code> works: importing
+<code>Interface.Ring</code> alone brings the whole instance chain, no
+<code>Require Export</code> towers. And law fields annotate their
+carriers explicitly (<code>forall a b : G</code>, not bare
+<code>forall a b</code>), because record elaboration does not infer
+them.</p></li>
+</ol>
+</main>
+</body>
+</html>

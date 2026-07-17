@@ -46,7 +46,8 @@ generically:</p>
 <pre class="coq"><code>Theorem bilinear_is_deriv : bm_bounded B -&gt;
   is_deriv (fun p : U * V =&gt; B (fst p) (snd p)) (u0, v0) bilinear_deriv_lm.</code></pre>
 <p>Matmul is the instance that matters for transformers — multiply an
-activation by a weight matrix, and you’re applying <code>mat_mul</code>
+activation by a weight matrix, and you’re applying <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 as a bilinear map. Get the general theorem once, and every “multiply
 input by weights” layer inherits its derivative for free, no separate
 proof needed per layer.</p>
@@ -54,29 +55,43 @@ proof needed per layer.</p>
 to <em>state</em> it</h2>
 <p>Two gaps, found rather than assumed, before any differentiation could
 happen at all:</p>
-<p><strong>No norm on a product space existed.</strong>
-<code>is_deriv</code> needs its domain to carry a
-<code>NormedSpace</code>. The domain here is
+<p><strong>No norm on a product space existed.</strong> <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+needs its domain to carry a <a
+href="coqdoc/Riktig.Interface.Norm.html#NormedSpace"><code>NormedSpace</code></a>.
+The domain here is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>×</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">U \times V</annotation></semantics></math>
 — a product — and nothing in the tree said how to measure the size of a
-pair. The fix, <code>Theory/ProdVS.v</code>’s new
-<code>Prod_NormedSpace</code>, uses the sum norm
+pair. The fix, <a
+href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>’s
+new <a
+href="coqdoc/Riktig.Theory.ProdVS.html#Prod_NormedSpace"><code>Prod_NormedSpace</code></a>,
+uses the sum norm
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mo>:=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|(u,v)\| := \|u\| + \|v\|</annotation></semantics></math>,
 chosen deliberately over the more common max norm because it makes every
-downstream inequality a one-line <code>add_interchange</code> rewrite
-instead of a case split on which coordinate is larger.</p>
-<p><strong>No boundedness notion existed for a
-<code>BilinearMap</code>.</strong> <code>LinearMap</code> already had
-one (<code>lm_bounded</code>, living in <code>Theory/Continuity.v</code>
+downstream inequality a one-line <a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_interchange"><code>add_interchange</code></a>
+rewrite instead of a case split on which coordinate is larger.</p>
+<p><strong>No boundedness notion existed for a <a
+href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>.</strong>
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+already had one (<a
+href="coqdoc/Riktig.Theory.Continuity.html#lm_bounded"><code>lm_bounded</code></a>,
+living in <a
+href="coqdoc/Riktig.Theory.Continuity.html"><code>Theory/Continuity.v</code></a>
 as a <em>hypothesis</em> some theorems assume, not a field baked into
-the record — <code>Interface/LinearMap.v</code> stays norm-free by
-design). The bilinear analogue,
+the record — <a
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+stays norm-free by design). The bilinear analogue,
 <code>bm_bounded B := exists C, 0 &lt;= C /\ forall u v, ‖B u v‖ &lt;= C * ‖u‖ * ‖v‖</code>
 — the nonnegativity conjunct is part of the definition, so later
-estimates can multiply by <code>C</code> without a sign side-condition —
-follows the identical pattern: a hypothesis
-<code>bilinear_is_deriv</code> takes, not a new field forced onto every
-bilinear map whether or not anyone needs an estimate.</p>
+estimates can multiply by <a
+href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a> without a
+sign side-condition — follows the identical pattern: a hypothesis <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_is_deriv"><code>bilinear_is_deriv</code></a>
+takes, not a new field forced onto every bilinear map whether or not
+anyone needs an estimate.</p>
 <h2 id="the-one-genuine-piece-of-analysis">The one genuine piece of
 analysis</h2>
 <p>Expand
@@ -114,28 +129,39 @@ exactly. Algebra gets you three of the four terms for free; analysis
 earns the fourth.</p>
 <h2 id="whats-confirmed-and-whats-still-owed">What’s confirmed, and
 what’s still owed</h2>
-<p>The theorem is unconditional given <code>bm_bounded</code> — no
-missing cases, no deferred sorry. What’s <em>not</em> done yet,
-honestly: nothing in the tree currently packages <code>mat_mul</code>
-itself as a <code>BilinearMap</code> witness, so matmul’s
-differentiability — the whole point — is a corollary one step away
-rather than a theorem already stated. That’s a small, mechanical gap
-(build the witness, show it’s bounded — true for any finite-dimensional
-bilinear map, itself a fact not yet formalized) and the natural next
-step once Stage B moves to matmul specifically. Today bought the hard
-part: the general theorem, proved once, that every future
-weight-multiplication layer will just inherit.</p>
-<p><em>Next: either matmul’s own <code>BilinearMap</code> witness,
-closing this loop, or back to the determinant — a fourth attempt has the
-row-swap gap narrowed to a single classical fact (sign flips under
-transposition), closer than it’s been all roadmap.</em></p>
+<p>The theorem is unconditional given <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bm_bounded"><code>bm_bounded</code></a>
+— no missing cases, no deferred sorry. What’s <em>not</em> done yet,
+honestly: nothing in the tree currently packages <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+itself as a <a
+href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+witness, so matmul’s differentiability — the whole point — is a
+corollary one step away rather than a theorem already stated. That’s a
+small, mechanical gap (build the witness, show it’s bounded — true for
+any finite-dimensional bilinear map, itself a fact not yet formalized)
+and the natural next step once Stage B moves to matmul specifically.
+Today bought the hard part: the general theorem, proved once, that every
+future weight-multiplication layer will just inherit.</p>
+<p><em>Next: either matmul’s own <a
+href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+witness, closing this loop, or back to the determinant — a fourth
+attempt has the row-swap gap narrowed to a single classical fact (sign
+flips under transposition), closer than it’s been all roadmap.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/BilinearDeriv.v"><code>Theory/BilinearDeriv.v</code></a>
-(<code>bilinear_is_deriv</code>, <code>bm_bounded</code>,
-<code>bilinear_remainder_eq</code>) · <a
+(<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_is_deriv"><code>bilinear_is_deriv</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bm_bounded"><code>bm_bounded</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_eq"><code>bilinear_remainder_eq</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/ProdVS.v"><code>Theory/ProdVS.v</code></a>
-(<code>Prod_NormedSpace</code>, the sum norm) · <a
+(<a
+href="coqdoc/Riktig.Theory.ProdVS.html#Prod_NormedSpace"><code>Prod_NormedSpace</code></a>,
+the sum norm) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/ANALYSIS-ROADMAP.md"><code>docs/ANALYSIS-ROADMAP.md</code></a>
 (Stage 6½, “multi-argument functions should already work for free”).</p>
 </main>

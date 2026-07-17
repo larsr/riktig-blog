@@ -55,13 +55,15 @@ the whole language is three lines:</p>
 <code>Abs (Var 0)</code> — <em>the same term</em>, structurally. A whole
 equivalence relation evaporates.</li>
 <li><strong>Capture becomes arithmetic.</strong> Substitution must
-adjust indices when it walks under a binder (<code>lift</code> — shift
-free variables up) — a bookkeeping function with a two-line invariant,
-instead of a side-condition (“provided x is not free in N…”) that every
-proof must drag along. The file’s <code>subst</code>/<code>lift</code>
-are the textbook twenty lines, and a capture-avoidance
-<code>Example</code> checks the classic trap by
-<code>reflexivity</code>.</li>
+adjust indices when it walks under a binder (<a
+href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> —
+shift free variables up) — a bookkeeping function with a two-line
+invariant, instead of a side-condition (“provided x is not free in N…”)
+that every proof must drag along. The file’s <a
+href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>/<a
+href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> are
+the textbook twenty lines, and a capture-avoidance <code>Example</code>
+checks the classic trap by <code>reflexivity</code>.</li>
 </ul>
 <p>The price is honesty about arithmetic; the prize is that every proof
 about terms is structural induction with no naming side-conditions.
@@ -76,8 +78,11 @@ agree:</p>
 with its congruence rules; good for proofs;</li>
 <li>a <strong>function</strong>
 <code>step_fn : tm -&gt; option tm</code> — executable; good for
-running; with <code>step_fn_sound</code> and
-<code>step_fn_complete</code> tying them together, and a fuelled driver
+running; with <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn_sound"><code>step_fn_sound</code></a>
+and <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn_complete"><code>step_fn_complete</code></a>
+tying them together, and a fuelled driver
 <code>eval : nat -&gt; tm -&gt; tm</code> on top
 (<code>eval_sound : star t (eval fuel t)</code>).</li>
 </ul>
@@ -87,12 +92,13 @@ lambda code — and the examples in the file are discharged by
 the programs when it checks the file:</p>
 <pre class="coq"><code>Example eval_id_id : eval 10 (App idt idt) = idt.
 Proof. reflexivity. Qed.</code></pre>
-<p>(<code>idt</code> is the identity, <code>Abs (Var 0)</code>.)
-<code>reflexivity</code> succeeds only because both sides compute to the
-same term. Evaluation is not something we argue about; it is something
-the kernel performs. (A standalone extracted evaluator — lambda code
-running as a native binary — is the queued next step, the same
-extraction pipeline the memory-DSL uses.)</p>
+<p>(<a href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a>
+is the identity, <code>Abs (Var 0)</code>.) <code>reflexivity</code>
+succeeds only because both sides compute to the same term. Evaluation is
+not something we argue about; it is something the kernel performs. (A
+standalone extracted evaluator — lambda code running as a native binary
+— is the queued next step, the same extraction pipeline the memory-DSL
+uses.)</p>
 <h2 id="two-side-quests-briefly-combinators-and-cps">Two side quests,
 briefly: combinators and CPS</h2>
 <p>Two more classic transformations live in the repository as runnable,
@@ -105,17 +111,20 @@ three closed combinators —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">K\,x\,y = x</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">I\,x = x</annotation></semantics></math>
 — suffice to express every lambda term, so even <em>variables</em> can
-be deleted. The file defines the combinator language (<code>CS</code>,
-<code>CK</code>, <code>CI</code>, application <code>@@</code>) with an
-executable normalizer, and implements <strong>bracket
-abstraction</strong> — the algorithm that eliminates a variable — with
-the theorem
+be deleted. The file defines the combinator language (<a
+href="coqdoc/Riktig.Lambda.SKI.html#CS"><code>CS</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CK"><code>CK</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CI"><code>CI</code></a>, application
+<code>@@</code>) with an executable normalizer, and implements
+<strong>bracket abstraction</strong> — the algorithm that eliminates a
+variable — with the theorem
 <code>babs_correct : forall t u, cstar (babs t @@ u) (csub u t)</code>:
 the abstracted term, applied, reduces to the substitution — β-reduction
 rebuilt without binders. The classic <strong>B, C, K, W</strong> basis
 is derived from <code>S</code> and <code>K</code>, its specifications
 are <code>Example</code>s discharged by running the normalizer, and
-<code>S</code> is recovered from <code>B</code>, <code>C</code>,
+<code>S</code> is recovered from <code>B</code>, <a
+href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>,
 <code>W</code> alone. We will meet combinators again when the lambda
 track meets the machine-code track.</p>
 <p><strong>Continuation-passing style</strong> (<a
@@ -126,22 +135,26 @@ an explicit argument, the continuation — as one
 textbook rules omit (the file’s header comment does that bookkeeping in
 public). One subtle point the proofs caught: a CPS program does not hand
 your continuation the original value but its <strong>CPS-converted
-twin</strong> (<code>psi</code> in the file), and the verification
-examples check exactly that by running both sides through the evaluator.
-The twin becomes observable at the shell in post #7, where
-<code>cps</code> is extracted into a binary alongside
-<code>eval</code>.</p>
+twin</strong> (<a
+href="coqdoc/Riktig.Lambda.CPS.html#psi"><code>psi</code></a> in the
+file), and the verification examples check exactly that by running both
+sides through the evaluator. The twin becomes observable at the shell in
+post #7, where <a
+href="coqdoc/Riktig.Lambda.CPS.html#cps"><code>cps</code></a> is
+extracted into a binary alongside <a
+href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>.</p>
 <h2 id="where-the-two-posts-meet">Where the two posts meet</h2>
 <p>Post #3 built categories; this post built programs. The junction is
 <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>theories/Impl/StlcCat.v</code></a>:
 simply-typed lambda terms, <em>quotiented by a fragment of βη-conversion
-— exactly the instances the category laws need</em>, form a
-<code>Category</code> — objects are types, an arrow is a program,
-composition is <code>λx. g (f x)</code>, and the category laws are
-conversion facts. This is what the hom-setoid design was built for:
-“equality” of arrows is <em>programs behave alike</em>, and the whole
-categorical toolkit from post #3 now applies to syntax.</p>
+— exactly the instances the category laws need</em>, form a <a
+href="coqdoc/Riktig.Interface.Category.html#Category"><code>Category</code></a>
+— objects are types, an arrow is a program, composition is
+<code>λx. g (f x)</code>, and the category laws are conversion facts.
+This is what the hom-setoid design was built for: “equality” of arrows
+is <em>programs behave alike</em>, and the whole categorical toolkit
+from post #3 now applies to syntax.</p>
 <p>Next: conversion becomes a first-class rewriting relation — so that
 <code>IF b THEN g ELSE h</code> with <code>b == TRUE</code> rewrites to
 <code>g</code> in one step, partial evaluation as algebra. The lambda

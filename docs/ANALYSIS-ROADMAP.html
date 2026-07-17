@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analysis roadmap — from instances to flervariabelanalys</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="analysis-roadmap--from-instances-to-flervariabelanalys">Analysis
+roadmap — from instances to flervariabelanalys</h1>
+<p><em>Piece-by-piece order for growing the theories toward
+multivariable calculus (Jacobian, div, curl, line and surface integrals)
+and space-time. Each stage is small, independently landable, and only
+depends on the stages before it. Nothing here is started until the
+category/lambda track is done; this document exists so every piece is
+introduced in its logical place.</em></p>
+<h2 id="design-bets-already-placed-why-this-will-go-smoothly">Design
+bets already placed (why this will go smoothly)</h2>
+<ul>
+<li><strong>Setoid equality everywhere.</strong> Constructive real
+numbers are equivalence classes of Cauchy sequences — their
+<code>==</code> is not Coq’s <code>eq</code>. Our whole hierarchy is
+already stated over <a
+href="../coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a>, so reals
+are just another instance, not a rework.</li>
+<li><strong>InnerProduct has no positivity axiom</strong> (deliberate,
+noted in the interface). A symmetric bilinear form of signature
+(+,−,−,−) is therefore already an <a
+href="../coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+— space-time needs no new structure, only an instance. Positivity
+becomes an <em>add-on mixin</em> when order arrives (stage 2).</li>
+<li><strong>GeometricAlgebra is in place.</strong> Div and curl are the
+two halves of one GA product (∇F = ∇·F + ∇∧F), and the spacetime algebra
+is GA over Minkowski. The vector-calculus zoo collapses into structures
+we already have.</li>
+</ul>
+<h2 id="stage-1--instances-and-finite-sums-no-new-analysis">Stage 1 —
+Instances and finite sums (no new analysis)</h2>
+<p>Instantiate what exists; meet the first genuinely new tool.</p>
+<ul>
+<li><a
+href="../coqdoc/Riktig.Impl.ListMonoid.html"><code>Impl/ListMonoid.v</code></a>
+— lists with <code>++</code>: first <em>non-commutative</em> monoid
+(shows why Monoid ≠ AbGroup).</li>
+<li><a href="../coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a> —
+stdlib <code>Q</code> as the first <strong>Field</strong> instance
+(decidable, axiom-free).</li>
+<li><a
+href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>
+— the workhorse: if <code>G</code> is a Monoid/Group/Ring/VectorSpace,
+then so is <code>X -&gt; G</code>, pointwise. One general construction,
+many structures for free.</li>
+<li><strong>n-dimensional vectors as <code>Fin n -&gt; F</code></strong>
+— a special case of Pointwise;
+<code>VectorSpace F (Fin n -&gt; F)</code> costs nothing.</li>
+<li><a
+href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+— finite indexed sums over a monoid (fold over <code>Fin n</code>).
+Prerequisite for: inner product on <code>Fin n -&gt; F</code>
+(<code>⟨u,v⟩ = Σ uᵢvᵢ</code>), <strong>Basis</strong>, matrices, the
+Jacobian.</li>
+</ul>
+<h2
+id="stage-1½--representation-isomorphisms-swap-data-layouts-by-rewriting">Stage
+1½ — Representation isomorphisms (swap data layouts by rewriting)</h2>
+<p>The bridge between the algebra and category tracks, and the
+foundation for every later “same computation, different layout”
+proof.</p>
+<ul>
+<li><a
+href="../coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>
+— <code>unit</code> is the zero space (<code>{0}</code>); categorically
+a <strong>zero object</strong> of Vect: both Initial and Terminal (state
+it with the category interfaces — Vect differs from Set here).</li>
+<li><a
+href="../coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>
+— <code>A × B</code> componentwise; the categorical product.</li>
+<li><a
+href="../coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
++ <code>LinearIso</code> — structure-preserving maps and isos; an iso
+yields rewrite equations (<code>from (to x) == x</code>,
+<code>to (x+y) == to x + to y</code>, Proper instances) so
+representations are swapped <strong>by setoid rewriting</strong>,
+mid-proof.</li>
+<li><a
+href="../coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>
+— the monoidal kit: unitor <code>(A × unit) ≅ A</code>, braiding
+<code>(A × B) ≅ (B × A)</code>, associator
+<code>((A×B)×C) ≅ (A×(B×C))</code>; transport of VectorSpace structure
+along a LinearIso.</li>
+<li><strong>Normalization by computation</strong>: a Fixpoint mapping
+any pair-tree of spaces to its right-nested normal form, composing the
+three isos on the way — so
+<code>((A,B),(C,(D,E))) ≅ (A,(B,(C,(D,(E,())))))</code> is computed, not
+proved per shape (executable coherence).</li>
+<li><a
+href="../coqdoc/Riktig.Impl.ListVS.html"><code>Impl/ListVS.v</code></a>
+— the showpiece: <code>list R</code> with <code>==</code> = “equal up to
+trailing zeros” is the finitely-supported sequences ⊕_ℕ R — a real
+vector space (raw lists under <code>eq</code> are NOT one; the setoid
+design is what makes this work). Prove
+<code>list R ≅ colimit of (Fin n -&gt; R)</code> informally via:
+fixed-length <code>Fin n -&gt; R</code> ≅ n-fold nested pairs (by
+normalization) and zero-padding embeddings.</li>
+<li>Same enc/dec shape as the Codec layer, but two-sided: representation
+isos are the lossless special case of the channel-stack prisms —
+computations conjugate across them freely.</li>
+<li><strong>The motivating application: AoS ↔︎ SoA.</strong> A table of
+records is a record of columns:
+<code>(Fin n -&gt; A × B) ≅ (Fin n -&gt; A) × (Fin n -&gt; B)</code> —
+the product distributing over the container, proved once as one more iso
+in this family (<code>zip</code>/<code>unzip</code> are its to/from). A
+program written against the abstract container interface transports
+across the layout change with its proofs; changing list-of-structs to
+separate column arrays becomes a rewrite, not a rewrite-everything. (Raw
+<code>list (A × B)</code> needs the equal-length side condition — length
+indexing or the setoid handles it, as with ListVS.)</li>
+<li>Feeds stage 6 directly: reshape/tiling/flash-attention equivalences
+are rewrites along these isos (for ⊗ as well as ×); AoS↔︎SoA is the same
+move applied to memory layout, which is where the memprog README’s
+“change the data representation without fear” is cashed in.</li>
+</ul>
+<h2 id="stage-2--order">Stage 2 — Order</h2>
+<ul>
+<li><a
+href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+— <a
+href="../coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>
+operational class, Poset, total order.</li>
+<li><code>Interface/OrderedRing.v</code>, <code>OrderedField.v</code> —
+compatibility laws (<code>a &lt;= b -&gt; a + c &lt;= b + c</code>;
+products of nonnegatives).</li>
+<li><code>Theory/Abs.v</code> — absolute value from order + neg;
+triangle inequality. This is the metric raw material.</li>
+<li><code>PositiveDefinite</code> mixin for InnerProduct (needs order):
+the real inner product; Cauchy–Schwarz becomes provable.</li>
+</ul>
+<h2 id="stage-3--norms-and-linear-maps">Stage 3 — Norms and linear
+maps</h2>
+<ul>
+<li><a
+href="../coqdoc/Riktig.Interface.Norm.html"><code>Interface/Norm.v</code></a>
+— <a
+href="../coqdoc/Riktig.Interface.Norm.html#HasNorm"><code>HasNorm</code></a>
++ laws (definiteness, homogeneity <code>‖a *: u‖ == |a| * ‖u‖</code>,
+triangle). Axiomatized separately rather than derived from
+<code>norm2</code> (deriving needs square roots, i.e. completeness —
+don’t couple the stages).</li>
+<li><a
+href="../coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+— structure-preserving maps between vector spaces (the categorical
+arrows of the linear world; also what a total derivative <em>is</em> in
+stage 5).</li>
+</ul>
+<h2 id="stage-4--reals-the-one-real-decision-point">Stage 4 — Reals (the
+one real decision point)</h2>
+<p>State the <strong>interface first</strong>:
+<code>CompleteOrderedField</code> (ordered field + completeness —
+least-upper-bound, or Cauchy-completeness; pick when we get there,
+they’re interderivable classically).</p>
+<p>Two implementations, in order:</p>
+<ol type="1">
+<li><code>Impl/Rstd.v</code> — Coq stdlib <code>R</code>. Pragmatic,
+classical. The stdlib’s axioms stay confined to this Impl file;
+interfaces and theories remain axiom-free, so the “no Axiom” rule holds
+where it matters — anything proved against the interface doesn’t care
+which model.</li>
+<li>(later, optional) constructive Cauchy reals over Q — our setoid
+hierarchy is already shaped for it.</li>
+</ol>
+<p><strong>Complex numbers</strong> follow immediately:
+<code>Impl/Cx.v</code> as pairs over any ordered field with
+<code>i² = −1</code> — Field instance + 2-dim real vector space.
+Hermitian inner products want a <code>HasConj</code> operational class
+with involution laws (a small *-ring structure — one interface file). GA
+note for the blog: ℂ is the even subalgebra of GA(2).</p>
+<h2 id="stage-5--limits-continuity-derivative">Stage 5 — Limits,
+continuity, derivative</h2>
+<p>ε-δ over normed spaces (filters are overkill at our scale):</p>
+<ul>
+<li><code>limit_at f a L := forall eps, 0 &lt; eps -&gt; exists delta, ...</code>
+in any normed space over an ordered field. <strong>No completeness
+needed to define limits</strong> — only to prove existence theorems. So
+this stage only depends on stages 2–3.</li>
+<li><a
+href="../coqdoc/Riktig.Theory.Limits.html"><code>Theory/Limits.v</code></a>
+— algebra of limits (sum, scalar, product), the rewrite-friendly
+workhorse lemmas.</li>
+<li>Continuity := limit equals value; composition of continuous
+maps.</li>
+<li>Derivative, twice:
+<ol type="1">
+<li>one variable: <code>f' a</code> as limit of the difference quotient
+(Field division — that’s why Field is in the tower);</li>
+<li><strong>total derivative as a LinearMap</strong> (Fréchet):
+<code>f'(a) : V →ₗ W</code> the best linear approximation. The Jacobian
+is <em>not</em> a new concept — it is this linear map written in a basis
+(stage 1 BigOp + Basis pay off here).</li>
+</ol></li>
+<li>Existence theorems (IVT, MVT) — the first consumers of
+completeness.</li>
+</ul>
+<h2 id="stage-6--flervariabelanalys">Stage 6 — Flervariabelanalys</h2>
+<ul>
+<li>Partial derivatives = total derivative applied to basis
+vectors.</li>
+<li><strong>Jacobian</strong> = matrix of the total derivative (Basis +
+BigOp). This is where the matmul-repo material migrates in.</li>
+<li><strong>div, curl via GA</strong>: the geometric derivative ∇F
+splits as ∇·F + ∇∧F; div and curl are its grades. One definition, both
+operators, and <code>curl (grad f) = 0</code> /
+<code>div (curl F) = 0</code> become grade-bookkeeping lemmas instead of
+coordinate computations.</li>
+<li>Integrals, interface-first (house style): specify <a
+href="../coqdoc/Riktig.Interface.Integral.html#Integral"><code>Integral</code></a>
+by its laws — linearity, interval additivity, FTC as the spec — program
+and prove against that, then construct Riemann sums as the Impl
+(completeness needed only in the construction). Line integrals = 1-D
+integral of a pulled-back field along a path; surface integrals and
+Stokes are the far end of this road.</li>
+<li><strong>Change of variables</strong>, in two layers matching the two
+derivatives: 1-D substitution <code>∫ f(g(t)) g'(t) dt == ∫ f</code>
+(FTC + chain rule, both already on this list); multivariable
+substitution with the Jacobian determinant <code>|det Dg|</code> as the
+volume factor — det comes from linalg wave L3, so the statement is
+assemblable before the (hard) proof; state it as the spec early, prove
+the affine case first, full version rides on the integral
+construction.</li>
+</ul>
+<h2 id="stage-6½--backprop-and-computation-graph-reorganization">Stage
+6½ — Backprop and computation-graph reorganization</h2>
+<p>Added 2026-07-08: the motivating application is reasoning formally
+about automatic differentiation and different ways of organizing a
+transformer’s computation (flash attention, KV-cache reshaping). <a
+href="../coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
+already proved the load-bearing fact — the Jacobian chain rule IS <a
+href="../coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>
+— so this stage is mostly composing existing pieces, not new
+machinery.</p>
+<ul>
+<li><label><input type="checkbox" checked="" /><strong>Forward-mode and
+reverse-mode AD compute the same Jacobian.</strong> Done — <a
+href="../coqdoc/Riktig.Theory.Backprop.html"><code>theories/Theory/Backprop.v</code></a>,
+N=3 and N=4 chain instances (general n-ary chain associativity left as a
+documented TODO, not a gap in this stage’s headline claim). For a chain
+<code>f_n ∘ ... ∘ f_1</code>, the Jacobian is the product
+<code>J_{f_n} · ... · J_{f_1}</code>; backprop (reverse-mode) associates
+<strong>left</strong>-to-right —<code>(J_n · ... · J_2) · J_1</code>—
+and forward-mode associates <strong>right</strong>-to-left
+—<code>J_n · (... · (J_2 · J_1))</code>— the direction corrected from
+this bullet’s original wording (which had the two brackets swapped) by
+deriving it from the VJP-seeding argument rather than trusting the
+prose: a cotangent seeded at the output extends the running product on
+the right toward the input (left-associated), a tangent seeded at the
+input extends it on the left toward the output (right-associated). Both
+are the SAME matrix because matrix multiplication is associative — <a
+href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+(Impl/Matrix.v); at the <a
+href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+level the fact is <a
+href="../coqdoc/Riktig.Theory.Backprop.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>,
+proved by <code>reflexivity</code> since <a
+href="../coqdoc/Riktig.Interface.LinearMap.html#lm_comp"><code>lm_comp</code></a>
+is literally function composition. <a
+href="../coqdoc/Riktig.Theory.Backprop.html#jacobian_chain3_assoc"><code>jacobian_chain3_assoc</code></a>/<a
+href="../coqdoc/Riktig.Theory.Backprop.html#jacobian_chain4_assoc"><code>jacobian_chain4_assoc</code></a>
+compose a chain of <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+witnesses via <a
+href="../coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>,
+associated either way, and get <code>==</code> Jacobians, lifted from <a
+href="../coqdoc/Riktig.Theory.Backprop.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>
+by <a
+href="../coqdoc/Riktig.Theory.MatRep.html#mat_of_proper"><code>mat_of_proper</code></a>.</label></li>
+<li><strong>Gradients via Riesz representation.</strong> For
+scalar-valued <code>f</code> (codomain <code>= F</code>), the gradient
+is the unique <code>g</code> with <code>Df(a)(h) == ⟨g,h⟩</code> for all
+<code>h</code> — connects <a
+href="../coqdoc/Riktig.Theory.Adjoint.html"><code>Theory/Adjoint.v</code></a>’s
+inner-product machinery to <a
+href="../coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>’s
+derivative; existence needs finite dimension (a basis), uniqueness
+should be immediate from <a
+href="../coqdoc/Riktig.Interface.PosInner.html#PosInner"><code>PosInner</code></a>’s
+definiteness.</li>
+<li><strong>Concrete differentiable layers as instances</strong>:
+matmul, softmax, ReLU, layernorm, each as an <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+witness with its derivative computed — this is where the abstraction
+touches an actual transformer. None exist yet.</li>
+<li><strong>Multi-argument functions should already work for
+free</strong> — a layer depending on both input and weights is a
+function on a product space (<a
+href="../coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>),
+and <a
+href="../coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
+is generic over any <a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace"><code>VectorSpace</code></a>
+— worth a concrete worked example to confirm rather than assume.</li>
+<li><strong>VJPs as an efficient Impl</strong>, not full Jacobian matrix
+formation — real backprop composes linear-map applications directly
+without materializing the matrix; a legitimate “descend to
+implementation for efficiency” instance once the abstract theory above
+exists.</li>
+</ul>
+<h2 id="stage-7--space-time">Stage 7 — Space-time</h2>
+<ul>
+<li><code>Impl/Minkowski.v</code> — <code>Fin 4 -&gt; R</code> with the
+(+,−,−,−) bilinear form: an <a
+href="../coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+instance <em>today</em>, thanks to positivity-free design. Could even
+land early (after stage 1) as a showcase — no analysis required.</li>
+<li>GA over Minkowski = the spacetime algebra: boosts as rotors,
+electromagnetic field as a bivector. Blog material of the highest
+order.</li>
+</ul>
+<h2 id="stage-8--the-lagrangian-and-numerics-by-refinement">Stage 8 —
+The Lagrangian, and numerics by refinement</h2>
+<p>The capstone that ties analysis back to the project’s thesis. Goal:
+<em>define</em> the Lagrangian against the real-number interface,
+<em>instantiate</em> a program that computes it, then <em>refine</em>
+that program to executable arithmetic — rationals for approximation,
+intervals for guaranteed enclosures — with the refinement proved
+sound.</p>
+<ul>
+<li><strong>Expression language for real formulas</strong>
+(program-as-data, again): an <code>Expr</code> AST whose exact
+denotation lands in the <code>CompleteOrderedField</code> interface.
+Same move as memprog’s <code>Expr</code>/<a
+href="../coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>/<code>compile</code>
+pipeline, now for numerics.</li>
+<li><strong>Rational evaluator</strong> — computes in <code>Q</code>,
+carries an error budget. Ball arithmetic (center <code>c : Q</code>,
+radius <code>r : Q</code>) is the proof-friendly formulation.</li>
+<li><strong>Interval evaluator</strong> — <code>[a, b]</code>
+enclosures. NOTE the honesty point: intervals do NOT form a field
+(<code>x − x</code> has positive width; <code>*</code> only
+sub-distributes), so this is not an <code>Impl</code> of the field
+interface. The correct statement is a <strong>soundness
+theorem</strong>: <code>real_denotation e ∈ interval_eval e</code> — a
+containment refinement, the same shape as every other refinement link in
+the project.</li>
+<li><strong>Lagrangian showcase</strong>: <code>L(q, q̇) = T − V</code>
+for a concrete system (harmonic oscillator, pendulum) — definable as
+soon as stages 1–3 exist (it’s polynomial in <code>q, q̇</code>;
+derivatives only needed later for Euler–Lagrange). Then: discrete
+action, and the refinement chain exact-L → rational-L-with-error →
+interval-L.</li>
+<li><strong>Connection to <code>~/mechanics</code></strong>: the
+symplectic-integration work is the eventual consumer — a verified
+integrator step whose interval version provably encloses the true
+trajectory is the long-range target. Euler–Lagrange / calculus of
+variations is far-future and deliberately not on this list.</li>
+</ul>
+<h2 id="explicitly-deferred">Explicitly deferred</h2>
+<p>Topology-first treatment (open sets, filters), measure theory /
+Lebesgue, differential forms as a separate formalism (GA covers the
+vector-calculus needs first). Each can be added as its own interface
+later without disturbing the tower.</p>
+</main>
+</body>
+</html>

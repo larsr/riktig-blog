@@ -85,10 +85,14 @@ objects are simple types, an arrow <code>A ~&gt; B</code> is a
 <em>program</em> of type <code>A → B</code>, and two arrows are equal
 when a conversion relation says the programs behave alike. The file’s
 <code>conv</code> is deliberately a small <em>fragment</em> of full
-βη-conversion — three generators (<code>conv_beta_id</code>,
-<code>conv_beta_comp</code>, <code>conv_eta</code>) plus congruence and
-weakening, exactly the instances the category laws need; the file
-discloses the scope cut in its header. Composition is
+βη-conversion — three generators (<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_beta_id"><code>conv_beta_id</code></a>,
+<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_beta_comp"><code>conv_beta_comp</code></a>,
+<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_eta"><code>conv_eta</code></a>)
+plus congruence and weakening, exactly the instances the category laws
+need; the file discloses the scope cut in its header. Composition is
 <code>λx. g (f x)</code>, and the category laws are conversion facts.
 More on this in post #4.</li>
 </ul>
@@ -108,14 +112,18 @@ is three fields:</p>
 <p>In Coq-types: <code>unit</code> is terminal (every type has exactly
 one function into it), the empty type is initial (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>
-is the mirror image, with <code>init</code> and <code>emit</code>).</p>
+is the mirror image, with <a
+href="coqdoc/Riktig.Interface.Category.html#init"><code>init</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Category.html#emit"><code>emit</code></a>).</p>
 <p>But saying “<strong>the</strong> terminal object” is an obligation:
 what if there are two? The first real theorem of the category track (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InitialTerminal.v"><code>Theory/InitialTerminal.v</code></a>)
 discharges it: any two terminal objects are <strong>isomorphic</strong>.
-It deserves the same slow walk that <code>cancel_l</code> got in post
-#1, because it is the first proof in the project conducted entirely with
-arrows — no elements anywhere.</p>
+It deserves the same slow walk that <a
+href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+got in post #1, because it is the first proof in the project conducted
+entirely with arrows — no elements anywhere.</p>
 <p>First, what is claimed. An <em>isomorphism</em> between objects
 <code>x</code> and <code>y</code> is a pair of arrows that undo each
 other (<a
@@ -127,9 +135,11 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Catego
   iso_tofrom : iso_to ∘ iso_from == cat_id
 }.</code></pre>
 <p>Next, the only lemma the proof needs: <em>every endomorphism of a
-terminal object is the identity</em>. Why? Both <code>f</code> and
-<code>cat_id</code> are arrows into a terminal object, and
-<code>bang_unique</code> says there is only one of those:</p>
+terminal object is the identity</em>. Why? Both <code>f</code> and <a
+href="coqdoc/Riktig.Interface.Category.html#cat_id"><code>cat_id</code></a>
+are arrows into a terminal object, and <a
+href="coqdoc/Riktig.Interface.Category.html#bang_unique"><code>bang_unique</code></a>
+says there is only one of those:</p>
 <pre class="coq"><code>Lemma term_endo_id (T : Terminal C) :
   forall f : term (Terminal:=T) ~&gt; term (Terminal:=T), f == cat_id.
 Proof.
@@ -140,9 +150,10 @@ Proof.
 Qed.</code></pre>
 <p>Read it: <code>f == bang term</code> (uniqueness, applied to
 <code>f</code>), and <code>cat_id == bang term</code> (uniqueness,
-applied to <code>cat_id</code>), hence <code>f == cat_id</code>. The
-proof never opens an object; it plays two uses of the same law against
-each other.</p>
+applied to <a
+href="coqdoc/Riktig.Interface.Category.html#cat_id"><code>cat_id</code></a>),
+hence <code>f == cat_id</code>. The proof never opens an object; it
+plays two uses of the same law against each other.</p>
 <p>Finally the theorem. Given two terminal objects <code>T1</code>,
 <code>T2</code>, where do the two arrows of the isomorphism come from?
 There is no choice to make: <code>T2</code>’s bang <em>at</em>
@@ -157,13 +168,15 @@ inhabitants the types allow:</p>
   iso_fromto := term_endo_id T1 _;
   iso_tofrom := term_endo_id T2 _
 |}.</code></pre>
-<p>(<code>initial_iso</code> is the same proof with all arrows reversed.
-And since any arrow into a terminal object <em>is</em> the bang, the
-isomorphism could not have been anything else — that uniqueness is
-immediate from <code>bang_unique</code>, though the file does not state
-it as a separate theorem.) Uniqueness-up-to-iso is category theory’s
-notion of “the”, and from here on the project earns every definite
-article it uses.</p>
+<p>(<a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#initial_iso"><code>initial_iso</code></a>
+is the same proof with all arrows reversed. And since any arrow into a
+terminal object <em>is</em> the bang, the isomorphism could not have
+been anything else — that uniqueness is immediate from <a
+href="coqdoc/Riktig.Interface.Category.html#bang_unique"><code>bang_unique</code></a>,
+though the file does not state it as a separate theorem.)
+Uniqueness-up-to-iso is category theory’s notion of “the”, and from here
+on the project earns every definite article it uses.</p>
 <h2
 id="products-exponentials-ccc-the-rest-of-the-reconstruction">Products,
 exponentials, CCC: the rest of the reconstruction</h2>
@@ -172,20 +185,30 @@ played — pick out an object by a universal property of its arrows — so
 we state them at a glance and let the files speak.</p>
 <p>A <strong>product</strong> of <code>a</code> and <code>b</code> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>)
-is an object with projections <code>pi1</code>, <code>pi2</code> through
-which any object mapping into both <code>a</code> and <code>b</code>
-factors, uniquely (<code>pair_pi1</code>, <code>pair_pi2</code>,
-<code>pair_unique</code>). No mention of “pairs of elements” — yet in
-Coq-types this is exactly
+is an object with projections <a
+href="coqdoc/Riktig.Interface.Category.html#pi1"><code>pi1</code></a>,
+<a href="coqdoc/Riktig.Interface.Category.html#pi2"><code>pi2</code></a>
+through which any object mapping into both <code>a</code> and
+<code>b</code> factors, uniquely (<a
+href="coqdoc/Riktig.Interface.Category.html#pair_pi1"><code>pair_pi1</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Category.html#pair_pi2"><code>pair_pi2</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Category.html#pair_unique"><code>pair_unique</code></a>).
+No mention of “pairs of elements” — yet in Coq-types this is exactly
 <code>prod</code>/<code>fst</code>/<code>snd</code>, and <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Product.v"><code>Theory/Product.v</code></a>
-derives the working algebra (<code>pair_eta</code>,
-<code>pair_comp</code>, commutativity of <code>×</code> up to iso). An
+derives the working algebra (<a
+href="coqdoc/Riktig.Theory.Product.html#pair_eta"><code>pair_eta</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Product.html#pair_comp"><code>pair_comp</code></a>,
+commutativity of <code>×</code> up to iso). An
 <strong>exponential</strong> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>)
 <em>internalizes</em> the arrows <code>a ~&gt; b</code> as an object
-<code>exp_obj a b</code>, with an application arrow
-<code>eval_mor</code> and a currying operation whose central law is</p>
+<code>exp_obj a b</code>, with an application arrow <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>
+and a currying operation whose central law is</p>
 <pre class="coq"><code>curry_beta : eval_mor ∘ (curry h ×× cat_id) == h</code></pre>
 <p>— <em>currying then applying is the original function</em>; <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Exponential.v"><code>Theory/Exponential.v</code></a>
@@ -202,11 +225,13 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v
 <p>Coq’s own types form a cartesian closed category, machine-checked, no
 axioms added. Why this is the right stopping point for today:
 <strong>CCCs are exactly the worlds where lambda calculus makes
-sense.</strong> The <code>curry</code>/<code>eval</code> algebra
-<em>is</em> the typing of <code>λ</code> and application;
-<code>Impl/StlcCat.v</code> is the syntactic side of that same coin.
-Which is the cliffhanger for post #4: lambda terms as a formal,
-executable object — with variables done right.</p>
+sense.</strong> The <code>curry</code>/<a
+href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>
+algebra <em>is</em> the typing of <code>λ</code> and application; <a
+href="coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>
+is the syntactic side of that same coin. Which is the cliffhanger for
+post #4: lambda terms as a formal, executable object — with variables
+done right.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>

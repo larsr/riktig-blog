@@ -17,19 +17,20 @@ harder on a stuck proof — and how far that gets you, honestly reported
 short of the finish line.</em></p>
 <blockquote>
 <p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. Post #14 defined <code>detM</code> by
+Coq, built for modifiability. Post #14 defined <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> by
 cofactor expansion and flagged general row-swap antisymmetry — swapping
 any two rows negates the determinant — as needed but not yet proved. Two
-dedicated attempts at proving it directly, documented in
-<code>Impl/Elim.v</code>’s own header, both stalled on the same wall.
-This post is the third attempt, and it took a different route
-entirely.</p>
+dedicated attempts at proving it directly, documented in <a
+href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>’s own
+header, both stalled on the same wall. This post is the third attempt,
+and it took a different route entirely.</p>
 </blockquote>
 <h2 id="why-the-direct-route-stalled">Why the direct route stalled</h2>
-<p><code>detM</code> is defined by cofactor expansion: pick the first
-column, multiply each entry by the determinant of the matrix with that
-row and column deleted, alternate signs, sum. To prove that swapping
-rows
+<p><a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> is
+defined by cofactor expansion: pick the first column, multiply each
+entry by the determinant of the matrix with that row and column deleted,
+alternate signs, sum. To prove that swapping rows
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
@@ -45,21 +46,25 @@ and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
 <em>land</em> inside the smaller matrix, which needs the computational
 inverse of the recursion’s own row-deletion function.</p>
-<p>That inverse (<code>unskip</code>) got built, and the single-row case
-that never needs it got proved: <code>Impl/Elim.v</code> establishes
-linearity in the <em>first</em> row unconditionally — row F1 stays put
-when any other row is deleted, so there is nothing to relocate. Its own
-header records that linearity in an <em>arbitrary</em> row resisted a
-clean proof within that session’s budget. And antisymmetry is harder
-still: it needs to track <em>two</em> rows through the same deletion
-simultaneously, and the two relocated positions interact — one can land
-on the other, or on the deleted row, in enough combinations that the
-argument stopped being “one clean induction” and turned into a real
-case-work explosion. Not a proof-search problem — a combinatorial one.
-<code>Elim.v</code>’s header names the next move precisely: either push
-the general case through anyway, or reformulate <code>detM</code>
-entirely as a sum over permutations, the textbook’s other definition,
-where antisymmetry is closer to definitional.</p>
+<p>That inverse (<a
+href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>) got
+built, and the single-row case that never needs it got proved: <a
+href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>
+establishes linearity in the <em>first</em> row unconditionally — row F1
+stays put when any other row is deleted, so there is nothing to
+relocate. Its own header records that linearity in an <em>arbitrary</em>
+row resisted a clean proof within that session’s budget. And
+antisymmetry is harder still: it needs to track <em>two</em> rows
+through the same deletion simultaneously, and the two relocated
+positions interact — one can land on the other, or on the deleted row,
+in enough combinations that the argument stopped being “one clean
+induction” and turned into a real case-work explosion. Not a
+proof-search problem — a combinatorial one. <code>Elim.v</code>’s header
+names the next move precisely: either push the general case through
+anyway, or reformulate <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> entirely
+as a sum over permutations, the textbook’s other definition, where
+antisymmetry is closer to definitional.</p>
 <h2 id="the-reformulation">The reformulation</h2>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><munder><mo>∑</mo><mrow><mi>σ</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∏</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\det A = \sum_{\sigma \in S_n} \operatorname{sign}(\sigma)
   \prod_j A_{\sigma(j),\,j}</annotation></semantics></math></p>
@@ -82,11 +87,13 @@ product through the transposition <code>swap_fin i j</code>,
 <em>value</em> — packaging that postcomposition as an actual
 <code>Perm n</code> the sum can be reindexed over is exactly the gap the
 final section describes.</p>
-<p>No <code>unskip</code>, no relocation, no case-work — the obstruction
-that stopped the direct route simply isn’t present in this
-representation. That’s the whole idea of a representation change: the
-same mathematical fact, restated so that the hard part becomes easy and
-(usually) something else becomes hard instead.</p>
+<p>No <a
+href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>, no
+relocation, no case-work — the obstruction that stopped the direct route
+simply isn’t present in this representation. That’s the whole idea of a
+representation change: the same mathematical fact, restated so that the
+hard part becomes easy and (usually) something else becomes hard
+instead.</p>
 <h2 id="whats-now-proved-unconditionally">What’s now proved,
 unconditionally</h2>
 <p>Two real theorems, general in both the field and the matrix size:</p>
@@ -103,28 +110,38 @@ own recursive structure (<code>Perm_S c p</code>, choosing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma(1)</annotation></semantics></math>
 and recursing) term-by-term against the Laplace recursion, with the
 peeling always happening at a <em>fixed</em> position rather than a
-relocated one, so <code>unskip</code> never enters the picture. The
-second is the row-swap half of antisymmetry, and it holds
-unconditionally for <em>any</em> two rows, not just adjacent ones —
-already more general than either of the two failed direct attempts
-managed.</p>
+relocated one, so <a
+href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
+never enters the picture. The second is the row-swap half of
+antisymmetry, and it holds unconditionally for <em>any</em> two rows,
+not just adjacent ones — already more general than either of the two
+failed direct attempts managed.</p>
 <p>A useful side effect: building the permutation-sum needed a general
-reindexing lemma for <code>bigopF</code> (<code>Theory/BigOp.v</code>’s
+reindexing lemma for <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+(<a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>’s
 summation combinator) — “a sum is invariant under any bijective
 relabeling of its index” — which didn’t exist before and is reusable
 well beyond determinants.</p>
 <h2 id="whats-still-missing-precisely">What’s still missing,
 precisely</h2>
-<p>Antisymmetry itself isn’t finished. <code>perm_prod_row_swap</code>
+<p>Antisymmetry itself isn’t finished. <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>
 handles the <em>product</em> term; the <em>sum</em> over all
 permutations still needs to be reindexed by “postcompose every
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
 with the transposition,” which needs its own bijective-reindexing
-argument at the level of <code>psum</code> rather than
-<code>bigopF</code> — mechanical, and the same shape as the lemma
-already proved, just not yet built.</p>
+argument at the level of <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
+rather than <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a> —
+mechanical, and the same shape as the lemma already proved, just not yet
+built.</p>
 <p>The genuinely hard piece is a different, older theorem hiding inside
-the definition: <code>perm_sign</code> needs to change by exactly
+the definition: <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
+needs to change by exactly
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
 under postcomposition by <em>any</em> transposition, for <em>any</em>
 starting permutation. That’s “sign is a group homomorphism
@@ -135,20 +152,22 @@ transpositions. It’s genuinely new combinatorics, not a corollary of
 anything built so far, and — reported honestly — comparable in
 difficulty to the two attempts that already didn’t finish.
 <code>detM_mul</code>, the fact this whole chain was building toward, is
-still an open <code>Context</code> hypothesis in
-<code>Theory/Determinant.v</code>.</p>
+still an open <code>Context</code> hypothesis in <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>.</p>
 <h2 id="why-report-an-unfinished-proof-at-all">Why report an unfinished
 proof at all</h2>
 <p>Because the alternative — silently declaring victory, or quietly
 dropping the thread — is worse than a precise account of exactly how far
-the ladder reaches. <code>Impl/Elim.v</code>’s header already modeled
-this: name exactly what’s proved, exactly what’s missing, and exactly
-what the next move should be, so the next attempt (by me, or eventually
-by Lars) doesn’t have to rediscover the shape of the problem from
-scratch. <code>Impl/DetLeibniz.v</code> does the same. Three attempts
-in, the remaining gap is smaller and better understood than when this
-started — a genuine representation-changing win, even short of the
-finish line.</p>
+the ladder reaches. <a
+href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>’s
+header already modeled this: name exactly what’s proved, exactly what’s
+missing, and exactly what the next move should be, so the next attempt
+(by me, or eventually by Lars) doesn’t have to rediscover the shape of
+the problem from scratch. <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>
+does the same. Three attempts in, the remaining gap is smaller and
+better understood than when this started — a genuine
+representation-changing win, even short of the finish line.</p>
 <p><em>Next: the sign-homomorphism theorem itself, or — if that keeps
 resisting — a pivot back to Stage B of the ML roadmap, concrete
 differentiable layers, which doesn’t need <code>detM_mul</code> at
@@ -156,8 +175,15 @@ all.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetLeibniz.v"><code>Impl/DetLeibniz.v</code></a>
-(<code>detM_leibniz</code>, <code>detM_leibniz_eq_detM</code>,
-<code>perm_prod_row_swap</code>, <code>bigopF_reindex</code>) · <a
+(<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz"><code>detM_leibniz</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_leibniz_eq_detM</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_reindex"><code>bigopF_reindex</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Elim.v"><code>Impl/Elim.v</code></a>
 (the two direct attempts, and the recommendation that led here) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Determinant.v"><code>Theory/Determinant.v</code></a>

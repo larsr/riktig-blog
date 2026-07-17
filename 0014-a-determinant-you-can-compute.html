@@ -51,11 +51,13 @@ typechecking.)</p>
 <p><code>minor A i</code> deletes row <code>i</code> and column
 <code>F1</code>; <code>sign_at i</code> alternates
 <code>1, -1, 1, …</code> down the column. The bookkeeping to make this
-precise in Coq — an injection <code>skip</code> that “increases past” a
-deleted row, so <code>minor</code>’s type is honest about being one row
-and one column smaller — is real work, but it’s <em>engineering</em>,
-not mathematics: once it’s right, the two theorems that matter fall out
-cleanly:</p>
+precise in Coq — an injection <a
+href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a> that
+“increases past” a deleted row, so <a
+href="coqdoc/Riktig.Impl.Det.html#minor"><code>minor</code></a>’s type
+is honest about being one row and one column smaller — is real work, but
+it’s <em>engineering</em>, not mathematics: once it’s right, the two
+theorems that matter fall out cleanly:</p>
 <pre class="coq"><code>Theorem det_id : detM mat_id == 1.
 Theorem det_col1_add : detM (upd_col1 A (c1 + c2)) ==
   detM (upd_col1 A c1) + detM (upd_col1 A c2).</code></pre>
@@ -86,10 +88,11 @@ matrices,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{tr}(AB) = \mathrm{tr}(BA)</annotation></semantics></math></p>
 <p>— provable directly, by expanding both sides into a double sum over
 <code>i</code> and <code>j</code> and noting they’re the <em>same</em>
-double sum, summed in the other order (<code>bigopF_swap</code>, a
-genuine Fubini theorem for finite sums, proved once in
-<code>Theory/BigOp.v</code> and reused everywhere a double sum needs
-reordering).</p>
+double sum, summed in the other order (<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>,
+a genuine Fubini theorem for finite sums, proved once in <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+and reused everywhere a double sum needs reordering).</p>
 <p><strong>Step two, change of basis is conjugation.</strong> Post #10
 already proved that switching bases transports a linear map’s matrix by
 conjugation:
@@ -105,18 +108,25 @@ Combine the two facts:</p>
 — cycle the product using step one, then cancel
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">P P^{-1}</annotation></semantics></math>
 back to the identity. Every piece of that sentence is a named lemma
-already sitting in the repository (<code>mat_of_conj</code> for the
-conjugation, <code>tr_mul_comm</code> for the cycling,
-<code>cob_inv</code> for the cancellation) — the theorem
-<em>assembles</em>, it doesn’t need new machinery.</p>
+already sitting in the repository (<a
+href="coqdoc/Riktig.Theory.Trace.html#mat_of_conj"><code>mat_of_conj</code></a>
+for the conjugation, <a
+href="coqdoc/Riktig.Theory.Trace.html#tr_mul_comm"><code>tr_mul_comm</code></a>
+for the cycling, <a
+href="coqdoc/Riktig.Theory.Trace.html#cob_inv"><code>cob_inv</code></a>
+for the cancellation) — the theorem <em>assembles</em>, it doesn’t need
+new machinery.</p>
 <pre class="coq"><code>Definition tr (B : Basis n F U) (f : LinearMap F U U) : F :=
   trM (mat_of B B f).</code></pre>
-<p><code>tr_basis_indep</code> says the basis argument to
-<code>tr</code> is immaterial — you may compute it in <em>any</em> basis
-and get the same answer, and now you know why: because the two matrices
-that different bases produce are always similar, and similar matrices
-always have the same diagonal sum, for the two structural reasons above
-and no others.</p>
+<p><a
+href="coqdoc/Riktig.Theory.Trace.html#tr_basis_indep"><code>tr_basis_indep</code></a>
+says the basis argument to <a
+href="coqdoc/Riktig.Theory.Trace.html#tr"><code>tr</code></a> is
+immaterial — you may compute it in <em>any</em> basis and get the same
+answer, and now you know why: because the two matrices that different
+bases produce are always similar, and similar matrices always have the
+same diagonal sum, for the two structural reasons above and no
+others.</p>
 <p><em>Next: a proper introduction to channels — how do you even talk
 about a wire that loses and duplicates packets, before you can prove
 anything about a protocol running over one?</em></p>
@@ -125,8 +135,11 @@ anything about a protocol running over one?</em></p>
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Det.v"><code>Impl/Det.v</code></a>
 (Laplace expansion, <code>det_id</code>, column linearity) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Trace.v"><code>Theory/Trace.v</code></a>
-(<code>tr_mul_comm</code>, change of basis as conjugation,
-<code>tr_basis_indep</code>) · <a
+(<a
+href="coqdoc/Riktig.Theory.Trace.html#tr_mul_comm"><code>tr_mul_comm</code></a>,
+change of basis as conjugation, <a
+href="coqdoc/Riktig.Theory.Trace.html#tr_basis_indep"><code>tr_basis_indep</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/BigOp.v"><code>Theory/BigOp.v</code></a>
 (the finite-sum Fubini lemma both proofs lean on).</p>
 </main>

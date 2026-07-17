@@ -51,8 +51,9 @@ every index type <code>X</code> (not just <code>Fin n</code>):</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo>×</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(X \to A \times B) \;\cong\; (X \to A) \times (X \to B)</annotation></semantics></math></p>
 <p>Three things need content before that line is a theorem: why each
 side is a vector space at all, what <code>≅</code> means when a machine
-checks it, and the proof. In the repository the destination is
-<code>vsiso_soa</code> in <a
+checks it, and the proof. In the repository the destination is <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>
+in <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>.</p>
 <h2 id="step-1-both-sides-are-vector-spaces-for-free">Step 1: both sides
 are vector spaces, for free</h2>
@@ -72,9 +73,10 @@ If <code>V</code> is a vector space, so is <code>X -&gt; V</code>, for
 any <code>X</code>: every operation acts at each point,</p>
 <pre class="coq"><code>#[global] Instance PW_Add {X M : Type} `{HasAdd M} : HasAdd (X -&gt; M) :=
   fun f g x =&gt; f x + g x.</code></pre>
-<p>equality is “equal at every point” (<code>PW_EqRel</code>), and every
-law holds because it holds at each point. A typical proof in the file,
-whole:</p>
+<p>equality is “equal at every point” (<a
+href="coqdoc/Riktig.Theory.Pointwise.html#PW_EqRel"><code>PW_EqRel</code></a>),
+and every law holds because it holds at each point. A typical proof in
+the file, whole:</p>
 <pre class="coq"><code>Lemma pw_idl : forall f : X -&gt; M, 0 + f == f.
 Proof. intros f x. apply mon_idl. Qed.</code></pre>
 <p>Read it: to prove two functions <code>==</code>, prove it at an
@@ -108,7 +110,9 @@ functions <code>f</code> with <code>f (u + v) == f u + f v</code> and
 <code>f (a *: u) == a *: f u</code>, respecting <code>==</code> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>;
 they get a proper treatment in post #9). So the repository’s notion of
-isomorphism-of-representations, <code>VSIso</code> in <a
+isomorphism-of-representations, <a
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> in
+<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>,
 is: two linear maps that undo each other.</p>
 <pre class="coq"><code>Record VSIso (F U V : Type) {FF : Field F}
@@ -121,9 +125,10 @@ is: two linear maps that undo each other.</p>
 <p>Four fields, each earning its keep: the two maps are the conversions,
 the two round-trip laws say no information is lost, and linearity says
 any algebra you do in one representation agrees with doing it in the
-other. Once you hold a <code>VSIso</code>, every equation about one
-carrier can be moved to the other by rewriting along these laws — the
-proofs travel with the data.</p>
+other. Once you hold a <a
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>,
+every equation about one carrier can be moved to the other by rewriting
+along these laws — the proofs travel with the data.</p>
 <h2 id="step-3-the-proof">Step 3: the proof</h2>
 <p><strong>On paper.</strong> The forward map splits a table into its
 two columns:</p>
@@ -153,8 +158,9 @@ Definition soa_merge : LinearMap F ((X -&gt; A) * (X -&gt; B)) (X -&gt; A * B) :
     (fun (p : (X -&gt; A) * (X -&gt; B)) (x : X) =&gt; (fst p x, snd p x))
     soa_merge_proper soa_merge_add soa_merge_scale.</code></pre>
 <p>one round trip, in full — equality of functions is pointwise
-(<code>intros f x</code>), equality of pairs is componentwise
-(<code>split</code>), and each component is literally the same term:</p>
+(<code>intros f x</code>), equality of pairs is componentwise (<a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>),
+and each component is literally the same term:</p>
 <pre class="coq"><code>Lemma soa_fromto : forall f : X -&gt; A * B,
   (fun x : X =&gt; (fst (f x), snd (f x))) == f.
 Proof.
@@ -173,23 +179,30 @@ Qed.</code></pre>
 <li>For every field <code>F</code>, every index type <code>X</code>, and
 every pair of <code>F</code>-vector spaces <code>A</code>,
 <code>B</code>: splitting a table into columns and zipping columns into
-a table are linear maps, and they are mutually inverse
-(<code>vsiso_soa</code>, <code>Theory/VSIso.v</code>). With
-<code>X := Fin n</code> this is array-of-structs ≅
+a table are linear maps, and they are mutually inverse (<a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>,
+<a
+href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>).
+With <code>X := Fin n</code> this is array-of-structs ≅
 struct-of-arrays.</li>
 <li>Consequently any equation about the vector algebra of tables holds
 in either layout, transported along the round-trip laws. The
 <em>representation</em> is a degree of freedom; the proofs travel with
 the data.</li>
 <li>The same file provides the smaller representation changes the big
-one composes with: <code>vsiso_unitor</code> (<code>A × () ≅ A</code> —
-dropping an empty column; the one-point type <code>unit</code> is itself
-a vector space, <a
+one composes with: <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_unitor"><code>vsiso_unitor</code></a>
+(<code>A × () ≅ A</code> — dropping an empty column; the one-point type
+<code>unit</code> is itself a vector space, <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/UnitVS.v"><code>Theory/UnitVS.v</code></a>),
-<code>vsiso_braiding</code> (<code>A × B ≅ B × A</code> — field order in
-a record is irrelevant), <code>vsiso_associator</code> (nesting is
-irrelevant), and <code>vsiso_sym</code>/<code>vsiso_trans</code> so
-isomorphisms invert and chain — the file’s closing example normalizes
+<a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_braiding"><code>vsiso_braiding</code></a>
+(<code>A × B ≅ B × A</code> — field order in a record is irrelevant), <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_associator"><code>vsiso_associator</code></a>
+(nesting is irrelevant), and <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_sym"><code>vsiso_sym</code></a>/<a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_trans"><code>vsiso_trans</code></a>
+so isomorphisms invert and chain — the file’s closing example normalizes
 <code>A × (B × ()) ≅ B × A</code> purely by chaining.</li>
 <li>And what is <em>not</em> proved, honestly: nothing about memory or
 cache behaviour. The theorem says the data and its algebra are preserved
@@ -201,8 +214,9 @@ growable coefficient lists where <code>[1; 0; 0]</code> and
 <code>[1]</code> are the same vector — equality by lookup-with-default,
 so trailing zeros vanish by <em>definition</em> — are <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ListVS.v"><code>Impl/ListVS.v</code></a>,
-with the concrete <code>Q</code> demonstration
-<code>q_trailing_zeros</code> in <a
+with the concrete <code>Q</code> demonstration <a
+href="coqdoc/Riktig.Impl.Qf.html#q_trailing_zeros"><code>q_trailing_zeros</code></a>
+in <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Qf.v"><code>Impl/Qf.v</code></a>.)</p>
 <p><em>Next: the lambda evaluator leaves the building — Coq extraction
 to a real binary you can run on your shell. And after that: order,

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation &amp; onboarding — cross-cutting TODO</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="documentation--onboarding--cross-cutting-todo">Documentation
+&amp; onboarding — cross-cutting TODO</h1>
+<p>Two deliverables that span every theory track (not owned by LINALG/
+ANALYSIS/CHANNELS/LAMBDA specifically), requested 2026-07-08.</p>
+<h2 id="1-equivalences-catalog--docsequivalencesmd">1. Equivalences
+catalog — <code>docs/EQUIVALENCES.md</code></h2>
+<p>A single file listing every proven equation/rewrite rule in the
+library — every <code>Theorem</code>/<code>Lemma</code> whose statement
+is an <code>==</code> (or <code>=</code> for the Channel/Lambda tracks,
+which don’t use the Ops setoid) or an <code>iff</code> — grouped by
+theory area (algebra foundations, linear algebra, category theory,
+lambda calculus, analysis, channels). Each entry: the statement rendered
+as LaTeX in markdown, plus a link to the exact file:line on git.ri.se
+where it’s proved. Inequalities and pure existence/Prop theorems
+(e.g. <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>,
+<a
+href="../coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>’s
+<a
+href="../coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
+conclusion) are out of scope for this file — genuine rewrite rules only.
+Status: <strong>done</strong>, <code>docs/EQUIVALENCES.md</code>, ~250
+entries.</p>
+<h2 id="3-architecture-audit--interfacetheoryimpl-trichotomy">3.
+Architecture audit — Interface/Theory/Impl trichotomy</h2>
+<p>Requested 2026-07-08 alongside a suspicion of “slide away from the
+spec/theory/impl separation.” Investigated by reading all 78 files under
+Interface/, Theory/, Impl/ plus the topic-based Channel/Lambda tracks
+against docs/DESIGN.md’s stated rule. Verdict: the core algebra tower
+(Monoid through VectorSpace/InnerProduct/Order/Norm) holds the
+trichotomy cleanly; real drift is concentrated in the faster-moving
+linear-algebra wave (Basis/Bilinear/Integral/LinearMap hosting
+undisclosed Theory content in Interface/; no Interface/Determinant.v,
+forcing Impl/Det.v and Impl/Elim.v to carry general theorems;
+Theory/Hom.v and Theory/VSIso.v importing Impl, reversing the stated
+dependency direction). Channel/ and Lambda/’s topic-based organization
+is confirmed a deliberate, sound, different discipline — not drift. Full
+itemized findings and fixes: <code>docs/LINALG-ROADMAP.md</code>, Wave
+L8. Status: <strong>done</strong> (investigation); the fixes themselves
+are queued, non-blocking quality debt.</p>
+<h2 id="2-getting-started-blog-post--hands-on-examples-per-domain">2.
+“Getting started” blog post — hands-on examples per domain</h2>
+<p>A blog post teaching how to actually <em>use</em> the library from a
+fresh import — the real pain point: with no <code>Require Export</code>
+tower (a deliberate house-style choice, unlike the original memprog-era
+development), it isn’t obvious what to import to get going. The post
+should: - explain the Import-vs-Export tradeoff explicitly: targeted
+<code>Require Import</code> avoids name clashes (enabled by the per-file
+prefix convention — <code>PW_</code>, <code>LV_</code>, <code>C_</code>,
+<code>Hom_</code>, …) at the cost of the reader needing to know what to
+ask for; give a short cheat sheet of “if you want X, import Y” for the
+common cases; - give one worked example per major domain (algebra/linear
+algebra, category theory, lambda calculus, channels — pick 1-2 more if a
+clean one exists), each following the same shape: state something in the
+<strong>abstract</strong> layer (an interface/typeclass), then prove a
+<strong>concrete instance</strong> satisfies it — the “descend to
+implementation only when needed” discipline the whole project is built
+on. - every example must actually compile; verify before writing prose
+around it.</p>
+<p>Status: <strong>done</strong>, blog #19
+(<code>0019-getting-started-five-imports.md</code>). Found and fixed a
+real bug along the way: <a
+href="../coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>’s
+<code>Arguments iso_to {x y}.</code> etc. were section-local, not
+<code>Global</code>, so they silently reverted to fully-explicit on
+export — now fixed.</p>
+</main>
+</body>
+</html>

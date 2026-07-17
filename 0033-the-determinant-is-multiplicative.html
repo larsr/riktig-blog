@@ -18,7 +18,8 @@ determinant is multiplicative</h1>
 whose correctness is proved in Coq. One thread of this series has chased
 a single classical theorem across seven attempts:
 <code>det(A·B) = det A · det B</code> for the computable
-Laplace-recursion determinant <code>detM</code> of <a
+Laplace-recursion determinant <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> of <a
 href="0014-a-determinant-you-can-compute.html">post #14</a>. Posts <a
 href="0023-sidestepping-the-determinant.html">#23</a> through <a
 href="0028-equal-rows-vanish.html">#28</a> built the classical
@@ -41,12 +42,14 @@ one honest hypothesis</h2>
 because it is a mathematical necessity, not a proof-engineering
 shortcut. The argument runs by Gaussian elimination, and elimination
 must at each step <em>decide</em> whether a pivot candidate is zero. In
-this library a <code>Field</code> carries no such decision procedure —
-field equality is a setoid <code>==</code>, and for a general field
-there is no algorithm answering <code>x == 0</code>. So the theorem
-takes the decision procedure as an explicit argument, on exactly the two
-results that need it, and nothing else in the file assumes it. For any
-concrete field of interest the hypothesis is free: over ℚ,</p>
+this library a <a
+href="coqdoc/Riktig.Interface.Field.html#Field"><code>Field</code></a>
+carries no such decision procedure — field equality is a setoid
+<code>==</code>, and for a general field there is no algorithm answering
+<code>x == 0</code>. So the theorem takes the decision procedure as an
+explicit argument, on exactly the two results that need it, and nothing
+else in the file assumes it. For any concrete field of interest the
+hypothesis is free: over ℚ,</p>
 <pre class="coq"><code>Corollary detM_mul_Q : forall (n : nat) (A B : Matrix n n Q),
   detM (mat_mul A B) == detM A * detM B.</code></pre>
 <p>is unconditional.</p>
@@ -62,28 +65,37 @@ The engine is a <em>certificate</em>, not a computation on paper:</p>
 operations, either to the identity or to a matrix with an explicit zero
 row. No rank, no dimension theory, no case analysis left implicit — the
 disjunction <em>is</em> the singular/nonsingular dichotomy, carried as
-data. The elementary operations are proof-carrying values
-(<code>ElemOp</code>): a swap, a scale that carries a certified inverse
-(<code>c*d == 1</code> is part of the value), or an
-add-multiple-of-a-row. Each kind changes the determinant by a known
-factor — packaged from the earlier posts’ <code>det_elem_swap</code>,
-<code>det_rowI_scale</code>, <code>det_elem_add</code> — and factors of
-a list multiply (<code>det_eops_apply</code>), the accumulated factor
-keeping a certified inverse of its own.</p>
+data. The elementary operations are proof-carrying values (<a
+href="coqdoc/Riktig.Impl.DetMul.html#ElemOp"><code>ElemOp</code></a>): a
+swap, a scale that carries a certified inverse (<code>c*d == 1</code> is
+part of the value), or an add-multiple-of-a-row. Each kind changes the
+determinant by a known factor — packaged from the earlier posts’ <a
+href="coqdoc/Riktig.Impl.DetSignGeneral.html#det_elem_swap"><code>det_elem_swap</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_elem_add"><code>det_elem_add</code></a>
+— and factors of a list multiply (<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_eops_apply"><code>det_eops_apply</code></a>),
+the accumulated factor keeping a certified inverse of its own.</p>
 <p>From the certificate, the headline theorem is two short stories:</p>
 <ul>
 <li><strong>A reduces to the identity.</strong> With <code>f</code> the
 accumulated factor, <code>f · det A == 1</code>; pushing the same
-operation list through <code>A·B</code> (they act on the left factor:
-<code>eops_apply_mul</code>) gives <code>f · det(A·B) == det B</code>.
-The product law follows by commutative regrouping of those two equations
-— notably, <em>no division is ever performed</em>.</li>
+operation list through <code>A·B</code> (they act on the left factor: <a
+href="coqdoc/Riktig.Impl.DetMul.html#eops_apply_mul"><code>eops_apply_mul</code></a>)
+gives <code>f · det(A·B) == det B</code>. The product law follows by
+commutative regrouping of those two equations — notably, <em>no division
+is ever performed</em>.</li>
 <li><strong>A reduces to a zero row.</strong> A matrix with a zero row
-has zero determinant (<code>det_zero_row</code> — which is arbitrary-row
-scaling at <code>c := 0</code>, so it too is characteristic-free), and a
-zero row of <code>A</code> survives into <code>A·B</code>
-(<code>mat_mul_zero_row</code>), so both sides are <code>0</code> once
-the factor is cancelled through its certified inverse.</li>
+has zero determinant (<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_zero_row"><code>det_zero_row</code></a>
+— which is arbitrary-row scaling at <code>c := 0</code>, so it too is
+characteristic-free), and a zero row of <code>A</code> survives into
+<code>A·B</code> (<a
+href="coqdoc/Riktig.Impl.DetMul.html#mat_mul_zero_row"><code>mat_mul_zero_row</code></a>),
+so both sides are <code>0</code> once the factor is cancelled through
+its certified inverse.</li>
 </ul>
 <p>One standalone deliverable fell out on the way, the fact the roadmap
 had always predicted this argument would need:</p>
@@ -93,19 +105,21 @@ had always predicted this argument would need:</p>
 <p>— the determinant of an upper-triangular matrix is the product of its
 diagonal, by induction: an upper-triangular first column has one
 possibly-nonzero entry, so the Laplace recursion collapses to a single
-term per level. (The final proof route through <code>mat_id</code> ended
-up not needing it; it is proved because it was promised, and it is true,
-unconditionally.)</p>
+term per level. (The final proof route through <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>
+ended up not needing it; it is proved because it was promised, and it is
+true, unconditionally.)</p>
 <h2 id="the-debt-it-pays-off">The debt it pays off</h2>
 <p><a href="0017-everything-sent-eventually-arrives.html">Post #17</a>
 introduced — and posts since have honestly repeated — the one
-conditional corner of the linear-algebra tower:
-<code>Theory/Determinant.v</code> defines the determinant of an
-endomorphism coordinate-freely,
+conditional corner of the linear-algebra tower: <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
+defines the determinant of an endomorphism coordinate-freely,
 <code>det B f := detM (mat_of B B f)</code>, but its two headline
 consequences stood under an undischarged <code>Context</code>
-hypothesis: multiplicativity of <code>detM</code>. Over ℚ, that
-hypothesis is now discharged, and the conditional theorems become
+hypothesis: multiplicativity of <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>. Over ℚ,
+that hypothesis is now discharged, and the conditional theorems become
 theorems:</p>
 <pre class="coq"><code>Corollary det_comp_Q : forall (U : Type) (VU : VectorSpace Q U) (n : nat)
     (B : Basis n Q U) (f g : LinearMap Q U U),
@@ -131,23 +145,33 @@ diagonal 2, 3, 4, determinant 24.</p>
 plainly — and what remains</h2>
 <ul>
 <li><code>detM (A·B) == detM A · detM B</code> for every field with
-decidable equality (<code>detM_mul_dec</code>), unconditionally over ℚ
-(<code>detM_mul_Q</code>), with <code>det_comp_Q</code> and
-<code>det_basis_indep_Q</code> as the coordinate-free payoff. Zero
-<code>Admitted</code>, zero <code>Axiom</code>, characteristic-free
-throughout.</li>
-<li>Unconditional supporting theorems for any field:
-<code>det_zero_row</code>, <code>mat_mul_zero_row</code>,
-<code>det_upper_triangular</code>, and the proof-carrying
-elementary-operation layer with its factor calculus.</li>
-<li>What remains, honestly: <code>detM_mul</code> <em>without</em>
-<code>DecEq</code> — the candidate route is a Leibniz/Cauchy–Binet-style
-expansion of <code>detM (A·B)</code>, where the only case analysis is
-injectivity of maps on <code>Fin n</code>, decidable for free.
-<code>Theory/Determinant.v</code>’s <code>Context</code> hypothesis
-deliberately stays as the interface until that strengthening exists; it
-is now known to be dischargeable for every concrete field this
-repository uses.</li>
+decidable equality (<a
+href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>),
+unconditionally over ℚ (<a
+href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_Q"><code>detM_mul_Q</code></a>),
+with <a
+href="coqdoc/Riktig.Impl.DetMul.html#det_comp_Q"><code>det_comp_Q</code></a>
+and <a
+href="coqdoc/Riktig.Impl.DetMul.html#det_basis_indep_Q"><code>det_basis_indep_Q</code></a>
+as the coordinate-free payoff. Zero <code>Admitted</code>, zero
+<code>Axiom</code>, characteristic-free throughout.</li>
+<li>Unconditional supporting theorems for any field: <a
+href="coqdoc/Riktig.Impl.DetMul.html#det_zero_row"><code>det_zero_row</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#mat_mul_zero_row"><code>mat_mul_zero_row</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_upper_triangular"><code>det_upper_triangular</code></a>,
+and the proof-carrying elementary-operation layer with its factor
+calculus.</li>
+<li>What remains, honestly: <code>detM_mul</code> <em>without</em> <a
+href="coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a> —
+the candidate route is a Leibniz/Cauchy–Binet-style expansion of
+<code>detM (A·B)</code>, where the only case analysis is injectivity of
+maps on <code>Fin n</code>, decidable for free. <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>’s
+<code>Context</code> hypothesis deliberately stays as the interface
+until that strengthening exists; it is now known to be dischargeable for
+every concrete field this repository uses.</li>
 </ul>
 <p><em>Next: the unconditional strengthening, or
 <code>Interface/Determinant.v</code> — the abstract spec this
@@ -155,9 +179,19 @@ seven-attempt thread has effectively written the contents of.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetMul.v"><code>Impl/DetMul.v</code></a>
-(<code>detM_mul_dec</code>, <code>gauss_reduce</code>,
-<code>det_upper_triangular</code>, <code>detM_mul_Q</code>,
-<code>det_comp_Q</code>, <code>det_basis_indep_Q</code>) · <a
+(<a
+href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#gauss_reduce"><code>gauss_reduce</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_upper_triangular"><code>det_upper_triangular</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_Q"><code>detM_mul_Q</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_comp_Q"><code>det_comp_Q</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_basis_indep_Q"><code>det_basis_indep_Q</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetAlternating.v"><code>Impl/DetAlternating.v</code></a>
 / <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetSignGeneral.v"><code>Impl/DetSignGeneral.v</code></a>

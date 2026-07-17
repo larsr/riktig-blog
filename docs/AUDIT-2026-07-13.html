@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit 2026-07-13: verifying earlier claims against the
+code</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="audit-2026-07-13-verifying-earlier-claims-against-the-code">Audit
+2026-07-13: verifying earlier claims against the code</h1>
+<p>Earlier work in this repository was produced with heavy AI
+assistance, and this audit checks it for silent shortcuts: stubbed
+definitions, vacuous tests, proofs whose strength is quietly gutted by
+unproven hypotheses, and blog posts or roadmap checkmarks claiming more
+than the code contains.</p>
+<h2 id="method">Method</h2>
+<ul>
+<li>Full build from current sources: <strong>109/109 files
+compile</strong> (Coq 8.20.1).</li>
+<li><code>grep</code> for <code>Admitted</code>, <code>admit</code>,
+<code>Axiom</code>, <code>Parameter</code> over all of
+<code>theories/</code>: <strong>no hits in code</strong> (only comments
+asserting their absence).</li>
+<li><code>coqchk</code> (kernel-level revalidation of every
+<code>.vo</code>, including the full axiom report):
+<strong>passes</strong>. The only axiom in the entire tree is
+<code>functional_extensionality_dep</code>, used deliberately and
+documented in <code>Programs/</code> (for <code>Fix_eq</code> unfolding
+lemmas) and <a
+href="../coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>.</li>
+<li>Six independent read-only review passes, run in parallel:
+<ol type="1">
+<li>Blog posts 0001–0010, every technical claim checked against the
+code.</li>
+<li>Blog posts 0011–0020, same.</li>
+<li>Blog posts 0021–0029, same (determinant + derivative threads).</li>
+<li><code>theories/Interface/</code> + <code>theories/Theory/</code> —
+vacuous lemmas, hypothesis smuggling, header oversell, dead files.</li>
+<li><code>theories/Impl/</code> — stubs, trivialized tests, the
+<code>Det*</code> chain’s claimed generality.</li>
+<li><code>theories/Channel/</code>, <code>theories/Lambda/</code>,
+<code>theories/Programs/</code>, all roadmap docs (<code>[x]</code>
+checkmarks vs. reality), <code>docs/DESIGN.md</code>.</li>
+</ol></li>
+</ul>
+<h2 id="clarity-grades-separate-pass-per-larss-request">Clarity grades
+(separate pass, per Lars’s request)</h2>
+<p>Each post graded A/B/C on: self-contained, one clear idea, plainly
+says what was proved, nothing mixed in that doesn’t belong. B/C posts
+get rewritten.</p>
+<p><strong>Posts 0021–0029</strong>: A — 0021, 0022, 0024, 0025, 0027,
+0029. B — 0023 (the second displayed theorem doesn’t parse, so the
+reader can’t tell what the row-swap lemma states), 0026 (both displayed
+“theorems” elided to comments and <code>...</code>; leans on post 23
+vocabulary with a thin recap), 0028 (drifts from one idea to three; “the
+dispatch” is internal jargon). No C’s.</p>
+<p><strong>Posts 0001–0010</strong>: A — 0002, 0005, 0007, 0009, 0010. B
+— 0001 (philosophy clear, but no inventory of what was proved; only <a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+walked), 0003 (five structures at one line each; the terminal-uniqueness
+theorem flashes past), 0004 (three ideas in one: evaluator + SKI + CPS),
+0006 (AoS≅SoA payoff delayed by a tour of unrelated instances and a war
+story), 0008 (five-topic list; the FormallyReal/complex construction —
+the one real theorem — compressed into the last section). No C’s.</p>
+<p>Editorial decision for the fixes: posts keep their numbers and topics
+(the series is published; renumbering breaks links). Where a grader
+suggested splitting, the post is refocused in place: the central idea
+front-loaded and walked properly, side threads compressed to short
+pointers.</p>
+<p><strong>Posts 0011–0020</strong>: A — 0011, 0013, 0015, 0018, 0019,
+0020. B — 0012 (“Also in this wave” bolts on three unrelated results),
+0014 (theme “computed via a basis, proved independent” delivered only
+for trace, oversold for det), 0016 (excellent ABP half + an unrelated
+inner-product-geometry appendix). <strong>C — 0017</strong>: mixes ABP
+liveness and the conditional determinant at equal weight, the one
+genuinely incoherent post. Fix: refocus on liveness (that’s the title),
+compress the determinant half to a forward pointer to posts 23–28.</p>
+<h2 id="findings-and-fixes">Findings and fixes</h2>
+<p>Status: <strong>complete (2026-07-13).</strong> All six passes
+finished, all findings fixed and ticked below, full tree rebuilt
+(109/109 files, zero errors), blog re-rendered and republished. Bottom
+line: the tree’s theorems are genuine — no stubs, no hidden axioms, no
+Admitted, and every headline result verified Qed-closed at its claimed
+generality. The real problems were one wrong program transcript, vacuous
+tests (singular matrix, theorem-application “tests”), misquoted or
+garbled theorem statements in four posts, stale roadmap blockers, and
+three posts that mixed unrelated threads; all fixed. Separately, every
+post was graded for clarity and the seven B/C-graded posts rewritten or
+restructured.</p>
+<h3 id="pass-4-interface--theory-65-files-read-in-full">Pass 4:
+<code>Interface/</code> + <code>Theory/</code> (65 files read in
+full)</h3>
+<p>63 of 65 files clean. No stubs, no vacuous proofs, no undisclosed
+hypothesis smuggling. <a
+href="../coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>’s
+conditional <code>detM_mul</code> Section hypothesis is disclosed
+correctly (header marks exactly which corollaries are conditional) and
+no importer hides it. All 65 files are in <code>_CoqProject</code>; none
+are dead.</p>
+<p><strong>Pass 4 resolution (2026-07-13):</strong>
+<code>isometry_preserves_inner</code> renamed to <a
+href="../coqdoc/Riktig.Theory.Adjoint.html#adjoint_inverse_preserves_inner"><code>adjoint_inverse_preserves_inner</code></a>,
+the unused <a
+href="../coqdoc/Riktig.Theory.Adjoint.html#is_isometry"><code>is_isometry</code></a>
+hypothesis dropped, and the comment now states explicitly that the
+classical isometry-alone statement (via polarization) remains unproved;
+the two doc references updated; tree rebuilt. The Jacobian/Backprop item
+is closed WITHOUT a code change: the analytic <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+hypotheses are the packaging that gives the matrix identity its meaning
+(“when these are jacobians, reverse mode = forward mode”), both files
+disclose at length that the proofs never touch them, and blog #21 tells
+the same story accurately — stripping them would leave a bare
+restatement of <a
+href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+and lose the point.</p>
+<h3 id="pass-1-blog-posts-00010010-vs-code">Pass 1: blog posts 0001–0010
+vs. code</h3>
+<p>Four posts fully clean (0001, 0005, 0006, 0009). All file links
+resolve; no stubs or fake proofs behind any claim. The auditor ran the
+extracted <code>lambda-eval</code> binary to check post 0007’s
+transcript — which is how the worst finding surfaced:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" /><strong>(medium)
+<code>blog/0007</code> — the <code>--cps</code> transcript does not
+match the program.</strong> Blog shows
+<code>./lambda-eval --cps '\x. x'</code> printing the CPS-translated
+term <code>\k. k (\x. \k. k x)</code>; the checked-in binary prints
+<code>\x. \y. y x</code>, because <code>--cps</code> applies the
+translation to the identity continuation and <em>evaluates</em>
+(Main.hs) rather than printing the translation. Transcript and flag
+description both wrong. Fix: real output + correct
+description.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0007</code> — misquotes <code>Extract.v</code>’s nat
+rendering</strong> (<code>"(Prelude.+) 1"</code> vs. the real
+<code>"Prelude.succ"</code>). Fix: quote the file.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0002</code> — “bit-identical toolchains” overclaim</strong>:
+the flake pins Coq/coq-lsp but GHC comes from unpinned
+<code>nixpkgs#ghc</code>. Fix: scope the claim to the Coq
+toolchain.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0003</code> + <code>blog/0004</code> — “quotiented by
+β/η-conversion” overstates <code>StlcCat.v</code>’s
+<code>conv</code></strong>, which is a deliberate three- generator
+fragment of βη (disclosed in the file). Fix: “a fragment of βη — exactly
+the instances the category laws need”.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0003</code> — “the isomorphism is itself unique”</strong>:
+uniqueness is immediate from <a
+href="../coqdoc/Riktig.Interface.Category.html#bang_unique"><code>bang_unique</code></a>
+but no such theorem is stated in <a
+href="../coqdoc/Riktig.Theory.InitialTerminal.html"><code>Theory/InitialTerminal.v</code></a>.
+Fix: soften or add the lemma.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0004</code> — says examples are stated
+<code>= … := eq_refl</code></strong>; the file uses
+<code>Proof. reflexivity. Qed.</code> Fix: reword.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0010</code> — quoted <a
+href="../coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+proof snippet has an inconsistent binder</strong>
+(<code>intros g f i k</code> vs. the file’s <code>i j</code>). Fix:
+quote the file.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0010</code> — “both proofs exist in the repo and
+agree”</strong>: only the Fubini proof of <a
+href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+exists; the composition-route proof was never written. Fix:
+reword.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0008</code> — presents three <a
+href="../coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
+laws as the interface</strong>; <a
+href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+axiomatizes seven. Fix: note the list is abridged.</label></li>
+</ul>
+<p><strong>Pass 1 + clarity fixes applied (2026-07-13):</strong> 0007’s
+transcript now shows the binary’s real output (confirmed by running it)
+and describes <code>--cps</code> correctly; the extraction quote matches
+Extract.v. 0002’s reproducibility claim scoped to the pinned Coq
+toolchain. 0001 gained a “what is proved so far” inventory (every lemma
+name checked against Theory/Monoid.v, Group.v, AbGroup.v) and a walked
+<a
+href="../coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>
+proof. 0003 walks <a
+href="../coqdoc/Riktig.Theory.InitialTerminal.html#terminal_iso"><code>terminal_iso</code></a>
+properly, softens the iso-uniqueness claim, and compresses the structure
+tour. 0004 refocused on the evaluator with SKI/CPS as brief pointers;
+the eq_refl claim corrected to the real <code>reflexivity</code>
+example. 0006 — which Lars flagged as a confused mess — fully rewritten
+around one thread: AoS ≅ SoA as <a
+href="../coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>,
+jargon defined at first use, instance tour and war story cut to
+parentheticals, closing “what was proved, plainly” section including
+what is NOT proved (nothing about memory/cache); all quotes spot-checked
+against Theory/VSIso.v and Theory/Pointwise.v. 0008 promotes the
+FormallyReal/complex construction to centerpiece with a “Proved:” line
+per catalogue item and the abridgement note on abs. 0010’s proof quote
+and associativity claim corrected. 0005 and 0009 untouched (clean, grade
+A).</p>
+<h3 id="pass-2-blog-posts-00110020-vs-code">Pass 2: blog posts 0011–0020
+vs. code</h3>
+<p>Five posts fully clean (0011, 0012, 0015, 0016, and 0017’s Coq
+content apart from one prose slip). The auditor compiled post 0019’s
+examples from scratch against the tree. No fake successes anywhere;
+findings are transcription slips:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0013</code> — both quoted theorems omit their
+<code>norm2 v =/= 0</code> hypothesis.</strong> The prose gloss “nonzero
+v” is only equivalent under <a
+href="../coqdoc/Riktig.Interface.PosInner.html#PosInner"><code>PosInner</code></a>;
+<a
+href="../coqdoc/Riktig.Theory.InnerGeometry.html#proj_orthogonal"><code>proj_orthogonal</code></a>
+lives in the general <a
+href="../coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+section where the hypothesis is strictly stronger (Minkowski null
+vectors). Fix: add the hypothesis to the quotes.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0019</code> — “every snippet compiled before it was written
+down” is false for <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html#fin2_combo"><code>fin2_combo</code></a></strong>:
+as printed it fails (<code>u</code>/<code>v</code> referenced under an
+unintroduced <code>forall</code>); compiles with
+<code>intros u v.</code> added. None of the five examples are checked
+into the repo. Fix: correct the snippet AND commit the five examples as
+a compiled file so the claim is machine-checked from now
+on.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0020</code> — three cross-references say Gram-Schmidt was
+built in post #14</strong>; it was post #16 (post #14 is
+determinant/trace). Fix: renumber.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0017</code> — says the channel may “reorder within the
+burst”; <a
+href="../coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+cannot reorder</strong> (the tree proves exactly that, and post #15
+celebrates it). Fix: drop or qualify the phrase.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0014</code> — quoted <a
+href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> omits
+the dependent-match boilerplate</strong>, so the printed version
+wouldn’t typecheck. Fix: add an elision marker.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(info)
+<code>blog/0018</code> — describes Interface/ drift that Wave L8 has
+since fixed</strong> (accurate snapshot + fulfilled plan). Optional
+postscript noting L8 landed; <a
+href="../coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>’s
+residue (<a
+href="../coqdoc/Riktig.Interface.LinearMap.html#lm_zero"><code>lm_zero</code></a>/<a
+href="../coqdoc/Riktig.Interface.LinearMap.html#lm_neg"><code>lm_neg</code></a>
+proved in Interface/) is still real.</label></li>
+</ul>
+<p><strong>Pass 2 + clarity fixes applied (2026-07-13):</strong> 0013’s
+displayed types now carry <code>norm2 v =/= 0</code> with the
+Minkowski-null-vector explanation. 0019’s <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html#fin2_combo"><code>fin2_combo</code></a>
+fixed and the repaired example actually compiled against the tree before
+the claim was reworded; the examples are now checked in at
+theories/Examples/GettingStarted.v and rebuild with the tree (done later
+the same day). 0020 had FOUR wrong “#14” references, all now “#16”. 0017
+fully rewritten around liveness (safety was #16; liveness needs <a
+href="../coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>),
+the “reorder within the burst” error replaced by the correct statement,
+the determinant half compressed to one closing paragraph pointing at
+posts #23–#28 — the old post’s <a
+href="../coqdoc/Riktig.Theory.Determinant.html#fstar_alternating"><code>fstar_alternating</code></a>
+quote also turned out not to match the source and is gone. 0014 reframed
+honestly (trace’s basis-independence delivered now, determinant’s
+deferred) + elision marker in the <a
+href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> quote.
+0012/0016’s unrelated “also in this wave” sections compressed to
+pointers. 0018’s postscript records what Wave L8 actually fixed,
+including the two honest residues (Interface/LinearMap.v lemmas;
+Interface/Determinant.v still missing).</p>
+<h3 id="pass-6-channel--lambda--programs--roadmap-docs">Pass 6:
+<code>Channel/</code> + <code>Lambda/</code> + <code>Programs/</code> +
+roadmap docs</h3>
+<p>All 16 Coq files in these tracks have genuine proofs; 15/16 clean
+(GoBackN.v has stale comments only). Extraction output
+(<code>programs/lambda-eval/Eval.hs</code>) exists and matches
+<code>Extract.v</code>’s claims. Every roadmap <code>[x]</code> was
+traced to its named file; all check out except the items below. Every
+finding here is documentation drift, not a faked result:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" /><strong>(medium)
+<code>docs/CHANNELS-ROADMAP.md</code> T3 — promises more than ABP.v
+delivers.</strong> Roadmap: “one-bit sequence numbers + retransmit + ack
+… delivered is always a <em>prefix</em> of sent”. Code (<a
+href="../coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>,
+honest in its own header): <a
+href="../coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>,
+strictly weaker (gaps allowed), and no ack channel is modeled (sender
+bursts unconditionally). Fix: scope note on T3 mirroring the one T5
+already has.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>docs/CHANNELS-ROADMAP.md</code> T1 — fault-class lattice table
+doesn’t match <a
+href="../coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a></strong>:
+no permutation-of-subsequence or multiset class exists, and Trace.v
+proves reorder ⊄ lossy_dup, so the “each class contains the previous”
+chain isn’t the implemented lattice. Fix: annotate what was actually
+built.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>docs/CHANNELS-ROADMAP.md</code> T2 — Mealy signature
+mismatch</strong>: roadmap says output <em>list</em>, <a
+href="../coqdoc/Riktig.Channel.Mealy.html"><code>Channel/Mealy.v</code></a>
+is single-output. Fix: correct the T2 line.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>docs/LINALG-ROADMAP.md</code> L1 — curry/uncurry marked done “as a
+VSIso”</strong>; code proves the round trips but explicitly defers the
+VSIso upgrade (also listed as open in the same doc’s Loose Ends). Fix:
+reword the bullet.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>docs/LINALG-ROADMAP.md</code> L7 + <code>docs/ML-ROADMAP.md</code>
+Stage D — stale blocker descriptions</strong>: both still cite “general
+row-swap invariance” as the open lemma, but L5 closed it (<a
+href="../coqdoc/Riktig.Impl.DetSignGeneral.html#detM_swap_general"><code>detM_swap_general</code></a>);
+the actual remaining gap for <code>detM_mul</code> is the
+triangular-decomposition argument. Fix: update both
+bullets.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low) <a
+href="../coqdoc/Riktig.Channel.GoBackN.html"><code>theories/Channel/GoBackN.v</code></a>
+— two stale comment blocks</strong> claiming lemmas are “reproved here”
+that are in fact reused from <code>Trace.v</code> (the code right below
+contradicts them). Fix: comments only.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>docs/DESIGN.md</code> — the Channel/Lambda/Programs exemption from
+the four-layer split is recorded only in a roadmap file.</strong> Fix:
+one paragraph in DESIGN.md naming the exempt tracks.</label></li>
+</ul>
+<p><strong>Pass 6 fixes applied (2026-07-13):</strong> T3 got a dated
+scope note in the T5 style (subseq not prefix, no ack channel, blind
+burst sender); T1 a note that reorder is a separate class incomparable
+with lossy_dup and the combined classes are deferred; T2 the
+single-output Mealy signature; L1 reworded to “round trips proved, VSIso
+packaging open”; the L7/Stage-D blockers now name the real remaining gap
+(triangular-decomposition argument for detM_mul); GoBackN.v’s two stale
+comment blocks now state the lemmas are reused from Trace.v; DESIGN.md
+gained a “Standing exception” paragraph naming the
+Channel/Lambda/Programs tracks. Comments-only change to GoBackN.v,
+delimiters verified balanced.</p>
+<h3 id="pass-3-blog-posts-00210029-vs-code">Pass 3: blog posts 0021–0029
+vs. code</h3>
+<p>Six of nine posts fully accurate (0021, 0025, 0026, 0027, 0028,
+0029): every named theorem exists, is Qed-closed, and the posts’
+self-reported gaps match the code’s actual gaps. Findings:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" /><strong>(medium)
+<code>blog/0023-sidestepping-the-determinant.md</code> — the displayed
+<a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>
+statement is not the real theorem.</strong> The quoted block is
+malformed (binds <code>tau</code>, uses a free <code>sigma</code>),
+names <code>row_swap_matrix</code> which exists nowhere in the tree, and
+states the conclusion via a permutation-postcomposition construction
+that didn’t exist until one post later. The real lemma (<a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>)
+is a pointwise rewrite through <a
+href="../coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>.
+Fix: replace both quoted blocks with the actual statement.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(medium)
+<code>blog/0023</code> — claims <a
+href="../coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>
+proves “general linearity in one arbitrary row”</strong>; it proves
+row-F1 linearity only (its own header says arbitrary-row “resisted a
+clean proof”), and post 0028 later celebrates closing exactly that gap.
+Fix: “linearity in the first row”.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0022</code> — the quoted <code>Class Exp</code> drops the <a
+href="../coqdoc/Riktig.Interface.Exp.html#exp_fn_proper"><code>exp_fn_proper</code></a>
+field</strong> without an elision marker. Fix: add the field or a
+<code>(* ... *)</code> marker.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>(low)
+<code>blog/0024</code> — inline <a
+href="../coqdoc/Riktig.Theory.BilinearDeriv.html#bm_bounded"><code>bm_bounded</code></a>
+paraphrase omits the <code>0 &lt;= C</code> conjunct</strong> that the
+real definition carries. Fix: include it.</label></li>
+</ul>
+<p><strong>Pass 3 + clarity fixes applied (2026-07-13):</strong> 0023’s
+two displayed theorem blocks replaced with the real <a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>
+statement from DetLeibniz.v, plus a paragraph noting the RHS is a
+pointwise <a
+href="../coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>
+rewrite (not yet a <a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod"><code>perm_prod</code></a>
+of a permutation value — which is the gap the post’s final section
+describes); the Elim.v claim now says row-F1 linearity. 0026 displays
+the real <a
+href="../coqdoc/Riktig.Impl.DetSign.html#perm_sign_postcompose_adj"><code>perm_sign_postcompose_adj</code></a>/<a
+href="../coqdoc/Riktig.Impl.DetSign.html#detM_swap_adjacent"><code>detM_swap_adjacent</code></a>
+statements and defines <a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
+on the encoding, so it stands alone; the retrospective is one sentence.
+0028 reframed as “the last three ingredients for detM_mul” with the real
+<a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>/<a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>
+statements displayed; all “dispatch” phrasing removed. 0022’s quote
+includes the <a
+href="../coqdoc/Riktig.Interface.Exp.html#exp_fn_proper"><code>exp_fn_proper</code></a>
+field; 0024’s <a
+href="../coqdoc/Riktig.Theory.BilinearDeriv.html#bm_bounded"><code>bm_bounded</code></a>
+includes <code>0 &lt;= C</code>. Every quote verified against its source
+file by the editor.</p>
+<p><strong>Pass 5 fixes applied (2026-07-13):</strong> the three
+Det-chain Q tests now compute on the nonsingular matrix
+[[1,2,3],[4,5,6],[7,8,10]] (det = -3): swaps compute to +3, the
+equal-rows matrix to 0, and <a
+href="../coqdoc/Riktig.Impl.Elim.html#elem_add"><code>elem_add</code></a>
+preserves -3 with both sides evaluated independently — all closed by
+plain <code>reflexivity</code>, with the old theorem applications kept
+as separate resolution checks. Elim.v gained computational examples for
+<a
+href="../coqdoc/Riktig.Impl.Elim.html#det_elem_scale"><code>det_elem_scale</code></a>/<a
+href="../coqdoc/Riktig.Impl.Elim.html#det_rowF1_scale"><code>det_rowF1_scale</code></a>/<a
+href="../coqdoc/Riktig.Impl.Elim.html#det_rowF1_add"><code>det_rowF1_add</code></a>
+and an honest header. DetLeibniz.v’s reindexing test now uses a real
+transposition on distinct values. <a
+href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat_FS"><code>fin_to_nat_FS</code></a>/<a
+href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat_inj"><code>fin_to_nat_inj</code></a>/<a
+href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_neg"><code>bigopF_neg</code></a>
+hoisted to Theory/BigOp.v (no typeclass binders, Hint Mode discipline
+untouched); duplicates dropped from QR.v, DetSignGeneral.v, Elim.v.
+Superseded-by notes added on Elim.v’s two historical theorems.
+CliffordFin.v header notes the filename mismatch; MatrixNorm.v’s
+cross-reference corrected. Full tree rebuilds with zero errors; strict
+grep of all nine changed files finds no Admitted/admit/Axiom.</p>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" /><strong>(low) <a
+href="../coqdoc/Riktig.Theory.Adjoint.html"><code>Theory/Adjoint.v</code></a>
+— <code>isometry_preserves_inner</code> has an unused hypothesis and a
+misleading name.</strong> The <code>is_isometry f</code> hypothesis is
+never used; the proof only needs the adjoint-inverse pair. The classical
+theorem the name evokes (isometry alone preserves the inner product) is
+not what is proved. Fix: drop the unused hypothesis, rename to match the
+actual content, keep a note about the real isometry version as future
+work. ### Pass 5: <code>Impl/</code> (28 files read in
+full)</label></li>
+</ul>
+<p>20 of 28 files clean; no high- or medium-severity findings. Every
+headline determinant theorem was independently verified to be a real,
+Qed-closed proof at the claimed generality (arbitrary
+<code>Field F</code>, arbitrary <code>n</code>, arbitrary
+<code>Fin.t</code> indices): <a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_leibniz_eq_detM</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.DetSignGeneral.html#perm_sign_postcompose_swap"><code>perm_sign_postcompose_swap</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.DetSignGeneral.html#detM_swap_general"><code>detM_swap_general</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>
+(genuinely characteristic-free — pairs Laplace terms via
+<code>sign_at F1 + sign_at (FS F1) == 0</code>, never
+<code>x == -x</code>), <a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#det_elem_add"><code>det_elem_add</code></a>.
+The remaining items are all about <em>tests and presentation</em>, not
+the theorems:</p>
+<ul class="task-list">
+<li><p><label><input type="checkbox" checked="" /><strong>(medium,
+upgraded from low) <a
+href="../coqdoc/Riktig.Impl.DetSign.html"><code>Impl/DetSign.v</code></a>
+/ <a
+href="../coqdoc/Riktig.Impl.DetSignGeneral.html"><code>Impl/DetSignGeneral.v</code></a>
+/ <a
+href="../coqdoc/Riktig.Impl.DetAlternating.html"><code>Impl/DetAlternating.v</code></a>
+— the Q verification examples are vacuous.</strong> All three use
+[[1,2,3],[4,5,6],[7,8,9]], which is singular (det = 0), so “swap negates
+det” degenerates to <code>0 == -0</code> and “elem_add preserves det” to
+<code>0 == 0</code>; worse, each is proved by
+<code>exact (theorem ...)</code> rather than computation, so it would
+pass even for a degenerate theorem. Fix: nonsingular matrix (e.g. last
+entry 10), both sides computed independently, closed by
+<code>reflexivity</code> — the model is <a
+href="../coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a>’s 2x2
+test, which does this right.</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low) <a
+href="../coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>
+header — overclaims its tests.</strong> Header says the examples check
+<a
+href="../coqdoc/Riktig.Impl.Elim.html#det_elem_scale"><code>det_elem_scale</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Elim.html#det_rowF1_add"><code>det_rowF1_add</code></a>/<code>_scale</code>
+“by computation”; the examples are theorem applications, and no <a
+href="../coqdoc/Riktig.Impl.Elim.html#det_rowF1_add"><code>det_rowF1_add</code></a>
+example exists at all. Fix: computational examples + reworded
+header.</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low) <a
+href="../coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>
+— <code>bigopF_reindex_id_Q</code> tests the reindexing theorem only at
+the identity bijection</strong>, where the statement is convertible to
+<code>reflexivity</code>. Fix: reindex a concrete <code>Fin.t 3</code>
+sum by a real transposition, close by computation.</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low)
+duplication: <a
+href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat_FS"><code>fin_to_nat_FS</code></a>/<a
+href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat_inj"><code>fin_to_nat_inj</code></a>
+proved independently in both <a
+href="../coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a> and <a
+href="../coqdoc/Riktig.Impl.DetSignGeneral.html"><code>Impl/DetSignGeneral.v</code></a>;
+<a
+href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_neg"><code>bigopF_neg</code></a>
+proved in both <a
+href="../coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>
+(general AbGroup) and <a
+href="../coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a>.</strong>
+Fix: hoist the <a
+href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat"><code>fin_to_nat</code></a>
+lemmas next to <a
+href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat"><code>fin_to_nat</code></a>
+itself and reuse the general <a
+href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_neg"><code>bigopF_neg</code></a>.</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low) Det
+chain housekeeping</strong> — <code>Elim.v</code>’s <a
+href="../coqdoc/Riktig.Impl.Elim.html#det_swap_F1_FS2"><code>det_swap_F1_FS2</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Elim.html#det_eq_rows_F1_FS2"><code>det_eq_rows_F1_FS2</code></a>
+are strictly superseded (by <a
+href="../coqdoc/Riktig.Impl.DetSignGeneral.html#detM_swap_general"><code>detM_swap_general</code></a>
+/ <a
+href="../coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>)
+and now consumed by nothing. Fix: one-line “superseded by …”
+notes.</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low) <a
+href="../coqdoc/Riktig.Impl.CliffordFin.html"><code>Impl/CliffordFin.v</code></a>
+— filename oversell</strong>: contains no <code>Fin</code>-indexed
+construction (header explains why not); content is the 1-dimensional
+trivial GA and Cl(0,1). Fix: note in header; renaming deferred (would
+touch <code>_CoqProject</code> and importers for cosmetic
+gain).</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low) <a
+href="../coqdoc/Riktig.Impl.MatrixNorm.html"><code>Impl/MatrixNorm.v</code></a>
+— comment points at “the boundedness estimate below”</strong> which
+actually lives in <a
+href="../coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</code></a>.
+Fix: correct the cross-reference.</label></p></li>
+<li><p><label><input type="checkbox" checked="" /><strong>(low, closed
+as no-change-needed) <a
+href="../coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
++ <a
+href="../coqdoc/Riktig.Theory.Backprop.html"><code>Theory/Backprop.v</code></a>
+— inert <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+hypotheses on matrix-level statements.</strong> <a
+href="../coqdoc/Riktig.Theory.Jacobian.html#jacobian_comp"><code>jacobian_comp</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Backprop.html#jacobian_chain3_assoc"><code>jacobian_chain3_assoc</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Backprop.html#backprop_eq_forward_mode"><code>backprop_eq_forward_mode</code></a>
+carry analytic hypotheses their proofs never touch; the content is <a
+href="../coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>/<a
+href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>.
+Disclosed in the files’ own comments, so not a fake — but the statements
+are stronger-looking than their content. Fix: strip the inert hypotheses
+(or move them to a clearly labelled “packaging” variant), keeping the
+honest framing.</label></p></li>
+</ul>
+</main>
+</body>
+</html>

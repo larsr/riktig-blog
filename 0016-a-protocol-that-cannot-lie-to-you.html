@@ -50,15 +50,19 @@ already has, and throw it away.</p>
   lossy_dup (sender_stream b0 ms k) wire -&gt;
   subseq (deliver b0 wire) ms.</code></pre>
 <p>Read it in English: <em>whatever the wire delivers — for any channel
-behavior in the <code>lossy_dup</code> class, any retransmission budget
-<code>k</code>, any message list <code>ms</code> — the sequence of
-messages the receiver actually accepts is a subsequence of what was
-sent.</em> No duplicates get through that were never sent. No
-reordering. No message the application never wrote gets fabricated. This
-is the entire safety contract of a reliable-delivery protocol, and it is
-a <strong>theorem</strong>, not a hope.</p>
+behavior in the <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+class, any retransmission budget <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, any
+message list <code>ms</code> — the sequence of messages the receiver
+actually accepts is a subsequence of what was sent.</em> No duplicates
+get through that were never sent. No reordering. No message the
+application never wrote gets fabricated. This is the entire safety
+contract of a reliable-delivery protocol, and it is a
+<strong>theorem</strong>, not a hope.</p>
 <p>Notice what’s absent: no assumption that packets eventually get
-through. If the channel drops <em>everything</em>, <code>deliver</code>
+through. If the channel drops <em>everything</em>, <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
 returns the empty list — still, trivially, a subsequence of
 <code>ms</code>. That’s honest: safety (nothing bad happens) and
 liveness (something good eventually happens) are different properties,
@@ -69,22 +73,25 @@ which is deliberately not assumed here; it’s queued as the next stage
 this simple.</p>
 <h2 id="why-the-proof-needed-a-detour-through-channels-themselves">Why
 the proof needed a detour through channels themselves</h2>
-<p>The interesting lemma isn’t about ABP at all — it’s about
-<code>lossy_dup</code> alone:</p>
+<p>The interesting lemma isn’t about ABP at all — it’s about <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+alone:</p>
 <pre class="coq"><code>Lemma lossy_dup_app_split : forall s1 s2 r,
   lossy_dup (s1 ++ s2) r -&gt;
   exists r1 r2, r = r1 ++ r2 /\ lossy_dup s1 r1 /\ lossy_dup s2 r2.</code></pre>
 <p><em>If the channel acted on a sent list that happens to be a
 concatenation <code>s1 ++ s2</code>, then the received list splits to
-match — a <code>lossy_dup</code>-behavior on the first part, followed by
-one on the second.</em> This sounds obvious and is not: the
-<code>stutter</code> constructor (duplication) can re-emit the
-<em>front</em> of what’s already been received without consuming
-anything more from the sent side, so a run of duplicates near the
-boundary could, in principle, straddle it in an awkward way. The proof
-goes by induction on the <code>lossy_dup</code> <em>derivation
-itself</em> — not on the lists — precisely to track that possibility
-honestly.</p>
+match — a <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>-behavior
+on the first part, followed by one on the second.</em> This sounds
+obvious and is not: the <code>stutter</code> constructor (duplication)
+can re-emit the <em>front</em> of what’s already been received without
+consuming anything more from the sent side, so a run of duplicates near
+the boundary could, in principle, straddle it in an awkward way. The
+proof goes by induction on the <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+<em>derivation itself</em> — not on the lists — precisely to track that
+possibility honestly.</p>
 <p>Once that lemma exists, ABP’s own proof is short: split the sent wire
 trace at each message’s retransmission burst, note that a whole burst
 (all copies carrying the same bit) contributes <strong>at most
@@ -92,13 +99,15 @@ one</strong> delivered message no matter how the channel maims it —
 duplicates all carry the identical bit and get rejected after the first
 — and induct over the message list.</p>
 <p>This is the project’s recurring shape again: a hard, general fact
-about the substrate (<code>lossy_dup_app_split</code>, purely about
-relations on lists) makes the domain-specific theorem
-(<code>abp_safety</code>) almost fall out. The next protocols in the
-roadmap — Go-Back-N, selective repeat, the mechanism at the heart of TCP
-— will reuse this exact lemma; a new retransmission scheme only ever
-owes its <em>own</em> burst-delivery argument, not a new proof that
-channels behave sanely.</p>
+about the substrate (<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>,
+purely about relations on lists) makes the domain-specific theorem (<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>)
+almost fall out. The next protocols in the roadmap — Go-Back-N,
+selective repeat, the mechanism at the heart of TCP — will reuse this
+exact lemma; a new retransmission scheme only ever owes its <em>own</em>
+burst-delivery argument, not a new proof that channels behave
+sanely.</p>
 <h2 id="also-in-this-wave-inner-product-geometry-finished">Also in this
 wave: inner-product geometry, finished</h2>
 <p>Two theorems complete <a

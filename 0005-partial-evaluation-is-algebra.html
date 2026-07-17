@@ -47,16 +47,19 @@ terms:</p>
 #[global] Instance Tm_EqRel : EqRel tm := conv.</code></pre>
 <p>That last line is the whole point: <code>tm</code> now has a
 <code>==</code>, the same <code>==</code> as monoids and vector spaces,
-with the same consequences — the <code>Proper</code> instances for
-<code>Abs</code> and <code>App</code> mean <code>rewrite</code> descends
-into programs like it descends into sums. <strong>Program syntax is now
-a setoid, and program transformation is setoid rewriting.</strong></p>
+with the same consequences — the <code>Proper</code> instances for <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> and <a
+href="coqdoc/Riktig.Lambda.Syntax.html#App"><code>App</code></a> mean
+<code>rewrite</code> descends into programs like it descends into sums.
+<strong>Program syntax is now a setoid, and program transformation is
+setoid rewriting.</strong></p>
 <p>Two design notes. First, <code>conv</code> deliberately contains more
-than execution: <code>step</code> only reduces in call-by-value
-positions, but <code>conv_abs</code> lets us rewrite <em>under a
-binder</em> — an optimizer transforms function bodies without calling
-the function. Second, equality-by- running comes with a bridge that
-turns the evaluator into a proof engine:</p>
+than execution: <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> only
+reduces in call-by-value positions, but <code>conv_abs</code> lets us
+rewrite <em>under a binder</em> — an optimizer transforms function
+bodies without calling the function. Second, equality-by- running comes
+with a bridge that turns the evaluator into a proof engine:</p>
 <pre class="coq"><code>conv_by_eval : forall n m s t, eval n s = eval m t -&gt; s == t</code></pre>
 <p><em>If two terms compute to the same normal form, they are
 convertible.</em> Proofs of program equations become
@@ -67,18 +70,24 @@ both programs and compares. We prove by <em>executing</em>.</p>
 <code>false</code> — and needs none. Church’s encoding: a boolean
 <em>is</em> the choice it would make.</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">R</mi><mi mathvariant="normal">U</mi><mi mathvariant="normal">E</mi></mrow><mo>=</mo><mi>λ</mi><mi>t</mi><mi>.</mi><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>t</mi><mspace width="2.0em"></mspace><mrow><mi mathvariant="normal">F</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mo>=</mo><mi>λ</mi><mi>t</mi><mi>.</mi><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>e</mi></mrow><annotation encoding="application/x-tex">\mathrm{TRUE} = \lambda t.\lambda e.\, t \qquad \mathrm{FALSE} = \lambda t.\lambda e.\, e</annotation></semantics></math></p>
-<p><code>TRUE</code> applied to two arguments keeps the first;
-<code>FALSE</code> keeps the second — your <code>if</code> is just
-application: <code>IFB b g h = (b\; g)\; h</code>. In <a
+<p><a href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a>
+applied to two arguments keeps the first; <a
+href="coqdoc/Riktig.Lambda.Church.html#FALSE"><code>FALSE</code></a>
+keeps the second — your <code>if</code> is just application:
+<code>IFB b g h = (b\; g)\; h</code>. In <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Church.v"><code>theories/Lambda/Church.v</code></a>
 the branch-simplification laws every compiler applies are theorems:</p>
 <pre class="coq"><code>IF_TRUE  : forall g h, value g -&gt; value h -&gt; IFB TRUE  g h == g
 IF_FALSE : forall g h, value g -&gt; value h -&gt; IFB FALSE g h == h</code></pre>
-<p>(The <code>value</code> hypotheses are call-by-value’s honesty: you
-may only discard a branch you were allowed not to evaluate.) Pairs come
-from the same trick — a pair is a function awaiting a selector, and the
-projection laws <code>FST_PAIR</code>, <code>SND_PAIR</code> literally
-<em>reduce to the boolean laws</em> in their proofs, because a
+<p>(The <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a>
+hypotheses are call-by-value’s honesty: you may only discard a branch
+you were allowed not to evaluate.) Pairs come from the same trick — a
+pair is a function awaiting a selector, and the projection laws <a
+href="coqdoc/Riktig.Lambda.Church.html#FST_PAIR"><code>FST_PAIR</code></a>,
+<a
+href="coqdoc/Riktig.Lambda.Church.html#SND_PAIR"><code>SND_PAIR</code></a>
+literally <em>reduce to the boolean laws</em> in their proofs, because a
 projection is an applied boolean. The encoding’s elegance shows up as
 proof reuse.</p>
 <h2 id="the-punchline-dead-branch-elimination-is-a-two-line-proof">The
@@ -92,14 +101,17 @@ Proof.
   rewrite Hb.
   apply IF_TRUE; assumption.
 Qed.</code></pre>
-<p>Read it slowly: we <em>know</em> the condition is (equivalent to)
-<code>TRUE</code> — perhaps an analysis proved it, perhaps it came from
-a constant — so we <strong>rewrite the condition inside the
-program</strong> (<code>rewrite Hb</code>, which works because
-<code>IFB</code> respects <code>==</code>), and then the branch law
-finishes. Compare with <code>cancel_l</code> from post #1: same shape,
-same tactic vocabulary, same reading experience. Group elements,
-vectors, programs — one discipline.</p>
+<p>Read it slowly: we <em>know</em> the condition is (equivalent to) <a
+href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> —
+perhaps an analysis proved it, perhaps it came from a constant — so we
+<strong>rewrite the condition inside the program</strong>
+(<code>rewrite Hb</code>, which works because <a
+href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a>
+respects <code>==</code>), and then the branch law finishes. Compare
+with <a
+href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+from post #1: same shape, same tactic vocabulary, same reading
+experience. Group elements, vectors, programs — one discipline.</p>
 <p>This is the bridge to where the project began. The memprog vision was
 a <em>rewrite pipeline</em>: a program refined step by step — inline
 this, specialize that, lower arithmetic, introduce a stack — with every
@@ -119,7 +131,8 @@ href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Conv.v
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Church.v"><code>Lambda/Church.v</code></a>
 (booleans, pairs, the branch laws) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
-(the evaluator behind <code>conv_by_eval</code>).</p>
+(the evaluator behind <a
+href="coqdoc/Riktig.Lambda.Conv.html#conv_by_eval"><code>conv_by_eval</code></a>).</p>
 </main>
 </body>
 </html>

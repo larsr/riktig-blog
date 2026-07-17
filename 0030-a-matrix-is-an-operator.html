@@ -20,7 +20,8 @@ task-appropriate equality <code>==</code>, operations, laws. <a
 href="0010-matrices-are-a-representation.html">Post #10</a> proved the
 abstract fact that a matrix <em>represents</em> a linear map between
 finite-dimensional spaces, and that under this representation
-composition of maps is matrix multiplication (<code>mat_of_comp</code>,
+composition of maps is matrix multiplication (<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>,
 <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatRep.v"><code>Theory/MatRep.v</code></a>).
 Today the same idea in its concrete, computable form: <strong>a matrix
@@ -45,7 +46,8 @@ where today’s whole story lives):</p>
   fun i =&gt; bigopF (fun j =&gt; A i j * v j).</code></pre>
 <p>Entry <code>i</code> of <code>A·v</code> is the dot product of row
 <code>i</code> with <code>v</code> — the textbook definition, as a sum
-<code>bigopF</code> over the shared index.</p>
+<a href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+over the shared index.</p>
 <h2 id="the-operator-is-linear">The operator is linear</h2>
 <p>“Operator” is earned, not assumed: <code>mat_vec A</code> must
 commute with the vector algebra. Additivity is distributivity pushed
@@ -58,7 +60,9 @@ Lemma mat_vec_scale : forall (m n : nat) (A : Matrix m n F) (a : F)
     (v : Fin.t n -&gt; F),
   mat_vec A (a *: v) == a *: mat_vec A v.</code></pre>
 <p>With properness for <code>==</code>, that is exactly the content of
-the <code>LinearMap</code> record (<a
+the <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+record (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>),
 so the file packages it:
 <code>mat_vec_lm A : LinearMap F (Fin.t n -&gt; F) (Fin.t m -&gt; F)</code>.
@@ -74,39 +78,54 @@ multiplication is composition</h2>
 small pleasure: view <code>v</code> as a one-<em>column</em> matrix
 <code>fun k _ =&gt; v k : Matrix p 1 F</code>. Then both sides of the
 goal are, definitionally, one entry of the two associations of a triple
-matrix product — and <code>mat_mul_assoc</code> (the Fubini argument
-proved once in <code>Impl/Matrix.v</code>) closes it. No sum is
-manipulated twice. The same one-column view gives the identity law from
-<code>mat_mul_1l</code>:</p>
+matrix product — and <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+(the Fubini argument proved once in <a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>)
+closes it. No sum is manipulated twice. The same one-column view gives
+the identity law from <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_1l"><code>mat_mul_1l</code></a>:</p>
 <pre class="coq"><code>Theorem mat_vec_id : forall (n : nat) (v : Fin.t n -&gt; F),
   mat_vec mat_id v == v.</code></pre>
-<p>And at the <code>LinearMap</code> level,
+<p>And at the <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+level,
 <code>mat_vec_lm (mat_mul A B) == lm_comp (mat_vec_lm A) (mat_vec_lm B)</code>
-(<code>mat_vec_lm_mul</code>): the packaging sends <code>mat_mul</code>
+(<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm_mul"><code>mat_vec_lm_mul</code></a>):
+the packaging sends <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 to composition, which is the concrete coordinate-space face of post
 #10’s representation theorem.</p>
 <h2 id="what-this-buys">What this buys</h2>
-<p>Read <code>mat_vec_mul</code> right to left and it is an
-<em>algorithm choice</em>: to compute <code>(A·B)·v</code> you may
-instead compute <code>A·(B·v)</code> — two matrix-vector applications,
-no matrix product, no <code>m × p</code> intermediate. For one vector
-this drops the multiplication count from <code>m·n·p + m·p</code> to
-<code>n·p + m·n</code>. The equality is a theorem, so the cheap order is
-not an approximation; it is the same value, with a machine-checked
-proof.</p>
+<p>Read <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>
+right to left and it is an <em>algorithm choice</em>: to compute
+<code>(A·B)·v</code> you may instead compute <code>A·(B·v)</code> — two
+matrix-vector applications, no matrix product, no <code>m × p</code>
+intermediate. For one vector this drops the multiplication count from
+<code>m·n·p + m·p</code> to <code>n·p + m·n</code>. The equality is a
+theorem, so the cheap order is not an approximation; it is the same
+value, with a machine-checked proof.</p>
 <h2 id="what-was-proved-plainly">What was proved, plainly</h2>
 <ul>
 <li><code>mat_vec A</code> is a linear operator on coordinate spaces,
-packaged as a <code>LinearMap</code> (<code>mat_vec_lm</code>), for
-every field <code>F</code> and every shape.</li>
-<li>The identity matrix acts as the identity operator
-(<code>mat_vec_id</code>), and matrix multiplication is operator
-composition (<code>mat_vec_mul</code>,
-<code>mat_vec_lm_mul</code>).</li>
+packaged as a <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>),
+for every field <code>F</code> and every shape.</li>
+<li>The identity matrix acts as the identity operator (<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_id"><code>mat_vec_id</code></a>),
+and matrix multiplication is operator composition (<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm_mul"><code>mat_vec_lm_mul</code></a>).</li>
 <li>Not proved here, honestly: anything about <em>which</em> linear maps
 arise this way (that every linear map between finite-dimensional spaces
-has a matrix is post #10’s <code>Theory/MatRep.v</code>, over abstract
-spaces with chosen bases; today’s file works directly on
+has a matrix is post #10’s <a
+href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
+over abstract spaces with chosen bases; today’s file works directly on
 <code>Fin.t n -&gt; F</code>), and anything about evaluation cost — that
 is the next post, where this theorem does real work.</li>
 </ul>
@@ -116,10 +135,21 @@ proved.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Attention.v"><code>Impl/Attention.v</code></a>
-(<code>mat_vec</code>, <code>mat_vec_lm</code>,
-<code>mat_vec_mul</code>, <code>mat_vec_id</code>) · <a
+(<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec"><code>mat_vec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_id"><code>mat_vec_id</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Matrix.v"><code>Impl/Matrix.v</code></a>
-(<code>mat_mul</code>, <code>mat_mul_assoc</code>) · <a
+(<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatRep.v"><code>Theory/MatRep.v</code></a>
 (the abstract representation theorem) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>.</p>

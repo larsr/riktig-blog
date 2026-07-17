@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vision, state, and roadmap</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="vision-state-and-roadmap">Vision, state, and roadmap</h1>
+<p><em>Written 2026-07-03, after a survey of coq-memprog and its sibling
+repos; now the working document of <strong>riktig</strong>, the
+consolidated monorepo those repos migrate into (§8). The README states
+the philosophy; this file records where everything actually stands and
+how it fits together.</em></p>
+<h2 id="1-the-aim">1. The aim</h2>
+<p><strong>Correct code that one can modify and be sure it still works —
+without having to redo the complete program.</strong> Changes should
+only require satisfying local obligations; the layering guarantees the
+rest. That is the whole vision. Everything else in this document is
+<em>instantiations</em> of it, at different levels:</p>
+<ul>
+<li>an <strong>algorithm</strong> — quicksort, refined from spec to
+machine code;</li>
+<li>a <strong>kernel</strong> — the minikernel as a library-like
+base;</li>
+<li><strong>programs on the kernel</strong> — a tcp stack, tty, ssh, a
+web server, web sockets;</li>
+<li><strong>protocols as showcases</strong> — protobufs, JSON, BSON,
+ASN.1, …, each generated from its grammar, never
+hand-reimplemented.</li>
+</ul>
+<p>The method: a short specification at the top, real executables at the
+bottom, a chain of small provable design decisions in between (data
+structure, algorithm, arithmetic representation, calling convention,
+instruction set, binary format). Proof obligations stay local and
+compose. Programming-language agnostic: the specifications and
+refinement stacks are the long-lived artifacts, not any implementation
+language.</p>
+<p>Two directions of the same idea:</p>
+<ul>
+<li><strong>Vertical refinement</strong>: refine <em>how</em> a program
+computes — memory-monad DSL → expression compilation → stack frames →
+machine code → x86 bytes → loadable binary.</li>
+<li><strong>Horizontal refinement</strong> (channels): refine
+<em>where</em> a computation happens in a stack of communication layers
+— as long as each layer satisfies its codec law, computations and their
+proofs transport across layers.</li>
+</ul>
+<p><em>How</em> we write code and proofs is a separate contract: see
+DESIGN.md.</p>
+<h2 id="2-the-repository-map">2. The repository map</h2>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 60%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th>Repo</th>
+<th>Role in the vision</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/coq-memprog</code></td>
+<td>The refinement chain + parser library (the memprog component,
+pending subtree import)</td>
+<td>Active; see §3</td>
+</tr>
+<tr>
+<td><code>~/matmul</code> (git parent)</td>
+<td>Completed small end-to-end proofs: fib and bubblesort proved from
+pure spec through C AST big-step semantics, no
+<code>Admitted</code></td>
+<td>Done; proof that the method closes</td>
+</tr>
+<tr>
+<td><code>~/enter-docker</code> branch <code>coq-math</code>, dir
+<code>math/</code></td>
+<td>The <strong>proof style</strong> to adopt: three-layer typeclass
+architecture (structure / theory / impl) with operational typeclasses
+giving readable notation and setoid rewriting</td>
+<td>Style ported into <code>theories/</code> here and extended
+(Ring/Field/VectorSpace/InnerProduct/GeometricAlgebra); original library
+small (Monoid/Group/AbelianGroup/PeanoNat)</td>
+</tr>
+<tr>
+<td><code>~/lean-test</code></td>
+<td>Lean 4 re-exploration; its <code>DESIGN.md</code> is the crispest
+statement of the architecture (seven orthogonal concerns, one-direction
+imports, no fuel, sorry-with-roadmap)</td>
+<td>Worth stealing the discipline back into Coq</td>
+</tr>
+<tr>
+<td><code>~/minikernel</code></td>
+<td><strong>Execution target</strong>: 32-bit x86 kernel (~3100 LOC),
+custom PROG program format, kctx syscall table, SMP, paging, TCP, 32
+automated QEMU tests</td>
+<td>Working; May–July 2026, 49 commits</td>
+</tr>
+<tr>
+<td><code>~/haskell-tty</code></td>
+<td>Pure POSIX line-discipline state machine + SSH-architecture session
+wiring; step toward own ssh with tty forwarding</td>
+<td>Working; core is pure and formalization-ready</td>
+</tr>
+</tbody>
+</table>
+<p>Git chain:
+<code>coq-memprog → matmul → enter-docker → git.ri.se</code>.</p>
+<h2
+id="3-state-of-the-memprog-component-still-in-coq-memprog-pending-migration-as-of-2026-07-03">3.
+State of the memprog component (still in <code>~/coq-memprog</code>,
+pending migration; as of 2026-07-03)</h2>
+<h3 id="proved">Proved</h3>
+<ul>
+<li><strong><code>src/QsortProof.v</code></strong> (759 lines,
+committed, zero Admitted/Axiom): <a
+href="../coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>
+— sorted + permutation + outside-range-unchanged, for a functional qsort
+over an abstract memory. This is the <em>top anchor</em> of the
+refinement chain, finished.</li>
+<li><strong>Executable chain</strong>: quicksort exists at 7 levels
+(C-like → Expr+eval → Expr+compile → stack frames → MC interpreter →
+x86-64 bytes → ELF), all running, identical results
+(<code>make test</code>). <code>scripts/gdb-check.sh</code> verifies the
+generated ELF sorts, in gdb.</li>
+</ul>
+<h3 id="the-active-frontier-parser-self-hosting-proof-95">The active
+frontier: parser self-hosting proof (~95%)</h3>
+<p><code>src/Parser/ABNF/Equiv.v</code> (untracked, 563 lines, compiles)
+proves the hand-written ABNF parser equals the parser <em>generated from
+the ABNF grammar of ABNF itself</em>. 14 of 15 lemmas Qed, including
+<code>native_compute</code> proofs <code>systems_agree</code> and
+<code>parsers_agree_on_abnf</code>. Only the main theorem is Admitted,
+with a proof sketch in comments:</p>
+<pre class="coq"><code>Theorem parser0_eq_generated : forall s : string,
+  parser0 s = parse (generate tree0 &quot;rulelist&quot; &lt;* Eof) (string_to_bytes s).</code></pre>
+<p>Supporting uncommitted work: <code>eval1_*</code> rewrite lemmas
+added to <code>Parser.v</code> (plus a stray <code>Search</code> at line
+184 to remove), <code>do!</code> notation in <code>Parser/Monad.v</code>
+commented out (collision with MemProg’s), <code>Equiv2.v</code> an
+exploratory equational variant.</p>
+<h3 id="not-started-the-refinement-links">Not started: the refinement
+links</h3>
+<p><code>src/MemProg.v</code> has zero theorems. No
+<code>qsortN ≡ qsortN+1</code> lemma exists.
+<code>src/SwapProof.v</code> (first memory-layer lemma) is Aborted —
+<code>unfold interp; simpl</code> blew up. <strong>Diagnosis</strong>:
+we lack an equivalence-relation layer; unfolding the interpreter is the
+wrong proof style (see §4).</p>
+<h3 id="housekeeping-list">Housekeeping list</h3>
+<ul>
+<li>Commit the parser-equivalence work (Equiv.v, eval1 lemmas, Makefile,
+_CoqProject); remove stray <code>Search</code> in
+<code>Parser.v:184</code>.</li>
+<li><code>higgsdoublet/</code> is unrelated physics → move to its own
+repo.</li>
+<li><code>forinarow.v</code> is empty → delete. <code>src/test.v</code>
+is Fin.t scratch.</li>
+<li>README has a literal <code>[claude please fill in]</code>
+placeholder — fill it with the 7-step chain (§5 below is the
+material).</li>
+</ul>
+<h2
+id="4-the-proof-style-from-enter-dockermath-now-ported-into-theories">4.
+The proof style (from enter-docker/math; now ported into
+<code>theories/</code>)</h2>
+<p>The <code>math/</code> library’s style is the answer to why SwapProof
+got stuck:</p>
+<ul>
+<li><strong>Operational typeclasses carry notation</strong>: <a
+href="../coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a>/<a
+href="../coqdoc/Riktig.Ops.html#Zero"><code>Zero</code></a>/<a
+href="../coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a> in
+<code>core.v</code> give <code>+</code>, <code>0</code>, <code>==</code>
+for any instance.</li>
+<li><strong>Property classes</strong> (<a
+href="../coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>, <a
+href="../coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>, <a
+href="../coqdoc/Riktig.Props.html#Invl"><code>Invl</code></a>, …) name
+reusable facts; structure classes state axioms as readable
+<code>forall</code>s, with <code>Instance</code> bindings connecting
+them to the property classes.</li>
+<li><strong>Setoid discipline</strong>: everything over <code>==</code>
+with <code>Equivalence</code> + <code>Proper</code>, so
+<code>rewrite</code> works everywhere; proofs are textbook chains
+(<code>rewrite &lt;- assoc; rewrite invr; rewrite idr; reflexivity</code>).</li>
+<li><strong>Three directories</strong>: <code>structure/</code> (axioms
+only), <code>theory/</code> (generic lemmas via Section/Context),
+<code>impl/</code> (instances).</li>
+</ul>
+<p><strong>Applied here</strong> — the keystone piece to build next:</p>
+<pre><code>structure/  program equivalence:  p === q  on Mem/MemT (observational,
+            via interp from equal machines);  Refines relation
+theory/     Proper for bindMem (rewrite under binds); memory-law algebra
+            (read-after-write, write-write-commute at distinct addrs,
+            bind associativity); Refines composes transitively
+impl/       swap_correct as first client (a few rewrites, no unfold);
+            then the chain links: compile e === retT (eval e)  (i.e.
+            qsort1 ≡ qsort0), then qsort2, qsortS, qsortMC</code></pre>
+<h2 id="5-integration-points-between-the-pieces">5. Integration points
+between the pieces</h2>
+<h3 id="minikernel-as-the-bottom-of-the-chain">minikernel as the bottom
+of the chain</h3>
+<p>The chain currently bottoms out at Linux ELF — a huge unspecified
+trusted base. The minikernel replaces it with ~3100 lines we wrote:</p>
+<ul>
+<li>Its <strong>PROG format</strong> (magic, code_size, reloc_count,
+entry; flat blob
+<ul>
+<li>u32 reloc offsets) is far simpler than ELF. A 32-bit variant of
+<code>MemProgX86.hs</code> emitting PROG instead of ELF lets Coq-refined
+programs run on our own kernel: registers → EAX..EDI, drop REX prefixes;
+entry ABI is <code>(mem, size, kctx*)</code> on the stack, so the
+data-base register is initialized from the first argument.</li>
+</ul></li>
+<li>Its <strong>kctx</strong> table (~25 function pointers: print,
+proc_create_on_cpu, fs_*, mem_alloc, nic_send/recv, …) is the entire
+syscall surface — small enough to specify as <code>SysCall</code>
+effects in the Mem DSL.</li>
+<li>Kernel-side verification targets, smallest first:
+<code>proc_switch</code> (13 asm instructions), the CAS lock protocol,
+kmalloc no-overlap / no-double-free, one-CPU-per-slot scheduler
+invariant.</li>
+</ul>
+<p>Target chain: <strong>Coq spec → Mem DSL → … → MC Instr → x86-32 →
+PROG → minikernel → QEMU/hardware</strong> — every layer ours.</p>
+<h3
+id="protocols-grammars-as-the-single-source-of-truth-langsec">Protocols:
+grammars as the single source of truth (LangSec)</h3>
+<p>Motivation: most security bugs are incorrect parsing of hostile
+input, and every language re-implements every format (“JSON by some
+guy”). All data exchange should be specified by a grammar, mechanically
+derived from the normative spec. The <code>make test-abnf</code>
+discipline (RFC text verbatim in <code>Spec.v</code>) is the strongest
+form of this: the spec text <em>is</em> the artifact.</p>
+<p>Architecture decision (resolves the “ABNF can’t express
+<code>&lt;count n&gt;&lt;n bytes&gt;</code>” problem):</p>
+<ul>
+<li><strong><code>ParseExpr</code> is the core</strong> — it is a free
+monad with <code>Bind</code>, so data-dependent formats are already
+expressible (<code>do! n &lt;- int; take n</code>). ABNF is <em>one
+frontend</em> (<code>Generator.v</code>) compiling into the core; add
+frontends per formalism: <code>.proto</code>, ASN.1 modules, a
+packet-layout DSL for prose-diagram specs (TCP headers).</li>
+<li><strong>Restrict dependence for analyzability</strong>: raw
+<code>Bind</code> makes grammars opaque (no unambiguity analysis, no
+serializer inversion). Keep <code>Bind</code> in the core but define a
+tame layer (<code>Take</code>/<code>Repeat</code> à la
+Narcissus/EverParse/Daedalus) and prove the strong theorems there.</li>
+<li><strong>Two round-trip laws per format</strong>:
+<code>faithful</code> (<code>flatten (parse s) = s</code>, wire side —
+exists) and <code>parse (serialize x) = x</code> (value side — future,
+requires serializer generation; Narcissus shows it feasible in Coq). The
+pair is what makes independent implementations agree.</li>
+</ul>
+<p>Prior art to consult: LangSec (Sassaman/Bratus/Patterson), Narcissus
+(Coq, parser+serializer derivation), EverParse/3D (F*, deployed in
+Hyper-V), Daedalus (Galois), RecordFlux, Kaitai Struct.</p>
+<h3 id="channels-composable-layered-stacks">Channels: composable layered
+stacks</h3>
+<p>Programs talk over stacks like
+<code>tcp → tls → http → json → openapi</code>, any layer swappable as
+long as <code>decode (encode x) = Some x</code>.</p>
+<ul>
+<li><strong>Codec typeclass</strong> in the enter-docker style
+(<code>enc</code>/<a
+href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>/law,
+notation <code>A ⇌ B</code>), with a composition instance proving the
+law composes <em>once</em> — this is the README’s “proofs compose”
+requirement made concrete.</li>
+<li><strong>Layers are prisms, not isos</strong>:
+<code>dec ∘ enc = id</code> total; <code>enc ∘ dec = id</code> only on
+canonical wire forms (JSON whitespace…). <code>faithful</code> is the
+wire-side direction; grammar unambiguity links the two. The asymmetry is
+where interop/smuggling bugs live — state both laws explicitly per
+layer.</li>
+<li><strong>Transports (TCP/TLS) are stateful processes</strong>, not
+pure codecs: their contract is trace identity
+(<code>recv_trace = send_trace</code>); endpoint state machines are
+verified with the same <code>Refines</code> machinery as the qsort
+chain.</li>
+<li><strong>Moving computations across layers</strong> = conjugation
+<code>enc ∘ f ∘ dec</code>; the codec law gives the commuting square, so
+correctness transports.</li>
+<li>Smallest artifact: <code>Codec</code> + compose + three instances we
+already own (<code>string_to_bytes</code>,
+<code>Tree</code>/<code>flatten</code> via <code>faithful</code>,
+<code>Tree → Json</code>) — the first file where the parser library
+meets the algebra style.</li>
+</ul>
+<h3 id="tty--ssh-haskell-tty">tty / ssh: haskell-tty</h3>
+<p><code>~/haskell-tty</code> (~950 LOC) implements a POSIX line
+discipline as a <strong>pure state machine</strong>:</p>
+<pre class="haskell"><code>step :: Side -&gt; Termios -&gt; LineState -&gt; ByteString -&gt; (LineState, [Event])
+-- Event = Forward bytes | Echo bytes | Signal sig | Eof | WindowChange …</code></pre>
+<p>Canonical editing is feature-complete (ERASE/KILL/WERASE/REPRINT/
+LNEXT/EOF), ISIG (^C <sup> </sup>Z), input flags, OPOST. Two wirings,
+which is itself a two-implementations-one-spec equivalence in the wild:
+<code>Session</code> (kernel’s ldisc, cooked pty) vs
+<code>PureSession</code> (our ldisc in the data path, kernel pty raw —
+exactly the SSH server architecture). End-to-end tests already run
+keystrokes over TCP → own ldisc → raw pty → bash, including ^C and
+erase. <code>Termios.hs</code> already maps RFC 4254 SSH opcodes.</p>
+<p>Fit: - The ~200-line pure core (<code>Canonical.hs</code> +
+<code>Output.hs</code>) transliterates to Coq almost line-by-line — a
+realistic, useful formalization target with an existing Haskell oracle
+and test suite. - The tty is another <em>layer</em> in the channel stack
+(Forward down, Echo up, Signal out-of-band), with statable laws. -
+Distance to “own ssh with tty forwarding”: SSH channel framing (RFC
+4254) around the existing TCP server + winsize wiring; crypto later (or
+lean on the verified-channel work). Architecture already matches. -
+minikernel has serial but no pty/process groups: either port the ldisc
+in, or run it host-side over minikernel’s serial as a dumb pipe. -
+Dogfood target eventually: minikernel’s <code>tcp.c</code> (796 lines of
+hand-rolled packet parsing — the canonical shotgun parser) replaced by a
+grammar-generated parser refined through the pipeline.</p>
+<h2 id="6-roadmap">6. Roadmap</h2>
+<p>Done since first writing: the consolidated repo is scaffolded (§8 is
+real — riktig, namespace <code>Riktig</code>), and the enter-docker/math
+algebra layer is ported and extended (<code>theories/</code>: Ops,
+Props, Interface/, Theory/, Impl/, through GeometricAlgebra). Remaining,
+in priority order, each item small enough to finish:</p>
+<ol type="1">
+<li><strong>Commit the parser-equivalence work</strong> (Equiv.v + eval1
+lemmas + build wiring, minus the stray <code>Search</code>), then
+<strong>finish <code>parser0_eq_generated</code></strong> — one
+well-founded induction from done, and it legitimizes the whole
+grammar→parser generator.</li>
+<li><strong>Build the program-equivalence setoid layer</strong> for
+Mem/MemT in the three-layer style (§4) — the algebra substrate in
+<code>theories/</code> now exists to build on. Redo
+<code>swap_correct</code> as its first client.</li>
+<li><strong>Prove the first chain link</strong>:
+<code>compile e === retT (eval e)</code> (qsort1 ≡ qsort0) — smallest
+link, exercises all the machinery.</li>
+<li><strong>PROG backend</strong>: 32-bit x86 encoder variant + PROG
+header writer in <code>MemProgX86.hs</code>; demo = verified
+memcpy/hello running on minikernel.</li>
+<li><strong>Codec layer</strong>: <code>Codec</code> class + composition
++ the three existing instances (parser meets algebra style).</li>
+<li>Housekeeping: fill README placeholder, evict
+<code>higgsdoublet/</code>, delete <code>forinarow.v</code>.</li>
+</ol>
+<p>Longer arcs (order flexible, each meets the others in the middle):
+restricted-dependence parser layer + serializer generation; kctx
+syscalls as Mem effects; ldisc core in Coq; SSH framing over
+haskell-tty; minikernel scheduler/lock/kmalloc invariants; remaining
+qsort chain links down to qsortMC.</p>
+<h2 id="7-development-environment-nix-devcontainer--persistent-cache">7.
+Development environment: nix devcontainer + persistent cache</h2>
+<p>Goal: anyone can attach VS Code to a well-defined, reproducible
+environment; Haskell/Coq toolchains are cached so container rebuilds
+don’t recompile the world. Six variants exist across the repos in
+different stages; <code>enter-docker</code>’s git history is the
+laboratory where the idea evolved (.envrc→docker run →
+exec-into-running-container → devcontainer detection → plain
+devcontainer.json).</p>
+<p><strong>The mature endpoint is
+<code>~/hterms/.devcontainer/</code></strong> — use it as the
+template:</p>
+<ul>
+<li>Base <code>mcr.microsoft.com/devcontainers/base:debian</code> (FHS
+userland, <code>vscode</code> user with passwordless sudo — no root, no
+UID pain).</li>
+<li>Determinate Nix installer (<code>--init none</code>), multi-user
+daemon started by <code>postStartCommand</code> with
+<code>waitFor</code> so terminals open ready.</li>
+<li><strong>Cache</strong>: named docker volume
+<code>PROJECT-nix-store</code> mounted at <code>/nix</code> — survives
+container rebuilds. (Named volume beats a bind-mounted dir: no UID
+mapping issues; per-project volumes avoid nixpkgs-pin collisions. A bind
+mount works too if host-visibility is wanted, but then run as host
+UID.)</li>
+<li>Optional team cache: S3 substituter in <code>flake.nix</code>
+<code>nixConfig</code> + read-only <code>~/.aws</code> bind mount
+forwarded to the daemon — the only piece that makes the multi-GiB
+GHC/HLS closure fast on a <em>fresh</em> machine. Droppable for solo
+use; the volume alone covers local reuse.</li>
+<li>direnv: <code>.envrc</code> = <code>use flake</code>; pre-trust
+<code>/workspaces</code> prefix and pre-warm the shell in
+<code>onCreateCommand</code>. See
+<code>hterms/docs/nix-cache.md</code>.</li>
+</ul>
+<p><strong>Superseded / droppable elsewhere</strong>: the
+<code>.envrc</code>→docker-exec orchestration and container-reuse
+detection from enter-docker’s history (devcontainer.json owns the
+lifecycle now); the third-party <code>xtruder/nix-devcontainer</code>
+image (own Dockerfile is more transparent); root-user containers and
+postCreate nix.conf copying (coq-memprog, AndreasQQ — coq-memprog’s
+devcontainer also lacks a /nix volume, so it re-downloads toolchains on
+rebuild: add the named volume). The whole good setup is ~50 lines:
+Dockerfile (base+nix+direnv), devcontainer.json (volume mount +
+lifecycle hooks), start-nix-daemon.sh, <code>.envrc</code>.</p>
+<p>Cleanup action: extract the hterms pattern (minus AWS bits) into a
+template, apply it here (riktig has no devcontainer yet) and to
+coq-memprog, then converge the other repos.</p>
+<h2 id="8-consolidation-one-repo-proper-subdirs-this-repo">8.
+Consolidation: one repo, proper subdirs (this repo)</h2>
+<p>Why sharing had been hard: the projects lived as <em>branches</em> of
+one repo (coq-math, coq-matmul, coq-memprog are branches of
+enter-docker), pushed through a chain of local remotes (coq-memprog →
+matmul → enter-docker → git.ri.se). There was no single URL with a clean
+history per project. This monorepo fixes that: one main branch, one
+remote, one flake, one devcontainer (§7), one CI.</p>
+<p>The open decisions are made. The repo is <strong>riktig</strong> (RI
+as in RI/RISE, Swedish for “correct, real, proper”, and Rikard), Coq
+namespace <code>Riktig</code>; the kernel program will be named
+<strong>KLAS</strong> (for Klas — “Kernel as a Library, Applications in
+Sync”).</p>
+<p>Present layout:</p>
+<pre><code>riktig/
+  docs/DESIGN.md      style rules (this file&#39;s §9, made a contract)
+  docs/VISION.md      this file
+  theories/           pure Coq, ONE namespace: -Q theories Riktig
+    Ops.v             operational typeclasses: ==, 0, 1, +, *, -, *:, ⟨,⟩
+    Props.v           property classes: Assoc, Commutes, Idl, Invl, ...
+    Interface/        structures, axioms only (Monoid .. GeometricAlgebra)
+    Theory/           lemmas derived from the interfaces, rewrite-oriented
+    Impl/             concrete instances (Z, ...)
+  programs/           verified implementations in the §9 style; each dir
+                      = spec (imports Riktig.*) + impl + tests — still
+                      empty, awaiting klas (kernel), tty, ssh</code></pre>
+<p>The subdirectories foreseen for the migrated material keep their
+plan: under <code>theories/</code> — <code>Category/</code> (categories,
+functors; seed: Interleave.v’s classes), <code>Linear/</code> (vectors,
+linear maps, tensors; reordering/tiling equivalences — matmul
+micro-kernel proofs; future: flash-attention ≡ transformer, KV-cache ≡
+recompute — same theorem family: blocked/streamed evaluation equals the
+spec), <code>Sched/</code> (interleavings, schedules, process fusion),
+<code>Mem/</code> (the memory DSL: Effect/ Theory/ Algorithm/ Bridge/,
+with QsortProof.v → Bridge/), <code>Parser/</code> (grammars, ABNF,
+generated parsers, Equiv proofs), <code>Channel/</code> (Codec class,
+layer laws, transports-as-traces); under <code>programs/</code> —
+<code>klas/</code> (minikernel: library-like kernel offering
+workers/channels; programs may link it, replace it, or FUSE with it —
+spec via kctx effects in <code>Riktig.Mem</code>), <code>tty/</code>
+(haskell-tty: pure ldisc + Session/PureSession wiring),
+<code>ssh/</code> (own ssh: tty forwarding over Channel stacks, RFC 4254
+framing; uses programs/tty as a library); plus <code>extracted/</code>
+for Coq→Haskell extraction output.</p>
+<p><strong>Using the theories from another repo (Coq
+namespacing).</strong> Inside the monorepo it’s one
+<code>_CoqProject</code>: <code>-Q theories Riktig</code> maps the dir
+tree onto module paths, so files say
+<code>From Riktig Require Import Interface.Group.</code> — exactly how
+mathcomp does it (<code>-Q . mathcomp</code>). For consumption from
+<em>outside</em>, the flake exports a package that installs the compiled
+<code>.vo</code> files into
+<code>$out/lib/coq/&lt;ver&gt;/user-contrib/Riktig/</code>; a consumer
+repo adds this repo as a flake input, puts the package in its devShell,
+and Coq finds <code>Riktig.*</code> via COQPATH automatically. (An opam
+package is the wider- distribution variant of the same thing; nix flake
+input is enough for our own repos.)</p>
+<p><strong>Endgame</strong> (the reason for the typed-interface
+discipline): a computer where every interface to the surrounding world
+is typed and specified, so that when something breaks, the blame is
+provably on the other side of the interface — “well-typed programs can’t
+be blamed” (Wadler &amp; Findler) as a systems-engineering principle.
+Each spec at a boundary (kctx, wire grammars, channel laws,
+termios/ldisc) is one plank of that.</p>
+<p>Migration checklist (still pending):
+<code>git subtree add --prefix=&lt;dir&gt; &lt;old-repo&gt; &lt;branch&gt;</code>
+per repo — preserves each history inside the monorepo. No big-bang: the
+skeleton + DESIGN.md exist (enter-docker/math is already ported as
+<code>theories/</code>); pull each repo in when next touched:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" />coq-memprog — refinement chain +
+parser library (§3) → <code>theories/Mem/</code>,
+<code>theories/Parser/</code>, <code>extracted/</code></label></li>
+<li><label><input type="checkbox" />minikernel →
+<code>programs/klas/</code></label></li>
+<li><label><input type="checkbox" />haskell-tty →
+<code>programs/tty/</code></label></li>
+<li><label><input type="checkbox" />matmul history — the closed
+end-to-end proofs → <code>theories/Linear/</code></label></li>
+</ul>
+<h2 id="9-the-program-and-proof-style">9. The program and proof
+style</h2>
+<p>Moved to <strong>DESIGN.md</strong> (the style contract: program
+rules — domain- language top level, program-as-data, errors float up, no
+layer leakage, find-the-abstraction-line — and proof rules — three-layer
+typeclass architecture, setoid rewriting, most-general lemmas, honest
+incompleteness). DESIGN.md is <code>docs/DESIGN.md</code> of this
+repo.</p>
+</main>
+</body>
+</html>

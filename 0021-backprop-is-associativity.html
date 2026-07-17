@@ -63,8 +63,9 @@ That’s the theorem this post proves — and it turns out to need almost
 nothing beyond a fact you already know: matrix multiplication is
 associative.</p>
 <h2 id="the-proof-twice">The proof, twice</h2>
-<p>At the level of linear maps, composition (<code>lm_comp</code>) is
-just function composition — <code>fun u =&gt; g (f u)</code>. Any two
+<p>At the level of linear maps, composition (<a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_comp"><code>lm_comp</code></a>)
+is just function composition — <code>fun u =&gt; g (f u)</code>. Any two
 ways of bracketing three composed functions beta-reduce to the identical
 function. So the general fact is <code>reflexivity</code>:</p>
 <pre class="coq"><code>Theorem lm_comp_assoc : forall (g : LinearMap F R S) (h : LinearMap F Q R)
@@ -75,12 +76,17 @@ Proof.
   reflexivity.
 Qed.</code></pre>
 <p>Post #14 (well — the linear algebra track generally) already proved
-that <code>mat_of</code>, the map from a <code>LinearMap</code> to its
-matrix in a chosen basis, is a <code>Proper</code> morphism: equal
-linear maps get equal matrices. Feed <code>lm_comp_assoc</code> through
-that morphism and the headline theorem — the one about actual
-differentiable functions, actual <code>is_deriv</code> witnesses, actual
-Jacobians — is one line:</p>
+that <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
+the map from a <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+to its matrix in a chosen basis, is a <code>Proper</code> morphism:
+equal linear maps get equal matrices. Feed <a
+href="coqdoc/Riktig.Theory.Backprop.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>
+through that morphism and the headline theorem — the one about actual
+differentiable functions, actual <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+witnesses, actual Jacobians — is one line:</p>
 <pre class="coq"><code>Theorem jacobian_chain3_assoc :
   forall (f1 : U -&gt; V) (f2 : V -&gt; W) (f3 : W -&gt; X) (a : U)
     (L1 : LinearMap F U V) (L2 : LinearMap F V W) (L3 : LinearMap F W X)
@@ -98,19 +104,24 @@ Proof.
            (lm_comp L3 (lm_comp L2 L1)) (lm_comp_assoc L3 L2 L1)).
 Qed.</code></pre>
 <p>The two sides are the Jacobian computed by composing the chain rule
-one way, versus the other. <code>deriv_comp</code> is post #12’s chain
-rule (<em>the derivative is a linear map</em>); everything downstream of
-it — the Jacobian, the matrix product, this theorem — is bookkeeping
-around that one fact. Named corollaries unpack each side as an explicit
-matrix product, so the two algorithms are visible by name:</p>
+one way, versus the other. <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+is post #12’s chain rule (<em>the derivative is a linear map</em>);
+everything downstream of it — the Jacobian, the matrix product, this
+theorem — is bookkeeping around that one fact. Named corollaries unpack
+each side as an explicit matrix product, so the two algorithms are
+visible by name:</p>
 <pre class="coq"><code>Theorem jacobian_reverse_mode : ... ==
   mat_mul (mat_mul (jacobian ... Hd3) (jacobian ... Hd2)) (jacobian ... Hd1).
 
 Theorem jacobian_forward_mode : ... ==
   mat_mul (jacobian ... Hd3) (mat_mul (jacobian ... Hd2) (jacobian ... Hd1)).</code></pre>
-<p>and a third theorem, <code>backprop_eq_forward_mode</code>, restates
-the whole thing purely as <code>mat_mul_assoc</code> at the Jacobian
-level — confirming that no new mathematics was smuggled in anywhere.</p>
+<p>and a third theorem, <a
+href="coqdoc/Riktig.Theory.Backprop.html#backprop_eq_forward_mode"><code>backprop_eq_forward_mode</code></a>,
+restates the whole thing purely as <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+at the Jacobian level — confirming that no new mathematics was smuggled
+in anywhere.</p>
 <h2
 id="getting-the-direction-right-by-deriving-it-not-assuming-it">Getting
 the direction right by <em>deriving</em> it, not assuming it</h2>
@@ -184,13 +195,25 @@ need before any of this touches an actual transformer.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Backprop.v"><code>Theory/Backprop.v</code></a>
-(<code>lm_comp_assoc</code>, <code>jacobian_chain3_assoc</code>,
-<code>jacobian_reverse_mode</code>, <code>jacobian_forward_mode</code>,
-<code>backprop_eq_forward_mode</code>) · <a
+(<a
+href="coqdoc/Riktig.Theory.Backprop.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_chain3_assoc"><code>jacobian_chain3_assoc</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_reverse_mode"><code>jacobian_reverse_mode</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_forward_mode"><code>jacobian_forward_mode</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Backprop.html#backprop_eq_forward_mode"><code>backprop_eq_forward_mode</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Jacobian.v"><code>Theory/Jacobian.v</code></a>
-(the two-function case, <code>jacobian_comp</code>) · <a
+(the two-function case, <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_comp"><code>jacobian_comp</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Derivative.v"><code>Theory/Derivative.v</code></a>
-(<code>deriv_comp</code>, the chain rule) · <a
+(<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>,
+the chain rule) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/ML-ROADMAP.md"><code>docs/ML-ROADMAP.md</code></a>
 (the plan this post is stage one of).</p>
 </main>

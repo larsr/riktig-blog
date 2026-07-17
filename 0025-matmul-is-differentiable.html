@@ -19,16 +19,22 @@ actual derivative, constant sharp enough to be worth stating.</em></p>
 <p><strong>What we are doing, and why.</strong> Verified software in
 Coq, built for modifiability. Every transformer layer that multiplies an
 activation by a weight matrix needs its derivative for backprop to work.
-<code>Theory/BilinearDeriv.v</code> proved that <em>any</em> bilinear
-map is differentiable, generically. Today’s post plugs
-<code>mat_mul</code> into that theorem — which needed a norm on matrices
-first, since none existed.</p>
+<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html"><code>Theory/BilinearDeriv.v</code></a>
+proved that <em>any</em> bilinear map is differentiable, generically.
+Today’s post plugs <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+into that theorem — which needed a norm on matrices first, since none
+existed.</p>
 </blockquote>
 <h2 id="the-missing-norm">The missing norm</h2>
-<p><code>is_deriv</code> needs a way to measure “how big” its inputs and
-outputs are — that’s what a <code>NormedSpace</code> is for. Nothing in
-the tree said how big a matrix is. The obvious classical choice, the
-Frobenius norm
+<p><a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+needs a way to measure “how big” its inputs and outputs are — that’s
+what a <a
+href="coqdoc/Riktig.Interface.Norm.html#NormedSpace"><code>NormedSpace</code></a>
+is for. Nothing in the tree said how big a matrix is. The obvious
+classical choice, the Frobenius norm
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>A</mi><msub><mo stretchy="false" form="postfix">∥</mo><mi>F</mi></msub><mo>=</mo><msqrt><mrow><msub><mo>∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><msubsup><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow><mn>2</mn></msubsup></mrow></msqrt></mrow><annotation encoding="application/x-tex">\|A\|_F = \sqrt{\sum_{i,j} A_{ij}^2}</annotation></semantics></math>,
 needs a square root — and this project doesn’t have one yet. Post #20
 already ran into the same wall building QR: Gram-Schmidt’s columns stay
@@ -36,13 +42,16 @@ un-normalized because normalizing needs
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mo>⋅</mo></msqrt><annotation encoding="application/x-tex">\sqrt{\cdot}</annotation></semantics></math>,
 deliberately deferred to a later constructive-reals pass.</p>
 <p>So: the entrywise <strong>L1 norm</strong> instead, needing only
-absolute value, which every <code>OrderedField</code> already has:</p>
+absolute value, which every <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField"><code>OrderedField</code></a>
+already has:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>A</mi><mo stretchy="false" form="postfix">∥</mo><mo>:=</mo><munder><mo>∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></munder><mo stretchy="false" form="prefix">|</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">\|A\| := \sum_{i,j} |A_{ij}|</annotation></semantics></math></p>
 <p>Simpler than Frobenius, and — this turns out to matter — <em>better
 behaved</em> under multiplication, as the next section shows.</p>
 <h2 id="the-sharp-bound">The sharp bound</h2>
-<p>To apply <code>bilinear_is_deriv</code>, matmul needs a boundedness
-witness: some constant
+<p>To apply <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_is_deriv"><code>bilinear_is_deriv</code></a>,
+matmul needs a boundedness witness: some constant
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
 with
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mi>C</mi><mi>⋅</mi><mo stretchy="false" form="postfix">∥</mo><mi>A</mi><mo stretchy="false" form="postfix">∥</mo><mi>⋅</mi><mo stretchy="false" form="postfix">∥</mo><mi>B</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|AB\| \le C \cdot \|A\| \cdot \|B\|</annotation></semantics></math>.
@@ -77,23 +86,27 @@ the actual point</h2>
 <pre class="coq"><code>Theorem mat_mul_is_deriv : forall A0 B0,
   is_deriv (fun AB =&gt; mat_mul (fst AB) (snd AB)) (A0, B0)
     (mat_mul_deriv_lm A0 B0).</code></pre>
-<p>One line, applying post #24’s <code>bilinear_is_deriv</code> to the
-<code>BilinearMap</code> witness and the <code>C := 1</code> boundedness
-proof above. This is the theorem a transformer layer actually reaches
-for: <em>this specific</em> matrix multiplication, differentiable,
-everywhere, with the derivative spelled out. Every “multiply activations
-by weights” layer in Stage B’s eventual attention mechanism inherits its
-derivative from this single theorem — no per-layer proof needed, exactly
-the payoff <code>docs/ML- ROADMAP.md</code> staged this work for.</p>
+<p>One line, applying post #24’s <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_is_deriv"><code>bilinear_is_deriv</code></a>
+to the <a
+href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+witness and the <code>C := 1</code> boundedness proof above. This is the
+theorem a transformer layer actually reaches for: <em>this specific</em>
+matrix multiplication, differentiable, everywhere, with the derivative
+spelled out. Every “multiply activations by weights” layer in Stage B’s
+eventual attention mechanism inherits its derivative from this single
+theorem — no per-layer proof needed, exactly the payoff
+<code>docs/ML- ROADMAP.md</code> staged this work for.</p>
 <h2 id="what-stage-b-still-owes">What Stage B still owes</h2>
 <p>Softmax, ReLU, and layernorm remain untouched — matmul was the piece
 that needed a genuinely new mathematical ingredient (the norm, the sharp
 bound); the other three are smaller, more mechanical proofs once picked
 up. Attention itself — <code>softmax(QKᵀ/√d)V</code> — is a composition
 of pieces most of which now exist: matmul’s derivative (today),
-<code>exp</code> (post #22), and <code>deriv_comp</code> (post #12’s
-chain rule) to chain them. What’s still missing is softmax’s own
-derivative and the <code>√d</code> scaling, both comparatively small
+<code>exp</code> (post #22), and <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+(post #12’s chain rule) to chain them. What’s still missing is softmax’s
+own derivative and the <code>√d</code> scaling, both comparatively small
 next steps.</p>
 <p><em>Next: softmax and ReLU, the two remaining Stage B layers standing
 between here and attention, or a return to the determinant — the
@@ -103,8 +116,11 @@ sign-homomorphism attempt is still narrowing the last gap.</em></p>
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/MatrixNorm.v"><code>Impl/MatrixNorm.v</code></a>
 (the entrywise L1 norm) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/MatMulBilinear.v"><code>Theory/MatMulBilinear.v</code></a>
-(<code>mat_mul_norm_submultiplicative</code>,
-<code>mat_mul_is_deriv</code>) · <a
+(<a
+href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_norm_submultiplicative"><code>mat_mul_norm_submultiplicative</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_is_deriv"><code>mat_mul_is_deriv</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/BilinearDeriv.v"><code>Theory/BilinearDeriv.v</code></a>
 (the general theorem this instantiates).</p>
 </main>

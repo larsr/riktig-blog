@@ -42,9 +42,10 @@ networks.</p>
 <p>The hypothesis lives in <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Channel/Fairness.v"><code>Channel/Fairness.v</code></a>,
 and it mirrors the sender’s own structure: the sender emits one
-<em>burst</em> of <code>k</code> identical copies per message, and the
-wire trace is required to split into per-burst fragments in lock-step
-with the message list —</p>
+<em>burst</em> of <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> identical
+copies per message, and the wire trace is required to split into
+per-burst fragments in lock-step with the message list —</p>
 <pre class="coq"><code>Fixpoint fair_wire (b : bit) (ms : list M) (k : nat) (wire : list Packet) : Prop :=
   match ms with
   | [] =&gt; wire = []
@@ -59,15 +60,23 @@ with the message list —</p>
 one copy of this message’s retransmission burst survives.</em> That’s
 the entire fairness assumption. Everything else is unchanged: within
 each burst the channel can still drop some copies and duplicate others —
-anything <code>lossy_dup</code> allows — as long as it doesn’t drop
-<em>all</em> of them. (Reordering is not among <code>lossy_dup</code>’s
-powers — post #15 proved <code>reorder_not_lossy_dup</code> — and within
-a burst it would be invisible anyway, since every copy is the identical
-packet.) Fairness is not “no loss”; it is “not total loss.”</p>
+anything <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+allows — as long as it doesn’t drop <em>all</em> of them. (Reordering is
+not among <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>’s
+powers — post #15 proved <a
+href="coqdoc/Riktig.Channel.Trace.html#reorder_not_lossy_dup"><code>reorder_not_lossy_dup</code></a>
+— and within a burst it would be invisible anyway, since every copy is
+the identical packet.) Fairness is not “no loss”; it is “not total
+loss.”</p>
 <p>And the hypothesis is not an unrelated model bolted onto the side: a
-sanity-check lemma, <code>fair_wire_lossy_dup</code>, shows every fair
-wire trace is in particular a <code>lossy_dup</code> mangling of the
-full sender stream — exactly the adversary class <code>abp_safety</code>
+sanity-check lemma, <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire_lossy_dup"><code>fair_wire_lossy_dup</code></a>,
+shows every fair wire trace is in particular a <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+mangling of the full sender stream — exactly the adversary class <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>
 already quantified over, now with per-burst survival added on top.
 Fairness <em>refines</em> the safety model; it doesn’t replace it.</p>
 <h2 id="the-theorem">The theorem</h2>
@@ -75,13 +84,15 @@ Fairness <em>refines</em> the safety model; it doesn’t replace it.</p>
   fair_wire b0 ms k wire -&gt; deliver b0 wire = ms.</code></pre>
 <p>Under that one assumption, delivery is <em>exactly</em> the sent list
 — no subsequence slack, no missing messages. Compare the two theorems
-side by side and you can see the whole shape of the argument:
-<code>abp_safety</code> needed <em>no</em> assumption and delivered
-<em>“a subsequence of”</em>; <code>abp_liveness</code> needed <em>“at
-least one copy per burst”</em> and delivered <em>“exactly.”</em> The
-strength of the conclusion tracks the strength of the hypothesis, with
-nothing hidden in between — that correspondence <em>is</em> what a
-liveness proof is supposed to show you.</p>
+side by side and you can see the whole shape of the argument: <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>
+needed <em>no</em> assumption and delivered <em>“a subsequence of”</em>;
+<a
+href="coqdoc/Riktig.Channel.Fairness.html#abp_liveness"><code>abp_liveness</code></a>
+needed <em>“at least one copy per burst”</em> and delivered
+<em>“exactly.”</em> The strength of the conclusion tracks the strength
+of the hypothesis, with nothing hidden in between — that correspondence
+<em>is</em> what a liveness proof is supposed to show you.</p>
 <p>A companion theorem confirms the endpoint everyone actually cares
 about: over the <strong>perfect</strong> channel (no loss at all),
 delivery is exact too —</p>
@@ -89,12 +100,14 @@ delivery is exact too —</p>
   k &gt; 0 -&gt; perfect (sender_stream b0 ms k) wire -&gt; deliver b0 wire = ms.</code></pre>
 <p>— with <code>k &gt; 0</code> earning its keep as a genuine, necessary
 hypothesis: with a retransmission budget of zero, nothing is ever sent,
-so of course nothing arrives. (Small, honest detail:
-<code>abp_liveness</code> needed no such side condition —
-<code>fair_wire</code> with <code>k = 0</code> is simply
-<em>unsatisfiable</em> for a nonempty message, since an empty burst can
-never contain a surviving packet. The right hypothesis makes the
-degenerate case impossible instead of needing a bolt-on exception.)</p>
+so of course nothing arrives. (Small, honest detail: <a
+href="coqdoc/Riktig.Channel.Fairness.html#abp_liveness"><code>abp_liveness</code></a>
+needed no such side condition — <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>
+with <code>k = 0</code> is simply <em>unsatisfiable</em> for a nonempty
+message, since an empty burst can never contain a surviving packet. The
+right hypothesis makes the degenerate case impossible instead of needing
+a bolt-on exception.)</p>
 <p>One scope note, stated in the file’s own header rather than
 discovered later: this is <em>finite</em> fairness, over finite message
 lists and wire traces. The stream-level statement — “a message offered

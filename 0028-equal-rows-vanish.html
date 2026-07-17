@@ -40,10 +40,11 @@ The textbook finishes with “and therefore
 — silently leaning on the field having characteristic other than 2,
 where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">2 = 0</annotation></semantics></math>
-would make that step false. This codebase’s <code>Field</code> interface
-makes no such assumption, deliberately, since the very first determinant
-file: a field of characteristic 2 is a completely legal instance, and a
-proof that secretly required
+would make that step false. This codebase’s <a
+href="coqdoc/Riktig.Interface.Field.html#Field"><code>Field</code></a>
+interface makes no such assumption, deliberately, since the very first
+determinant file: a field of characteristic 2 is a completely legal
+instance, and a proof that secretly required
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">2 \ne 0</annotation></semantics></math>
 would be a proof that only worked for <em>some</em> fields while
 claiming to work for all of them.</p>
@@ -53,9 +54,10 @@ fixed-transposition, and show the pairs cancel termwise — a genuine
 piece of new combinatorics, sketched but not yet attempted.</p>
 <h2 id="what-actually-worked">What actually worked</h2>
 <p>It turned out unnecessary. Rather than reasoning about permutations
-at all, the proof goes back to <code>detM</code>’s <em>original</em>
-definition — the cofactor recursion, not the Leibniz sum — and argues
-directly by induction on matrix size.</p>
+at all, the proof goes back to <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>’s
+<em>original</em> definition — the cofactor recursion, not the Leibniz
+sum — and argues directly by induction on matrix size.</p>
 <p>For two <em>adjacent</em> equal rows, the cofactor expansion has
 exactly two terms that involve those rows, with opposite signs (that
 much is just the recursion’s own alternating-sign structure, no theorem
@@ -69,20 +71,22 @@ anywhere, so nothing about characteristic ever enters the argument:</p>
   i &lt;&gt; j -&gt; (forall c, A i c == A j c) -&gt; detM A == 0.</code></pre>
 <p>The general (non-adjacent) case doesn’t need a new induction either —
 it reduces to the adjacent case with a single ordinary row swap, reusing
-post #27’s <code>detM_swap_general</code> directly. Simpler than the
-sign-flip proof’s own route, which needed real induction on the distance
-between positions; here, one swap suffices because the <em>value</em>
-being proved is <code>0</code>, and
+post #27’s <a
+href="coqdoc/Riktig.Impl.DetSignGeneral.html#detM_swap_general"><code>detM_swap_general</code></a>
+directly. Simpler than the sign-flip proof’s own route, which needed
+real induction on the distance between positions; here, one swap
+suffices because the <em>value</em> being proved is <code>0</code>, and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>=</mo><mi>−</mi><mn>0</mn></mrow><annotation encoding="application/x-tex">0 = -0</annotation></semantics></math>
 makes the sign of the swap irrelevant to the final answer.</p>
 <h2 id="the-second-ingredient-linearity-in-any-row">The second
 ingredient: linearity in any row</h2>
-<p><code>Impl/Elim.v</code>’s very first header — the file that started
-this whole five-attempt thread — named one thing it couldn’t reach:
-linearity of <code>detM</code> in an <em>arbitrary</em> row, not just
-the first. That fact had been sitting open since the beginning, and
-<code>detM_mul</code> needs it. It falls out now almost for free: to
-reason about row
+<p><a href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>’s
+very first header — the file that started this whole five-attempt thread
+— named one thing it couldn’t reach: linearity of <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> in an
+<em>arbitrary</em> row, not just the first. That fact had been sitting
+open since the beginning, and <code>detM_mul</code> needs it. It falls
+out now almost for free: to reason about row
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
 conjugate it into the first position with a single swap — each side of
 the equation picks up the same negation sign, which cancels — then apply
@@ -130,10 +134,19 @@ that finally reaches <code>detM_mul</code>, six attempts in.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetAlternating.v"><code>Impl/DetAlternating.v</code></a>
-(<code>detM_alternating</code>, <code>det_rowI_add</code>,
-<code>det_rowI_scale</code>, <code>det_elem_add</code>) · <a
+(<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_elem_add"><code>det_elem_add</code></a>)
+· <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/DetSignGeneral.v"><code>Impl/DetSignGeneral.v</code></a>
-(<code>detM_swap_general</code>, reused directly) · <a
+(<a
+href="coqdoc/Riktig.Impl.DetSignGeneral.html#detM_swap_general"><code>detM_swap_general</code></a>,
+reused directly) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Elim.v"><code>Impl/Elim.v</code></a>
 (the original unreached-row-linearity note, now closed).</p>
 </main>
