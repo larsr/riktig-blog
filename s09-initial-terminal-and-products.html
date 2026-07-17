@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Initial and terminal objects, products, and the
+universal-property style of proof</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="initial-and-terminal-objects-products-and-the-universal-property-style-of-proof">Initial
+and terminal objects, products, and the universal-property style of
+proof</h1>
+<p>A category is a collection of <em>objects</em> together with
+<em>arrows</em> between them. For each pair of objects
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>y</mi><annotation encoding="application/x-tex">y</annotation></semantics></math>
+there is a collection of arrows written <code>x ~&gt; y</code>; arrows
+compose associatively (<code>g ∘ f</code> runs <code>f</code> then
+<code>g</code>), and every object carries an identity arrow that does
+nothing under composition. One design choice will matter throughout:
+arrows are compared not by Coq’s built-in definitional equality but by a
+per-pair equivalence relation written <code>==</code>, a
+<em>hom-setoid</em>. Categories built out of syntax — lambda terms, for
+instance — need to treat two arrows as equal when they agree only after
+simplification, and definitional equality is too strict for that. (A
+<em>functor</em>, a map between categories that preserves identities and
+composition, was the subject of the previous post; we will not need it
+here.)</p>
+<p>This post is about a different <em>kind</em> of definition and a
+different <em>kind</em> of proof. Most of the objects one meets are
+built by writing down their elements. The objects here are pinned down
+instead by a single sentence about arrows — “there is exactly one arrow
+with such and such a shape” — and that phrase, “exactly one,” is the
+whole subject. It is called a <em>universal property</em>, and proving
+things from one is a genuinely different activity from equational
+rewriting: you prove <em>existence</em> and <em>uniqueness</em>
+separately, and the uniqueness half is often proved by turning the
+universal property against itself. We will do that twice.</p>
+<h2 id="two-objects-defined-by-counting-arrows">Two objects defined by
+counting arrows</h2>
+<p>A <strong>terminal object</strong> is an object into which every
+object has exactly one arrow. An <strong>initial object</strong> is the
+mirror image: every object has exactly one arrow <em>out</em> of it.
+Here are the two classes, verbatim from the source:</p>
+<pre class="coq"><code>(* An initial object: every object has exactly one morphism out of it.
+   The exact dual of Terminal, stated up to the hom-setoid. *)
+Class Initial {O : Type} (C : Category O) := {
+  init : O;
+  emit : forall x : O, init ~&gt; x;
+  emit_unique : forall (x : O) (f : init ~&gt; x), f == emit x
+}.
+
+(* A terminal object: every object has exactly one morphism into it.
+   Uniqueness is stated up to the hom-setoid, not definitional equality. *)
+Class Terminal {O : Type} (C : Category O) := {
+  term : O;
+  bang : forall x : O, x ~&gt; term;
+  bang_unique : forall (x : O) (f : x ~&gt; term), f == bang x
+}.</code></pre>
+<p>Read <a
+href="coqdoc/Riktig.Interface.Category.html#Terminal"><code>Terminal</code></a>
+slowly, because the shape recurs everywhere below. It carries three
+things: a distinguished object <a
+href="coqdoc/Riktig.Interface.Category.html#term"><code>term</code></a>;
+a <em>chosen</em> arrow <code>bang x : x ~&gt; term</code> for every
+object <code>x</code> (the exclamation-mark name is traditional — “the
+unique arrow,” written <code>!</code>); and the field that does the real
+work, <a
+href="coqdoc/Riktig.Interface.Category.html#bang_unique"><code>bang_unique</code></a>,
+which says that <em>any</em> arrow <code>f : x ~&gt; term</code> you
+might have is equal to that chosen one. Existence is <a
+href="coqdoc/Riktig.Interface.Category.html#bang"><code>bang</code></a>;
+uniqueness is <a
+href="coqdoc/Riktig.Interface.Category.html#bang_unique"><code>bang_unique</code></a>.
+Together they are “exactly one.” <a
+href="coqdoc/Riktig.Interface.Category.html#Initial"><code>Initial</code></a>
+is the same statement with every arrow reversed.</p>
+<h3 id="a-concrete-instance-coqs-own-types">A concrete instance: Coq’s
+own types</h3>
+<p>None of this is abstract nonsense until you see it land on something
+familiar. Take the category whose objects are Coq types and whose arrows
+<code>X ~&gt; Y</code> are ordinary functions <code>X -&gt; Y</code>. In
+that category the one-element type <code>unit</code> is terminal: from
+any type there is exactly one function into <code>unit</code>, the one
+that ignores its input and returns <code>tt</code>. Here is that
+instance, and the proof that the arrow really is unique:</p>
+<pre class="coq"><code>(* Tactic exception: uniqueness into unit is forced by destructing the
+   unit result f x — unit&#39;s universal property is its case analysis. *)
+Lemma unit_bang_unique (X : Type) (f : X -&gt; unit) :
+  fn_equ X unit f (fun _ : X =&gt; tt).
+Proof.
+  intros x. destruct (f x). reflexivity.
+Qed.
+
+#[global] Instance CoqTerminal : Terminal CoqCat :=
+  @Build_Terminal Type CoqCat
+    unit
+    (fun X : Type =&gt; fun _ : X =&gt; tt)
+    unit_bang_unique.</code></pre>
+<p>The proof is one line of content: given any
+<code>f : X -&gt; unit</code>, at each argument <code>x</code> the value
+<code>f x</code> lives in <code>unit</code>, and <code>unit</code> has a
+single inhabitant, so case-analysis (<code>destruct (f x)</code>) leaves
+<code>tt = tt</code>. There is nowhere else for <code>f x</code> to go.
+Dually, the empty type <code>Empty_set</code> is initial — from it there
+is exactly one function to any type, because a function out of the empty
+type has no input to disagree about — and the source records that as <a
+href="coqdoc/Riktig.Impl.CoqCat.html#CoqInitial"><code>CoqInitial</code></a>
+in the same file.</p>
+<h2
+id="the-universal-property-proof-style-on-the-smallest-possible-example">The
+universal-property proof style, on the smallest possible example</h2>
+<p>Before the theorem, the intuition. When an object is defined by
+“there is exactly one arrow into it,” the uniqueness clause is a tool
+you can point at <em>any</em> arrow of the right shape and conclude it
+equals the canonical one. The trick that follows appears again and
+again: if two arrows both have the shape the universal property talks
+about, they are both equal to the canonical arrow, hence to each other.
+You never compute either arrow; you only note that they <em>could not
+differ</em>.</p>
+<p>The smallest instance of the trick: <strong>any arrow from a terminal
+object to itself is the identity.</strong> On the blackboard it is two
+applications of one fact. Write <code>!</code> for the unique arrow into
+<a
+href="coqdoc/Riktig.Interface.Category.html#term"><code>term</code></a>.
+Then any endomorphism
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mtext mathvariant="normal">term</mtext><mo>→</mo><mtext mathvariant="normal">term</mtext></mrow><annotation encoding="application/x-tex">f : \text{term} \to \text{term}</annotation></semantics></math>
+satisfies
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mi>!</mi></mrow><annotation encoding="application/x-tex">f = {!}</annotation></semantics></math>,
+and so does the identity,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>=</mo><mi>!</mi></mrow><annotation encoding="application/x-tex">\mathrm{id} = {!}</annotation></semantics></math>;
+therefore</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>!</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex"> f \;=\; {!} \;=\; \mathrm{id}. </annotation></semantics></math></p>
+<p>In Coq:</p>
+<pre class="coq"><code>(* An endomorphism of a terminal object is a morphism into it, hence
+   the bang — and so is cat_id, so uniqueness equates the two. *)
+Lemma term_endo_id (T : Terminal C) :
+  forall f : term (Terminal:=T) ~&gt; term (Terminal:=T), f == cat_id.
+Proof.
+  intros f.
+  rewrite (bang_unique _ f).
+  symmetry.
+  apply bang_unique.
+Qed.</code></pre>
+<p>Step by step. <code>intros f</code> takes an arbitrary arrow
+<code>f</code> from <a
+href="coqdoc/Riktig.Interface.Category.html#term"><code>term</code></a>
+to itself. <code>rewrite (bang_unique _ f)</code> uses uniqueness on
+<code>f</code>: it <em>is</em> an arrow into <a
+href="coqdoc/Riktig.Interface.Category.html#term"><code>term</code></a>,
+so it equals the canonical <code>bang term</code>, and we replace
+<code>f</code> by <code>bang term</code>, leaving the goal
+<code>bang term == cat_id</code>. <code>symmetry</code> flips this to
+<code>cat_id == bang term</code>. Finally <code>apply bang_unique</code>
+uses uniqueness a second time, now on <a
+href="coqdoc/Riktig.Interface.Category.html#cat_id"><code>cat_id</code></a>,
+which is <em>also</em> an arrow into <a
+href="coqdoc/Riktig.Interface.Category.html#term"><code>term</code></a>
+and hence <em>also</em> the canonical bang. Two uses of the same field,
+no calculation. The initial object obeys the mirror-image lemma <a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#init_endo_id"><code>init_endo_id</code></a>,
+proved the same way with <a
+href="coqdoc/Riktig.Interface.Category.html#emit"><code>emit</code></a>.</p>
+<h2 id="uniqueness-up-to-isomorphism">Uniqueness up to isomorphism</h2>
+<p>Now the theorem this style exists for. A universal property can never
+name a <em>unique</em> object — if <code>T</code> is terminal, anything
+isomorphic to <code>T</code> is terminal too, since you can transport
+the arrows across the isomorphism. What it can guarantee is that any two
+objects satisfying it are isomorphic, and canonically so. Recall that an
+<em>isomorphism</em> between objects <code>x</code> and <code>y</code>
+is a pair of arrows <code>x ~&gt; y</code> and <code>y ~&gt; x</code>
+whose two composites are the identities; the source packages this as a
+record <code>Iso x y</code>, and writes <code>x ≅ y</code>
+(“<code>x</code> is isomorphic to <code>y</code>”) for its mere
+existence.</p>
+<p>The argument for two terminal objects
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>1</mn></msub><annotation encoding="application/x-tex">T_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>2</mn></msub><annotation encoding="application/x-tex">T_2</annotation></semantics></math>:
+each has a unique arrow into the other, call them
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>!</mi><mn>12</mn></msub><mo>:</mo><msub><mi>T</mi><mn>1</mn></msub><mo>→</mo><msub><mi>T</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">!_{12} : T_1 \to T_2</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>!</mi><mn>21</mn></msub><mo>:</mo><msub><mi>T</mi><mn>2</mn></msub><mo>→</mo><msub><mi>T</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">!_{21} : T_2 \to T_1</annotation></semantics></math>.
+Compose them one way and you get an endomorphism of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>1</mn></msub><annotation encoding="application/x-tex">T_1</annotation></semantics></math>;
+compose the other way, an endomorphism of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>2</mn></msub><annotation encoding="application/x-tex">T_2</annotation></semantics></math>.
+By the lemma we just proved, both composites are identities:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mn>1</mn></msub><mover><mo>→</mo><mrow><mspace width="0.278em"></mspace><msub><mi>!</mi><mn>12</mn></msub><mspace width="0.278em"></mspace></mrow></mover><msub><mi>T</mi><mn>2</mn></msub><mover><mo>→</mo><mrow><mspace width="0.278em"></mspace><msub><mi>!</mi><mn>21</mn></msub><mspace width="0.278em"></mspace></mrow></mover><msub><mi>T</mi><mn>1</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><msub><mi>T</mi><mn>1</mn></msub></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>T</mi><mn>2</mn></msub><mover><mo>→</mo><mrow><mspace width="0.278em"></mspace><msub><mi>!</mi><mn>21</mn></msub><mspace width="0.278em"></mspace></mrow></mover><msub><mi>T</mi><mn>1</mn></msub><mover><mo>→</mo><mrow><mspace width="0.278em"></mspace><msub><mi>!</mi><mn>12</mn></msub><mspace width="0.278em"></mspace></mrow></mover><msub><mi>T</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><msub><mi>T</mi><mn>2</mn></msub></msub><mi>.</mi></mrow><annotation encoding="application/x-tex"> T_1 \xrightarrow{\;!_{12}\;} T_2 \xrightarrow{\;!_{21}\;} T_1
+   \;=\; \mathrm{id}_{T_1}, \qquad
+   T_2 \xrightarrow{\;!_{21}\;} T_1 \xrightarrow{\;!_{12}\;} T_2
+   \;=\; \mathrm{id}_{T_2}. </annotation></semantics></math></p>
+<p>That is exactly the data of an isomorphism, and the source builds it
+as a record literal — the two chosen arrows in the <a
+href="coqdoc/Riktig.Theory.Category.html#iso_to"><code>iso_to</code></a>/<a
+href="coqdoc/Riktig.Theory.Category.html#iso_from"><code>iso_from</code></a>
+fields, and <a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#term_endo_id"><code>term_endo_id</code></a>
+discharging each round-trip:</p>
+<pre class="coq"><code>(* Terminal objects are unique up to isomorphism: the two bangs
+   compose to endomorphisms of terminal objects, which are identities. *)
+Definition terminal_iso (T1 T2 : Terminal C) :
+  Iso (term (Terminal:=T1)) (term (Terminal:=T2)) := {|
+  iso_to := bang (Terminal:=T2) (term (Terminal:=T1));
+  iso_from := bang (Terminal:=T1) (term (Terminal:=T2));
+  iso_fromto := term_endo_id T1 _;
+  iso_tofrom := term_endo_id T2 _
+|}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.Category.html#iso_to"><code>iso_to</code></a>
+is the unique arrow from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>1</mn></msub><annotation encoding="application/x-tex">T_1</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>2</mn></msub><annotation encoding="application/x-tex">T_2</annotation></semantics></math>;
+<a
+href="coqdoc/Riktig.Theory.Category.html#iso_from"><code>iso_from</code></a>
+the unique arrow from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>2</mn></msub><annotation encoding="application/x-tex">T_2</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>1</mn></msub><annotation encoding="application/x-tex">T_1</annotation></semantics></math>.
+The field <a
+href="coqdoc/Riktig.Theory.Category.html#iso_fromto"><code>iso_fromto</code></a>
+must prove <code>iso_from ∘ iso_to == cat_id</code> — but that composite
+is an endomorphism of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>1</mn></msub><annotation encoding="application/x-tex">T_1</annotation></semantics></math>,
+so <code>term_endo_id T1 _</code> is exactly the proof, and <a
+href="coqdoc/Riktig.Theory.Category.html#iso_tofrom"><code>iso_tofrom</code></a>
+the same for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>2</mn></msub><annotation encoding="application/x-tex">T_2</annotation></semantics></math>.
+Notice there is no <code>Proof ... Qed</code> here at all: the
+isomorphism is <em>constructed</em>, not <em>searched for</em>, because
+the two arrows it is made of were forced on us. Turning it into the
+relation <code>≅</code> is a one-liner:</p>
+<pre class="coq"><code>Corollary terminal_isomorphic (T1 T2 : Terminal C) :
+  term (Terminal:=T1) ≅ term (Terminal:=T2).
+Proof. exact (inhabits (terminal_iso T1 T2)). Qed.</code></pre>
+<p>Initial objects satisfy the dual statement, <a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#initial_isomorphic"><code>initial_isomorphic</code></a>,
+built identically from <a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#init_endo_id"><code>init_endo_id</code></a>.
+This is why one is entitled to speak of <em>the</em> terminal object, or
+<em>the</em> empty type, or <em>the</em> one-element type: not because
+there is literally one, but because any two are the same in the only
+sense a category can see.</p>
+<h2 id="products-by-the-same-recipe">Products, by the same recipe</h2>
+<p>A <strong>binary product</strong> of two objects <code>a</code> and
+<code>b</code> is an object equipped with two projection arrows and one
+universal property tying them together. The intuition is the ordered
+pair: an element of <code>a × b</code> is determined by its two
+coordinates, and to <em>build</em> a map into <code>a × b</code> it is
+enough to say what its two coordinates are. Here is the class:</p>
+<pre class="coq"><code>(* Binary products: a limiting cone for each pair of objects.
+   Uniqueness is stated up to the hom-setoid, not definitional equality. *)
+Class HasProducts {O : Type} (C : Category O) := {
+  prod_obj : O -&gt; O -&gt; O;
+  pi1 : forall {a b : O}, prod_obj a b ~&gt; a;
+  pi2 : forall {a b : O}, prod_obj a b ~&gt; b;
+  pair_mor : forall {x a b : O}, (x ~&gt; a) -&gt; (x ~&gt; b) -&gt; (x ~&gt; prod_obj a b);
+  #[global] pair_proper :: forall x a b : O,
+      Proper (equ ==&gt; equ ==&gt; equ) (@pair_mor x a b);
+  pair_pi1 : forall (x a b : O) (f : x ~&gt; a) (g : x ~&gt; b),
+      pi1 ∘ pair_mor f g == f;
+  pair_pi2 : forall (x a b : O) (f : x ~&gt; a) (g : x ~&gt; b),
+      pi2 ∘ pair_mor f g == g;
+  pair_unique : forall (x a b : O) (f : x ~&gt; a) (g : x ~&gt; b)
+                       (h : x ~&gt; prod_obj a b),
+      pi1 ∘ h == f -&gt; pi2 ∘ h == g -&gt; h == pair_mor f g
+}.</code></pre>
+<p><code>prod_obj a b</code> is the product object; <a
+href="coqdoc/Riktig.Interface.Category.html#pi1"><code>pi1</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Category.html#pi2"><code>pi2</code></a>
+are the two projections. <code>pair_mor f g</code> is the
+<em>mediating</em> arrow: given a pair of arrows
+<code>f : x ~&gt; a</code> and <code>g : x ~&gt; b</code> out of a
+common source, it builds the single arrow
+<code>x ~&gt; prod_obj a b</code> whose coordinates are <code>f</code>
+and <code>g</code>. The laws <a
+href="coqdoc/Riktig.Interface.Category.html#pair_pi1"><code>pair_pi1</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Category.html#pair_pi2"><code>pair_pi2</code></a>
+say projecting recovers the coordinates you put in —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>1</mn></msub><mo>∘</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mo>,</mo><mi>g</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">\pi_1 \circ \langle f, g\rangle = f</annotation></semantics></math>
+— and <a
+href="coqdoc/Riktig.Interface.Category.html#pair_unique"><code>pair_unique</code></a>
+is again the “exactly one” clause: any arrow <code>h</code> with those
+two projections <em>is</em> the pairing. In Coq’s own category the
+product is the pair type <code>prod</code>, with <code>fst</code> and
+<code>snd</code> as the two projections; the source instance <a
+href="coqdoc/Riktig.Impl.CoqCat.html#CoqProducts"><code>CoqProducts</code></a>
+discharges the two projection laws by <code>reflexivity</code> and the
+uniqueness law by case-analysis on the pair.</p>
+<p>The clean small theorem here reads the uniqueness clause backwards.
+Any arrow <code>h</code> into a product equals the pairing of its own
+two projections — the <em>eta law</em> for products. On the blackboard:
+<code>h</code>’s coordinates are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>1</mn></msub><mo>∘</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">\pi_1 \circ h</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>2</mn></msub><mo>∘</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">\pi_2 \circ h</annotation></semantics></math>,
+and the pairing of an arrow’s coordinates is the arrow itself,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mspace width="0.167em"></mspace><msub><mi>π</mi><mn>1</mn></msub><mo>∘</mo><mi>h</mi><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>π</mi><mn>2</mn></msub><mo>∘</mo><mi>h</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">⟩</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>h</mi><mi>.</mi></mrow><annotation encoding="application/x-tex"> \langle\, \pi_1 \circ h,\; \pi_2 \circ h \,\rangle \;=\; h. </annotation></semantics></math></p>
+<pre class="coq"><code>(* Every mediating morphism into a product is the pairing of its
+   projections: the eta law, read off from uniqueness. *)
+Theorem pair_eta : forall (x a b : O) (h : x ~&gt; prod_obj a b),
+    pair_mor (pi1 ∘ h) (pi2 ∘ h) == h.
+Proof.
+  intros x a b h.
+  symmetry.
+  apply pair_unique; reflexivity.
+Qed.</code></pre>
+<p><code>intros x a b h</code> fixes the arrow. <code>symmetry</code>
+turns the goal into <code>h == pair_mor (pi1 ∘ h) (pi2 ∘ h)</code>,
+which is precisely the <em>shape</em> <a
+href="coqdoc/Riktig.Interface.Category.html#pair_unique"><code>pair_unique</code></a>
+concludes. <code>apply pair_unique</code> then asks for the two
+hypotheses <code>pi1 ∘ h == pi1 ∘ h</code> and
+<code>pi2 ∘ h == pi2 ∘ h</code> — literally reflexive, so the single
+<code>reflexivity</code> (applied to both goals by the <code>;</code>)
+closes them. The whole proof is: <em><code>h</code> has some
+projections, and the pairing of an arrow’s own projections is that
+arrow.</em> Once more we computed nothing; the universal property did
+the work.</p>
+<p>That is the shape of every proof in this corner of the library.
+Existence is a chosen arrow; uniqueness is a field you aim at any arrow
+of the right shape; and identity, isomorphism, and the eta law all fall
+out of aiming it twice.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.Category.html#Terminal"><code>Terminal</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Category.html#Initial"><code>Initial</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Category.html#HasProducts"><code>HasProducts</code></a>
+classes) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/InitialTerminal.v"><code>Theory/InitialTerminal.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#term_endo_id"><code>term_endo_id</code></a>,
+<a
+href="coqdoc/Riktig.Theory.InitialTerminal.html#terminal_iso"><code>terminal_iso</code></a>)
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Product.v"><code>Theory/Product.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Product.html#pair_eta"><code>pair_eta</code></a>)
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Category.v"><code>Theory/Category.v</code></a>
+(<a href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>,
+<code>≅</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>Impl/CoqCat.v</code></a>
+(types and functions instantiate it all).</p>
+</main>
+</body>
+</html>

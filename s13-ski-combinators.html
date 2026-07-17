@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Combinators: eliminating variables with SKI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="combinators-eliminating-variables-with-ski">Combinators:
+eliminating variables with SKI</h1>
+<p>A lambda term is built from three things: a variable, an abstraction
+<code>λ. body</code> that binds a variable, and an application
+<code>f a</code>. We write variables as de Bruijn indices — a variable
+is a number counting how many binders you cross on the way out to the
+<code>λ</code> that introduced it, so <code>λ.λ. 1</code> is “the
+function of two arguments returning the first.” Reduction is the single
+rule that applying a <code>λ</code> to an argument substitutes the
+argument for the bound variable, and two terms count as equal when
+reduction can bring them to a common form.</p>
+<p>That one rule — substitution — is where all the fuss lives. You
+cannot just textually drop the argument in: a free variable in the
+argument can be accidentally captured by a binder it lands under, so
+real substitution has to renumber indices as it goes (the lifting
+bookkeeping). Every implementation of the lambda calculus pays this tax
+on every step.</p>
+<h2 id="why-remove-variables-at-all">Why remove variables at all</h2>
+<p>Here is the idea worth the trouble. Suppose we could rewrite every
+lambda term using only a small, fixed set of <em>closed</em> building
+blocks — constants that bind nothing and contain no free variables —
+combined by application alone. Then there are no bound variables
+anywhere, and so there is nothing to capture, nothing to renumber,
+nothing to lift. A term with no binders is trivially safe to copy, to
+reorder, to compile: substitution degenerates into “plug a subterm into
+a hole.” That is combinatory logic, and the classic building blocks are
+three combinators called <code>S</code>, <code>K</code>, and
+<code>I</code>.</p>
+<p>Their reduction rules are just three rewrites:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>x</mi><mspace width="2.0em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>x</mi><mspace width="2.0em"></mspace><mi>S</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">I\,x \;\to\; x \qquad K\,x\,y \;\to\; x \qquad S\,f\,g\,x \;\to\; f\,x\,(g\,x)</annotation></semantics></math></p>
+<p><code>I</code> is the identity; <code>K</code> throws its second
+argument away; <code>S</code> applies <code>f</code> and <code>g</code>
+to a shared <code>x</code> and combines the results. Remarkably, that is
+enough to express every lambda term. As a first taste,
+<code>S K K</code> behaves exactly like the identity <code>I</code>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mspace width="0.167em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">S\,K\,K\,x \;\to\; K\,x\,(K\,x) \;\to\; x</annotation></semantics></math></p>
+<p>The <code>S</code> rule shares <code>x</code> into both branches,
+then the outer <code>K</code> keeps the left branch and drops the right.
+In the Coq development, where the combinators are named <a
+href="coqdoc/Riktig.Lambda.SKI.html#CS"><code>CS</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CK"><code>CK</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CI"><code>CI</code></a> (bare
+<code>S</code> and <code>I</code> would clash with the successor of a
+natural number and with the proof of <code>True</code>), this is checked
+by running a fuelled normalizer on an opaque argument
+<code>CVar 0</code>:</p>
+<pre class="coq"><code>(* SKK = I, the classic warm-up. *)
+Example nf_SKK : nf 10 (CS @@ CK @@ CK @@ CVar 0) = CVar 0.
+Proof. reflexivity. Qed.</code></pre>
+<p>The <code>@@</code> is application, and <code>CVar 0</code> is an
+inert constant with no reduction rule of its own — it stands in for an
+arbitrary argument so the check cannot cheat by simplifying it.</p>
+<h2 id="the-combinators-as-a-datatype">The combinators, as a
+datatype</h2>
+<p>The whole syntax of combinatory logic is five constructors: the three
+combinators, the inert variable used for testing, and application.</p>
+<pre class="coq"><code>Inductive comb : Type :=
+  | CS : comb
+  | CK : comb
+  | CI : comb
+  | CVar : nat -&gt; comb
+  | CApp : comb -&gt; comb -&gt; comb.
+
+Notation &quot;f @@ x&quot; := (CApp f x) (at level 40, left associativity).</code></pre>
+<p>One-step reduction is the three contraction rules above, plus two
+congruence rules that let a step happen inside a left or right
+subterm:</p>
+<pre class="coq"><code>Inductive cstep : comb -&gt; comb -&gt; Prop :=
+  | cstep_S : forall f g x,
+      cstep (CS @@ f @@ g @@ x) (f @@ x @@ (g @@ x))
+  | cstep_K : forall x y,
+      cstep (CK @@ x @@ y) x
+  | cstep_I : forall x,
+      cstep (CI @@ x) x
+  | cstep_app1 : forall f f&#39; a,
+      cstep f f&#39; -&gt;
+      cstep (f @@ a) (f&#39; @@ a)
+  | cstep_app2 : forall f a a&#39;,
+      cstep a a&#39; -&gt;
+      cstep (f @@ a) (f @@ a&#39;).</code></pre>
+<p>Write <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar"><code>cstar</code></a> for
+the reflexive-transitive closure of <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstep"><code>cstep</code></a>:
+<code>cstar t u</code> means <code>t</code> reduces to <code>u</code> in
+zero or more steps.</p>
+<h2 id="bracket-abstraction-putting-a-variable-back">Bracket
+abstraction: putting a variable back</h2>
+<p>To translate a lambda term into combinators we need to reverse a
+binder. Given a combinator term <code>t</code> that mentions the
+variable <code>CVar 0</code>, we want a <em>closed</em> combinator
+<code>[0] t</code> such that applying it to any argument <code>u</code>
+reproduces <code>t</code> with <code>u</code> in place of
+<code>CVar 0</code>. That operation is bracket abstraction, <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a>. The
+rules are the textbook ones, with no cleverness:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>I</mi><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mi>y</mi><mo>=</mo><mi>K</mi><mspace width="0.167em"></mspace><mi>y</mi><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mi>c</mi><mo>=</mo><mi>K</mi><mspace width="0.167em"></mspace><mi>c</mi><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>M</mi><mspace width="0.167em"></mspace><mi>N</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>S</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mi>M</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mi>N</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[x]\,x = I \qquad [x]\,y = K\,y \qquad [x]\,c = K\,c \qquad [x]\,(M\,N) = S\,([x]M)\,([x]N)</annotation></semantics></math></p>
+<p>The variable being abstracted becomes <code>I</code>; anything not
+containing it (another variable, or a bare combinator <code>c</code>) is
+guarded by <code>K</code> so the argument is discarded; an application
+is split by <code>S</code> so the argument reaches both sides. In de
+Bruijn form, “the variable being abstracted” is index <code>0</code>,
+and any other variable <code>S n</code> shifts down to
+<code>n</code>:</p>
+<pre class="coq"><code>Fixpoint babs (t : comb) : comb :=
+  match t with
+  | CVar O =&gt; CI
+  | CVar (S n) =&gt; CK @@ CVar n
+  | CApp f a =&gt; CS @@ babs f @@ babs a
+  | c =&gt; CK @@ c
+  end.</code></pre>
+<p>The meaning we want <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> to have
+is captured by a substitution <code>csub u t</code>: replace
+<code>CVar 0</code> by <code>u</code> and shift every other variable
+down by one.</p>
+<pre class="coq"><code>Fixpoint csub (u : comb) (t : comb) : comb :=
+  match t with
+  | CVar O =&gt; u
+  | CVar (S n) =&gt; CVar n
+  | CApp f a =&gt; csub u f @@ csub u a
+  | c =&gt; c
+  end.</code></pre>
+<h2 id="the-correctness-of-bracket-abstraction">The correctness of
+bracket abstraction</h2>
+<p>Here is the result that makes bracket abstraction trustworthy: for
+every term <code>t</code> and every argument <code>u</code>, applying
+the abstracted term to <code>u</code> reduces to the substitution.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mi>u</mi><mspace width="0.278em"></mspace><msup><mo>→</mo><mo>*</mo></msup><mspace width="0.278em"></mspace><mi>t</mi><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mi>u</mi><mi>/</mi><mn>0</mn><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">([0]\,t)\;u \;\longrightarrow^{*}\; t[\,u/0\,]</annotation></semantics></math></p>
+<p>Verbatim from the source:</p>
+<pre class="coq"><code>Lemma babs_correct : forall t u, cstar (babs t @@ u) (csub u t).
+Proof.
+  induction t as [ | | | n | f IHf a IHa]; intros u; simpl.
+  - eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - destruct n as [| n]; simpl.
+    + eapply cstar_step. { apply cstep_I. } apply cstar_refl.
+    + eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - eapply cstar_step. { apply cstep_S. }
+    eapply cstar_trans. { apply cstar_app1. apply IHf. }
+    apply cstar_app2. apply IHa.
+Qed.</code></pre>
+<p>The proof is a structural induction on <code>t</code>, one branch per
+shape the term can have.</p>
+<ul>
+<li>The first three branches are <code>t = CS</code>,
+<code>t = CK</code>, <code>t = CI</code>. For each,
+<code>babs t = CK @@ t</code>, so <code>(CK @@ t) @@ u</code> takes one
+<code>K</code> step to <code>t</code>, and <code>csub u t = t</code>
+because a bare combinator has no variables to substitute. Each branch is
+a single <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstep_K"><code>cstep_K</code></a>
+followed by <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_refl"><code>cstar_refl</code></a>.</li>
+<li>The <code>CVar n</code> branch splits on whether <code>n</code> is
+zero. If <code>n = 0</code>, then <code>babs (CVar 0) = CI</code>, so
+<code>CI @@ u</code> takes one <code>I</code> step to <code>u</code>,
+and <code>csub u (CVar 0) = u</code> — the two sides meet. If
+<code>n = S n'</code>, then
+<code>babs (CVar (S n')) = CK @@ CVar n'</code>, one <code>K</code> step
+to <code>CVar n'</code>, matching
+<code>csub u (CVar (S n')) = CVar n'</code>.</li>
+<li>The application branch <code>t = f a</code> is the only one that
+recurses. Here <code>babs (f a) = CS @@ babs f @@ babs a</code>, so <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstep_S"><code>cstep_S</code></a>
+turns <code>(CS @@ babs f @@ babs a) @@ u</code> into
+<code>(babs f @@ u) @@ (babs a @@ u)</code>. The two induction
+hypotheses <code>IHf</code> and <code>IHa</code> reduce the two halves
+to <code>csub u f</code> and <code>csub u a</code>; <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_app1"><code>cstar_app1</code></a>
+applies the first inside the left of the application, <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_app2"><code>cstar_app2</code></a>
+the second inside the right, and <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_trans"><code>cstar_trans</code></a>
+chains them. The result is <code>csub u f @@ csub u a</code>, which is
+exactly <code>csub u (f a)</code>.</li>
+</ul>
+<p>No side condition is needed: combinatory reduction places no
+restriction on when a redex may fire, so the per-redex law holds for
+every argument <code>u</code>.</p>
+<h2 id="compiling-a-lambda-term-to-combinators">Compiling a lambda term
+to combinators</h2>
+<p>With <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> in hand,
+translating a lambda term is three lines: a variable becomes the
+corresponding combinator variable, an application becomes an
+application, and an abstraction becomes a bracket abstraction of its
+translated body.</p>
+<pre class="coq"><code>Fixpoint translate (t : tm) : comb :=
+  match t with
+  | Var n =&gt; CVar n
+  | Abs b =&gt; babs (translate b)
+  | App f a =&gt; translate f @@ translate a
+  end.</code></pre>
+<p>Take the smallest interesting closed term, <code>k = λ.λ. 1</code>
+(the function of two arguments that returns the first). Working the
+translation by hand, outermost binder last:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">translate</mtext><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>.</mi><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">CVar </mtext><mspace width="0.333em"></mspace></mrow><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>K</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">CVar </mtext><mspace width="0.333em"></mspace></mrow><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>S</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>K</mi><mspace width="0.167em"></mspace><mi>K</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>I</mi></mrow><annotation encoding="application/x-tex">\text{translate}\,(\lambda.\lambda.\,1) = [0]\,\big([0]\,(\text{CVar }1)\big) = [0]\,(K\,(\text{CVar }0)) = S\,(K\,K)\,I</annotation></semantics></math></p>
+<p>Read left to right: the inner <code>[0]</code> turns
+<code>CVar 1</code> into <code>CK @@ CVar 0</code> (a non-zero variable,
+guarded by <code>K</code> and shifted down to <code>CVar 0</code>); the
+outer <code>[0]</code> sees an application <code>CK @@ CVar 0</code>, so
+it splits with <code>S</code>, sending <code>babs CK = CK @@ CK</code>
+to the left and <code>babs (CVar 0) = CI</code> to the right. The Coq
+development confirms the computed result exactly:</p>
+<pre class="coq"><code>Example translate_k : translate k = CS @@ (CK @@ CK) @@ CI.
+Proof. reflexivity. Qed.</code></pre>
+<p>And the translated term genuinely behaves like <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>: handed two
+opaque arguments, it returns the first, checked by running the
+normalizer.</p>
+<pre class="coq"><code>Example translate_k_fst :
+  cstar (translate k @@ CVar 0 @@ CVar 1) (CVar 0).
+Proof. apply (nf_cstar 20). reflexivity. Qed.</code></pre>
+<p>The simplest case is simpler still — the identity <code>λ.0</code>
+compiles to <a
+href="coqdoc/Riktig.Lambda.SKI.html#CI"><code>CI</code></a>
+outright:</p>
+<pre class="coq"><code>Example translate_id : translate idt = CI.
+Proof. reflexivity. Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Lambda.SKI.html#babs_correct"><code>babs_correct</code></a>
+is the local guarantee behind these runs: it says a single translated
+redex steps to the right combinator-level substitution. The source stops
+short of the full simulation theorem (that every lambda reduction is
+mirrored by a combinator reduction), and says so plainly rather than
+leaving an <code>Admitted</code> behind — the general statement needs
+substitution-commutation lemmas over de Bruijn indices, and weak
+combinatory reduction does not mirror beta reduction underneath a
+binder. What is proved is the per-redex law, and it is enough to compile
+and run closed terms.</p>
+<p>Next post: continuation-passing style, another translation on the
+same lambda terms, this time turning control flow into ordinary
+data.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/SKI.v"><code>Lambda/SKI.v</code></a>
+(combinators, bracket abstraction, translation) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+(the lambda terms translated from).</p>
+</main>
+</body>
+</html>

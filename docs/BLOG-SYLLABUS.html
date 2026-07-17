@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog syllabus — the mental tools, in order, before anything
+else</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="blog-syllabus--the-mental-tools-in-order-before-anything-else">Blog
+syllabus — the mental tools, in order, before anything else</h1>
+<p>Every post here follows docs/BLOG-STYLE.md without exception. The
+order matters: each entry may assume the reader has read the ones above
+it (recapped in a few sentences, not by reference), and nothing below
+it. No post in this list mentions “riktig,” “the project,” or why any of
+it matters — that framing is reserved for a single capstone post at the
+very end of the whole syllabus (not written yet, not scheduled until
+everything above it exists).</p>
+<p>Status markers: <strong>[has code]</strong> — a real <code>.v</code>
+file exists, write the post from it. <strong>[needs code]</strong> — no
+implementation exists yet; do not write the post until the Coq exists.
+<strong>[rewrite]</strong> — an old post covers this ground but needs a
+full rewrite under the new style, not an edit. <strong>[new]</strong> —
+no old post exists for this at all.</p>
+<h2 id="part-1--the-mathematical-hierarchy">Part 1 — The mathematical
+hierarchy</h2>
+<ol type="1">
+<li><strong>What is a mathematical structure?</strong> [rewrite of
+#0001] — interface vs. structure (vocabulary + laws), the monoid, why
+“prove once, hold everywhere” matters. Show <a
+href="../coqdoc/Riktig.Theory.Monoid.html#id_unique"><code>id_unique</code></a>/<a
+href="../coqdoc/Riktig.Theory.Monoid.html#zero_unique_l"><code>zero_unique_l</code></a>
+in full, blackboard + Coq.</li>
+<li><strong>Groups: undoing, and the cancellation trick</strong> [new,
+split out of old #0001] — group axioms, <a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>/<a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_r"><code>cancel_r</code></a>
+proved in full (both directions), <a
+href="../coqdoc/Riktig.Theory.Group.html#neg_involutive"><code>neg_involutive</code></a>,
+the group-hom lemmas (<a
+href="../coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>/<a
+href="../coqdoc/Riktig.Theory.Group.html#hom_neg"><code>hom_neg</code></a>)
+with a concrete instance shown running.</li>
+<li><strong>Commutative structure: abelian groups and rings</strong>
+[new] — <a
+href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup"><code>AbGroup</code></a>’s
+reshuffling kit (<a
+href="../coqdoc/Riktig.Theory.AbGroup.html#add_interchange"><code>add_interchange</code></a>),
+then <a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring"><code>Ring</code></a>
+(distributivity, the <a
+href="../coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>/<a
+href="../coqdoc/Riktig.Props.html#Commutes"><code>Commutes</code></a>/<a
+href="../coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>/<a
+href="../coqdoc/Riktig.Props.html#Idr"><code>Idr</code></a> generic-law
+trick that lets one proof serve <code>+</code> and <code>*</code> both),
+a concrete <code>Z</code> instance computing something.</li>
+<li><strong>Fields, and why <code>Q</code> is more interesting than it
+looks</strong> [new] — field axioms, <a
+href="../coqdoc/Riktig.Theory.Field.html#mul_cancel_l"><code>mul_cancel_l</code></a>,
+and the payoff: <code>Q</code> with <code>Qeq</code> as its equality,
+proving <code>1/2 == 2/4</code> is a real, load-bearing fact, not a
+footnote.</li>
+<li><strong>Vector spaces without coordinates</strong> [rewrite of
+#0009] — <code>Hom(U,V)</code> as a vector space, <code>End V</code> as
+the first noncommutative ring, one full proof shown end to end (<a
+href="../coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
+reused, or <a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+reused inside a vector-space proof — show the reuse, that’s the
+point).</li>
+<li><strong>Inner products and geometric algebra</strong> [rewrite,
+folded from old #0001’s tail section + #0013] — the polarization
+identity, proved in full with both the blackboard argument and the Coq,
+exactly like #0001’s best section but given its own post and more
+room.</li>
+</ol>
+<h2 id="part-2--category-theory">Part 2 — Category theory</h2>
+<ol start="7" type="1">
+<li><strong>Categories, in the way a programmer already half-knows
+them</strong> [has code: Interface/Category.v, Theory/Category.v] —
+objects and arrows, the hom-setoid, identity/associativity, one worked
+example in a genuinely concrete category (not
+<code>Set</code>/<code>Type</code> abstractly — pick something with
+visible arrows).</li>
+<li><strong>Functors and natural transformations</strong> [has code] — a
+functor as a structure-preserving map between categories, naturality
+proved for one real example.</li>
+<li><strong>Initial and terminal objects, products, and the
+universal-property style of proof</strong> [has code:
+Theory/InitialTerminal.v, Theory/Product.v] —
+uniqueness-up-to-isomorphism proved in full.</li>
+<li><strong>Cartesian closed categories</strong> [has code:
+Theory/Exponential.v, the CCC bundle] — exponentials, currying, and why
+this is exactly the structure a lambda calculus needs — the bridge into
+Part 3.</li>
+</ol>
+<h2
+id="part-3--programs-as-data-lambda-calculus-and-its-transformations">Part
+3 — Programs as data: lambda calculus and its transformations</h2>
+<ol start="11" type="1">
+<li><strong>The lambda calculus you can run</strong> [rewrite of #0004]
+— de Bruijn terms, the small-step evaluator, <a
+href="../coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+sound and complete, running a real term to a normal form in the
+post.</li>
+<li><strong>Program equality is a setoid, and optimizations are
+rewrites</strong> [rewrite of #0005] — the <code>conv</code> relation,
+Church booleans, <a
+href="../coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>
+proved and walked exactly like a group-theory proof.</li>
+<li><strong>Combinators: SKI and bracket abstraction</strong> [has code:
+Lambda/SKI.v] — eliminating variables entirely, <a
+href="../coqdoc/Riktig.Lambda.SKI.html#babs_correct"><code>babs_correct</code></a>
+proved, one term compiled to combinators and run.</li>
+<li><strong>Continuation-passing style, concretely</strong> [has code:
+Lambda/CPS.v] — the transform, why it exists (making control flow into
+data), one real term CPS-translated and its evaluation walked step by
+step.</li>
+<li><strong>Defunctionalization: closures without closures</strong>
+[needs code] — Reynolds’s original technique (<em>Definitional
+Interpreters for Higher-Order Programming Languages</em>, 1972) and
+Danvy &amp; Nielsen’s modern treatment (<em>Defunctionalization at
+Work</em>, 2001): replace a higher-order function space with a
+first-order datatype plus an <code>apply</code> dispatcher, and prove
+the two programs compute the same thing. Queue the Coq implementation
+before this post is written.</li>
+<li><strong>A-normal form: naming every intermediate result</strong>
+[needs code] — Flanagan, Sabry, Duba &amp; Felleisen’s ANF transform
+(<em>The Essence of Compiling with Continuations</em>, 1993): every
+subexpression gets a name via <code>let</code>, and this is what makes a
+compiler’s job tractable. Queue the Coq implementation before this post
+is written.</li>
+</ol>
+<h2
+id="part-4--analysis-and-geometry-existing-coverage-needs-a-full-rewrite-pass">Part
+4 — Analysis and geometry (existing coverage, needs a full rewrite
+pass)</h2>
+<ol start="17" type="1">
+<li><strong>Order and absolute value, axiomatically</strong> [rewrite of
+#0008’s order section] — why <a
+href="../coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> is
+a law-abiding operation, not a case-split on the sign;
+<code>0 &lt;= 1</code> as a genuine theorem.</li>
+<li><strong>Normed spaces, and what a limit is</strong> [rewrite of
+#0011] — the ε-N definition, <a
+href="../coqdoc/Riktig.Theory.Limits.html#lim_unique"><code>lim_unique</code></a>
+proved by the ε/2 argument in full.</li>
+<li><strong>Continuity and the derivative as a linear map</strong>
+[rewrite of #0012] — the Fréchet derivative, the chain rule, walked
+exactly like the polarization proof.</li>
+<li><strong>Matrices are a representation, not a definition</strong>
+[rewrite of #0010] — <code>Hom(U,V) ≅ Matrix</code>, matrix
+multiplication <em>is</em> composition, the representation theorem
+proved and used.</li>
+<li><strong>The determinant, coordinate-free</strong> [rewrite/merge of
+#0014, #0023, #0033] — one post, one throughline: det as “how a map
+scales a top alternating form,” multiplicativity as the payoff theorem,
+no scattered side-quests.</li>
+<li><strong>Geometric algebra’s payoff: rotations and
+reflections</strong> [rewrite, extends part 1’s polarization post] — now
+that categories and linear maps exist, show what geometric algebra is
+actually <em>for</em>.</li>
+</ol>
+<h2
+id="part-5--communication-channels-existing-coverage-needs-rewrite--an-honest-self-assessment">Part
+5 — Communication channels (existing coverage, needs rewrite + an honest
+self-assessment)</h2>
+<ol start="23" type="1">
+<li><strong>What a channel is: relations, not probabilities</strong>
+[rewrite of #0015] — keep the possibilistic framing (it’s the right
+idea, argued well already), cut every “telecom leg of the work” aside,
+add a fully-worked example of using the fault-class relations as a
+hypothesis in a small toy proof (not just describing the lattice —
+proving something with it, in the post).</li>
+<li><strong>State machines and composing them through a channel</strong>
+[rewrite of whatever currently covers Mealy.v] — a genuinely worked
+example: two toy machines, a channel between them, the composite trace
+relation, proved.</li>
+<li><strong>The alternating-bit protocol: safety,
+unconditionally</strong> [rewrite of #0016] — the actual safety theorem,
+proved and walked, no liveness mixed in.</li>
+<li><strong>Fairness and liveness</strong> [rewrite of #0017, split from
+its other half] — the fairness hypothesis stated precisely, the liveness
+theorem that needs it, why it’s honest to require it.</li>
+</ol>
+<h2 id="notes-for-whoever-writes-these">Notes for whoever writes
+these</h2>
+<ul>
+<li>Each post is independent to WRITE (a writing agent needs only: this
+syllabus entry, docs/BLOG-STYLE.md, and the real <code>.v</code> file(s)
+named in its status marker — never an old blog post as a source, not
+even to “see what’s already been said”).</li>
+<li>Parts 1-2 (entries 1-10) are the first wave: everything there has
+code today. Start there.</li>
+<li>Part 3 splits: entries 11-14 have code now: entries 15-16 are
+blocked on new Coq work (a separate, explicitly scoped task, not bundled
+into a writing task).</li>
+<li>Parts 4-5 are rewrites of existing posts and can start once Part 1-3
+sets the tone, or in parallel if the writing agent is explicitly handed
+this syllabus + style doc and told not to consult the old posts at
+all.</li>
+</ul>
+</main>
+</body>
+</html>

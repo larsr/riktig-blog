@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commutative structure: abelian groups and rings</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="commutative-structure-abelian-groups-and-rings">Commutative
+structure: abelian groups and rings</h1>
+<p>A <em>monoid</em> is a set with an associative combining operation
+<code>+</code> and a do-nothing element <code>0</code> (so
+<code>(a + b) + c == a + (b + c)</code>, <code>0 + a == a</code>,
+<code>a + 0 == a</code>). A <em>group</em> adds undoing: a negation
+<code>- a</code> with <code>(- a) + a == 0</code> and
+<code>a + (- a) == 0</code>, so every combination can be reversed.
+Nothing so far says the order of combination matters — and in a group it
+need not: composing two rotations one way generally differs from the
+other. This post is about the structures where order <em>doesn’t</em>
+matter, and about what a second operation buys once it does.</p>
+<p>Throughout, <code>==</code> is the structure’s own notion of
+equality: an equivalence relation the carrier comes equipped with, not
+necessarily Coq’s built-in <code>=</code>. For the integers it is
+ordinary equality; in the next post it will be something else. And
+<code>a =/= b</code> is shorthand for <code>~ (a == b)</code>.</p>
+<p>Each proof below is written as a chain. The line</p>
+<pre class="coq"><code>calc x
+  == y  { law1 }
+  == z  { law2 }.</code></pre>
+<p>reads as <em><code>x</code> equals <code>y</code> by
+<code>law1</code>, which equals <code>z</code> by
+<code>law2</code></em>. Every brace names the single fact that justifies
+its step, and Coq checks the chain end to end, so the displayed
+calculation <em>is</em> the proof, not a comment alongside one.</p>
+<h2 id="the-commutativity-law">The commutativity law</h2>
+<p>An <strong>abelian group</strong> is a group with one law added:
+combining is commutative, <code>a + b == b + a</code>. That is the whole
+definition.</p>
+<pre class="coq"><code>Class AbGroup G := {
+  #[global] ab_group :: Group G;
+  ab_comm  : forall a b : G, a + b == b + a
+}.</code></pre>
+<p>The first field says an abelian group <em>is</em> a group (with all
+its operations and laws); the second adds the one new axiom. Everything
+proved for groups holds here unchanged, and <a
+href="coqdoc/Riktig.Interface.AbGroup.html#ab_comm"><code>ab_comm</code></a>
+lets us rearrange sums freely.</p>
+<h2 id="a-reshuffling-kit">A reshuffling kit</h2>
+<p>With commutativity in hand, sums of several terms can be permuted
+into any order. Two small lemmas do the local moves. Their
+statements:</p>
+<pre class="coq"><code>Theorem add_swap_r : forall a b c : G, (a + b) + c == (a + c) + b.
+Theorem add_swap_l : forall a b c : G, a + (b + c) == b + (a + c).</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_swap_r"><code>add_swap_r</code></a>
+swaps the last two summands of a left-nested sum; <a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_swap_l"><code>add_swap_l</code></a>
+swaps the first two of a right-nested one. Here is the left one in full.
+In words: reassociating to expose the front pair, swapping it, and
+reassociating back moves <code>b</code> ahead of <code>a</code>.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>b</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a + (b + c) \;=\; (a + b) + c \;=\; (b + a) + c \;=\; b + (a + c)</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem add_swap_l : forall a b c : G, a + (b + c) == b + (a + c).
+Proof.
+  intros a b c.
+  calc (a + (b + c))
+    == ((a + b) + c)  { assoc }
+    == ((b + a) + c)  { (comm a b) }
+    == (b + (a + c))  { assoc }.
+Qed.</code></pre>
+<p>Step by step: <a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>
+(associativity) reparenthesizes <code>a + (b + c)</code> as
+<code>(a + b) + c</code>; <code>comm a b</code> (commutativity, applied
+to the pair <code>a + b</code>) turns it into <code>(b + a) + c</code>;
+<a href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>
+reparenthesizes once more to land on <code>b + (a + c)</code>.</p>
+<p>The lemma worth its own name is the <strong>interchange law</strong>:
+two sums added together can be regrouped by pairing first-with-first and
+second-with-second.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a + b) + (c + d) \;=\; a + (b + (c + d)) \;=\; a + (c + (b + d)) \;=\; (a + c) + (b + d)</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem add_interchange : forall a b c d : G,
+  (a + b) + (c + d) == (a + c) + (b + d).
+Proof.
+  intros a b c d.
+  calc ((a + b) + (c + d))
+    == (a + (b + (c + d)))  { assoc }
+    == (a + (c + (b + d)))  { (add_swap_l b c d) }
+    == ((a + c) + (b + d))  { assoc }.
+Qed.</code></pre>
+<p>The middle step is the only interesting one. <a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a> first pulls
+the leading <code>a</code> out front, exposing the tail
+<code>b + (c + d)</code>. Then <code>add_swap_l b c d</code> — the lemma
+just proved — swaps <code>b</code> past <code>c</code> inside that tail,
+rewriting <code>b + (c + d)</code> into <code>c + (b + d)</code>. A
+final <a href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>
+regroups <code>a + (c + (b + d))</code> as
+<code>(a + c) + (b + d)</code>. Four terms went in as
+<code>(a b)(c d)</code> and came out as <code>(a c)(b d)</code>, with
+commutativity used exactly once, buried in <a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_swap_l"><code>add_swap_l</code></a>.</p>
+<h2 id="rings-a-second-operation">Rings: a second operation</h2>
+<p>A <strong>ring</strong> keeps the abelian group under <code>+</code>
+and adds a second operation <code>*</code> with its own identity
+<code>1</code>. Multiplication is associative and unital, and — the law
+that ties the two operations together — it <em>distributes</em> over
+addition: <code>a * (b + c) == a * b + a * c</code>, and the same on the
+right. Multiplication is <strong>not</strong> assumed commutative.</p>
+<pre class="coq"><code>Class Ring R := {
+  #[global] ring_ab         :: AbGroup R;
+  #[global] ring_one        :: One R;
+  #[global] ring_mul        :: HasMult R;
+  ring_mul_assoc  : forall a b c : R, (a * b) * c == a * (b * c);
+  ring_mul_1l     : forall a : R, 1 * a == a;
+  ring_mul_1r     : forall a : R, a * 1 == a;
+  ring_distl      : forall a b c : R, a * (b + c) == a * b + a * c;
+  ring_distr      : forall a b c : R, (a + b) * c == a * c + b * c;
+  #[global] ring_mul_proper :: Proper (equ ==&gt; equ ==&gt; equ) (@mult R _)
+}.</code></pre>
+<p>The last field, <a
+href="coqdoc/Riktig.Interface.Ring.html#ring_mul_proper"><code>ring_mul_proper</code></a>,
+records that <code>*</code> respects <code>==</code> in both arguments:
+replacing a factor by an equal one gives an equal product. That is
+automatic when <code>==</code> is plain equality, but it is a real
+obligation when <code>==</code> is a coarser equivalence — which is the
+whole subject of the next post.</p>
+<h2 id="one-name-two-operations">One name, two operations</h2>
+<p>Look back at the ring: it now has <em>two</em> associative operations
+on the same carrier (<code>+</code> and <code>*</code>) and <em>two</em>
+identities (<code>0</code> and <code>1</code>). A proof about
+<code>*</code> will want to say “reassociate” and “use the identity”
+just as often as a proof about <code>+</code>. Watch how one short ring
+theorem does it. The fact — negating by multiplying by <code>-1</code> —
+reads</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>a</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>⋅</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">(-1)\cdot a \;=\; -(1\cdot a) \;=\; -a</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem mul_neg1_l : forall a : R, (- (1)) * a == - a.
+Proof.
+  intros a.
+  calc ((- (1)) * a)
+    == (- (1 * a)) { (mul_neg_l 1 a) }
+    == (- a)       { idl }.
+Qed.</code></pre>
+<p>The first step uses <a
+href="coqdoc/Riktig.Theory.Ring.html#mul_neg_l"><code>mul_neg_l</code></a>
+— the fact <code>(- x) * y == - (x * y)</code>, that a negation can be
+pulled out of a product, proved earlier in the same file — to rewrite
+<code>(-1) * a</code> as <code>- (1 * a)</code>. The second step names
+<a href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a>, the
+<em>left-identity</em> law. But <a
+href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> is the very
+name a monoid uses for <code>0 + a == a</code>. How does the same name
+discharge <code>1 * a == a</code>?</p>
+<p>The answer is in <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>, where the
+single-law classes live. Each is parameterized not just by a carrier but
+by the <em>operation</em> it talks about:</p>
+<pre class="coq"><code>Class Idl T (e : EqRel T) (op : BinOp T) unit :=
+  idl : forall a, op unit a == a.</code></pre>
+<p><code>Idl T e op unit</code> is the statement
+<code>op unit a == a</code> for a <em>given</em> operation
+<code>op</code> and unit. A monoid registers its additive identity as
+one instance of this class; a ring registers its multiplicative identity
+as a <em>second, separate</em> instance on the same carrier:</p>
+<pre class="coq"><code>#[global] Instance Ring_MulAssoc R (H : Ring R) : Assoc R equ mult := ring_mul_assoc.
+#[global] Instance Ring_MulIdl R (H : Ring R) : Idl R equ mult 1 := ring_mul_1l.
+#[global] Instance Ring_MulIdr R (H : Ring R) : Idr R equ mult 1 := ring_mul_1r.</code></pre>
+<p>So on a ring carrier there are two <a
+href="coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a> instances:
+<code>Idl R equ add 0</code> (from the additive monoid) and
+<code>Idl R equ mult 1</code> (from <a
+href="coqdoc/Riktig.Interface.Ring.html#Ring_MulIdl"><code>Ring_MulIdl</code></a>).
+When a proof writes <code>rewrite idl</code>, Coq first reads the goal
+to see which operation is present — in <a
+href="coqdoc/Riktig.Theory.Ring.html#mul_neg1_l"><code>mul_neg1_l</code></a>
+the term is <code>- (1 * a)</code>, which contains <a
+href="coqdoc/Riktig.Ops.html#mult"><code>mult</code></a>, not <a
+href="coqdoc/Riktig.Ops.html#add"><code>add</code></a> — and only then
+searches for an <a
+href="coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a> instance whose
+operation matches. It finds <a
+href="coqdoc/Riktig.Interface.Ring.html#Ring_MulIdl"><code>Ring_MulIdl</code></a>.
+A goal mentioning <code>0 + a</code> would have matched the additive
+instance instead. One word, <a
+href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a>, resolved by
+the shape of the goal; likewise <a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a> on a
+product means multiplicative associativity, <a
+href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a> on a sum
+means additive.</p>
+<p>One instance is pointedly absent. A ring registers <a
+href="coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>, <a
+href="coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>, and <a
+href="coqdoc/Riktig.Props.html#Idr"><code>Idr</code></a> for
+<code>*</code>, but <em>not</em> <a
+href="coqdoc/Riktig.Props.html#Commutes"><code>Commutes</code></a> —
+multiplication in a general ring need not commute (square matrices are
+the standard counterexample), so <code>rewrite comm</code> on a product
+finds no matching instance and simply fails. Restoring that instance is
+exactly what makes a ring a field, which is where the next post
+begins.</p>
+<h2 id="the-integers-are-a-ring">The integers are a ring</h2>
+<p>None of the above is worth anything until a real type satisfies it.
+The integers <code>Z</code> do: with <code>==</code> as ordinary
+equality, addition and multiplication from the standard library, and
+every law discharged by a standard-library lemma, <code>Z</code> is
+registered as a ring. The generic theory then applies to it directly.
+For instance, <a
+href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a> —
+the ring theorem that <code>0 * a == 0</code>, proved once from
+distributivity for every ring — instantiates at <code>Z</code>:</p>
+<pre class="coq"><code>Example z_mul_0_l : (0 * 7)%Z == 0.
+Proof. exact (mul_0_l 7%Z). Qed.</code></pre>
+<p>No induction on integers, no case split on signs: the fact
+<code>0 * 7 == 0</code> for <code>Z</code> is the general ring lemma
+with <code>R</code> fixed to <code>Z</code> and <code>a</code> fixed to
+<code>7</code>. The abstraction earns its keep the moment a second ring
+arrives and inherits the same body of theorems unchanged.</p>
+<p><em>Next: fields, where multiplication commutes and nonzero elements
+can be divided — and where <code>==</code> stops being ordinary
+equality.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Props.v"><code>Props.v</code></a>
+(the operation-parameterized single-law classes) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/AbGroup.v"><code>Interface/AbGroup.v</code></a>
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/AbGroup.v"><code>Theory/AbGroup.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_swap_l"><code>add_swap_l</code></a>,
+<a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_interchange"><code>add_interchange</code></a>)
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Ring.v"><code>Interface/Ring.v</code></a>
+(the ring class and the <code>Ring_Mul*</code> instances) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Ring.v"><code>Theory/Ring.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Ring.html#mul_neg1_l"><code>mul_neg1_l</code></a>)
+· <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Zr.v"><code>Impl/Zr.v</code></a>
+(<code>Z</code> as a ring).</p>
+</main>
+</body>
+</html>

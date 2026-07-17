@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog style — the actual rules, with real examples</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="blog-style--the-actual-rules-with-real-examples">Blog style —
+the actual rules, with real examples</h1>
+<p>This supersedes the looser five-criteria version from the 2026-07-13
+audit. Read this whole document before writing or rewriting a single
+post. It exists because Lars has had to ask for this — his words — “at
+least five times.” The failure mode is specific: each new writing
+session gets a decent brief, drifts a little from it, and the next
+session’s brief is written from the <em>drifted</em> result instead of
+from first principles. This document is the fix: it is the
+first-principles version, held constant, quoted from directly in every
+future brief instead of re-derived.</p>
+<h2 id="the-one-sentence-test">The one-sentence test</h2>
+<p><strong>A reader who has never heard of this project, dropped onto
+this one post with no other context, must come away understanding one
+idea, correctly, with no sense that they were being sold
+something.</strong></p>
+<p>If a sentence would not survive that reader’s first read — because it
+assumes they know what “riktig” is, or because it name-drops a
+destination three topics away, or because it sounds like marketing copy
+— cut it.</p>
+<h2 id="rule-1--no-project-framing-in-tool-building-posts">Rule 1 — no
+project framing in tool-building posts</h2>
+<p>Do not write “riktig,” “the project,” “verified software,”
+“modifiability,” or any sentence whose actual content is <em>why this
+whole endeavor matters</em>. That framing belongs in exactly one place:
+a capstone post written <em>after</em> the tool-building series is
+complete, titled something like “putting the tools to work,” which is
+the ONLY post allowed to say why any of this was worth building. Every
+other post is a plain exposition of one mathematical or computational
+idea, full stop.</p>
+<p><strong>Bad</strong> (real, from post #1’s opening, currently in the
+repo):</p>
+<blockquote>
+<p><em>This is the first post in a series documenting the
+<strong>riktig</strong> project.</em></p>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in the Coq proof assistant
+— sorting algorithms down to machine code, a small operating-system
+kernel, network protocols generated from their grammars. The goal is not
+proof for its own sake: it is <em>modifiability</em>.</p>
+</blockquote>
+<p>A reader who opened this post to learn what a monoid is has been
+told, before a single mathematical word, that they are reading marketing
+for an operating-system kernel that doesn’t appear in the post at
+all.</p>
+<p><strong>Good</strong> (what the same post should open with
+instead):</p>
+<blockquote>
+<p>Programmers already know half of what a <em>mathematical
+structure</em> is. An interface says which operations exist: this thing
+can be compared, that thing can be concatenated. What an interface does
+not say is what the operations <em>mean</em>. A sort function that
+returns its input unsorted satisfies the interface
+<code>list → list</code> perfectly. A mathematical structure is the
+missing half — this post is about that missing half, and about a handful
+of structures built from it, each one a little richer than the last.</p>
+</blockquote>
+<p>Same information content, zero throat-clearing, states the actual
+destination in the first paragraph.</p>
+<h2 id="rule-2--self-contained-means-self-contained">Rule 2 —
+self-contained means self-contained</h2>
+<p>A post may assume the reader has read the <em>earlier</em> posts in
+the syllabus (docs/BLOG-SYLLABUS.md) — that’s what a series is — but it
+must recap what it needs in its own words, in two or three sentences,
+not by reference (“as post #3 explained…”). Never assume anything from a
+LATER post. Never mix two unrelated ideas at equal weight in one post —
+if a proof leans on a fact from a different area, state the fact plainly
+(one sentence, no proof) and move on; don’t make the reader detour.</p>
+<p><strong>Bad</strong> (real, from the old audit’s findings — post #17
+mixed):</p>
+<p>Channel liveness and matrix determinants in one post, no connection
+between them, no signal to the reader that they are now reading about
+something unrelated.</p>
+<p><strong>Good</strong>: one post, one idea. If two results genuinely
+belong together (they share a proof technique, say), the post’s title
+and opening paragraph say so explicitly, in one sentence, before either
+result is presented.</p>
+<h2 id="rule-3--show-the-real-proof-and-show-how-to-use-the-thing">Rule
+3 — show the real proof, and show how to use the thing</h2>
+<p>Every post’s biggest single failure mode has been <em>telling</em>
+instead of <em>showing</em>. Lars’s exact words on post #1, the best
+post so far: “it showed too little of proofs and how to use the code.”
+Concretely:</p>
+<ul>
+<li>Every structure/definition introduced needs at least one theorem
+proved <em>in the post</em>, with the real Coq source pasted in (copied
+from the file, never reconstructed from memory — check it compiles by
+reading the actual file with the Read tool right before pasting it, not
+by recalling an earlier draft).</li>
+<li>Show the blackboard version of the proof next to the Coq version
+(post #1’s <a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+treatment, and the newer calc-chain posts, are the right model — see
+Rule 5).</li>
+<li>Show at least one concrete usage: instantiate the structure at a
+real type (<code>Z</code>, <code>Q</code>, a small example type), run a
+computation, show the output. If the codebase has an
+<code>Example</code> demonstrating this, quote it; if not, and the post
+needs one to make the idea concrete, say so honestly rather than
+inventing prose that sounds like code.</li>
+</ul>
+<p><strong>Bad</strong>: “the file proves the whole inclusion lattice as
+small lemmas — each a short induction, each doing exactly what its name
+says.” (This <em>describes</em> proofs without showing one. A reader has
+no way to check the claim or learn the technique.)</p>
+<p><strong>Good</strong>: paste the actual lemma statement and the
+actual proof, then walk it in one or two sentences.</p>
+<h2
+id="rule-4--titles-must-match-content-and-say-something-specific">Rule 4
+— titles must match content, and say something specific</h2>
+<p>A title is a promise. “Introducing channels” promises an overview and
+delivers one — fine. But a title like “Full generality” or “Any adjacent
+pair” (real titles from the current series) promises nothing checkable —
+a reader cannot tell from the title whether they want to read the post,
+and cannot tell after reading it whether the title was earned. Every
+title must name the actual mathematical content: what structure, what
+theorem, what technique. If you can’t compress the post’s content into a
+title that would let a stranger predict roughly what proof appears
+inside, the post’s scope is wrong — fix the scope, not the title.</p>
+<h2 id="rule-5--the-proof-walking-format-that-works">Rule 5 — the
+proof-walking format that works</h2>
+<p>This format, from post #1’s <a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+and the later calc-chain posts, is the house style — use it for every
+proof shown:</p>
+<ol type="1">
+<li>State the theorem in one sentence of English.</li>
+<li>Show the blackboard-style equational chain (LaTeX/math, one
+line).</li>
+<li>Show the real Coq
+<code>Theorem</code>/<code>Proof</code>/<code>Qed</code> block, pasted
+verbatim.</li>
+<li>Walk it: one short sentence per proof step, connecting the Coq
+tactic to the blackboard step it corresponds to.</li>
+</ol>
+<p>Do not paraphrase a theorem statement. Do not write <code>...</code>
+inside a displayed Coq block to elide something — either show the whole
+thing or don’t show it. A garbled or partial quote is worse than none
+(the 2026-07-13 audit’s worst finding: a displayed statement that didn’t
+even parse, naming a function that doesn’t exist).</p>
+<h2
+id="rule-6--no-internal-jargon-no-unexplained-acronyms-no-tone-deaf-voice">Rule
+6 — no internal jargon, no unexplained acronyms, no tone-deaf voice</h2>
+<p>Define every piece of jargon the first time it’s used, in the same
+sentence, in plain words. Never use words from how the <em>project</em>
+talks about itself internally — “the dispatch,” “the wave,” “the audit,”
+agent/session/orchestration language of any kind. The voice is a patient
+teacher explaining something they find genuinely elegant, not someone
+performing confidence. Concretely, avoid:</p>
+<ul>
+<li>Declarative one-liners that sound clever but assert nothing
+checkable (“this is the whole business model of algebra” is
+borderline-fine once, in moderation — a whole post full of sentences
+like it reads as bluster, not exposition).</li>
+<li>Unexplained forward references (“this pays off later” — say what
+pays off, or cut the sentence).</li>
+<li>Foreshadowing more than one sentence at the very end (“next post: X”
+is fine; a running commentary about the shape of the whole series is
+not).</li>
+</ul>
+<p>Also apply the existing vocabulary rule from the project’s own
+CLAUDE.md (no American sports/military/startup-hype idiom — “unlock,”
+“move the needle,” “battle-tested,” etc.) — that rule is unaffected and
+still in force, it is a narrower special case of “plain, precise
+language” that this document generalizes.</p>
+<h2 id="rule-7--never-write-about-code-that-doesnt-exist">Rule 7 — never
+write about code that doesn’t exist</h2>
+<p>If a topic in docs/BLOG-SYLLABUS.md is marked “needs implementation,”
+do not write the post. Say so and stop, or write the Coq first, then the
+post from the real result. This has bitten the project before
+(fabricated theorem statements, invented lemma names) and the fix is
+procedural, not a matter of trying harder: read the actual current
+<code>.v</code> file with the Read tool immediately before quoting
+anything from it, every time, no exceptions, even if you (the writing
+agent) believe you already know its contents from earlier in the same
+session.</p>
+<h2 id="grading">Grading</h2>
+<p>Before a rewritten post is considered done, grade it against these
+seven rules, A/B/C each, and report the grades. A post below B on any
+rule is not finished. The previous audit’s grading scale still applies;
+this document adds Rules 1, 2 (tightened), 4, and 7 to it.</p>
+</main>
+</body>
+</html>

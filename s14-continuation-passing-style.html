@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continuation-passing style, concretely</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="continuation-passing-style-concretely">Continuation-passing
+style, concretely</h1>
+<p>A lambda term is a variable, an abstraction <code>λ. body</code>, or
+an application <code>f a</code>. Variables are de Bruijn indices — a
+number counting the binders out to the <code>λ</code> that bound the
+variable — so <code>λ.0</code> is the identity function. We evaluate
+call-by-value and left-to-right: to run <code>f a</code>, reduce
+<code>f</code> to a function, reduce <code>a</code> to a value, then
+substitute the value into the function’s body. A <em>value</em> is
+anything that is not a pending application: an abstraction, or a
+variable that is stuck for lack of an argument.</p>
+<h2 id="what-cps-makes-explicit">What CPS makes explicit</h2>
+<p>In ordinary evaluation a function <em>returns</em>: it computes a
+result and hands it back to whoever called it, and “whoever called it”
+is implicit machinery, not something the program can name.
+Continuation-passing style makes that machinery explicit. Every function
+takes one extra argument — the <em>continuation</em>, conventionally
+called <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> —
+which is a function describing “what happens next.” Instead of returning
+its result, a CPS function calls the continuation with the result.
+Nothing ever returns in the ordinary sense; a program is one long chain
+of tail calls threading a continuation through.</p>
+<p>Why go to this trouble: once “what happens next” is an ordinary
+value, you can do ordinary things with it. You can hold onto a
+continuation and call it later, call it more than once, or call it from
+somewhere else entirely. Control-flow features that otherwise each need
+their own mechanism — early return, exceptions, generators, coroutines —
+all become the same move: capture a continuation, invoke it when you
+please. That uniformity is why CPS is a standard intermediate form
+inside compilers.</p>
+<h2 id="the-transform">The transform</h2>
+<p>The call-by-value CPS transform (due to Fischer and Plotkin) rewrites
+each of the three term shapes so that it takes a continuation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> and ends by
+calling <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">[\![x]\!] = \lambda k.\,k\,x</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>λ</mi><mi>.</mi><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![\lambda.E]\!] = \lambda k.\,k\,(\lambda x.\,[\![E]\!])</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>F</mi><mspace width="0.167em"></mspace><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>F</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>f</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>e</mi><mspace width="0.167em"></mspace><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![F\,E]\!] = \lambda k.\,[\![F]\!]\,(\lambda f.\,[\![E]\!]\,(\lambda e.\,f\,e\,k))</annotation></semantics></math></p>
+<p>A variable hands itself to the continuation. An abstraction hands the
+continuation a CPS-converted function. An application is the interesting
+case: run <code>[[F]]</code> with a continuation that names its result
+<code>f</code>, then run <code>[[E]]</code> with a continuation that
+names its result <a
+href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>, then apply
+<code>f</code> to <a
+href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> — passing
+along the outer continuation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> so the call
+knows what to do next. The left-to-right order of evaluation is now
+literally the nesting order of the continuations.</p>
+<p>In de Bruijn form the binders introduced by each rule shift the
+payloads so their free variables keep pointing at the right place, and
+that lifting is all the arithmetic in the definition:</p>
+<pre class="coq"><code>Fixpoint cps (t : tm) : tm :=
+  match t with
+  | Var n =&gt; Abs (App (Var 0) (Var (S n)))
+  | Abs b =&gt; Abs (App (Var 0) (Abs (lift 1 1 (cps b))))
+  | App f a =&gt;
+      Abs (App (lift 1 0 (cps f))
+               (Abs (App (lift 2 0 (cps a))
+                         (Abs (App (App (Var 1) (Var 0)) (Var 2))))))
+  end.</code></pre>
+<p>In the <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Var"><code>Var</code></a> rule,
+<code>x</code> now sits under the new <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> binder, so
+index <code>n</code> becomes <code>S n</code>. In the <a
+href="coqdoc/Riktig.Lambda.Syntax.html#App"><code>App</code></a> rule,
+inside the innermost abstraction the three names in scope are
+<code>e = 0</code>, <code>f = 1</code>, <code>k = 2</code>, which is why
+the body is <code>App (App (Var 1) (Var 0)) (Var 2)</code> —
+<code>f e k</code>.</p>
+<p>There is a companion, the value translation <code>Ψ</code>, which
+converts a value without wrapping it in a continuation-taker: a variable
+is left alone, and an abstraction has its body CPS-converted.</p>
+<pre class="coq"><code>Definition psi (v : tm) : tm :=
+  match v with
+  | Abs b =&gt; Abs (cps b)
+  | other =&gt; other
+  end.</code></pre>
+<h2 id="what-the-transform-guarantees">What the transform
+guarantees</h2>
+<p>The heart of the correctness argument is one small step. Take a value
+<code>v</code> and a continuation <code>c</code> that is itself a value.
+Then the CPS translation of <code>v</code>, applied to <code>c</code>,
+takes a single beta step to <code>c</code> applied to
+<code>Ψ v</code>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>v</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mi>c</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>c</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi mathvariant="normal">Ψ</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![v]\!]\,c \;\longrightarrow\; c\,(\Psi\,v)</annotation></semantics></math></p>
+<p>The subtlety worth pausing on is that the result is
+<code>c (Ψ v)</code>, not <code>c v</code>. A CPS program cannot hand
+back the syntactically identical value; it hands back the value’s
+CPS-converted twin. For a variable the twin is the variable itself, but
+for a function the twin has its body rewritten. Verbatim:</p>
+<pre class="coq"><code>Lemma cps_value_step : forall v c, value v -&gt; value c -&gt;
+  step (App (cps v) c) (App c (psi v)).
+Proof.
+  intros v c Hv Hc. destruct Hv as [n | b]; simpl.
+  - rewrite &lt;- (cps_var_beta c n). apply step_beta. exact Hc.
+  - rewrite &lt;- (cps_abs_beta c b). apply step_beta. exact Hc.
+Qed.</code></pre>
+<p>The proof splits on which kind of value <code>v</code> is. In both
+cases <code>cps v</code> is an abstraction <code>λk. …</code>, so
+applying it to the value <code>c</code> is a single beta step (<a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>,
+which fires only when the argument is a value — here <code>c</code>).
+What remains is to compute the substitution that the beta step performs,
+and that is exactly what the two helper lemmas say:</p>
+<pre class="coq"><code>Lemma cps_var_beta : forall c n,
+  subst 0 c (App (Var 0) (Var (S n))) = App c (Var n).
+
+Lemma cps_abs_beta : forall c b,
+  subst 0 c (App (Var 0) (Abs (lift 1 1 (cps b)))) = App c (Abs (cps b)).</code></pre>
+<p>For a variable, substituting <code>c</code> for the continuation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> turns the
+body <code>k x</code> into <code>c x</code>. For an abstraction, the
+same substitution turns <code>k (λ. cps b ↑)</code> into
+<code>c (λ. cps b)</code> — the outward lift <code>lift 1 1</code> that
+the transform inserted is undone precisely by the substitution, which is
+why the twin <code>psi (Abs b) = Abs (cps b)</code> comes out clean
+rather than carrying stray index shifts.</p>
+<p>Run against the identity continuation specifically, the answer is
+<code>Ψ v</code> on the nose:</p>
+<pre class="coq"><code>Lemma cps_value_id : forall v, value v -&gt;
+  star (App (cps v) idt) (psi v).</code></pre>
+<h2 id="one-term-translated-and-run">One term, translated and run</h2>
+<p>Take the smallest application there is: the identity applied to
+itself, <code>(λ.0)(λ.0)</code>. Evaluated directly it reduces to the
+identity <code>λ.0</code>. Now CPS-translate the whole term, apply it to
+the identity continuation <code>λ.0</code>, and run it. The claim is
+that it delivers <code>Ψ</code> of the direct result — the CPS twin of
+the identity, not the identity itself:</p>
+<pre class="coq"><code>Example cps_id_id :
+  eval 100 (App (cps (App idt idt)) idt) = psi (eval 10 (App idt idt)).
+Proof. reflexivity. Qed.</code></pre>
+<p>Because both sides are closed terms, <code>reflexivity</code> settles
+it: Coq runs the fuelled evaluator on the left and the value translation
+on the right and finds them identical. Reading off the concrete shape of
+that common value:</p>
+<pre class="coq"><code>Example cps_id_id_shape :
+  eval 100 (App (cps (App idt idt)) idt) = Abs (Abs (App (Var 0) (Var 1))).
+Proof. reflexivity. Qed.</code></pre>
+<p>The result is <code>λx.λk. k x</code> (in de Bruijn form
+<code>Abs (Abs (App (Var 0) (Var 1)))</code>, where inside the two
+binders <code>Var 0</code> is <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> and
+<code>Var 1</code> is <code>x</code>). That is precisely
+<code>Ψ(λ.0)</code> — the CPS-converted identity, a function that takes
+its argument and a continuation and hands the argument to the
+continuation. Direct evaluation returned <code>λ.0</code>; the CPS run
+returned that function’s twin, which is exactly what <a
+href="coqdoc/Riktig.Lambda.CPS.html#cps_value_step"><code>cps_value_step</code></a>
+predicted, played out through a two-step computation rather than a
+single beta step.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/CPS.v"><code>Lambda/CPS.v</code></a>
+(the transform, the value translation, the correctness step) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+(the lambda terms, evaluation, and the lift/subst laws used).</p>
+</main>
+</body>
+</html>

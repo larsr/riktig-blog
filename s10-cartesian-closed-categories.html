@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartesian closed categories: where lambda calculus lives</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="cartesian-closed-categories-where-lambda-calculus-lives">Cartesian
+closed categories: where lambda calculus lives</h1>
+<p>A quick setting of the stage. A <em>category</em> is objects and
+arrows: for each pair of objects <code>x</code>, <code>y</code> a
+collection of arrows <code>x ~&gt; y</code>, composing associatively
+with an identity at every object, and arrows compared up to a per-pair
+equality written <code>==</code> rather than Coq’s definitional
+equality. Two pieces of extra structure from the previous post recur
+here. A <em>terminal object</em> is one into which every object has
+exactly one arrow — in the category of Coq types and functions it is the
+one-element type <code>unit</code>. A <em>binary product</em>
+<code>prod_obj a b</code> comes with two projections <a
+href="coqdoc/Riktig.Interface.Category.html#pi1"><code>pi1</code></a>,
+<a href="coqdoc/Riktig.Interface.Category.html#pi2"><code>pi2</code></a>
+and a universal pairing: to give an arrow into the product is exactly to
+give its two coordinates. This post adds the third piece and shows what
+the three together are <em>for</em>.</p>
+<p>The idea it rests on is one every functional programmer already uses
+without naming it. A function of two arguments is the same thing as a
+function of one argument that returns a function. Adding two numbers can
+be seen as a map <code>A × B → C</code>, or equally as a map
+<code>A → (B → C)</code> that takes the first number and hands back “add
+that number to —”. No information is lost either way; the two forms are
+interchangeable, and turning one into the other is called
+<em>currying</em>. In Coq this is a definition you could write in your
+sleep:</p>
+<pre class="coq"><code>Definition fn_curry (X A B : Type) (h : prod X A -&gt; B) : X -&gt; A -&gt; B :=
+  fun x a =&gt; h (x, a).</code></pre>
+<p>The whole content of this post is that currying is not a quirk of
+functions-as-Coq-values but a <em>universal property</em> — a statement
+about arrows — and that a category in which it holds has exactly enough
+structure to interpret a typed lambda calculus.</p>
+<h2 id="making-the-function-space-an-object">Making the function space
+an object</h2>
+<p>Here is the move. In any category the arrows <code>a ~&gt; b</code>
+form a collection sitting <em>outside</em> the category — you cannot
+compose an arrow with a collection-of-arrows, or project from one. An
+<strong>exponential object</strong> <code>exp_obj a b</code> (written
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>b</mi><mi>a</mi></msup><annotation encoding="application/x-tex">b^a</annotation></semantics></math>
+on the blackboard) puts that collection back <em>inside</em> the
+category as an object of its own, so that “a function from
+<code>a</code> to <code>b</code>” becomes something you can pair,
+project, and pass around like any other object. The universal property
+that makes <code>exp_obj a b</code> deserve the name is currying. Here
+is the class:</p>
+<pre class="coq"><code>(* Exponential objects: exp_obj a b internalises the hom a ~&gt; b, with
+   eval_mor as counit and curry as the transpose across the product
+   adjunction. Uniqueness is stated up to the hom-setoid. *)
+Class HasExponentials {O : Type} (C : Category O) `{!HasProducts C} := {
+  exp_obj : O -&gt; O -&gt; O;
+  eval_mor : forall {a b : O}, prod_obj (exp_obj a b) a ~&gt; b;
+  curry : forall {x a b : O}, (prod_obj x a ~&gt; b) -&gt; (x ~&gt; exp_obj a b);
+  #[global] curry_proper :: forall x a b : O,
+      Proper (equ ==&gt; equ) (@curry x a b);
+  curry_beta : forall (x a b : O) (h : prod_obj x a ~&gt; b),
+      eval_mor ∘ (curry h ×× cat_id) == h;
+  curry_unique : forall (x a b : O) (h : prod_obj x a ~&gt; b)
+                        (k : x ~&gt; exp_obj a b),
+      eval_mor ∘ (k ×× cat_id) == h -&gt; k == curry h
+}.</code></pre>
+<p>Three ingredients carry the meaning. <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>
+is <em>application</em>: an arrow
+<code>prod_obj (exp_obj a b) a ~&gt; b</code> that takes a
+function-object paired with an argument and produces the result —
+literally “apply this function to this argument.” <code>curry</code>
+transposes an arrow <code>prod_obj x a ~&gt; b</code> (a two-input map)
+into an arrow <code>x ~&gt; exp_obj a b</code> (a one-input map
+returning a function-object). The notation <code>k ×× cat_id</code> is
+the product acting on both coordinates at once, running <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> on the
+first and the identity on the second, so <code>curry h ×× cat_id</code>
+prepares a pair for <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>
+to consume.</p>
+<p>The two laws are the “exactly one” of currying. <a
+href="coqdoc/Riktig.Interface.Category.html#curry_beta"><code>curry_beta</code></a>
+is the computation rule: apply the curried form and you get the original
+two- input map back,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">eval</mtext><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">curry </mtext><mspace width="0.333em"></mspace></mrow><mi>h</mi><mo>×</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">\text{eval} \circ (\text{curry } h \times \mathrm{id})
+= h</annotation></semantics></math>. <a
+href="coqdoc/Riktig.Interface.Category.html#curry_unique"><code>curry_unique</code></a>
+says <code>curry h</code> is the <em>only</em> arrow with that property
+— anything else transposing to <code>h</code> already <em>is</em>
+<code>curry h</code>. Existence plus uniqueness, the universal-property
+pattern again.</p>
+<p>In Coq’s own category the exponential is nothing but the function
+type, and <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>
+and <code>curry</code> are the obvious maps:</p>
+<pre class="coq"><code>Definition fn_eval (A B : Type) : prod (A -&gt; B) A -&gt; B :=
+  fun p =&gt; fst p (snd p).
+
+Definition fn_curry (X A B : Type) (h : prod X A -&gt; B) : X -&gt; A -&gt; B :=
+  fun x a =&gt; h (x, a).
+
+#[global] Instance CoqExponentials :
+  @HasExponentials Type CoqCat CoqProducts :=
+  @Build_HasExponentials Type CoqCat CoqProducts
+    (fun A B : Type =&gt; A -&gt; B)
+    fn_eval
+    fn_curry
+    fn_curry_proper
+    fn_curry_beta
+    fn_curry_unique.</code></pre>
+<p><code>fn_eval p</code> applies the first component of the pair to the
+second — <code>fst p (snd p)</code> — which is what “evaluate” means for
+real functions. <a
+href="coqdoc/Riktig.Impl.CoqCat.html#fn_curry"><code>fn_curry</code></a>
+is the one-liner from the opening. The exponential object is
+<code>fun A B =&gt; A -&gt; B</code>, the honest function type. (One
+subtlety the source flags: proving <code>curry</code> <em>unique</em>
+for real functions needs functional extensionality, since two functions
+agreeing at every argument must be treated as equal; that is the one
+standard axiom <a
+href="coqdoc/Riktig.Impl.CoqCat.html#CoqCat"><code>CoqCat</code></a>
+leans on, and nothing more.)</p>
+<h2 id="currying-and-uncurrying-are-inverse">Currying and uncurrying are
+inverse</h2>
+<p>The universal property says currying can be undone. Going back is
+<code>uncurry</code>: feed a one-input map to <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>
+after spreading it across the product.</p>
+<pre class="coq"><code>(* The inverse transpose across the product adjunction. *)
+Definition uncurry {x a b : O} (k : x ~&gt; exp_obj a b) : prod_obj x a ~&gt; b :=
+  eval_mor ∘ (k ×× cat_id).</code></pre>
+<p>That <code>curry</code> and <code>uncurry</code> are mutually inverse
+is the theorem that makes “a two-argument function <em>is</em> a
+function returning a function” precise: the two hom-collections
+<code>prod_obj x a ~&gt; b</code> and <code>x ~&gt; exp_obj a b</code>
+are in bijection, and <code>curry</code>/<code>uncurry</code> are the
+bijection. Both halves are one line, because each is a law of the class
+pointed in the right direction.</p>
+<p>First direction: uncurrying a curried map returns it. On the
+blackboard this is exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>β</mi><annotation encoding="application/x-tex">\beta</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">uncurry</mtext><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">curry </mtext><mspace width="0.333em"></mspace></mrow><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">eval</mtext><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">curry </mtext><mspace width="0.333em"></mspace></mrow><mi>h</mi><mo>×</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>h</mi><mi>.</mi></mrow><annotation encoding="application/x-tex"> \text{uncurry}(\text{curry } h)
+   \;=\; \text{eval} \circ (\text{curry } h \times \mathrm{id})
+   \;=\; h. </annotation></semantics></math></p>
+<pre class="coq"><code>Theorem uncurry_curry : forall (x a b : O) (h : prod_obj x a ~&gt; b),
+    uncurry (curry h) == h.
+Proof.
+  intros x a b h.
+  apply curry_beta.
+Qed.</code></pre>
+<p>After <code>intros</code>, the goal
+<code>uncurry (curry h) == h</code> unfolds by the definition of
+<code>uncurry</code> to <code>eval_mor ∘ (curry h ×× cat_id) == h</code>
+— and that <em>is</em> the statement of <a
+href="coqdoc/Riktig.Interface.Category.html#curry_beta"><code>curry_beta</code></a>,
+so <code>apply curry_beta</code> finishes it outright. The computation
+rule and this direction of the inverse are the same fact wearing two
+names.</p>
+<p>Second direction: currying an uncurried map returns it. Here the
+uniqueness clause does the work. We want
+<code>curry (uncurry k) == k</code>.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">curry</mtext><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">uncurry </mtext><mspace width="0.333em"></mspace></mrow><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>k</mi><mo>,</mo><mspace width="1.0em"></mspace><mrow><mtext mathvariant="normal">because </mtext><mspace width="0.333em"></mspace></mrow><mtext mathvariant="normal">eval</mtext><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo>×</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mtext mathvariant="normal">uncurry </mtext><mspace width="0.333em"></mspace></mrow><mi>k</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> by definition.</mtext></mrow></mrow><annotation encoding="application/x-tex"> \text{curry}(\text{uncurry } k) \;=\; k,
+   \quad\text{because } \text{eval} \circ (k \times \mathrm{id})
+   \;=\; \text{uncurry } k \text{ by definition.} </annotation></semantics></math></p>
+<pre class="coq"><code>Theorem curry_uncurry : forall (x a b : O) (k : x ~&gt; exp_obj a b),
+    curry (uncurry k) == k.
+Proof.
+  intros x a b k.
+  symmetry.
+  apply curry_unique.
+  reflexivity.
+Qed.</code></pre>
+<p><code>symmetry</code> turns the goal into
+<code>k == curry (uncurry k)</code>, the exact shape <a
+href="coqdoc/Riktig.Interface.Category.html#curry_unique"><code>curry_unique</code></a>
+concludes: “if <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> transposes
+to <code>uncurry k</code> then <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is its
+currying.” <code>apply curry_unique</code> leaves the single obligation
+<code>eval_mor ∘ (k ×× cat_id) == uncurry k</code> — but the right-hand
+side is <em>defined</em> to be the left, so <code>reflexivity</code>
+closes it. <code>uncurry k</code> was built to be the thing <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> transposes
+to, so <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
+is forced to be its currying. The two theorems together:
+<code>curry</code> and <code>uncurry</code> are inverse bijections
+between the two collections of arrows.</p>
+<h2 id="the-cartesian-closed-bundle">The cartesian closed bundle</h2>
+<p>Gather the three properties and you have the structure this post is
+named for. A <strong>cartesian closed category</strong> — CCC — is a
+category with a terminal object, binary products, and exponentials:</p>
+<pre class="coq"><code>(* A cartesian closed category: terminal object, binary products, and
+   exponentials. The exponential structure lives over ccc_prod. *)
+Class CCC {O : Type} (C : Category O) := {
+  #[global] ccc_term :: Terminal C;
+  #[global] ccc_prod :: HasProducts C;
+  #[global] ccc_exp :: @HasExponentials O C ccc_prod
+}.</code></pre>
+<p>Read the three fields against a typed lambda calculus and they line
+up one for one. The terminal object is the unit type — the type with a
+single trivial value, the result of a program that returns nothing
+interesting. Products are pair types — forming and taking apart tuples.
+Exponentials are function types, with <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>
+as application and <code>curry</code> as lambda-abstraction. A typed
+lambda term with free variables of types
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>A</mi><mi>n</mi></msub></mrow><annotation encoding="application/x-tex">A_1, \dots, A_n</annotation></semantics></math>
+and result type
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+becomes an arrow
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mn>1</mn></msub><mo>×</mo><mi>…</mi><mo>×</mo><msub><mi>A</mi><mi>n</mi></msub><mo>→</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A_1 \times \dots \times A_n \to B</annotation></semantics></math>;
+abstracting a variable is currying; applying a function is <a
+href="coqdoc/Riktig.Interface.Category.html#eval_mor"><code>eval_mor</code></a>.
+Everything a simply-typed lambda calculus can say, a CCC can express as
+arrows. Coq’s own types and functions are the worked example — the
+source assembles them into <a
+href="coqdoc/Riktig.Impl.CoqCat.html#CoqCCC"><code>CoqCCC</code></a>:</p>
+<pre class="coq"><code>#[global] Instance CoqCCC : CCC CoqCat :=
+  @Build_CCC Type CoqCat
+    CoqTerminal
+    CoqProducts
+    CoqExponentials.</code></pre>
+<p>And the correspondence runs the other way too. In the same source
+tree, the simply-typed lambda calculus is built up as syntax —
+intrinsically typed terms, quotiented by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi><mi>η</mi></mrow><annotation encoding="application/x-tex">\beta\eta</annotation></semantics></math>-conversion
+— and shown to form a category, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#Stlc_Category"><code>Stlc_Category</code></a>,
+whose objects are types and whose arrows <code>A ~&gt; B</code> are
+closed terms of type <code>A → B</code>. That the category laws hold
+only <em>up to conversion</em> is exactly why arrows were compared with
+<code>==</code> and not definitional equality from the very first post;
+and the file’s examples show the arrows are real terms that compute:</p>
+<pre class="coq"><code>Example tcomp_computes :
+  tcomp (tid Base) (tid Base)
+  = TAbs (TApp (TAbs (TVar here)) (TApp (TAbs (TVar here)) (TVar here))).
+Proof. reflexivity. Qed.</code></pre>
+<p>Composing two identity terms in this category produces, on the nose,
+the lambda term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\lambda x.\,(\lambda y.\,y)\,((\lambda y.\,y)\,x)</annotation></semantics></math>
+— identity applied to identity applied to the input — written in de
+Bruijn form. The arrows of <a
+href="coqdoc/Riktig.Impl.StlcCat.html#Stlc_Category"><code>Stlc_Category</code></a>
+<em>are</em> lambda terms.</p>
+<p>So the cartesian closed structure is not an analogy for the lambda
+calculus; it is the semantic shape the lambda calculus is built to fit,
+with unit, pairing, and currying answering to unit values, tuples, and
+functions exactly. This structure is precisely what a lambda calculus
+needs in order to be interpreted — next: the lambda calculus itself.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials"><code>HasExponentials</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Category.html#CCC"><code>CCC</code></a>
+classes) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Exponential.v"><code>Theory/Exponential.v</code></a>
+(<code>uncurry</code>, <code>curry_uncurry</code>,
+<code>uncurry_curry</code>) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>Impl/CoqCat.v</code></a>
+(types and functions as a CCC, <a
+href="coqdoc/Riktig.Impl.CoqCat.html#CoqCCC"><code>CoqCCC</code></a>) ·
+<a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/StlcCat.v"><code>Impl/StlcCat.v</code></a>
+(the simply-typed lambda calculus as a category).</p>
+</main>
+</body>
+</html>

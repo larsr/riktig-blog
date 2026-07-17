@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The lambda calculus you can run</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="the-lambda-calculus-you-can-run">The lambda calculus you can
+run</h1>
+<p>A cartesian closed category is a category with just enough structure
+to treat functions as first-class objects: it has products (so you can
+pair two values) and <em>exponentials</em> (an object
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>B</mi><mi>A</mi></msup><annotation encoding="application/x-tex">B^A</annotation></semantics></math>
+that stands for “the functions from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>”),
+together with currying, the one-to-one correspondence between a
+two-argument function and a function that returns a function. The lambda
+calculus is the <em>syntax</em> for that structure — a tiny language
+whose only ideas are “make a function” and “apply a function”. This post
+is about writing that language down in Coq as a datatype, giving it an
+evaluator that actually computes, and proving that the evaluator agrees
+exactly with the mathematical relation that says what a computation step
+is.</p>
+<h2 id="names-are-the-hard-part-so-we-remove-them">Names are the hard
+part, so we remove them</h2>
+<p>The lambda calculus has three kinds of term: a variable, a function
+<code>\x. body</code> (an <em>abstraction</em>), and an application
+<code>f a</code>. That is the whole language. The awkward part is not
+the functions — it is the variables. Consider substitution, the
+operation at the heart of evaluation: to apply
+<code>(\x. body) a</code>, you replace every free <code>x</code> in
+<code>body</code> by <code>a</code>. If you do this naively with names,
+you can capture a variable by accident. Substituting <code>y</code> into
+<code>\y. x</code> for <code>x</code> would give <code>\y. y</code>,
+silently turning a function that ignores its argument into the identity
+— the inner <code>y</code> was a <em>different</em> <code>y</code>, and
+the substitution was supposed to leave it alone. Getting this right with
+names means renaming bound variables on the fly, and that bookkeeping is
+entirely beside the point.</p>
+<p>De Bruijn indices remove the names. Instead of writing a variable’s
+name, you write a number: the count of enclosing <code>\</code> you have
+to cross, from the inside out, to reach the one that binds this
+variable. Index <code>0</code> is the nearest enclosing lambda,
+<code>1</code> is the next one out, and so on.</p>
+<p>Take the term <code>\x. \y. x</code> — a function of two arguments
+that returns the first and discards the second. Stand at the occurrence
+of <code>x</code> in the body. The nearest enclosing lambda is
+<code>\y</code>, and this variable is not bound by it. The next
+enclosing lambda is <code>\x</code>, and that is the one that binds it —
+one lambda crossed, so the index is <code>1</code>. The names
+<code>x</code> and <code>y</code> now carry no information and can be
+dropped. The term becomes:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><munder><mn>1</mn><mo accent="true">_</mo></munder></mrow><annotation encoding="application/x-tex">\lambda.\,\lambda.\,\underline{1}</annotation></semantics></math></p>
+<p>Two anonymous binders and a single index. With names gone,
+substitution becomes pure arithmetic on those indices — no name is ever
+compared, so no name can ever be captured. That is the whole reason to
+pay the up-front cost of counting.</p>
+<p>Here is the datatype, exactly as it stands in the source:</p>
+<pre class="coq"><code>Inductive tm : Type :=
+  | Var : nat -&gt; tm
+  | Abs : tm -&gt; tm
+  | App : tm -&gt; tm -&gt; tm.</code></pre>
+<p><code>Var n</code> is the de Bruijn index <code>n</code>;
+<code>Abs b</code> is <code>\</code>-of-body-<code>b</code> with no name
+to record; <code>App f a</code> is application. Our example
+<code>\x. \y. x</code> is <code>Abs (Abs (Var 1))</code>, and the
+identity function <code>\x. x</code> is <code>Abs (Var 0)</code>.</p>
+<h2 id="substitution-is-arithmetic">Substitution is arithmetic</h2>
+<p>Because variables are numbers counting binders, moving a term
+underneath a binder means shifting its free indices up by one, so they
+keep pointing at the same outer lambdas. That shift is <a
+href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>:</p>
+<pre class="coq"><code>Fixpoint lift (d k : nat) (t : tm) : tm :=
+  match t with
+  | Var n =&gt; Var (if Nat.leb k n then d + n else n)
+  | Abs b =&gt; Abs (lift d (S k) b)
+  | App f a =&gt; App (lift d k f) (lift d k a)
+  end.</code></pre>
+<p><code>lift d k t</code> adds <code>d</code> to every variable of
+<code>t</code> that is at least <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. The number
+<a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> counts
+binders crossed so far: variables below <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> are bound
+inside <code>t</code> and must not move; crossing an <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> raises
+the threshold to <code>S k</code>. Substitution then replaces one index
+and closes the gap the consumed binder leaves behind:</p>
+<pre class="coq"><code>Fixpoint subst (k : nat) (u : tm) (t : tm) : tm :=
+  match t with
+  | Var n =&gt;
+      if Nat.ltb n k then Var n
+      else if Nat.eqb n k then lift k 0 u
+      else Var (pred n)
+  | Abs b =&gt; Abs (subst (S k) u b)
+  | App f a =&gt; App (subst k u f) (subst k u a)
+  end.</code></pre>
+<p>Reading the <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Var"><code>Var</code></a> case:
+an index below <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is bound
+locally and stays; an index equal to <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is the
+variable being replaced, so it becomes <code>u</code> lifted to survive
+the <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
+binders it now sits under; an index above <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> was
+pointing past the binder that is being consumed, so it drops by one.
+Under an <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>, the
+target index grows to <code>S k</code>. No names, no renaming — just
+comparisons on <code>nat</code>.</p>
+<p>The source states and proves this is capture-free on a concrete term.
+The following <code>Example</code> is checked by Coq
+(<code>reflexivity</code>, so both sides compute to the same normal
+form):</p>
+<pre class="coq"><code>Example subst_avoids_capture :
+  subst 0 (Abs (App (Var 0) (Var 1))) (Abs (Var 1))
+  = Abs (Abs (App (Var 0) (Var 2))).
+Proof. reflexivity. Qed.</code></pre>
+<p>The substituted term <code>Abs (App (Var 0) (Var 1))</code> has a
+free index <code>1</code>; pushing it under the binder of
+<code>Abs (Var 1)</code> bumps that free index to <code>2</code>,
+exactly so it keeps pointing where it did before. The free variable
+escapes capture, mechanically.</p>
+<h2 id="what-a-computation-step-is">What a computation step is</h2>
+<p>Evaluation is a relation between a term and its immediate successor.
+This is <em>call-by-value</em>, left to right: the argument of an
+application must be fully evaluated (a <em>value</em>) before the
+function fires. A value here is a variable or an abstraction — anything
+but an application:</p>
+<pre class="coq"><code>Inductive value : tm -&gt; Prop :=
+  | value_var : forall n, value (Var n)
+  | value_abs : forall b, value (Abs b).</code></pre>
+<p>The single-step relation has one rule that does real work and two
+that say where to look for the next step:</p>
+<pre class="coq"><code>Inductive step : tm -&gt; tm -&gt; Prop :=
+  | step_beta : forall b v,
+      value v -&gt;
+      step (App (Abs b) v) (subst 0 v b)
+  | step_app1 : forall f f&#39; a,
+      step f f&#39; -&gt;
+      step (App f a) (App f&#39; a)
+  | step_app2 : forall v a a&#39;,
+      value v -&gt;
+      step a a&#39; -&gt;
+      step (App v a) (App v a&#39;).</code></pre>
+<p><a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>
+is the actual reduction: an abstraction applied to a value substitutes
+that value for index <code>0</code> in the body. <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>
+reduces the function position while it is still not a value; <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>
+waits until the function is a value, then reduces the argument. Together
+they pin down a unique place to reduce at each stage.</p>
+<h2 id="the-evaluator-and-why-it-is-trustworthy">The evaluator, and why
+it is trustworthy</h2>
+<p>The relation says what a step <em>is</em>, but it does not run — it
+is a <code>Prop</code>, a statement, not a program. The executable
+counterpart is a function that, given a term, returns its next term if
+one exists:</p>
+<pre class="coq"><code>Fixpoint step_fn (t : tm) : option tm :=
+  match t with
+  | App f a =&gt;
+      if is_value f then
+        if is_value a then
+          match f with
+          | Abs b =&gt; Some (subst 0 a b)
+          | _ =&gt; None
+          end
+        else option_map (App f) (step_fn a)
+      else option_map (fun f&#39; =&gt; App f&#39; a) (step_fn f)
+  | _ =&gt; None
+  end.</code></pre>
+<p>Now there are two descriptions of a step: the relation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> and
+the function <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>.
+A separate evaluator would be worthless if it disagreed with the
+definition, so the source proves the two agree in both directions.
+<em>Soundness</em>: every step the function takes is a genuine step
+according to the relation. <em>Completeness</em>: every step the
+relation permits is the one the function finds. Between them, the
+executable function and the mathematical relation are
+interchangeable.</p>
+<p>Soundness, in full:</p>
+<pre class="coq"><code>Lemma step_fn_sound : forall t t&#39;, step_fn t = Some t&#39; -&gt; step t t&#39;.
+Proof.
+  induction t as [n | b _ | f IHf a IHa]; intros t&#39; H; simpl in H.
+  - discriminate.
+  - discriminate.
+  - destruct (is_value f) eqn:Hf.
+    + destruct (is_value a) eqn:Ha.
+      * destruct f; try discriminate.
+        injection H as &lt;-. constructor. apply is_value_value; exact Ha.
+      * destruct (step_fn a) as [a&#39;|]; [|discriminate].
+        injection H as &lt;-. constructor.
+        { apply is_value_value; exact Hf. }
+        { apply IHa; reflexivity. }
+    + destruct (step_fn f) as [f&#39;|]; [|discriminate].
+      injection H as &lt;-. constructor. apply IHf; reflexivity.
+Qed.</code></pre>
+<p>The proof is an induction on the term, following <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>’s
+own shape. A <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Var"><code>Var</code></a> or an
+<a href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>
+makes <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+return <code>None</code>, so the hypothesis
+<code>step_fn t = Some t'</code> is contradictory and
+<code>discriminate</code> closes both. For <code>App f a</code>, split
+on whether <code>f</code> is a value: if it is and <code>a</code> is
+too, <code>f</code> must be an <a
+href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> for a
+step to exist, and the result is a <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>
+by <code>constructor</code>. If <code>f</code> is a value but
+<code>a</code> is not, the function recursed into <code>a</code>, and
+the induction hypothesis <code>IHa</code> turns that recursive step into
+a <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>.
+If <code>f</code> is not a value, it recursed into <code>f</code>, and
+<code>IHf</code> gives a <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>.
+Every branch that could return <code>Some</code> is matched to the
+constructor that justifies it.</p>
+<p>Completeness is the shorter of the two — it inducts on the derivation
+instead of the term:</p>
+<pre class="coq"><code>Lemma step_fn_complete : forall t t&#39;, step t t&#39; -&gt; step_fn t = Some t&#39;.
+Proof.
+  intros t t&#39; H. induction H; simpl.
+  - rewrite (value_is_value _ H). reflexivity.
+  - rewrite (step_not_value _ _ H). rewrite IHstep. reflexivity.
+  - rewrite (value_is_value _ H).
+    rewrite (step_not_value _ _ H0). rewrite IHstep. reflexivity.
+Qed.</code></pre>
+<p>One case per rule of <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>. For
+<a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>,
+the argument is a value, so <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value_is_value"><code>value_is_value</code></a>
+rewrites the inner test to <code>true</code> and the function returns
+the same substitution <code>subst 0 v b</code>. For <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>,
+the function position is mid-reduction, hence not a value; <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_not_value"><code>step_not_value</code></a>
+rewrites that test to <code>false</code>, and the induction hypothesis
+<code>IHstep</code> supplies the recursive answer. For <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>,
+both facts are needed — the function is a value, the argument is not —
+and again <code>IHstep</code> finishes. The two directions together
+license using <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+wherever <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> was
+meant.</p>
+<h2 id="running-a-real-term">Running a real term</h2>
+<p>Iterating <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+with a fuel bound gives a driver, <code>eval fuel t</code>, that takes
+up to <code>fuel</code> steps or stops early at a value. Because it is
+an ordinary Coq function, terms reduce inside the proof assistant. Two
+<code>Example</code>s in the source compute and are closed by
+<code>reflexivity</code>:</p>
+<pre class="coq"><code>Example eval_id_id : eval 10 (App idt idt) = idt.
+Proof. reflexivity. Qed.
+
+Example eval_k : eval 10 (App (App k idt) (Abs (Abs (Var 0)))) = idt.
+Proof. reflexivity. Qed.</code></pre>
+<p>Here <a
+href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a> is
+<code>Abs (Var 0)</code>, the identity <code>\x. x</code>, and <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is
+<code>Abs (Abs (Var 1))</code>, our <code>\x. \y. x</code> from the
+start. The first applies the identity to itself and gets the identity
+back. The second applies <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> to <a
+href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a> and a
+throwaway argument and recovers <a
+href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a> — <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> keeps its
+first argument and drops its second, exactly as its de Bruijn index
+<code>1</code> said it would.</p>
+<p>The same evaluator, extracted to Haskell, drives a command-line tool
+that parses ordinary named syntax, converts to de Bruijn form, runs <a
+href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>, and
+prints the result back with names. From the tool’s README, a real
+transcript:</p>
+<pre><code>$ ./programs/lambda-eval/lambda-eval &quot;(\x. x x) (\y. y)&quot;
+\x. x
+$ ./programs/lambda-eval/lambda-eval &quot;(\x. \y. x) a b&quot;
+a</code></pre>
+<p>The first applies <code>\x. x x</code> to the identity, which
+duplicates the identity, applies it to itself, and settles at
+<code>\x. x</code>. The second is <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> again with
+concrete arguments <code>a</code> and <code>b</code>: it returns
+<code>a</code>. The evaluator you just watched agree with its defining
+relation is the same one producing this output — line for line the
+extraction of the Coq <a
+href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>.</p>
+<p><em>Next: this same <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>
+relation, closed under symmetry and congruence, turns <code>tm</code>
+into a setoid on which program optimizations are rewrites.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+(the datatype, substitution, <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>, <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>,
+the examples) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Extract.v"><code>Lambda/Extract.v</code></a>
+(extraction to Haskell) · <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/programs/lambda-eval"><code>programs/lambda-eval/</code></a>
+(the command-line evaluator).</p>
+</main>
+</body>
+</html>
