@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continuity and the derivative as a linear map</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="continuity-and-the-derivative-as-a-linear-map">Continuity and
+the derivative as a linear map</h1>
+<p>A <em>limit</em> records the value a function’s output settles toward
+as its input is driven arbitrarily close to a point. Written out with
+tolerances: <code>L</code> is the limit of <code>f</code> at
+<code>a</code> when, for every tolerance <code>eps</code>, there is a
+radius <code>delta</code> such that every input within
+<code>delta</code> of <code>a</code> produces an output within
+<code>eps</code> of <code>L</code>. The two “within” clauses are
+measured by norms — the length of a difference vector — so this makes
+sense between any two spaces that have a norm, not only on the real
+line. This post takes that definition, defines continuity from it, and
+then builds the derivative on top: not as a number, but as a linear map,
+which is the only shape that survives into more than one dimension.</p>
+<h2 id="continuity-is-a-limit-that-lands-where-you-expect">Continuity is
+a limit that lands where you expect</h2>
+<p>Here is the limit definition, from <a
+href="coqdoc/Riktig.Theory.Continuity.html"><code>Theory/Continuity.v</code></a>.
+Both distances are norms of differences; <code>‖ x ‖</code> is the
+length of <code>x</code>, and <code>u + - a</code> is <code>u</code>
+minus <code>a</code>:</p>
+<pre class="coq"><code>Definition limit_at (f : U -&gt; V) (a : U) (L : V) : Prop :=
+  forall eps : F, 0 &lt; eps -&gt;
+    exists delta : F, 0 &lt; delta /\
+      forall u : U, ‖ u + - a ‖ &lt; delta -&gt; ‖ f u + - L ‖ &lt; eps.</code></pre>
+<p>A function is <strong>continuous at <code>a</code></strong> when its
+limit there is the value it actually takes — no jump, no removable
+hole:</p>
+<pre class="coq"><code>Definition continuous_at (f : U -&gt; V) (a : U) : Prop :=
+  limit_at f a (f a).
+
+Definition continuous (f : U -&gt; V) : Prop :=
+  forall a : U, continuous_at f a.</code></pre>
+<p>Unfolding the first: <code>f</code> is continuous at <code>a</code>
+when for every <code>eps &gt; 0</code> there is a
+<code>delta &gt; 0</code> so that <code>‖ u + - a ‖ &lt; delta</code>
+forces <code>‖ f u + - f a ‖ &lt; eps</code>. Inputs close to
+<code>a</code> have outputs close to <code>f a</code>.</p>
+<h2 id="composition-of-continuous-functions-is-continuous">Composition
+of continuous functions is continuous</h2>
+<p>The first real theorem. If <code>f</code> is continuous at
+<code>a</code> and <code>g</code> is continuous at the point
+<code>f a</code>, then the composite <code>u ↦ g (f u)</code> is
+continuous at <code>a</code>. On the blackboard it is a chase through
+two radii. To force <code>g (f u)</code> within <code>eps</code> of
+<code>g (f a)</code>, continuity of <code>g</code> supplies a radius
+<code>d1</code>: any <code>v</code> within <code>d1</code> of
+<code>f a</code> has <code>g v</code> within <code>eps</code> of
+<code>g (f a)</code>. Now aim <code>f</code> at that <code>d1</code>:
+continuity of <code>f</code> supplies a radius <code>d2</code> so that
+any <code>u</code> within <code>d2</code> of <code>a</code> has
+<code>f u</code> within <code>d1</code> of <code>f a</code>. Feed
+<code>d2</code>-close inputs in and the two guarantees compose:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo>−</mo><mi>a</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><msub><mi>d</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo>−</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>a</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><msub><mi>d</mi><mn>1</mn></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">continuity of </mtext><mspace width="0.333em"></mspace></mrow><mi>f</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> at </mtext><mspace width="0.333em"></mspace></mrow><mi>a</mi><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><mi>ε</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">continuity of </mtext><mspace width="0.333em"></mspace></mrow><mi>g</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> at </mtext><mspace width="0.333em"></mspace></mrow><mi>f</mi><mspace width="0.167em"></mspace><mi>a</mi><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\lVert u - a\rVert &lt; d_2
+\;\Rightarrow\; \lVert f\,u - f\,a\rVert &lt; d_1 \quad\{\text{continuity of } f \text{ at } a\}
+\;\Rightarrow\; \lVert g(f\,u) - g(f\,a)\rVert &lt; \varepsilon \quad\{\text{continuity of } g \text{ at } f\,a\}.
+</annotation></semantics></math></p>
+<p>Here is the proof exactly as it stands in <a
+href="coqdoc/Riktig.Theory.Continuity.html"><code>Theory/Continuity.v</code></a>:</p>
+<pre class="coq"><code>Theorem continuous_comp : forall (f : U -&gt; V) (g : V -&gt; W) (a : U),
+  continuous_at f a -&gt; continuous_at g (f a) -&gt;
+  continuous_at (fun u : U =&gt; g (f u)) a.
+Proof.
+  intros f g a Hf Hg eps Heps.
+  destruct (Hg eps Heps) as [d1 [Hd1 Hg1]].
+  destruct (Hf d1 Hd1) as [d2 [Hd2 Hf2]].
+  exists d2.
+  split.
+  - exact Hd2.
+  - intros u Hu.
+    apply Hg1.
+    apply Hf2.
+    exact Hu.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros f g a Hf Hg eps Heps</code> fixes a tolerance
+<code>eps &gt; 0</code> for the composite; the goal is to produce a
+radius that works.</li>
+<li><code>destruct (Hg eps Heps)</code> reads off <code>g</code>’s
+guarantee at <code>f a</code>: a radius <code>d1</code> (positive,
+<code>Hd1</code>) with <code>Hg1</code> saying anything within
+<code>d1</code> of <code>f a</code> has its <code>g</code>-image within
+<code>eps</code> of <code>g (f a)</code>.</li>
+<li><code>destruct (Hf d1 Hd1)</code> feeds that <code>d1</code> back in
+as the tolerance for <code>f</code> at <code>a</code>, yielding a radius
+<code>d2</code> with <code>Hf2</code>: within <code>d2</code> of
+<code>a</code>, <code>f</code> is <code>d1</code>-close to
+<code>f a</code>.</li>
+<li><code>exists d2</code> offers <code>d2</code> as the composite’s
+radius, and <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+peels off its positivity (<code>exact Hd2</code>).</li>
+<li><code>intros u Hu</code> assumes <code>‖ u + - a ‖ &lt; d2</code>.
+Then <code>apply Hg1</code> turns the goal into
+<code>‖ f u + - f a ‖ &lt; d1</code>, <code>apply Hf2</code> turns
+<em>that</em> into <code>‖ u + - a ‖ &lt; d2</code>, and
+<code>exact Hu</code> is exactly the hypothesis. The two radii
+telescope.</li>
+</ul>
+<h2 id="the-derivative-is-a-linear-map-not-a-number">The derivative is a
+linear map, not a number</h2>
+<p>In one variable the derivative is a slope — a single number
+<code>f'(a)</code>, the factor by which <code>f</code> stretches a tiny
+displacement near <code>a</code>. That reading stops working the moment
+the input or output has more than one coordinate. A map from a plane to
+space cannot be summarized by one number; the right object is the whole
+<em>best linear approximation</em> near <code>a</code>. Write the
+approximation as</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≈</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>L</mi><mspace width="0.167em"></mspace><mi>h</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">f(a + h) \;\approx\; f(a) + L\,h,</annotation></semantics></math></p>
+<p>where <code>L</code> is a <strong>linear map</strong> — a function
+that preserves addition and scaling, <code>L (u + v) = L u + L v</code>
+and <code>L (c *: u) = c *: L u</code>. The derivative <em>is</em> that
+<code>L</code>. “Best” means the leftover error is small compared to the
+size of the displacement <code>h</code>: it shrinks faster than
+<code>h</code> does, so that near <code>a</code> the linear term
+dominates. Nothing in this sentence mentions coordinates or dimension.
+The classical one-variable slope is just the special case where
+<code>L</code> is multiplication by a number.</p>
+<p>The library states “best linear approximation” without dividing by
+<code>h</code> (division would need <code>h</code> nonzero and force a
+punctured neighborhood). Instead it bounds the leftover directly. From
+<a
+href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>:</p>
+<pre class="coq"><code>Definition is_deriv (f : U -&gt; V) (a : U) (L : LinearMap F U V) : Prop :=
+  lm_bounded L /\
+  forall eps : F, 0 &lt; eps -&gt;
+    exists delta : F, 0 &lt; delta /\
+      forall h : U, ‖ h ‖ &lt; delta -&gt;
+        ‖ f (a + h) + - (f a + L h) ‖ &lt;= eps * ‖ h ‖.</code></pre>
+<p>Read the second half as: for every <code>eps</code>, once
+<code>h</code> is small enough (<code>‖ h ‖ &lt; delta</code>), the
+remainder <code>f (a + h) - (f a + L h)</code> is no larger than
+<code>eps * ‖ h ‖</code>. Since <code>eps</code> can be any positive
+number, the remainder is eventually a vanishingly small fraction of
+<code>‖ h ‖</code> — that is what “shrinks faster than <code>h</code>”
+means, stated without any division. At <code>h = 0</code> both sides are
+zero, so no point is excluded.</p>
+<p>The first half, <code>lm_bounded L</code>, is the requirement that
+<code>L</code> does not stretch vectors by an unbounded factor:</p>
+<pre class="coq"><code>Definition lm_bounded (f : LinearMap F U V) : Prop :=
+  exists C : F, 0 &lt;= C /\ forall u : U, ‖ f u ‖ &lt;= C * ‖ u ‖.</code></pre>
+<p>A single constant <a
+href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a> caps the
+stretch: <code>‖ f u ‖ &lt;= C * ‖ u ‖</code> for every <code>u</code>.
+This is exactly the condition that makes a linear map continuous.</p>
+<h2 id="the-derivative-is-unique">The derivative is unique</h2>
+<p>There is only one such <code>L</code>. Suppose <code>L1</code> and
+<code>L2</code> both approximate <code>f</code> best at <code>a</code>.
+Fix any direction <code>u</code>. Both remainders are small, so their
+difference — which at first order is <code>(L1 - L2) u</code> — is
+smaller than <code>eps * ‖ u ‖</code> for <em>every</em> positive
+<code>eps</code>. On the blackboard:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∀</mo><mi>ε</mi><mo>&gt;</mo><mn>0</mn><mi>.</mi><mspace width="1.0em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>L</mi><mn>1</mn></msub><mi>u</mi><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="2.0em"></mspace><mo>⇒</mo><mspace width="2.0em"></mspace><msub><mi>L</mi><mn>1</mn></msub><mi>u</mi><mo>=</mo><msub><mi>L</mi><mn>2</mn></msub><mi>u</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">\forall \varepsilon &gt; 0.\quad \lVert L_1 u - L_2 u\rVert \;\le\; \varepsilon\,\lVert u\rVert \qquad\Longrightarrow\qquad L_1 u = L_2 u,</annotation></semantics></math></p>
+<p>because a nonnegative quantity below every positive bound is zero,
+and this holds in every direction <code>u</code>. The bound on the left
+is the content of a supporting lemma, which tests both approximations
+along the scaled points <code>t *: u</code> and lets the common factor
+<code>t</code> cancel:</p>
+<pre class="coq"><code>Lemma deriv_diff_bound : forall (f : U -&gt; V) (a : U)
+    (L1 L2 : LinearMap F U V) (eps : F) (u : U),
+  is_deriv f a L1 -&gt; is_deriv f a L2 -&gt; 0 &lt; eps -&gt;
+  ‖ L1 u + - L2 u ‖ &lt;= eps * ‖ u ‖.</code></pre>
+<p>With that in hand, uniqueness is the “below every <code>eps</code>,
+hence zero” argument. Here is <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>
+in full, verbatim from <a
+href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>:</p>
+<pre class="coq"><code>Theorem deriv_unique : forall (f : U -&gt; V) (a : U)
+    (L1 L2 : LinearMap F U V),
+  is_deriv f a L1 -&gt; is_deriv f a L2 -&gt; L1 == L2.
+Proof.
+  intros f a L1 L2 HD1 HD2 u.
+  apply sub_eq_zero.
+  apply norm_def.
+  apply nonneg_below_all_pos_is_zero.
+  - apply norm_nonneg.
+  - intros eps Heps.
+    apply (le_trans (‖ L1 u + - L2 u ‖)
+      ((eps * inv (1 + ‖ u ‖)) * ‖ u ‖) eps).
+    + apply (deriv_diff_bound f a L1 L2 (eps * inv (1 + ‖ u ‖)) u HD1 HD2).
+      apply mul_pos.
+      * exact Heps.
+      * apply pos_inv. apply one_plus_nonneg_pos. apply norm_nonneg.
+    + apply (le_rewrite_l (‖ u ‖ * (eps * inv (1 + ‖ u ‖)))).
+      * apply field_mul_comm.
+      * apply mul_pad_div_le.
+        -- apply lt_le. exact Heps.
+        -- apply norm_nonneg.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros ... u</code> — equality of linear maps means agreement
+at every point, so it suffices to prove <code>L1 u == L2 u</code> for an
+arbitrary <code>u</code>.</li>
+<li><code>apply sub_eq_zero</code> reduces <code>L1 u == L2 u</code> to
+showing the difference <code>L1 u + - L2 u</code> is zero, and
+<code>apply norm_def</code> reduces <em>that</em> to its norm being zero
+— a vector is zero exactly when its length is.</li>
+<li><code>apply nonneg_below_all_pos_is_zero</code> splits the goal into
+two: the norm is nonnegative (<code>apply norm_nonneg</code>), and it
+lies below every positive <code>eps</code>.</li>
+<li>For the second, <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_diff_bound"><code>deriv_diff_bound</code></a>
+is invoked at the padded tolerance <code>eps * inv (1 + ‖ u ‖)</code>,
+giving <code>‖ L1 u + - L2 u ‖ &lt;= (that) * ‖ u ‖</code>; the padding
+lemma <a
+href="coqdoc/Riktig.Theory.Order.html#mul_pad_div_le"><code>mul_pad_div_le</code></a>
+then collapses <code>(eps * inv (1 + ‖ u ‖)) * ‖ u ‖</code> to at most
+<code>eps</code>. Below every <code>eps</code>, so zero.</li>
+</ul>
+<h2 id="linearity-the-derivative-of-a-negation">Linearity: the
+derivative of a negation</h2>
+<p>The derivative respects the vector-space operations: the derivative
+of a sum is the sum of the derivatives (<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_add"><code>deriv_add</code></a>),
+of a scaling is the same scaling of the derivative (<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_scale"><code>deriv_scale</code></a>),
+and of a negation is the negation of the derivative (<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_neg"><code>deriv_neg</code></a>).
+The cleanest of the three to show in full is the negation: if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+has derivative
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>f</mi></mrow><annotation encoding="application/x-tex">-f</annotation></semantics></math>
+has derivative
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>L</mi></mrow><annotation encoding="application/x-tex">-L</annotation></semantics></math>
+there,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>f</mi><msup><mo stretchy="false" form="postfix">)</mo><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mspace width="0.167em"></mspace><msup><mi>f</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(-f)&#39;(a) \;=\; -\,f&#39;(a).</annotation></semantics></math></p>
+<p>Its whole content is one norm identity: the remainder of
+<code>- f</code> against <code>- Lf</code> is the negation of the
+remainder of <code>f</code> against <code>Lf</code>, and negation does
+not change a length —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">∥</mo><mo>−</mo><mi>p</mi><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>q</mi><mo>−</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">∥</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">∥</mo><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mo>+</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">∥</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">push the minus out</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">∥</mo><mi>p</mi><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mo>+</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">∥</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>−</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\bigl\lVert -p - (-q - x)\bigr\rVert \;=\; \bigl\lVert -(p - (q + x))\bigr\rVert \quad\{\text{push the minus out}\} \;=\; \bigl\lVert p - (q + x)\bigr\rVert \quad\{\lVert -v\rVert = \lVert v\rVert\}.</annotation></semantics></math></p>
+<p>That identity is isolated as a lemma:</p>
+<pre class="coq"><code>Lemma neg_remainder_norm : forall p q x : V,
+  ‖ - p + - (- q + - x) ‖ == ‖ p + - (q + x) ‖.</code></pre>
+<p>And the rule itself:</p>
+<pre class="coq"><code>Theorem deriv_neg : forall (f : U -&gt; V) (a : U) (Lf : LinearMap F U V),
+  is_deriv f a Lf -&gt; is_deriv (fun u : U =&gt; - f u) a (- Lf).
+Proof.
+  intros f a Lf [Hbf HDf].
+  split.
+  - exact (bounded_neg Lf Hbf).
+  - intros eps Heps.
+    destruct (HDf eps Heps) as [d [Hd HR]].
+    exists d.
+    split.
+    + exact Hd.
+    + intros h Hh.
+      apply (le_rewrite_l (‖ f (a + h) + - (f a + Lf h) ‖)).
+      * symmetry.
+        exact (neg_remainder_norm (f (a + h)) (f a) (Lf h)).
+      * apply HR. exact Hh.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros f a Lf [Hbf HDf]</code> unpacks the hypothesis into
+<code>Hbf</code> (the map <code>Lf</code> is bounded) and
+<code>HDf</code> (its remainder estimate). The <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+matches the two halves of <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>.</li>
+<li>The boundedness half is <code>bounded_neg Lf Hbf</code>: negating a
+bounded map keeps the same bounding constant.</li>
+<li>For the remainder half, <code>destruct (HDf eps Heps)</code> grabs
+the radius <code>d</code> and estimate <code>HR</code> that already work
+for <code>f</code>. The same <code>d</code> is offered
+(<code>exists d</code>) for <code>- f</code>.</li>
+<li><code>apply (le_rewrite_l ...)</code> rewrites the negated remainder
+into the original one via <a
+href="coqdoc/Riktig.Theory.Derivative.html#neg_remainder_norm"><code>neg_remainder_norm</code></a>
+(used with <code>symmetry</code>), after which <code>apply HR</code>
+closes the goal with <code>f</code>’s own estimate. The negation costs
+nothing — same radius, same bound.</li>
+</ul>
+<p>The additive rule <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_add"><code>deriv_add</code></a>
+splits the remainder of a sum into the two summand remainders and runs
+each at <code>eps/2</code>; the scaling rule <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_scale"><code>deriv_scale</code></a>
+pulls the scalar’s absolute value out of the norm. Both follow the same
+pattern: reduce to a norm identity, reuse the estimate.</p>
+<h2 id="the-chain-rule">The chain rule</h2>
+<p>The reason to make the derivative a linear map, rather than a number,
+appears here. The derivative of a composite is the <em>composite</em> of
+the derivatives:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>∘</mo><mi>f</mi><msup><mo stretchy="false" form="postfix">)</mo><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msup><mi>g</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∘</mo><mspace width="0.278em"></mspace><msup><mi>f</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(g \circ f)&#39;(a) \;=\; g&#39;(f\,a) \;\circ\; f&#39;(a).</annotation></semantics></math></p>
+<p>In the library the right-hand side is literally
+<code>lm_comp Lg Lf</code>, the composition of two linear maps — one
+line of linear algebra. The work is in the analysis: showing that the
+composite’s remainder really is small. Boundedness of the composite
+comes first, and it is short — the stretch factors multiply: if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><msub><mi>C</mi><mi>g</mi></msub><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert g\,v\rVert \le C_g \lVert v\rVert</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><msub><mi>C</mi><mi>f</mi></msub><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert f\,u\rVert \le C_f \lVert u\rVert</annotation></semantics></math>,
+then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><msub><mi>C</mi><mi>g</mi></msub><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>g</mi><mtext mathvariant="normal">’s bound</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><msub><mi>C</mi><mi>g</mi></msub><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msub><mi>C</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>f</mi><mtext mathvariant="normal">’s bound, monotonicity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><msub><mi>C</mi><mi>g</mi></msub><msub><mi>C</mi><mi>f</mi></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">\lVert g(f\,u)\rVert \;\le\; C_g\,\lVert f\,u\rVert \quad\{g\text{&#39;s bound}\} \;\le\; C_g\,(C_f\,\lVert u\rVert) \quad\{f\text{&#39;s bound, monotonicity}\} \;=\; (C_g C_f)\,\lVert u\rVert.</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma bounded_comp : forall (g : LinearMap F V W) (f : LinearMap F U V),
+  lm_bounded g -&gt; lm_bounded f -&gt; lm_bounded (lm_comp g f).
+Proof.
+  intros g f [Cg [HCg Hbg]] [Cf [HCf Hbf]].
+  exists (Cg * Cf).
+  split.
+  - apply mul_nonneg.
+    + exact HCg.
+    + exact HCf.
+  - intros u.
+    apply (le_trans _ (Cg * ‖ f u ‖) _).
+    + exact (Hbg (f u)).
+    + apply (le_trans _ (Cg * (Cf * ‖ u ‖)) _).
+      * apply mul_le_mono_l.
+        -- exact HCg.
+        -- exact (Hbf u).
+      * apply eq_le. symmetry. apply ring_mul_assoc.
+Qed.</code></pre>
+<p>If <code>g</code> stretches by at most <code>Cg</code> and
+<code>f</code> by at most <code>Cf</code>, then <code>g ∘ f</code>
+stretches by at most <code>Cg * Cf</code>: apply <code>f</code>’s bound,
+then <code>g</code>’s bound on top, and reassociate the product.</p>
+<p>The central step is a two-term split of the composite’s remainder.
+Take <code>b = f a</code>, <code>y = f (a + h)</code>, and
+<code>x = Lf h</code>. The remainder of <code>g ∘ f</code> — measured
+against the candidate derivative <code>Lg (Lf h)</code> — is bounded by
+two pieces: <code>g</code>’s own remainder at the <em>actual</em>
+increment <code>y - b = f (a + h) - f a</code>, plus <code>Lg</code>
+applied to <code>f</code>’s remainder <code>y - (b + x)</code>. In
+symbols,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">∥</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>y</mi><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>b</mi><mo>+</mo><msub><mi>L</mi><mi>g</mi></msub><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">∥</mo><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><munder><munder><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">∥</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>−</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>b</mi><mo>+</mo><msub><mi>L</mi><mi>g</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>−</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">∥</mo></mrow><mo accent="true">⏟</mo></munder><mrow><mi>g</mi><mtext mathvariant="normal">’s remainder at the increment</mtext></mrow></munder><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><munder><munder><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">∥</mo><msub><mi>L</mi><mi>g</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>y</mi><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">∥</mo></mrow><mo accent="true">⏟</mo></munder><mrow><msub><mi>L</mi><mi>g</mi></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> of </mtext><mspace width="0.333em"></mspace></mrow><mi>f</mi><mtext mathvariant="normal">’s remainder</mtext></mrow></munder><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\bigl\lVert g\,y - (g\,b + L_g\,x)\bigr\rVert
+\;\le\;
+\underbrace{\bigl\lVert g(b + (y - b)) - (g\,b + L_g(y - b))\bigr\rVert}_{g\text{&#39;s remainder at the increment}}
+\;+\;
+\underbrace{\bigl\lVert L_g\bigl(y - (b + x)\bigr)\bigr\rVert}_{L_g \text{ of } f\text{&#39;s remainder}}.
+</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma comp_remainder_split : forall (g : V -&gt; W) (Lg : LinearMap F V W),
+  Proper (equ ==&gt; equ) g -&gt;
+  forall b y x : V,
+  ‖ g y + - (g b + Lg x) ‖ &lt;=
+  ‖ g (b + (y + - b)) + - (g b + Lg (y + - b)) ‖ + ‖ Lg (y + - (b + x)) ‖.</code></pre>
+<p>The first term is small because <code>g</code> is differentiable at
+<code>b = f a</code>; the second is small because <code>Lg</code> is
+bounded and <code>f</code>’s remainder is small. Each is driven below
+<code>eps/2 * ‖ h ‖</code>, and the two halves add to
+<code>eps * ‖ h ‖</code>. The full proof, verbatim from <a
+href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>:</p>
+<pre class="coq"><code>Theorem deriv_comp : forall (f : U -&gt; V) (g : V -&gt; W) (a : U)
+    (Lf : LinearMap F U V) (Lg : LinearMap F V W),
+  Proper (equ ==&gt; equ) g -&gt;
+  is_deriv f a Lf -&gt; is_deriv g (f a) Lg -&gt;
+  is_deriv (fun u : U =&gt; g (f u)) a (lm_comp Lg Lf).
+Proof.
+  intros f g a Lf Lg Pg [Hbf HDf] [Hbg HDg].
+  split.
+  - exact (bounded_comp Lg Lf Hbg Hbf).
+  - destruct Hbf as [Cf [HCf HbF]].
+    destruct Hbg as [Cg [HCg HbG]].
+    intros eps Heps.
+    destruct (pos_min_exists 1 (half eps * inv (1 + Cg)) lt_0_1
+        (mul_pos (half eps) (inv (1 + Cg)) (half_pos eps Heps)
+           (pos_inv (1 + Cg) (one_plus_nonneg_pos Cg HCg))))
+      as [e1 [He1 [He1_1 He1_g]]].
+    destruct (HDf e1 He1) as [df [Hdf HRf]].
+    destruct (HDg (half eps * inv (1 + (1 + Cf)))
+        (mul_pos (half eps) (inv (1 + (1 + Cf))) (half_pos eps Heps)
+           (pos_inv (1 + (1 + Cf))
+              (one_plus_nonneg_pos (1 + Cf)
+                 (lt_le 0 (1 + Cf) (one_plus_nonneg_pos Cf HCf))))))
+      as [dg [Hdg HRg]].
+    destruct (pos_min_exists df (dg * inv (1 + Cf)) Hdf
+        (mul_pos dg (inv (1 + Cf)) Hdg
+           (pos_inv (1 + Cf) (one_plus_nonneg_pos Cf HCf))))
+      as [d [Hd [Hd_f Hd_g]]].
+    exists d.
+    split.
+    + exact Hd.
+    + intros h Hh.
+      apply (le_trans _
+        (‖ g (f a + (f (a + h) + - f a))
+           + - (g (f a) + Lg (f (a + h) + - f a)) ‖
+         + ‖ Lg (f (a + h) + - (f a + Lf h)) ‖) _).
+      * exact (comp_remainder_split g Lg Pg (f a) (f (a + h)) (Lf h)).
+      * apply (le_trans _ (half eps * ‖ h ‖ + half eps * ‖ h ‖) _).
+        -- apply add_le_mono.
+           (* g&#39;s remainder at the increment k h := f (a+h) - f a. *)
+           ++ apply (le_trans _
+                ((half eps * inv (1 + (1 + Cf)))
+                 * ‖ f (a + h) + - f a ‖) _).
+              ** apply HRg.
+                 apply (le_lt_trans _ ((1 + Cf) * ‖ h ‖) _).
+                 --- exact (deriv_increment_bound f a h Lf e1 Cf HCf HbF
+                       He1_1 (HRf h (lt_le_trans (‖ h ‖) d df Hh Hd_f))).
+                 --- apply (lt_le_trans _
+                       ((1 + Cf) * (dg * inv (1 + Cf))) _).
+                     +++ apply mul_lt_mono_l.
+                         *** apply one_plus_nonneg_pos. exact HCf.
+                         *** exact (lt_le_trans (‖ h ‖) d
+                               (dg * inv (1 + Cf)) Hh Hd_g).
+                     +++ apply eq_le.
+                         apply field_mul_div_cancel.
+                         apply pos_neq_0.
+                         apply one_plus_nonneg_pos.
+                         exact HCf.
+              ** apply (le_trans _
+                   ((half eps * inv (1 + (1 + Cf)))
+                    * ((1 + Cf) * ‖ h ‖)) _).
+                 --- apply mul_le_mono_l.
+                     +++ apply mul_nonneg.
+                         *** apply lt_le. apply half_pos. exact Heps.
+                         *** apply lt_le. apply pos_inv.
+                             apply one_plus_nonneg_pos.
+                             apply lt_le. apply one_plus_nonneg_pos.
+                             exact HCf.
+                     +++ exact (deriv_increment_bound f a h Lf e1 Cf HCf
+                           HbF He1_1
+                           (HRf h (lt_le_trans (‖ h ‖) d df Hh Hd_f))).
+                 --- apply (le_rewrite_l
+                       (((half eps * inv (1 + (1 + Cf))) * (1 + Cf))
+                        * ‖ h ‖)).
+                     +++ apply ring_mul_assoc.
+                     +++ apply mul_le_mono_r.
+                         *** apply norm_nonneg.
+                         *** apply (le_rewrite_l
+                               ((1 + Cf)
+                                * (half eps * inv (1 + (1 + Cf))))).
+                             ---- apply field_mul_comm.
+                             ---- apply mul_pad_div_le.
+                                  ++++ apply lt_le. apply half_pos.
+                                       exact Heps.
+                                  ++++ apply lt_le.
+                                       apply one_plus_nonneg_pos.
+                                       exact HCf.
+           (* Lg applied to f&#39;s remainder. *)
+           ++ apply (le_trans _ (Cg * ‖ f (a + h) + - (f a + Lf h) ‖) _).
+              ** exact (HbG (f (a + h) + - (f a + Lf h))).
+              ** apply (le_trans _ (Cg * (e1 * ‖ h ‖)) _).
+                 --- apply mul_le_mono_l.
+                     +++ exact HCg.
+                     +++ exact (HRf h (lt_le_trans (‖ h ‖) d df Hh Hd_f)).
+                 --- apply (le_rewrite_l ((Cg * e1) * ‖ h ‖)).
+                     +++ apply ring_mul_assoc.
+                     +++ apply mul_le_mono_r.
+                         *** apply norm_nonneg.
+                         *** apply (le_trans _
+                               (Cg * (half eps * inv (1 + Cg))) _).
+                             ---- apply mul_le_mono_l.
+                                  ++++ exact HCg.
+                                  ++++ exact He1_g.
+                             ---- apply mul_pad_div_le.
+                                  ++++ apply lt_le. apply half_pos.
+                                       exact Heps.
+                                  ++++ exact HCg.
+        -- apply eq_le. apply half_mul_sum.
+Qed.</code></pre>
+<p>The proof is long because it is bookkeeping three tolerances at once,
+but its shape is exactly the blackboard argument. Walking the
+structure:</p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+produces the two halves. The first is <code>bounded_comp Lg Lf</code>,
+the composite is bounded.</li>
+<li>The tolerances are chosen up front. <code>e1</code> is
+<code>f</code>’s tolerance, kept at most <code>1</code> (so
+<code>f</code>’s increment stays controlled) and at most
+<code>(eps/2) / (1 + Cg)</code> (so that <code>Lg</code> of
+<code>f</code>’s remainder is under <code>eps/2</code>). <code>dg</code>
+is <code>g</code>’s radius, run at tolerance
+<code>(eps/2) / (1 + (1 + Cf))</code>. The composite’s radius
+<code>d</code> is the smaller of <code>df</code> and
+<code>dg / (1 + Cf)</code>, the second factor accounting for
+<code>f</code>’s own stretch.</li>
+<li><code>intros h Hh</code> and the first <a
+href="coqdoc/Riktig.Interface.Order.html#le_trans"><code>le_trans</code></a>
+install <a
+href="coqdoc/Riktig.Theory.Derivative.html#comp_remainder_split"><code>comp_remainder_split</code></a>:
+the composite remainder is at most the two-term sum.</li>
+<li>The second <a
+href="coqdoc/Riktig.Interface.Order.html#le_trans"><code>le_trans</code></a>
+targets <code>eps/2 * ‖ h ‖ + eps/2 * ‖ h ‖</code>, split by <a
+href="coqdoc/Riktig.Theory.Order.html#add_le_mono"><code>add_le_mono</code></a>
+into one bound per term.</li>
+<li>The first term (<code>g</code>’s remainder at the true increment
+<code>f (a+h) - f a</code>) uses <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_increment_bound"><code>deriv_increment_bound</code></a>
+— the increment is <code>(1 + Cf)</code>-controlled — fed into
+<code>g</code>’s estimate <code>HRg</code>, then the padding lemma trims
+the constant to <code>eps/2</code>.</li>
+<li>The second term (<code>Lg</code> of <code>f</code>’s remainder) uses
+the bound on <code>Lg</code> (constant <code>Cg</code>) and
+<code>f</code>’s estimate <code>HRf</code> at tolerance <code>e1</code>;
+the choice <code>e1 &lt;= (eps/2) / (1 + Cg)</code> brings it under
+<code>eps/2</code>.</li>
+<li>The closing <a
+href="coqdoc/Riktig.Theory.Order.html#half_mul_sum"><code>half_mul_sum</code></a>
+adds the two halves back to <code>eps * ‖ h ‖</code>.</li>
+</ul>
+<p>The linear-map framing is what makes the identity
+<code>(g ∘ f)' = g' ∘ f'</code> literally the composition
+<code>lm_comp Lg Lf</code>: no matrices, no coordinates, no separate
+one-variable and many-variable statements. The one-variable chain rule
+and the Jacobian chain rule are the same theorem read in different
+spaces.</p>
+<p><em>Next: fixing a basis turns these linear maps into matrices, and
+turns <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_comp"><code>lm_comp</code></a>
+into matrix multiplication.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Continuity.html"><code>Theory/Continuity.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Continuity.html#limit_at"><code>limit_at</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Continuity.html#continuous_at"><code>continuous_at</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Continuity.html#continuous_comp"><code>continuous_comp</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_neg"><code>deriv_neg</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>).</p>
+</main>
+</body>
+</html>

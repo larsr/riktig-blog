@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The linear core of attention, reassociated</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="the-linear-core-of-attention-reassociated">The linear core of
+attention, reassociated</h1>
+<p>A matrix multiplied by a column of numbers produces another column:
+this is applying a <strong>linear map</strong>, a function that respects
+addition and scaling. Multiplying two matrices composes the two linear
+maps they stand for, and — exactly like composing functions — matrix
+multiplication is <strong>associative</strong>:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mi>C</mi></mrow><annotation encoding="application/x-tex">(AB)C</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mi>C</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">A(BC)</annotation></semantics></math>
+are the same matrix, whichever way you bracket them. This post is about
+one place where that freedom to rebracket is worth real arithmetic: the
+linear core of an <em>attention</em> layer, the central operation in the
+neural networks behind current language models.</p>
+<p><strong>Attention</strong> is a way of computing, for each item in a
+sequence, a weighted combination of “value” vectors, where the weights
+come from comparing that item’s “query” against every item’s “key.”
+Stack the queries, keys, and values as the rows of three matrices
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>,
+each of shape
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">n \times d</annotation></semantics></math>
+—
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+items in the sequence,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+numbers per item, with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+typically far smaller than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
+The linear core of the layer is the matrix product</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Attention</mtext><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo>,</mo><mi>K</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo>⋅</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>V</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\text{Attention}(Q,K,V) = (Q\cdot K^\mathsf{T})\cdot V.</annotation></semantics></math></p>
+<p>The inner factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup></mrow><annotation encoding="application/x-tex">Q K^\mathsf{T}</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>:
+it scores every pair of items. Then those scores mix the rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>.
+Read left to right, that is the direct description of what the layer
+computes — and it is also the expensive way to compute it.</p>
+<h2 id="the-same-layer-bracketed-two-ways">The same layer, bracketed two
+ways</h2>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup></mrow><annotation encoding="application/x-tex">Q K^\mathsf{T}</annotation></semantics></math>
+is an
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
+matrix — one entry for every pair of items in the sequence. But the
+final result is only
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">n \times d</annotation></semantics></math>.
+Associativity lets us avoid ever building the large square in the
+middle:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>V</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">(Q K^\mathsf{T})\,V \;=\; Q\,(K^\mathsf{T} V),</annotation></semantics></math></p>
+<p>and the right-hand factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi></mrow><annotation encoding="application/x-tex">K^\mathsf{T} V</annotation></semantics></math>
+is only
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">d \times d</annotation></semantics></math>.
+From <a
+href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>:</p>
+<pre class="coq"><code>  (* Left-to-right: materializes the n×n score matrix Q·Kᵀ.           *)
+  Definition attn_naive : Matrix n d F := mat_mul (mat_mul Q (mat_tr K)) V.
+
+  (* Right-to-left: materializes only the d×d matrix Kᵀ·V.            *)
+  Definition attn_fast : Matrix n d F := mat_mul Q (mat_mul (mat_tr K) V).</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_tr"><code>mat_tr</code></a>
+is the transpose, so <code>mat_tr K</code> is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>K</mi><mi>𝖳</mi></msup><annotation encoding="application/x-tex">K^\mathsf{T}</annotation></semantics></math>.
+The naive form builds the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
+score matrix; the fast form builds instead the inner product
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi></mrow><annotation encoding="application/x-tex">K^\mathsf{T} V</annotation></semantics></math>.
+Nothing of size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
+is ever formed. That these two produce the same matrix is a single
+application of associativity:</p>
+<pre class="coq"><code>  Theorem attn_assoc : attn_naive == attn_fast.
+  Proof.
+    exact (mat_mul_assoc n d n d Q (mat_tr K) V).
+  Qed.</code></pre>
+<p>The proof names no tactics at all — <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+applied to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>K</mi><mi>𝖳</mi></msup><annotation encoding="application/x-tex">K^\mathsf{T}</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>,
+with the four dimension arguments <code>n d n d</code>, <em>is</em> the
+theorem. The <code>==</code> is the pointwise equality on matrices: the
+two sides agree entry by entry.</p>
+<h2 id="what-the-reassociation-costs-counted">What the reassociation
+costs, counted</h2>
+<p>Reassociating is only worth doing if the second order is genuinely
+cheaper, so <a
+href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
+counts the scalar multiplications each order performs. An
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">m \times n</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>p</mi></mrow><annotation encoding="application/x-tex">n \times p</annotation></semantics></math>
+product has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">mp</annotation></semantics></math>
+entries, each a sum of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+products, so it costs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>n</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">mnp</annotation></semantics></math>
+multiplications:</p>
+<pre class="coq"><code>Definition mulcost (m n p : nat) : nat := (m * n * p)%nat.
+
+Definition cost_naive (n d : nat) : nat :=
+  (mulcost n d n + mulcost n n d)%nat.
+
+Definition cost_fast (n d : nat) : nat :=
+  (mulcost d n d + mulcost n d d)%nat.</code></pre>
+<p>Adding the two products in each order:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">v</mi><mi mathvariant="normal">e</mi></mrow></msub><mo>=</mo><mi>n</mi><mi>d</mi><mi>n</mi><mo>+</mo><mi>n</mi><mi>n</mi><mi>d</mi><mo>=</mo><mn>2</mn><msup><mi>n</mi><mn>2</mn></msup><mi>d</mi><mo>,</mo><mspace width="2.0em"></mspace><msub><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow></msub><mo>=</mo><mi>d</mi><mi>n</mi><mi>d</mi><mo>+</mo><mi>n</mi><mi>d</mi><mi>d</mi><mo>=</mo><mn>2</mn><mi>n</mi><msup><mi>d</mi><mn>2</mn></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{cost}_{\mathrm{naive}} = n d n + n n d = 2n^2 d,
+\qquad
+\mathrm{cost}_{\mathrm{fast}} = d n d + n d d = 2n d^2,</annotation></semantics></math></p>
+<p>so when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+is smaller than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>,
+the ratio is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>/</mi><mi>d</mi></mrow><annotation encoding="application/x-tex">n/d</annotation></semantics></math>.
+Both of these are exact counts about the algorithm the definitions
+denote, not estimates. At the scale of a realistic layer —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">n = 1024</annotation></semantics></math>
+items, head dimension
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">d = 64</annotation></semantics></math>
+— the counts are checked as literal numbers. Because the naive count
+runs into hundreds of millions, well past what Coq’s unary natural
+numbers can hold in memory, the concrete checks pass through the binary
+numbers <code>N</code>:</p>
+<pre class="coq"><code>Example cost_naive_1024_64 : N.of_nat (cost_naive 1024 64) = 134217728%N.
+Proof.
+  rewrite (cost_naive_toN 1024 64).
+  reflexivity.
+Qed.
+
+Example cost_fast_1024_64 : N.of_nat (cost_fast 1024 64) = 8388608%N.
+Proof.
+  rewrite (cost_fast_toN 1024 64).
+  reflexivity.
+Qed.</code></pre>
+<p><code>134217728</code> multiplications for the naive order against
+<code>8388608</code> for the reassociated one. The transfer lemma <a
+href="coqdoc/Riktig.Impl.Attention.html#cost_naive_toN"><code>cost_naive_toN</code></a>
+rewrites the count into a product of binary numbers where the arithmetic
+is instant, and <code>reflexivity</code> confirms the value. The ratio
+between the two is checked directly, in <a
+href="coqdoc/Riktig.Examples.AttentionLayer.html"><code>Examples/AttentionLayer.v</code></a>:</p>
+<pre class="coq"><code>Example naive_over_fast_is_16 : (134217728 = 16 * 8388608)%N.
+Proof. reflexivity. Qed.</code></pre>
+<p>A factor of sixteen — exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>/</mi><mi>d</mi><mo>=</mo><mn>1024</mn><mi>/</mi><mn>64</mn></mrow><annotation encoding="application/x-tex">n/d = 1024/64</annotation></semantics></math>.
+At a size small enough for unary arithmetic to handle on its own, the
+same counts are checked without the detour through <code>N</code>:</p>
+<pre class="coq"><code>Example cost_naive_16_4 : cost_naive 16 4 = 2048%nat.
+Proof. reflexivity. Qed.
+
+Example cost_fast_16_4 : cost_fast 16 4 = 512%nat.
+Proof. reflexivity. Qed.</code></pre>
+<p><code>2048</code> against <code>512</code> at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">n = 16</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">d = 4</annotation></semantics></math>
+— a factor of four, again
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>/</mi><mi>d</mi></mrow><annotation encoding="application/x-tex">n/d</annotation></semantics></math>.</p>
+<h2 id="one-rewrite-makes-the-two-implementations-equal">One rewrite
+makes the two implementations equal</h2>
+<p>The point of proving <a
+href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>
+is that a “simple” implementation, written to read like the definition,
+and an “efficient” one, written to be cheap, can be shown to be the same
+layer — not by inspection, but by a setoid rewrite that the checker
+verifies. <a
+href="coqdoc/Riktig.Examples.AttentionLayer.html"><code>Examples/AttentionLayer.v</code></a>
+writes both:</p>
+<pre class="coq"><code>  Definition attn_simple : Matrix n d F :=
+    mat_mul (mat_mul Q (mat_tr K)) V.
+
+  Definition attn_efficient : Matrix n d F :=
+    mat_mul Q (mat_mul (mat_tr K) V).</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+respects the matrix equality <code>==</code> — replacing a factor by an
+equal one gives an equal product — so the associativity law is usable as
+a rewrite rule on a matrix expression. One rewrite turns the simple form
+into the efficient one:</p>
+<pre class="coq"><code>  Theorem attn_equal : attn_simple == attn_efficient.
+  Proof.
+    unfold attn_simple, attn_efficient.
+    rewrite mat_mul_assoc.
+    reflexivity.
+  Qed.</code></pre>
+<p>Walking it: <code>unfold</code> replaces the two names by their
+definitions, so the goal becomes
+<code>mat_mul (mat_mul Q (mat_tr K)) V == mat_mul Q (mat_mul (mat_tr K) V)</code>.
+<code>rewrite mat_mul_assoc</code> applies associativity left to right,
+rebracketing the left side to match the right. <code>reflexivity</code>
+closes what is now an identity. The simple and the efficient
+implementations are provably the same function.</p>
+<h2 id="a-run-over-the-rationals">A run over the rationals</h2>
+<p>None of this is abstract: with concrete small matrices the layer
+computes a concrete matrix, and both orders can be checked entry by
+entry to agree with it. <a
+href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
+fixes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">n = 3</annotation></semantics></math>
+items and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">d = 2</annotation></semantics></math>,
+with rational entries:</p>
+<pre class="coq"><code>Definition Qm3 : Matrix 3 2 Q :=
+  mat32 (1#1)%Q (2#1)%Q (0#1)%Q (1#1)%Q (1#1)%Q ((-1)#1)%Q.
+
+Definition Km3 : Matrix 3 2 Q :=
+  mat32 (1#1)%Q (0#1)%Q (2#1)%Q (1#1)%Q (0#1)%Q (3#1)%Q.
+
+Definition Vm3 : Matrix 3 2 Q :=
+  mat32 (1#1)%Q (1#1)%Q (2#1)%Q (0#1)%Q (0#1)%Q (1#1)%Q.</code></pre>
+<p>By hand the score matrix and the layer output are</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>4</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>6</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mi>−</mi><mn>3</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>V</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>9</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd><mtd columnalign="center" style="text-align: center"><mi>−</mi><mn>2</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">Q K^\mathsf{T} = \begin{pmatrix} 1 &amp; 4 &amp; 6\\ 0 &amp; 1 &amp; 3\\ 1 &amp; 1 &amp; -3 \end{pmatrix},
+\qquad
+(Q K^\mathsf{T})\,V = \begin{pmatrix} 9 &amp; 7\\ 2 &amp; 3\\ 3 &amp; -2 \end{pmatrix}.</annotation></semantics></math></p>
+<p>The naive order is checked against those six output entries by
+computation:</p>
+<pre class="coq"><code>Example attn_naive_Q_compute :
+     attn_naive 3 2 Qm3 Km3 Vm3 Fin.F1 Fin.F1 == (9#1)%Q
+  /\ attn_naive 3 2 Qm3 Km3 Vm3 Fin.F1 (Fin.FS Fin.F1) == (7#1)%Q
+  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS Fin.F1) Fin.F1 == (2#1)%Q
+  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS Fin.F1) (Fin.FS Fin.F1) == (3#1)%Q
+  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS (Fin.FS Fin.F1)) Fin.F1 == (3#1)%Q
+  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS (Fin.FS Fin.F1)) (Fin.FS Fin.F1)
+       == ((-2)#1)%Q.
+Proof.
+  repeat split; reflexivity.
+Qed.</code></pre>
+<p>Each <code>Fin.F1</code> / <code>Fin.FS ...</code> picks a row and a
+column; the six conjuncts are the six entries of the output matrix
+above. <code>repeat split</code> breaks the conjunction apart and
+<code>reflexivity</code> evaluates each entry — the layer really
+computes these rationals. The reassociated order, <a
+href="coqdoc/Riktig.Impl.Attention.html#attn_fast_Q_compute"><code>attn_fast_Q_compute</code></a>,
+is checked against the same six literals independently, with no appeal
+to <a
+href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>:
+two different bracketings, computed separately, land on the same
+matrix.</p>
+<h2 id="what-this-is-not">What this is not</h2>
+<p>The scope should be stated precisely. The layer here is
+<em>linear</em> attention. A real transformer computes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">x</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mi>/</mi><msqrt><mi>d</mi></msqrt><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">\mathrm{softmax}(Q K^\mathsf{T}/\sqrt{d})\cdot V</annotation></semantics></math>,
+with a softmax sitting between the score matrix and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>.
+The softmax is not linear, and with it in place the reassociation above
+is invalid — you cannot slide <code>V</code> inside it. Dropping the
+softmax, or replacing it with a linear kernel, is exactly what the
+“linear attention” family of models does, and it is that linear core,
+and only it, that this reassociation applies to. Within that core, the
+saving is real, machine-checked, and comes from one fact: matrix
+multiplication is associative.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_naive"><code>attn_naive</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_fast"><code>attn_fast</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>,
+the cost model and its concrete counts, the run over <code>Q</code>) ·
+<a
+href="coqdoc/Riktig.Examples.AttentionLayer.html"><code>Examples/AttentionLayer.v</code></a>
+(<a
+href="coqdoc/Riktig.Examples.AttentionLayer.html#attn_simple"><code>attn_simple</code></a>,
+<a
+href="coqdoc/Riktig.Examples.AttentionLayer.html#attn_efficient"><code>attn_efficient</code></a>,
+<a
+href="coqdoc/Riktig.Examples.AttentionLayer.html#attn_equal"><code>attn_equal</code></a>
+by one rewrite, and <a
+href="coqdoc/Riktig.Examples.AttentionLayer.html#naive_over_fast_is_16"><code>naive_over_fast_is_16</code></a>).</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Euclid's algorithm and binary search, proved directly</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="euclids-algorithm-and-binary-search-proved-directly">Euclid’s
+algorithm and binary search, proved directly</h1>
+<p>Euclid’s algorithm computes a greatest common divisor by repeatedly
+replacing the pair
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a, b)</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(b, a \bmod b)</annotation></semantics></math>;
+binary search finds a target in a sorted range by repeatedly halving the
+range. Neither recursion calls itself on a piece of its own input — the
+arguments of the recursive call are freshly computed numbers — so the
+reason either one stops is not visible in the shape of the data. What
+stops them is a <em>quantity</em> that shrinks at every call: the
+divisor in one case, the width of the range in the other. A proof
+assistant that accepts only recursions it can see terminating has to be
+told about that quantity. This post shows the two programs written so
+that the shrinking quantity, and the proof that it shrinks, are part of
+the program text itself — and then proves both programs correct.</p>
+<p>There are two ways to arrange that in Coq. One is to reach for a
+special elaboration front-end — <code>Program Fixpoint</code>, or the
+<code>Equations</code> plugin — that rewrites your definition into
+something involving well-founded recursion, hides the rewriting, and
+hands you obligations to discharge afterwards. The other is to write the
+program <em>as an ordinary lambda term</em> yourself: apply the
+well-founded recursion combinator <code>Fix</code> by hand, supply the
+measure that decreases, and prove each recursive call’s side-condition
+inline. The second way is more typing, but in return the definition you
+read is the program that runs — no elaboration layer between the source
+and the term. Both programs below are written that way.</p>
+<p>Both programs branch on a decision. A <strong>decidable
+proposition</strong> is one for which you can compute a definite
+yes-or-no answer; the library packs that answer as a value
+<code>dec P</code> that reduces either to a proof that <code>P</code>
+holds or to a proof that it does not. The construct
+<code>if dec P then u else v</code> is an ordinary two-way branch,
+except that inside the <code>then</code> branch a proof of
+<code>P</code> is in scope and inside the <code>else</code> branch a
+proof of its negation is — the same test that steers the computation
+also hands the correctness proof the fact it needs. That is the only
+piece of vocabulary these two programs share.</p>
+<h2 id="euclids-algorithm-as-one-term">Euclid’s algorithm as one
+term</h2>
+<p>The mathematical rule is one line:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mi>a</mi></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mo>=</mo><mn>0</mn><mo>,</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">otherwise.</mtext></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\gcd(a, b) \;=\; \begin{cases} a &amp; \text{if } b = 0,\\ \gcd(b,\ a \bmod b) &amp; \text{otherwise.} \end{cases}</annotation></semantics></math></p>
+<p>The recursion terminates because the second argument strictly shrinks
+— <code>a mod b &lt; b</code> whenever <code>b</code> is nonzero — even
+though neither argument is a structural sub-term of the other. Here is
+the whole definition, from <a
+href="coqdoc/Riktig.Programs.Gcd.html"><code>Programs/Gcd.v</code></a>:</p>
+<pre class="coq"><code>Definition gcd : nat -&gt; nat -&gt; nat.
+ apply (uncurry ∘ (Fix (well_founded_ltof (nat * nat) snd) (fun _ =&gt; nat))).
+  refine
+  ( fun p gcd =&gt;
+      match p as x return p=x -&gt; nat with
+      | (a, b) =&gt;
+          fun e =&gt;
+          if dec (b = 0)
+            then a
+            else gcd (b, a mod b) _
+      end eq_refl );
+  (subst p; unfold ltof; simpl; abstract (now apply Nat.mod_upper_bound)).
+ Defined.</code></pre>
+<p>Reading it top to bottom: <code>Fix</code> takes a proof that a
+relation is well-founded and builds a recursor for it. The relation here
+is <code>ltof (nat * nat) snd</code> — compare two pairs by the second
+component, <code>snd</code> — and <code>well_founded_ltof</code>
+supplies the proof that this ordering has no infinite descent. So the
+recursion is on a single tupled argument <code>p : nat * nat</code>; the
+leading <code>uncurry ∘</code> turns the tupled function back into the
+ordinary two-argument <code>gcd a b</code> we wanted to write. Inside,
+<a href="coqdoc/Riktig.Programs.Gcd.html#gcd"><code>gcd</code></a> is
+the recursive call the recursor provides. The
+<code>if dec (b = 0)</code> is the base test. In the recursive branch,
+<code>gcd (b, a mod b) _</code> leaves a hole <code>_</code> for the
+proof that the new pair is smaller; the final line fills every such hole
+with <code>Nat.mod_upper_bound</code>, the fact that
+<code>a mod b &lt; b</code>. The <code>abstract</code> seals that proof
+into a separate opaque lemma so it never bloats the term that runs.</p>
+<p>Applying <code>Fix</code> by hand has one consequence:
+<code>gcd a b</code> does not reduce by <code>simpl</code> the way a
+plain <code>Fixpoint</code> would, because <code>Fix</code> is guarded
+by the well-foundedness proof. So the file derives the defining equation
+— the displayed case rule above, verbatim — as a lemma, <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd_step"><code>gcd_step</code></a>,
+once:</p>
+<pre class="coq"><code>Lemma gcd_step: forall a b : nat,
+    gcd a b = if dec (b = 0) then a else gcd b (a mod b).
+  intros; unfold gcd at 1, compose, uncurry.
+  rewrite Fix_eq.
+  - destruct dec; reflexivity.
+  - intros [x y] f g H.
+    destruct dec; [reflexivity | apply H].
+ Qed.</code></pre>
+<p><code>Fix_eq</code> is the general lemma that a <code>Fix</code>
+equals its body applied to itself, provided the body does not inspect
+<em>which</em> recursive function it was handed — the second bullet
+discharges exactly that, showing the two branches use the recursive
+argument the same way under any <code>f</code> and <code>g</code>. From
+<a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd_step"><code>gcd_step</code></a>
+on, every proof rewrites with this equation and never touches the
+<code>Fix</code> again. And the program computes; these are checked in
+the file by <code>eq_refl</code>, which forces both sides to the same
+normal form:</p>
+<pre class="coq"><code>Check Logic.eq_refl : gcd 48 18 = 6.
+Check Logic.eq_refl : gcd 17 5 = 1.
+Check Logic.eq_refl : gcd 0 5 = 5.
+Check Logic.eq_refl : gcd 5 0 = 5.
+Check Logic.eq_refl : gcd 270 192 = 6.</code></pre>
+<h3 id="what-correct-means-and-the-bridge-that-proves-it">What “correct”
+means, and the bridge that proves it</h3>
+<p>The specification of a greatest common divisor is two facts:
+<code>gcd a b</code> divides both <code>a</code> and <code>b</code>, and
+any <code>c</code> that divides both also divides <code>gcd a b</code>
+(it is greatest in the divisibility ordering). Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">d = \gcd(a,b)</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>∣</mo><mi>a</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>d</mi><mo>∣</mo><mi>b</mi><mo>,</mo><mspace width="2.0em"></mspace><mo>∀</mo><mi>c</mi><mo>,</mo><mspace width="0.222em"></mspace><mspace width="0.222em"></mspace><mi>c</mi><mo>∣</mo><mi>a</mi><mspace width="0.222em"></mspace><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> and </mtext><mspace width="0.333em"></mspace></mrow><mspace width="0.222em"></mspace><mi>c</mi><mo>∣</mo><mi>b</mi><mspace width="0.222em"></mspace><mo>⟹</mo><mspace width="0.222em"></mspace><mi>c</mi><mo>∣</mo><mi>d</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">d \mid a, \qquad d \mid b, \qquad \forall c,\ \ c \mid a \ \text{ and }\ c \mid b \ \implies\ c \mid d.</annotation></semantics></math></p>
+<p>Coq’s standard library already proves these for its own
+<code>Nat.gcd</code>. So the cleanest route is a bridge: show the
+program computes exactly <code>Nat.gcd</code>, then inherit the
+specification. The bridge carries the substantial work.</p>
+<p>The identity to prove is that the program and the library agree —
+<code>gcd a b = Nat.gcd a b</code> — by induction on the argument that
+shrinks. Write
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math>
+for the library’s <code>Nat.gcd</code>. On the blackboard, the base case
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">b = 0</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\gcd(a,0) = a = G(a,0)</annotation></semantics></math>,
+and the nonzero case is a chain of three equalities:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the program’s step, since </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mo>≠</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">induction hypothesis at the smaller pair: </mtext><mspace width="0.333em"></mspace></mrow><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo>&lt;</mo><mi>b</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mtext mathvariant="normal">, the library’s own Euclid step.</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\gcd(a,b) &amp;= \gcd(b,\ a \bmod b) &amp;&amp; \{\text{the program&#39;s step, since } b \neq 0\}\\
+          &amp;= G(b,\ a \bmod b)    &amp;&amp; \{\text{induction hypothesis at the smaller pair: } a \bmod b &lt; b\}\\
+          &amp;= G(a,b)              &amp;&amp; \{G(b,\ a \bmod b) = G(a,b)\text{, the library&#39;s own Euclid step.}\}
+\end{aligned}
+</annotation></semantics></math></p>
+<p>Here is the proof from <a
+href="coqdoc/Riktig.Theory.Gcd.html"><code>Theory/Gcd.v</code></a>:</p>
+<pre class="coq"><code>  Lemma gcd_eq_stdlib : forall a b, gcd a b = Nat.gcd a b.
+  Proof.
+    apply (measure_ind2 (fun (_ b : nat) =&gt; b)
+             (fun a b =&gt; gcd a b = Nat.gcd a b)).
+    intros a b IH.
+    rewrite gcd_step. destruct (dec (b = 0)) as [-&gt;|Hb].
+    - now rewrite Nat.gcd_0_r.
+    - rewrite (IH b (a mod b)) by (apply Nat.mod_upper_bound; exact Hb).
+      rewrite (Nat.gcd_comm b (a mod b)), Nat.Lcm0.gcd_mod.
+      apply Nat.gcd_comm.
+  Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Lib.MeasureInd.html#measure_ind2"><code>measure_ind2</code></a>
+is strong induction along a measure of two arguments; here the measure
+is <code>fun (_ b) =&gt; b</code>, the second argument, so the induction
+hypothesis <code>IH</code> may be used at any pair whose second
+component is smaller.</li>
+<li><code>rewrite gcd_step</code> replaces <code>gcd a b</code> by its
+defining <code>if</code>, and
+<code>destruct (dec (b = 0)) as [-&gt;|Hb]</code> splits on the test —
+the <code>-&gt;</code> substitutes <code>b := 0</code> in the base case,
+and <code>Hb : b &lt;&gt; 0</code> names the hypothesis in the
+step.</li>
+<li>In the base case <code>now rewrite Nat.gcd_0_r</code> closes
+<code>a = Nat.gcd a 0</code>, since <code>Nat.gcd a 0</code> is
+<code>a</code>.</li>
+<li>In the step, <code>rewrite (IH b (a mod b))</code> is the induction
+hypothesis — its side-condition <code>a mod b &lt; b</code> is
+discharged right there by <code>Nat.mod_upper_bound</code> using
+<code>Hb</code>. That leaves
+<code>Nat.gcd b (a mod b) = Nat.gcd a b</code>, which the last two
+rewrites and <code>apply Nat.gcd_comm</code> settle through the standard
+<code>gcd_comm</code> and <code>gcd_mod</code> lemmas — this is the
+outer two equalities of the blackboard chain.</li>
+</ul>
+<p>With the bridge in hand the specification is three one-line
+corollaries, each a rewrite followed by the matching standard-library
+fact:</p>
+<pre class="coq"><code>  Lemma gcd_divides_l : forall a b, Nat.divide (gcd a b) a.
+  Proof. intros a b. rewrite gcd_eq_stdlib. apply Nat.gcd_divide_l. Qed.
+
+  Lemma gcd_divides_r : forall a b, Nat.divide (gcd a b) b.
+  Proof. intros a b. rewrite gcd_eq_stdlib. apply Nat.gcd_divide_r. Qed.
+
+  Lemma gcd_greatest : forall a b c,
+      Nat.divide c a -&gt; Nat.divide c b -&gt; Nat.divide c (gcd a b).
+  Proof.
+    intros a b c Ha Hb. rewrite gcd_eq_stdlib.
+    now apply Nat.gcd_greatest.
+  Qed.</code></pre>
+<p>Each one rewrites <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd"><code>gcd</code></a> to
+<code>Nat.gcd</code> and then quotes the library:
+<code>gcd_divide_l</code>/<code>gcd_divide_r</code> for the two
+divisibility facts, <a
+href="coqdoc/Riktig.Theory.Gcd.html#gcd_greatest"><code>gcd_greatest</code></a>
+for maximality. The program is a common divisor of its arguments, and it
+is the greatest one.</p>
+<h2 id="binary-search-generic-in-the-element-type">Binary search,
+generic in the element type</h2>
+<p>The second program searches a sorted range for a target. It is
+written against an abstract read interface rather than a concrete list:
+a memory type <code>mem</code>, a
+<code>read : mem -&gt; nat -&gt; V</code> that fetches the element at an
+index, and a single comparison <code>leb : V -&gt; V -&gt; bool</code>.
+Nothing else is assumed of the element type <code>V</code> — not even an
+equality test, so “the element here equals the target” is expressed the
+textbook antisymmetric way, <code>leb x target = true</code> and
+<code>leb target x = true</code> both holding.</p>
+<p>Like <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd"><code>gcd</code></a> above,
+the search recurses on a tupled pair — here the two bounds
+<code>(lo, hi)</code> themselves, not a derived size — well-founded on
+the measure <code>S hi - lo</code>, the range size. There is one genuine
+subtlety absent from <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd"><code>gcd</code></a>:
+descending into the left half needs an upper bound <code>mid - 1</code>,
+and <code>nat</code>’s truncated subtraction cannot represent “the empty
+range below index 0” — at <code>mid = lo</code> (which happens once the
+remaining range holds one or two elements), <code>mid - 1</code> would
+silently reinterpret “nothing left to search” as “search index
+<code>mid - 1</code> again”. Since <code>lo</code> only ever stays put
+or grows across the recursion, <code>mid = lo</code> unambiguously means
+the left half is empty <em>at this call</em>, regardless of
+<code>lo</code>’s value, so that case is answered directly
+(<code>None</code>) without ever computing <code>mid - 1</code>. From <a
+href="coqdoc/Riktig.Programs.BinarySearch.html"><code>Programs/BinarySearch.v</code></a>:</p>
+<pre class="coq"><code>  Definition bsearch : nat -&gt; nat -&gt; option nat.
+  apply (uncurry ∘ (Fix (well_founded_ltof (nat * nat) (fun p =&gt; S (snd p) - fst p))
+           (fun _ =&gt; option nat))).
+  refine
+  ( fun p bsearch =&gt;
+      match p as x return p = x -&gt; option nat with
+      | (lo, hi) =&gt;
+          fun e =&gt;
+          if dec (hi &lt; lo)
+          then None
+          else
+            let mid := lo + (hi - lo) / 2 in
+            if dec (leb (read m mid) target = true)
+            then if dec (leb target (read m mid) = true)
+                 then Some mid
+                 else bsearch (S mid, hi) _
+            else if dec (mid = lo)
+                 then None
+                 else bsearch (lo, mid - 1) _
+      end eq_refl
+  );
+  (subst p; unfold ltof; cbn [fst snd]; pose proof (half_le (hi - lo)); abstract lia).
+  Defined.</code></pre>
+<p>Reading it the same way as <a
+href="coqdoc/Riktig.Programs.Gcd.html#gcd"><code>gcd</code></a>: the
+well-founded relation is now on pairs,
+<code>fun p =&gt; S (snd p) - fst p</code> — the range size — via
+<code>well_founded_ltof</code>, and <code>uncurry ∘</code> again turns
+the tupled recursor back into the two-argument
+<code>bsearch lo hi</code> this file wants.
+<code>if dec (hi &lt; lo)</code> is the base case, an empty range.
+Otherwise <code>mid</code> is the midpoint; the program reads it once
+and asks the same two questions as before:
+<code>read m mid &lt;= target</code> and
+<code>target &lt;= read m mid</code>. If both hold, <code>mid</code> is
+the answer. If only the first holds, the target lies above the midpoint,
+and the recursion continues into the strictly smaller pair
+<code>(S mid, hi)</code>. Otherwise <code>dec (mid = lo)</code> decides
+whether the left half is empty (<code>None</code>, no
+<code>mid - 1</code> ever formed) or continues into
+<code>(lo, mid - 1)</code>. The two remaining holes are proofs that the
+new pair is smaller under the measure; both close the same way,
+<code>pose proof (half_le (hi - lo))</code> supplying the genuine
+integer-division bound <code>d / 2 &lt;= d</code> that <code>lia</code>
+cannot derive on its own, followed by <code>abstract lia</code>. As
+before, a <a
+href="coqdoc/Riktig.Programs.BinarySearch.html#bsearch_step"><code>bsearch_step</code></a>
+lemma (in the same file) derives the defining equation through
+<code>Fix_eq</code>, unfolding one layer of the tupled recursion into
+exactly this four-way branch.</p>
+<p>Instantiated at <code>nat</code> with <code>Nat.leb</code> over a
+list read through <code>nth_default</code>, it runs — a found case and a
+not-found case among the checks in the file:</p>
+<pre class="coq"><code>Check Logic.eq_refl : bsearch nat Nat.leb (list nat) (nth_default 0) l 7 0 6 = Some 3.
+Check Logic.eq_refl : bsearch nat Nat.leb (list nat) (nth_default 0) l 4 0 6 = None.</code></pre>
+<p>with <code>l := [1;3;5;7;9;11;13]</code>: the target <code>7</code>
+sits at index <code>3</code>, and <code>4</code> is absent, so the
+search reports <code>Some 3</code> and <code>None</code>
+respectively.</p>
+<h3 id="soundness-needs-no-assumptions-about-the-order">Soundness needs
+no assumptions about the order</h3>
+<p>Here is the pleasant asymmetry of binary search. To <em>find</em> an
+element in a sorted range you need the range to be sorted and the
+comparison to be transitive — that is the completeness direction. But to
+trust an answer the search <em>does</em> return, you need nothing at all
+about the order: the program only replies <code>Some mid</code> after it
+has itself checked both comparisons, so a returned index provably holds
+an element equal to the target, no hypotheses required. That is the
+cleaner theorem to walk.</p>
+<p>The theorem is <a
+href="coqdoc/Riktig.Theory.BinarySearch.html#bsearch_sound"><code>bsearch_sound</code></a>:
+if <code>bsearch lo hi</code> returns <code>Some i</code>, then
+<code>i</code> lies in the range <code>lo &lt;= i &lt;= hi</code> and
+its element compares equal to the target on both sides. In symbols —
+writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>i</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">m[i]</annotation></semantics></math>
+for the element at index
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+for the target, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>≼</mo><mi>y</mi></mrow><annotation encoding="application/x-tex">x \preceq y</annotation></semantics></math>
+for the comparison <code>leb x y = true</code>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>l</mi><mi>o</mi><mo>,</mo><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.222em"></mspace><mi>i</mi><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mi>l</mi><mi>o</mi><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>h</mi><mi>i</mi><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mo>≼</mo><mi>t</mi><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>t</mi><mo>≼</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{search}(lo, hi) = \mathrm{Some}\ i \;\implies\; lo \le i \le hi \;\wedge\; m[i] \preceq t \;\wedge\; t \preceq m[i].</annotation></semantics></math></p>
+<p>It goes by well-founded induction on the pair <code>(lo, hi)</code>,
+via the measure <code>S hi - lo</code> (<a
+href="coqdoc/Riktig.Lib.MeasureInd.html#measure_ind2"><code>measure_ind2</code></a>),
+following the four branches of <a
+href="coqdoc/Riktig.Programs.BinarySearch.html#bsearch_step"><code>bsearch_step</code></a>:</p>
+<pre class="coq"><code>  Theorem bsearch_sound :
+    forall lo hi i,
+      bsearch lo hi = Some i -&gt;
+      lo &lt;= i &lt;= hi
+      /\ leb (read m i) target = true
+      /\ leb target (read m i) = true.
+  Proof.
+    apply (measure_ind2 (fun lo hi =&gt; S hi - lo)
+             (fun lo hi =&gt; forall i,
+                  bsearch lo hi = Some i -&gt;
+                  lo &lt;= i &lt;= hi
+                  /\ leb (read m i) target = true
+                  /\ leb target (read m i) = true)).
+    intros lo hi IH i.
+    rewrite bsearch_step.
+    destruct (dec (hi &lt; lo)) as [L|L]; [intros E; discriminate E|].
+    cbv zeta.
+    pose proof (half_le (hi - lo)) as Hq.
+    destruct (dec (leb (read m (lo + (hi - lo) / 2)) target = true)) as [L1|L1].
+    - destruct (dec (leb target (read m (lo + (hi - lo) / 2)) = true)) as [L2|L2].
+      + (* found at the midpoint.  (congruence, not injection: the
+           latter normalizes (hi - lo) / 2 into its divmod unfolding,
+           which lia then no longer matches with half_le.) *)
+        intros E.
+        assert (Ei : i = lo + (hi - lo) / 2) by congruence.
+        subst i.
+        split; [lia|split; assumption].
+      + (* right half: indices S mid .. hi *)
+        intros E.
+        assert (Hd : S hi - S (lo + (hi - lo) / 2) &lt; S hi - lo) by lia.
+        destruct (IH _ hi Hd _ E) as (Hr &amp; H1 &amp; H2).
+        split; [lia|split; assumption].
+    - destruct (dec (lo + (hi - lo) / 2 = lo)) as [Eeq|Eeq];
+        [intros E; discriminate E|].
+      (* left half: indices lo .. mid - 1 *)
+      intros E.
+      assert (Hd : S (lo + (hi - lo) / 2 - 1) - lo &lt; S hi - lo) by lia.
+      destruct (IH lo _ Hd _ E) as (Hr &amp; H1 &amp; H2).
+      split; [lia|split; assumption].
+  Qed.</code></pre>
+<p>Walking the argument:</p>
+<ul>
+<li><code>apply (measure_ind2 (fun lo hi =&gt; S hi - lo) ...)</code>
+sets up well-founded induction on the pair: <code>IH</code> applies at
+every pair whose measure is strictly smaller.
+<code>rewrite bsearch_step</code> exposes the program’s four-way branch,
+and <code>hi &lt; lo</code> is dismissed because
+<code>None = Some i</code> is impossible (<code>discriminate</code>).
+<code>cbv zeta</code> unfolds the <code>let</code> for <code>mid</code>,
+and <code>pose proof (half_le (hi - lo))</code> puts the division bound
+in scope for <code>lia</code>.</li>
+<li>The two <code>destruct (dec ...)</code> split on the same two
+comparisons the program tests. In the found case,
+<code>Some (lo + (hi-lo)/2) = Some i</code> forces
+<code>i = lo + (hi-lo)/2</code> by <code>congruence</code>; then the
+range membership is arithmetic (<code>lia</code>) and the two comparison
+facts are exactly <code>L1</code> and <code>L2</code>, in scope from the
+branch.</li>
+<li>In the right-half case the answer came from the smaller pair
+<code>(S mid, hi)</code>: <code>assert (Hd : ... &lt; S hi - lo)</code>
+supplies the measure decrease, <code>IH _ hi Hd _ E</code> applies the
+hypothesis there, and its conclusion is re-assembled — the range bound
+widens back out to <code>lo &lt;= i &lt;= hi</code> by
+<code>lia</code>.</li>
+<li>In the left-half case, <code>dec (mid = lo)</code> is dismissed
+first (<code>None = Some i</code> is impossible there too — this is the
+empty-left-half short-circuit, dead whenever the program actually
+answers <code>Some</code>), then <code>IH lo _ Hd _ E</code> applies at
+the smaller pair <code>(lo, mid - 1)</code>.</li>
+</ul>
+<p>The companion result is <a
+href="coqdoc/Riktig.Theory.BinarySearch.html#bsearch_complete"><code>bsearch_complete</code></a>,
+which does need the two order assumptions: if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>≼</mo><annotation encoding="application/x-tex">\preceq</annotation></semantics></math>
+is transitive and the range is pairwise sorted
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mo>≼</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>j</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">m[i] \preceq m[j]</annotation></semantics></math>
+whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>o</mi><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>h</mi><mi>i</mi></mrow><annotation encoding="application/x-tex">lo \le i \le j \le hi</annotation></semantics></math>),
+then a present element is always found —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∃</mo><mi>j</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>l</mi><mi>o</mi><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>h</mi><mi>i</mi><mspace width="0.167em"></mspace><mo>∧</mo><mspace width="0.167em"></mspace><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>j</mi><mo stretchy="false" form="postfix">]</mo><mo>≼</mo><mi>t</mi><mspace width="0.167em"></mspace><mo>∧</mo><mspace width="0.167em"></mspace><mi>t</mi><mo>≼</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>j</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo>∃</mo><mi>i</mi><mo>,</mo><mspace width="0.222em"></mspace><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>l</mi><mi>o</mi><mo>,</mo><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.222em"></mspace><mi>i</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\exists j,\ lo \le j \le hi \,\wedge\, m[j] \preceq t \,\wedge\, t \preceq m[j] \;\implies\; \exists i,\ \mathrm{search}(lo, hi) = \mathrm{Some}\ i.</annotation></semantics></math></p>
+<p>Its proof, in <a
+href="coqdoc/Riktig.Theory.BinarySearch.html"><code>Theory/BinarySearch.v</code></a>,
+runs the same well-founded induction; in each failed-comparison branch,
+transitivity plus sortedness turn the witness position <code>j</code>
+into a contradiction with the branch condition, so the witness always
+survives into the half that is searched. Soundness says the answer you
+get is right; completeness says you get an answer when one exists.</p>
+<p><em>Next: merge and merge sort, where “sorted” is finally given a
+name and the sorting is proved to be a permutation of its
+input.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Programs.Gcd.html"><code>Programs/Gcd.v</code></a>
+(Euclid’s algorithm as a lambda term) · <a
+href="coqdoc/Riktig.Theory.Gcd.html"><code>Theory/Gcd.v</code></a> (<a
+href="coqdoc/Riktig.Theory.Gcd.html#gcd_eq_stdlib"><code>gcd_eq_stdlib</code></a>
+and the divisibility specification) · <a
+href="coqdoc/Riktig.Programs.BinarySearch.html"><code>Programs/BinarySearch.v</code></a>
+(binary search over an abstract read interface) · <a
+href="coqdoc/Riktig.Theory.BinarySearch.html"><code>Theory/BinarySearch.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.BinarySearch.html#bsearch_sound"><code>bsearch_sound</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BinarySearch.html#bsearch_complete"><code>bsearch_complete</code></a>).</p>
+</main>
+</body>
+</html>

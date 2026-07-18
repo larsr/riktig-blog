@@ -130,7 +130,7 @@ left identity (<code>e + a == a</code> for all <code>a</code>) and an
 <code>f</code> that is a right identity (<code>a + f == a</code> for all
 <code>a</code>). They must be equal. The argument is a single trick —
 look at the combination <code>e + f</code> from both sides:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>e</mi><mo>+</mo><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">e \;=\; e + f \;=\; f.</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>e</mi><mo>+</mo><mi>f</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mi>f</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is a right identity</mtext></mrow></mrow><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mi>e</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is a left identity</mtext></mrow></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">e \;=\; e + f \quad\{\text{$f$ is a right identity}\}\quad =\; f \quad\{\text{$e$ is a left identity}\}</annotation></semantics></math></p>
 <p>The first equality holds because <code>f</code> does nothing on the
 right; the second because <a
 href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> does nothing
@@ -166,7 +166,7 @@ coincide.</p>
 named up front — the structure’s own <code>0</code> — and a candidate
 compared against it. That is a one-step corollary. A <em>left</em>
 identity must be the zero:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>e</mi><mo>+</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">e \;=\; e + 0 \;=\; 0.</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>e</mi><mo>+</mo><mn>0</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right identity law</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">hypothesis </mtext><mspace width="0.333em"></mspace></mrow><mi>e</mi><mo>+</mo><mi>a</mi><mo>=</mo><mi>a</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> at </mtext><mspace width="0.333em"></mspace></mrow><mi>a</mi><mo>=</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">e \;=\; e + 0 \quad\{\text{right identity law}\}\quad =\; 0 \quad\{\text{hypothesis } e + a = a \text{ at } a = 0\}</annotation></semantics></math></p>
 <pre class="coq"><code>Theorem zero_unique_l : forall e : M, (forall a, e + a == a) -&gt; e == 0.
 Proof.
   intros e He.
@@ -190,51 +190,69 @@ with</h2>
 is shown to satisfy the <a
 href="coqdoc/Riktig.Interface.Monoid.html#Monoid"><code>Monoid</code></a>
 class, all of the above becomes true of it with no further work. The
-integers are the first instance, in <a
-href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>, where each
-law is discharged by the corresponding standard fact about
-<code>Z.add</code> (associativity, <code>0 + a = a</code>,
-<code>a + 0 = a</code>). With that instance in scope, the monoid’s
-<code>+</code> and <code>0</code> <em>are</em> integer addition and
-zero, and they run:</p>
-<pre class="coq"><code>Example z_idl : (0 + 5)%Z == 5%Z.
-Proof. reflexivity. Qed.</code></pre>
-<p>This computes: <code>0 + 5</code> reduces to <code>5</code>, and the
-two sides are literally equal. The list monoid from <a
+integers are the first instance. Here is the whole declaration from <a
+href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a> — each law
+field is discharged by the corresponding fact from Coq’s standard
+library:</p>
+<pre class="coq"><code>#[global] Instance Z_Monoid : Monoid Z := {|
+  mon_equ        := Z_EqRel;
+  mon_zero       := Z_Zero;
+  mon_add        := Z_Add;
+  mon_equiv      := eq_equivalence;
+  mon_assoc      := fun a b c =&gt; eq_sym (Z.add_assoc a b c);
+  mon_idl        := Z.add_0_l;
+  mon_idr        := Z.add_0_r;
+  mon_add_proper := ltac:(solve_proper)
+|}.</code></pre>
+<p><code>Z.add_0_l</code> is exactly the left-identity law,
+<code>Z.add_0_r</code> the right one. The one wrinkle is <a
+href="coqdoc/Riktig.Interface.Monoid.html#mon_assoc"><code>mon_assoc</code></a>:
+the standard library states associativity as
+<code>a + (b + c) = (a + b) + c</code>, the mirror image of the class’s
+field, so <code>eq_sym</code> flips it around. The list monoid from <a
 href="coqdoc/Riktig.Impl.ListMonoid.html"><code>Impl/ListMonoid.v</code></a>
 gives the same laws for concatenation, where <code>0</code> is the empty
-list:</p>
-<pre class="coq"><code>Example list_zero_add : @add (list Z) _ 0 [4;5;6]%Z = [4;5;6]%Z.
-Proof. reflexivity. Qed.</code></pre>
-<p>Prepending the empty list changes nothing — the same left-identity
-law, now about <code>app</code>. Both instances inherit <a
+list. First the vocabulary — equality, zero, addition — then the
+bundle:</p>
+<pre class="coq"><code>#[global] Instance List_EqRel A : EqRel (list A) := eq.
+#[global] Instance List_Zero  A : Zero (list A) := nil.
+#[global] Instance List_Add   A : HasAdd (list A) := @app A.</code></pre>
+<pre class="coq"><code>#[global] Instance List_Monoid A : Monoid (list A) := {|
+  mon_equiv      := eq_equivalence;
+  mon_assoc      := fun l m n =&gt; eq_sym (app_assoc l m n);
+  mon_idl        := @app_nil_l A;
+  mon_idr        := @app_nil_r A;
+  mon_add_proper := app_proper A
+|}.</code></pre>
+<p>The laws here are <code>app_nil_l</code> (prepending the empty list
+changes nothing) and <code>app_nil_r</code> (appending it changes
+nothing), again with <code>eq_sym</code> reorienting associativity. Both
+instances inherit <a
 href="coqdoc/Riktig.Theory.Monoid.html#id_unique"><code>id_unique</code></a>
 and <a
 href="coqdoc/Riktig.Theory.Monoid.html#zero_unique_l"><code>zero_unique_l</code></a>
 for free: whatever left identity you can find in <code>Z</code> under
-<code>+</code>, or in <code>list Z</code> under concatenation, is
+<code>+</code>, or in <code>list A</code> under concatenation, is
 provably the one already named <code>0</code>.</p>
 <p><em>Next: groups — what it takes to </em>undo* a combination, and the
 cancellation law that falls out of it.*</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Ops.v"><code>Ops.v</code></a>
-(the vocabulary) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Props.v"><code>Props.v</code></a>
-(the single laws) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Monoid.v"><code>Interface/Monoid.v</code></a>
+href="coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> (the vocabulary) ·
+<a href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> (the single
+laws) · <a
+href="coqdoc/Riktig.Interface.Monoid.html"><code>Interface/Monoid.v</code></a>
 (the structure) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Monoid.v"><code>Theory/Monoid.v</code></a>
+href="coqdoc/Riktig.Theory.Monoid.html"><code>Theory/Monoid.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Monoid.html#id_unique"><code>id_unique</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Monoid.html#zero_unique_l"><code>zero_unique_l</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Monoid.html#zero_unique_r"><code>zero_unique_r</code></a>)
-· <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Zr.v"><code>Impl/Zr.v</code></a>
+· <a href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>
 (<code>Z</code> as a monoid) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ListMonoid.v"><code>Impl/ListMonoid.v</code></a>
+href="coqdoc/Riktig.Impl.ListMonoid.html"><code>Impl/ListMonoid.v</code></a>
 (lists under concatenation).</p>
 </main>
 </body>

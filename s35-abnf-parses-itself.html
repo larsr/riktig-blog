@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A parser that parses its own grammar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="a-parser-that-parses-its-own-grammar">A parser that parses its
+own grammar</h1>
+<p>When a standards document needs to pin down an exact text format —
+the shape of an email address, the header lines of an HTTP request, the
+syntax of a URI — it rarely does so in prose. Prose is ambiguous.
+Instead it writes a <em>grammar</em>: a compact set of rules saying
+which strings are valid and how they decompose. The notation most
+Internet standards reach for is <strong>ABNF</strong>, Augmented
+Backus–Naur Form, defined in RFC 5234. A rule looks like this:</p>
+<pre><code>DIGIT = %x30-39</code></pre>
+<p>read as “a <code>DIGIT</code> is one character whose byte value is
+between hexadecimal <code>30</code> and <code>39</code>” — that is,
+<code>0</code> through <code>9</code>. Rules combine: a concatenation
+<code>a b</code> means <em>a then b</em>, an alternation
+<code>a / b</code> means <em>a or b</em>, <code>*a</code> means <em>zero
+or more copies of a</em>, <code>[a]</code> means <em>optional a</em>,
+and a rule may name another rule, so grammars nest.</p>
+<p>Here is the observation this post is about. ABNF is itself a text
+format with an exact syntax — so that syntax can be described <em>by an
+ABNF grammar</em>. RFC 5234 does exactly this: its Section 4 is a
+grammar, written in ABNF, whose subject is ABNF. A <code>rule</code> is
+a <code>rulename</code>, then a <code>defined-as</code>
+(<code>=</code>), then some <code>elements</code>; an
+<code>alternation</code> is a <code>concatenation</code> followed by
+zero or more <code>/</code>-separated concatenations; and so on down to
+the terminal <code>char-val</code> and <code>num-val</code>. The
+notation describes itself.</p>
+<p>That self-description is only a claim on paper until something checks
+it. This post builds the pieces that turn it into a fact a machine
+verifies: a datatype for parsed ABNF, a hand-written parser that reads
+ABNF text into that datatype, a generic interpreter that turns
+<em>any</em> such datatype back into a working parser, and finally the
+round trip that feeds ABNF’s own grammar through both and confirms the
+result is identical to where it started.</p>
+<h2 id="the-shape-of-a-parsed-grammar">The shape of a parsed
+grammar</h2>
+<p>First, the target: a Coq datatype that a piece of ABNF text parses
+<em>into</em>. It mirrors the notation piece for piece. A numeric
+terminal is either a list of concatenated byte values or a range, tagged
+with its base; a repetition carries an optional lower and upper
+bound:</p>
+<pre class="coq"><code>Inductive NumBase := BinBase | DecBase | HexBase.
+
+Inductive NumSpec :=
+  | NumConcat : NumBase -&gt; list nat -&gt; NumSpec
+  | NumRange  : NumBase -&gt; nat -&gt; nat -&gt; NumSpec.
+
+Record RepeatSpec := mkRepeat {
+  repeat_min : option nat;
+  repeat_max : option nat
+}.</code></pre>
+<p>The heart is four mutually recursive types — an <em>element</em> is
+one of six things (a rule name, a quoted string, a numeric value, a
+prose description, a parenthesised group, or a bracketed option); an
+<em>alternation</em> is a list of concatenations; a
+<em>concatenation</em> is a list of repetitions; a <em>repetition</em>
+is an optional repeat-count wrapped around an element:</p>
+<pre class="coq"><code>Inductive ABNFElement :=
+  | ElemRuleName : string -&gt; ABNFElement
+  | ElemCharVal  : string -&gt; ABNFElement
+  | ElemNumVal   : NumSpec -&gt; ABNFElement
+  | ElemProseVal : string -&gt; ABNFElement
+  | ElemGroup    : ABNFAlternation -&gt; ABNFElement
+  | ElemOption   : ABNFAlternation -&gt; ABNFElement
+
+with ABNFAlternation :=
+  | Alt : list ABNFConcatenation -&gt; ABNFAlternation
+
+with ABNFConcatenation :=
+  | Concat : list ABNFRepetition -&gt; ABNFConcatenation
+
+with ABNFRepetition :=
+  | Rep : option RepeatSpec -&gt; ABNFElement -&gt; ABNFRepetition.</code></pre>
+<p>A whole grammar is a list of rules, each a name, a marker for
+<code>=</code> versus the incremental <code>=/</code>, and a body
+alternation:</p>
+<pre class="coq"><code>Inductive DefinedAs := DefEqual | DefIncremental.
+
+Record ABNFRule := mkRule {
+  rule_name    : string;
+  rule_defined : DefinedAs;
+  rule_body    : ABNFAlternation
+}.
+
+Definition ABNFRulelist := list ABNFRule.</code></pre>
+<p>Nothing here parses anything. It is pure data — the shape a grammar
+has <em>after</em> it has been read.</p>
+<h2 id="the-static-parser-abnf-text-into-that-data">The static parser:
+ABNF text into that data</h2>
+<p>The first program reads ABNF text and produces one of those <a
+href="coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRulelist"><code>ABNFRulelist</code></a>
+values. It is written by hand, once, out of small parser combinators (a
+<a
+href="coqdoc/Riktig.Impl.Parser.html#satisfy"><code>satisfy</code></a>
+that consumes one matching character, a <a
+href="coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a> that
+repeats, an <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+that tries alternatives), one function per grammar production: <a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#p_rulename"><code>p_rulename</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#p_repeat"><code>p_repeat</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#p_alternation"><code>p_alternation</code></a>,
+and so on, ending in a single entry point:</p>
+<pre class="coq"><code>Definition parse_abnf (input : string) : option ABNFRulelist :=
+  match p_rulelist input input with
+  | Some (rules, _) =&gt; Some (List.filter (fun r =&gt; negb (String.eqb (rule_name r) &quot;&quot;)) rules)
+  | None =&gt; None
+  end.</code></pre>
+<p>It returns <code>option</code> because parsing can fail: text that is
+not well-formed ABNF yields <code>None</code>. On text that is, it
+yields <code>Some</code> of the parsed rule list, with blank lines
+filtered out. To see it produce actual data, here is a test from the
+file. The input is one rule followed by a line feed:</p>
+<pre class="coq"><code>Definition crlf_str : string := String &quot;010&quot;%char EmptyString.
+
+Definition test_input :=
+  (&quot;DIGIT = %x30-39&quot; ++ crlf_str)%string.
+
+Example test_rule :
+  run (p_rule test_input) test_input
+  = Some (mkRule &quot;DIGIT&quot; DefEqual (Alt [Concat [Rep None (ElemNumVal (NumRange HexBase 48 57))]])).
+Proof. reflexivity. Qed.</code></pre>
+<p>The proof is <code>reflexivity</code>: both sides compute to the same
+value, so Coq checks the claim by running the parser. Read the result
+inside-out. The text <code>%x30-39</code> became
+<code>NumRange HexBase 48 57</code> — a hexadecimal range, and
+<code>0x30 = 48</code>, <code>0x39 = 57</code>, the byte values of
+<code>0</code> and <code>9</code>. That numeric value is the lone
+element of a single repetition (<code>Rep None</code>, no repeat count)
+inside a single concatenation inside a one-branch alternation, and the
+whole rule is named <code>DIGIT</code> and defined with <code>=</code>
+(<a
+href="coqdoc/Riktig.Programs.ABNF.Ast.html#DefEqual"><code>DefEqual</code></a>).
+The notation on the left became the tree on the right, and the machine
+agrees it did.</p>
+<h2 id="the-generic-interpreter-that-data-back-into-a-parser">The
+generic interpreter: that data back into a parser</h2>
+<p>The second program goes the other way. Given <em>any</em> <a
+href="coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRulelist"><code>ABNFRulelist</code></a>
+— not a fixed grammar baked in at compile time, but a rule list handed
+over at run time — it builds a parser for whatever language that grammar
+describes. It walks the AST: an alternation becomes a chain of
+<code>&lt;|&gt;</code> (try each branch), a concatenation becomes a
+sequence, a repetition applies its bounds, and a rule name is looked up
+in the grammar and followed. The result of a successful parse is a
+generic labelled tree, a <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#ParseTree"><code>ParseTree</code></a>,
+recording what matched. The top-level builder is:</p>
+<pre class="coq"><code>Definition make_parser (grammar : ABNFRulelist) (start_rule : string)
+  (depth : nat) (input : string) : Parser string ParseTree :=
+  let env := build_env grammar in
+  match lookup_rule env start_rule with
+  | None =&gt; fail
+  | Some body =&gt;
+    ts &lt;- interp_alternation (resolve_rule env depth) body input ;;
+    ret (Node start_rule ts)
+  end.</code></pre>
+<p>Give it a grammar, a start rule, and some input, and it returns the
+parse tree — or fails. Two conveniences wrap it: <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>
+takes the grammar as <em>text</em>, parses it with the static parser
+above, then parses the input with the resulting dynamic parser; and <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_and_print"><code>parse_and_print</code></a>
+does the same but pretty-prints the tree back to text at the end. Here
+is the interpreter running on a one-rule grammar:</p>
+<pre class="coq"><code>Definition test_grammar_1 :=
+  (&quot;digit = %x30-39&quot; ++ crlf_s)%string.
+
+Example test_interp_digit :
+  parse_with_abnf test_grammar_1 &quot;digit&quot; &quot;5&quot; 10 = Some (Node &quot;digit&quot; [Leaf &quot;5&quot;]).
+Proof. reflexivity. Qed.</code></pre>
+<p>The grammar text <code>digit = %x30-39</code> was parsed into an AST,
+that AST was turned into a parser, and <em>that</em> parser was run on
+the input <code>"5"</code>, producing a tree labelled <code>digit</code>
+with the leaf <code>"5"</code>. No parser for digits was written by
+hand; one was manufactured from the grammar.</p>
+<p>The pretty-printer closes the loop. Every character the interpreter
+matches is kept in a <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#Leaf"><code>Leaf</code></a>,
+so walking the tree and concatenating the leaves recovers the exact text
+that was parsed:</p>
+<pre class="coq"><code>Definition test_grammar_3 :=
+  (&quot;hi = %x68 %x69&quot; ++ crlf_s)%string.
+
+Example test_pretty_print :
+  parse_and_print test_grammar_3 &quot;hi&quot; &quot;hi&quot; 10 = Some &quot;hi&quot;.
+Proof. reflexivity. Qed.</code></pre>
+<p>Parse <code>"hi"</code> with a grammar built from
+<code>hi = %x68 %x69</code>, then print the tree, and you get
+<code>"hi"</code> back. Parsing and printing are inverse on this input —
+and that “parse then print returns the input” is exactly the property
+the final check will demand of ABNF’s own grammar.</p>
+<h2
+id="the-self-hosting-check-abnf-parsed-by-a-parser-built-from-abnf">The
+self-hosting check: ABNF, parsed by a parser built from ABNF</h2>
+<p>Now put the two programs nose to tail on the one grammar that
+describes themselves. RFC 5234’s Section 4 — the ABNF grammar of ABNF —
+is transcribed into a Coq string, <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>,
+character for character. The self-hosting check is this pipeline — the
+first arrow is the static parser <a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#parse_abnf"><code>parse_abnf</code></a>,
+the second the grammar-driven parser-and-printer <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print_with_grammar</code></a>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mover><mo>→</mo><mrow><mspace width="0.222em"></mspace><mtext mathvariant="normal">parse</mtext><mspace width="0.222em"></mspace></mrow></mover><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">T</mi></mrow><mover><mo>→</mo><mrow><mspace width="0.222em"></mspace><mtext mathvariant="normal">interpret, re-parse, print</mtext><mspace width="0.222em"></mspace></mrow></mover><msup><mi>g</mi><mo>′</mo></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">
+g \xrightarrow{\ \text{parse}\ } \mathrm{AST}
+\xrightarrow{\ \text{interpret, re-parse, print}\ } g&#39;,
+</annotation></semantics></math></p>
+<p>and the claim is the round-trip identity
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>g</mi><mo>′</mo></msup><mo>=</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">g&#39; = g</annotation></semantics></math>
+— where the second arrow does not use any hand-written ABNF parser. It
+uses the <em>generic</em> interpreter, driven by the AST that the static
+parser just produced. If the static parser understood ABNF correctly,
+and the interpreter builds a faithful parser from any grammar, then
+feeding ABNF’s own grammar through should reproduce ABNF’s own grammar.
+Any disagreement between the two programs about what “ABNF” means would
+surface as a mismatch here.</p>
+<p>The file records four checks, in order. The first is a plain sanity
+check: the transcribed grammar is the length it should be, so nothing
+was dropped in transcription.</p>
+<pre class="coq"><code>Example grammar_length :
+  String.length abnf_grammar = 3388.
+Proof. vm_compute. reflexivity. Qed.</code></pre>
+<p>The second confirms the static parser accepts the whole grammar text
+— it does not choke partway through:</p>
+<pre class="coq"><code>Example parse_abnf_grammar_succeeds :
+  match parse_abnf_tree abnf_grammar with
+  | Some _ =&gt; true
+  | None =&gt; false
+  end = true.
+Proof. compute. reflexivity. Qed.</code></pre>
+<p>The third is a round trip through the whitespace-preserving parser:
+parse the grammar, print the tree, and get back the original text, every
+byte including spaces and comments — in symbols, with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+the parse tree of the grammar text
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.222em"></mspace><mi>t</mi><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>g</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{parse}(g) = \mathrm{Some}\ t \;\implies\; \mathrm{print}(t) = g.</annotation></semantics></math></p>
+<pre class="coq"><code>Example roundtrip_abnf_grammar :
+  match parse_abnf_tree abnf_grammar with
+  | Some t =&gt; String.eqb (pretty_print t) abnf_grammar
+  | None =&gt; false
+  end = true.
+Proof. compute. reflexivity. Qed.</code></pre>
+<p>The fourth is the self-hosting check itself. Parse the Section 4
+grammar with the static, typed parser (<a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#parse_abnf"><code>parse_abnf</code></a>)
+to get an <a
+href="coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRulelist"><code>ABNFRulelist</code></a>;
+hand that rule list to the generic interpreter (<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print_with_grammar</code></a>)
+to build a dynamic parser and printer for the grammar it just parsed;
+run that dynamic parser on the <em>same</em> Section 4 text, starting
+from the <code>rulelist</code> rule; and check the printed result is
+letter-for-letter the input:</p>
+<pre class="coq"><code>Definition abnf_section4_rules : option ABNFRulelist :=
+  parse_abnf abnf_section4.
+
+Example selfhost_abnf_section4 :
+  match abnf_section4_rules with
+  | None =&gt; None
+  | Some rules =&gt; print_with_grammar rules &quot;rulelist&quot; abnf_section4
+  end = Some abnf_section4.
+Proof. vm_compute. reflexivity. Qed.</code></pre>
+<p>The proof is <code>vm_compute</code> followed by
+<code>reflexivity</code>: these are claims about fixed strings and a
+fixed grammar, so the right tool is to <em>run</em> the whole pipeline
+and compare. <code>vm_compute</code> evaluates it — parse the 3388-byte
+grammar, build the interpreter, re-parse, re-print — and
+<code>reflexivity</code> confirms the output string is syntactically
+identical to <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>.
+There is no appeal to a lemma, no hand-waving; the equality is decided
+by computation.</p>
+<p>Why is “parses itself, and the round trip matches exactly” a real
+property and not a slogan? Because each arrow is a total program with a
+type, and the endpoints are concrete strings.
+<code>parse_abnf abnf_section4</code> either returns
+<code>Some rules</code> or it does not, and the check pattern-matches on
+that. <code>print_with_grammar rules "rulelist" abnf_section4</code>
+either returns <code>Some s</code> for some definite string
+<code>s</code>, or it does not. The <code>Example</code> asserts that
+<code>s</code> equals the original text — a decidable equality of two
+byte strings, settled by <code>reflexivity</code>. If the static parser
+misread a single rule of ABNF, the AST would be wrong, the interpreter
+would build a different parser, and the printed string would differ; the
+proof would simply fail to close. That it closes is the content: the
+hand-written understanding of ABNF and the grammar-driven understanding
+of ABNF agree, on ABNF, down to the byte.</p>
+<p><em>Next: turning the same pretty-printed parse tree into a diff
+between two grammars, so a change to a format shows up as a change to
+its parser.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Programs.ABNF.Ast.html"><code>Programs/ABNF/Ast.v</code></a>
+(the parsed-grammar datatype) · <a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>
+(the static parser, <a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#parse_abnf"><code>parse_abnf</code></a>)
+· <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html"><code>Programs/ABNF/Interp.v</code></a>
+(the generic interpreter, <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>)
+· <a
+href="coqdoc/Riktig.Programs.ABNF.Pretty.html"><code>Programs/ABNF/Pretty.v</code></a>
+(the whitespace-preserving parser and printer) · <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html"><code>Programs/ABNF/Grammar.v</code></a>
+(<a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#grammar_length"><code>grammar_length</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#parse_abnf_grammar_succeeds"><code>parse_abnf_grammar_succeeds</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#roundtrip_abnf_grammar"><code>roundtrip_abnf_grammar</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#selfhost_abnf_section4"><code>selfhost_abnf_section4</code></a>).</p>
+</main>
+</body>
+</html>

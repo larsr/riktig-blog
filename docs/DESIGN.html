@@ -100,7 +100,16 @@ arguments with a measure when possible. <strong>No fuel</strong>:
 termination is always by a well-founded measure, never by a
 <code>fuel : nat</code> argument threaded through the recursion — fuel
 changes the function’s type, pollutes every equation with “enough fuel”
-side conditions, and proves nothing about the algorithm. The older
+side conditions, and proves nothing about the algorithm. Never use fuel
+for a computation we know terminates — sorting a list, manipulating a
+tree, structural compilation. Fuel has exactly one legitimate home: an
+interpreter or evaluator running <em>arbitrary</em> code that might
+genuinely loop forever, where the point is to run for a while and see
+whether an answer or an error comes back (<code>Lambda/</code>’s
+step-bounded runners, the Memprog machine interpreters). There the
+partiality is a fact about the language being interpreted, not about our
+algorithm — and a per-program “this much fuel suffices” lemma is what
+restores the honest statement for programs that do terminate. The older
 <code>refine (Fix ...)</code> files (<a
 href="../coqdoc/Riktig.Programs.BinarySearch.html"><code>Programs/BinarySearch.v</code></a>,
 <a

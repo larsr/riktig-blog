@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a channel is: relations, not probabilities</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="what-a-channel-is-relations-not-probabilities">What a channel
+is: relations, not probabilities</h1>
+<p>When a message travels from a sender to a receiver, things can go
+wrong. A message can be lost. It can arrive twice. A batch of messages
+can turn up out of order. The usual way to describe such a channel
+attaches a <em>probability</em> to each mishap: this link drops one
+message in a thousand, that one reorders with some small chance.
+Probabilities are the right tool when you want to predict how often a
+channel misbehaves.</p>
+<p>But there is an earlier, coarser question that has nothing to do with
+frequencies: <em>can</em> this channel lose a message at all? Can it
+duplicate? Can it reorder? A channel that never reorders is a genuinely
+different object from one that sometimes does, however rarely — and most
+things you want to prove about a protocol (that it never delivers a
+corrupted result, that an acknowledgement scheme is safe) depend only on
+which mishaps are <em>possible</em>, not on how likely they are. This is
+the <strong>possibilistic</strong> view: forget the probabilities and
+keep only the set of behaviours a channel is allowed to exhibit.</p>
+<p>That set is a <strong>relation</strong>. Write down the finite list
+of messages the sender put in — the <em>sent trace</em> — and the finite
+list the receiver got out — the <em>received trace</em>. A channel is
+exactly the relation that says which received traces are possible given
+a sent trace. A perfect wire relates each sent trace to itself and
+nothing else. A lossy wire relates a sent trace to every trace you could
+get by dropping some of its messages. No numbers anywhere; just
+<em>sent</em> and <em>received</em>, and a yes-or-no verdict on whether
+that pair could happen. This post builds five such relations, arranges
+them by how permissive they are, and then proves something concrete that
+follows purely from knowing which one you are dealing with.</p>
+<h2 id="traces-are-plain-lists">Traces are plain lists</h2>
+<p>A trace is a finite list of messages. The messages come from some
+type <code>M</code> with no structure at all: a message is only ever
+compared for being the same message or a different one, so ordinary list
+equality is all we need — no algebra, no notion of “close enough.” Every
+channel relation below takes its two arguments in the order
+<code>(sent, received)</code>.</p>
+<h2 id="five-fault-classes">Five fault classes</h2>
+<p>The simplest channel delivers exactly what was sent:</p>
+<pre class="coq"><code>Definition perfect s r : Prop := r = s.</code></pre>
+<p>A <strong>lossy</strong> channel may drop messages but keeps the
+survivors in order. “Received is what is left after dropping some sent
+messages” is precisely the subsequence relation, written
+<code>subseq r s</code> (“<code>r</code> is a subsequence of
+<code>s</code>”):</p>
+<pre class="coq"><code>Definition lossy s r : Prop := subseq r s.</code></pre>
+<p>A <strong>duplicating</strong> channel never drops anything but may
+repeat a message it just delivered. It is given inductively — three ways
+to build a valid <code>(sent, received)</code> pair:</p>
+<pre class="coq"><code>Inductive dup : list M -&gt; list M -&gt; Prop :=
+  | dup_nil : dup [] []
+  | dup_keep : forall x s r, dup s r -&gt; dup (x :: s) (x :: r)
+  | dup_stutter : forall x s r, dup s (x :: r) -&gt; dup s (x :: x :: r).</code></pre>
+<p><a
+href="coqdoc/Riktig.Channel.Trace.html#dup_nil"><code>dup_nil</code></a>
+relates the empty trace to itself. <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_keep"><code>dup_keep</code></a>
+delivers the next sent message once. <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_stutter"><code>dup_stutter</code></a>
+re-emits the message currently at the head of the received trace —
+turning a received <code>x :: r</code> into <code>x :: x :: r</code> —
+without consuming anything new from the sender. Because only <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_keep"><code>dup_keep</code></a>
+ever draws from the sent list and it always delivers what it drew, this
+relation can grow a trace but never shrink it.</p>
+<p>A channel that both drops and duplicates combines the two constructor
+sets:</p>
+<pre class="coq"><code>Inductive lossy_dup : list M -&gt; list M -&gt; Prop :=
+  | lossy_dup_nil : lossy_dup [] []
+  | lossy_dup_keep : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) (x :: r)
+  | lossy_dup_drop : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) r
+  | lossy_dup_stutter : forall x s r,
+      lossy_dup s (x :: r) -&gt; lossy_dup s (x :: x :: r).</code></pre>
+<p>Finally, a <strong>reordering</strong> channel delivers exactly the
+messages that were sent, each the right number of times, but possibly in
+a different order — which is what the standard library’s
+<code>Permutation</code> already means:</p>
+<pre class="coq"><code>Definition reorder s r : Prop := Permutation s r.</code></pre>
+<h2 id="the-lattice-better-channels-are-smaller-relations">The lattice:
+better channels are smaller relations</h2>
+<p>A channel that can do fewer things is a better channel — its relation
+is a subset of the worse one’s. A perfect wire can do strictly less than
+a lossy wire, so <a
+href="coqdoc/Riktig.Channel.Trace.html#perfect"><code>perfect</code></a>
+sits inside <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy"><code>lossy</code></a>;
+the same wire viewed as possibly-reordering is inside <a
+href="coqdoc/Riktig.Channel.Trace.html#reorder"><code>reorder</code></a>;
+loss alone and duplication alone are both inside the combined <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>.
+Each of these containments is a short lemma. Here is the first, proved
+in full.</p>
+<p>The claim: any behaviour a perfect channel allows, a lossy channel
+also allows. On the blackboard it is one step. <code>perfect s r</code>
+says <code>r = s</code>, and the subsequence relation is reflexive
+(<code>subseq s s</code> always holds), so</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mi>s</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">q</mi></mrow><mspace width="0.222em"></mspace><mi>r</mi><mspace width="0.222em"></mspace><mi>s</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">r = s \;\Longrightarrow\; \mathrm{subseq}\ r\ s.</annotation></semantics></math></p>
+<p>The Coq proof, verbatim:</p>
+<pre class="coq"><code>Lemma perfect_lossy : forall s r, perfect s r -&gt; lossy s r.
+Proof.
+  intros s r H. destruct H. exact (subseq_refl r).
+Qed.</code></pre>
+<p>Walking it: <code>intros s r H</code> names the two traces and the
+hypothesis <code>H : perfect s r</code>, which unfolds to
+<code>r = s</code>. <code>destruct H</code> uses that equation to
+replace <code>s</code> by <code>r</code> throughout, so the goal
+<code>lossy s r</code> — that is, <code>subseq r s</code> — becomes
+<code>subseq r r</code>. That is exactly <code>subseq_refl r</code>, the
+fact that every list is a subsequence of itself, so <a
+href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>
+closes the goal. The other containments have the same shape: <a
+href="coqdoc/Riktig.Channel.Trace.html#perfect_reorder"><code>perfect_reorder</code></a>
+(perfect is inside reorder, via reflexivity of
+<code>Permutation</code>), <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_lossy_dup"><code>lossy_lossy_dup</code></a>
+(loss is inside lossy+duplication), and <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_lossy_dup"><code>dup_lossy_dup</code></a>
+(duplication is inside lossy+duplication).</p>
+<p>The containments are strict — the bigger classes really can do more.
+A reordering channel can swap two messages, and no amount of dropping
+and duplicating reproduces a swap, because once a message is dropped it
+is gone and duplication never moves a message past another. One such gap
+is pinned down by a concrete counterexample over the naturals — no
+derivation of the dropped-message pair exists in the duplication
+class:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>¬</mo><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>;</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo><mo>,</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\neg\,\mathrm{dup}\bigl([0;1],\,[0]\bigr).</annotation></semantics></math></p>
+<pre class="coq"><code>Example lossy_not_dup : ~ dup [0; 1] [0].
+Proof.
+  intros H.
+  repeat match goal with
+  | Hc : dup _ _ |- False =&gt; inversion Hc; clear Hc; subst
+  | Heq : _ = _ |- False =&gt; discriminate Heq
+  end.
+Qed.</code></pre>
+<p>Reading <code>[0; 1] [0]</code> as (sent, received): a lossy channel
+is perfectly happy to deliver <code>[0; 1]</code> as <code>[0]</code> —
+it dropped the <code>1</code>. A duplicating channel cannot, because
+delivering <code>[0]</code> from <code>[0; 1]</code> would require
+losing the <code>1</code>, and <a
+href="coqdoc/Riktig.Channel.Trace.html#dup"><code>dup</code></a> has no
+constructor that loses anything. The proof repeatedly inverts the
+assumed derivation <code>dup [0;1] [0]</code>: each
+<code>inversion</code> either exposes a mismatch that
+<code>discriminate</code> rejects outright, or peels one constructor and
+continues, and after a few layers every branch has hit a contradiction.
+So the classes are genuinely distinct, not just formally different
+names.</p>
+<h2 id="the-payoff-what-a-fault-class-buys-you">The payoff: what a fault
+class buys you</h2>
+<p>The point of naming these relations is that assuming one of them, as
+a hypothesis, lets you <em>prove</em> things about the received trace
+that would be false for a worse channel. Here is the cleanest example,
+straight from the file: a duplicating channel can only make a trace
+longer.</p>
+<p>On the blackboard the argument is an induction on the derivation of
+<code>dup s r</code>. In the base case both traces are empty,
+<code>0 ≤ 0</code>. Each <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_keep"><code>dup_keep</code></a>
+step adds one message to <em>both</em> the sent and the received trace,
+so an inequality <code>m ≤ n</code> becomes <code>m+1 ≤ n+1</code>. Each
+<a
+href="coqdoc/Riktig.Channel.Trace.html#dup_stutter"><code>dup_stutter</code></a>
+step adds a message to the received trace <em>only</em>, so
+<code>m ≤ n</code> becomes the even weaker <code>m ≤ n+1</code>. Sent
+length therefore never overtakes received length:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mspace width="0.222em"></mspace><mi>s</mi><mspace width="0.222em"></mspace><mi>r</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mo>≤</mo><mo stretchy="false" form="prefix">|</mo><mi>r</mi><mo stretchy="false" form="prefix">|</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{dup}\ s\ r \;\Longrightarrow\; |s| \le |r|.</annotation></semantics></math></p>
+<p>The Coq proof, verbatim:</p>
+<pre class="coq"><code>Lemma dup_length : forall s r, dup s r -&gt; length s &lt;= length r.
+Proof.
+  intros s r H.
+  induction H as [| x s r H IH | x s r H IH]; simpl.
+  - apply le_n.
+  - apply le_n_S. exact IH.
+  - apply le_S. exact IH.
+Qed.</code></pre>
+<p><code>induction H</code> splits on the three constructors, and
+<code>simpl</code> computes the two <code>length</code>s in each case.
+The <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_nil"><code>dup_nil</code></a>
+case leaves <code>0 &lt;= 0</code>, closed by <code>le_n</code>. The <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_keep"><code>dup_keep</code></a>
+case has <code>IH : length s &lt;= length r</code> and goal
+<code>S (length s) &lt;= S (length r)</code>, which is
+<code>le_n_S</code> applied to the inductive hypothesis — the “add one
+to both sides” step. The <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_stutter"><code>dup_stutter</code></a>
+case has the same <code>IH</code> but goal
+<code>length s &lt;= S (length r)</code>, one weaker, which is
+<code>le_S IH</code> — the “add one to the received side only” step.
+Three constructors, three arithmetic moves, done.</p>
+<p>Contrast that with what a <em>lossy</em> channel guarantees, which is
+the mirror image:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.222em"></mspace><mi>s</mi><mspace width="0.222em"></mspace><mi>r</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>r</mi><mo stretchy="false" form="prefix">|</mo><mo>≤</mo><mo stretchy="false" form="prefix">|</mo><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy}\ s\ r \;\Longrightarrow\; |r| \le |s|.</annotation></semantics></math></p>
+<p>Because <code>lossy s r</code> is <em>by definition</em>
+<code>subseq r s</code>, this is not a new theorem at all — it is the
+subsequence length lemma, <code>subseq_length r s</code>, applied
+directly. Here is that lemma, verbatim from <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>:</p>
+<pre class="coq"><code>  Lemma subseq_length : forall r s, subseq r s -&gt; length r &lt;= length s.
+  Proof.
+    intros r s H.
+    induction H as [| x r s H IH | x r s H IH]; simpl.
+    - apply le_n.
+    - apply le_n_S. exact IH.
+    - apply le_S. exact IH.
+  Qed.</code></pre>
+<p>The induction has exactly the same three-case shape as <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_length"><code>dup_length</code></a>
+above, with the roles of the two sides exchanged: keeping a message adds
+one to both lengths (<code>le_n_S</code>), dropping one adds only to the
+parent’s side (<code>le_S</code>).</p>
+<p>So the fault class you assume is not bookkeeping — it decides the
+theorem you get. Told only that the channel is <a
+href="coqdoc/Riktig.Channel.Trace.html#reorder"><code>reorder</code></a>,
+you would know the received trace has the same length as the sent one
+but nothing about its order. Told it is <a
+href="coqdoc/Riktig.Channel.Trace.html#dup"><code>dup</code></a>, you
+know the received trace is at least as long as the sent one. Told it is
+<a href="coqdoc/Riktig.Channel.Trace.html#lossy"><code>lossy</code></a>,
+you know it is at most as long. Each of these is a real, checkable fact
+that follows from the relation alone, with no probability ever mentioned
+— which is exactly what the possibilistic view promised.</p>
+<p><em>Next: turning the sender and receiver into small state machines,
+and composing two of them through one of these channels into a single
+relation on application traces.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
+(the five fault classes, the lattice, <a
+href="coqdoc/Riktig.Channel.Trace.html#perfect_lossy"><code>perfect_lossy</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#dup_length"><code>dup_length</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_not_dup"><code>lossy_not_dup</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_refl"><code>subseq_refl</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_length"><code>subseq_length</code></a>).</p>
+</main>
+</body>
+</html>

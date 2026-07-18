@@ -13,9 +13,11 @@ them</title>
 <h1
 id="categories-in-the-way-a-programmer-already-half-knows-them">Categories,
 in the way a programmer already half-knows them</h1>
-<p>Two functions compose. If <code>f</code> sends <code>A</code> to
-<code>B</code> and <code>g</code> sends <code>B</code> to <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>, then
+<p>Two functions compose. If <code>f</code> sends <code>A</code> to <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+and <code>g</code> sends <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+to <a href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>, then
 <code>g ∘ f</code> sends <code>A</code> to <a
 href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>: run
 <code>f</code>, then <code>g</code>. There is a do-nothing function on
@@ -40,7 +42,7 @@ identity arrow, and associativity — as the algebra. Where a monoid asks
 how elements combine, a category asks how arrows chain.</p>
 <h2 id="the-category-class">The Category class</h2>
 <p>Here is the whole definition, from <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>theories/Interface/Category.v</code></a>:</p>
+href="coqdoc/Riktig.Interface.Category.html"><code>theories/Interface/Category.v</code></a>:</p>
 <pre class="coq"><code>Class Category (obj : Type) := {
   hom : obj -&gt; obj -&gt; Type;
   #[global] hom_equ :: forall x y, EqRel (hom x y);
@@ -100,7 +102,7 @@ composition is associative.</li>
 already use: types and functions</h2>
 <p>None of that is abstract nonsense — it has concrete instances. The
 first one, <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>theories/Impl/CoqCat.v</code></a>,
+href="coqdoc/Riktig.Impl.CoqCat.html"><code>theories/Impl/CoqCat.v</code></a>,
 is the category whose objects are types and whose arrows are functions.
 It starts by fixing what an arrow is, and when two arrows count as
 equal:</p>
@@ -115,8 +117,12 @@ Definition fn_comp (X Y Z : Type) (g : Y -&gt; Z) (f : X -&gt; Y) : X -&gt; Z :=
 <code>X -&gt; Y</code>; two functions are equal when they agree on every
 input — pointwise equality, the hom-setoid for this category. The
 identity arrow is the identity function; composition is function
-composition. The three category laws then hold, and each proof is a
-single <code>reflexivity</code>:</p>
+composition. The three category laws then hold,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>∘</mo><mi>f</mi><mo>=</mo><mi>f</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>f</mi><mo>∘</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>=</mo><mi>f</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>f</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>∘</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>∘</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>h</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{id} \circ f = f, \qquad f \circ \mathrm{id} = f, \qquad
+f \circ (g \circ h) = (f \circ g) \circ h,</annotation></semantics></math></p>
+<p>each up to pointwise equality, and each proof is a single
+<code>reflexivity</code>, because at any input both sides compute to the
+same value:</p>
 <pre class="coq"><code>Lemma fn_idl (X Y : Type) (f : X -&gt; Y) :
   fn_equ X Y (fn_comp X Y Y (fn_id Y) f) f.
 Proof.
@@ -160,7 +166,7 @@ holds for it.</p>
 id="one-theorem-an-identity-is-the-only-arrow-that-behaves-like-one">One
 theorem: an identity is the only arrow that behaves like one</h2>
 <p>Here is such a theorem, from <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Category.v"><code>theories/Theory/Category.v</code></a>.
+href="coqdoc/Riktig.Theory.Category.html"><code>theories/Theory/Category.v</code></a>.
 In any category, if an arrow <code>e : x ~&gt; x</code> leaves every
 arrow unchanged when composed first — that is, <code>f ∘ e == f</code>
 for all <code>f</code> out of <code>x</code> — then <a
@@ -168,7 +174,7 @@ href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> is the
 identity. The identity is not merely <em>an</em> arrow that does
 nothing; it is the <em>only</em> one.</p>
 <p>On the blackboard the argument is two steps:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>∘</mo><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow></mrow><annotation encoding="application/x-tex">e \;=\; \mathrm{id} \circ e \;=\; \mathrm{id}</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>∘</mo><mi>e</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">left identity, read backwards</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">hypothesis, at </mtext><mspace width="0.333em"></mspace></mrow><mi>f</mi><mo>=</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">e \;=\; \mathrm{id} \circ e \quad\{\text{left identity, read backwards}\}\quad =\; \mathrm{id} \quad\{\text{hypothesis, at } f = \mathrm{id}\}</annotation></semantics></math></p>
 <p>The first equality is the left-identity law read backwards; the
 second uses the hypothesis about <a
 href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>, taking the
@@ -208,13 +214,13 @@ laws — lambda terms, linear maps, and the rest.</p>
 and the natural transformations between those.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/Category.v"><code>Interface/Category.v</code></a>
+href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
 (the <a
 href="coqdoc/Riktig.Interface.Category.html#Category"><code>Category</code></a>
 class) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/CoqCat.v"><code>Impl/CoqCat.v</code></a>
+href="coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>
 (types and functions as a category) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Category.v"><code>Theory/Category.v</code></a>
+href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Category.html#id_unique_l"><code>id_unique_l</code></a>
 and more).</p>

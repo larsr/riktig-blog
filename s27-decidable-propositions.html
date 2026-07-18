@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decidable propositions: branching with the proof attached</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="decidable-propositions-branching-with-the-proof-attached">Decidable
+propositions: branching with the proof attached</h1>
+<p>An ordinary <code>if</code> needs a boolean. You write
+<code>if b then .. else ..</code>, the machine looks at <code>b</code>,
+and one of the two branches runs. But most of the facts a program
+actually wants to branch on are not booleans. In Coq,
+<code>a &lt; b</code> is a <em>proposition</em> — a member of the sort
+<code>Prop</code>, the sort of things that can be proved — not a member
+of <code>bool</code>. So is <code>x = y</code>. A proposition has no
+runtime value to test; it is a statement, not a bit. You cannot feed it
+to <code>if</code>.</p>
+<p>The usual escape is to keep a separate boolean function around —
+<code>Nat.ltb : nat -&gt; nat -&gt; bool</code> next to the proposition
+<code>a &lt; b</code> — and branch on the boolean. That works, but now
+the program has forgotten <em>why</em> it took a branch. Inside
+<code>then</code>, all it knows is that some boolean came out
+<code>true</code>; the fact <code>a &lt; b</code> that the boolean stood
+for is nowhere in the proof context. This post is about a small
+typeclass that keeps the two together: a decision procedure that both
+chooses the branch, so the term still computes, and hands you the
+corresponding fact for free, so a later proof can use it.</p>
+<h2 id="a-decision-is-a-boolean-carrying-its-reason">A decision is a
+boolean carrying its reason</h2>
+<p>The type Coq already has for “a boolean that carries its reason” is
+the standard library’s <code>sumbool</code>, written
+<code>{P} + {~ P}</code>: a value that is <em>either</em> a proof of
+<code>P</code>, tagged on the left, <em>or</em> a proof of
+<code>~ P</code> (“not <code>P</code>”), tagged on the right. The tag is
+what an <code>if</code> looks at — it is a two-way choice, exactly like
+a boolean — but riding along with the tag is the actual evidence. A
+proposition that has such a value is called <strong>decidable</strong>,
+and the whole vocabulary is two lines, from <a
+href="coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>:</p>
+<pre class="coq"><code>Class Decidable (P : Prop) := dec : {P} + {~ P}.
+Arguments dec _ {_}.
+
+Class EqDec (A : Type) := eq_dec : forall (x y : A), Decidable (x = y).
+#[global] Instance EqDec_Decidable {A} `{EqDec A} : forall x y : A, Decidable (x = y) := eq_dec.</code></pre>
+<p><code>Decidable P</code> says: there is a decision procedure for
+<code>P</code>, namely a value <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+of type <code>{P} + {~ P}</code>. The <code>Arguments dec _ {_}</code>
+line makes the proposition explicit and the instance implicit, so you
+write <code>dec P</code> and instance resolution finds the procedure.
+<code>EqDec A</code> is the special case that comes up most: a type
+whose <em>equality</em> is decidable, <code>x = y</code> decidable for
+every pair <code>x y : A</code>. The last line registers the reverse
+direction — knowing <code>A</code> has decidable equality, Coq can
+supply <code>Decidable (x = y)</code> on demand.</p>
+<p>Now the payoff of the informative type. Write
+<code>if dec P then a1 else a2</code>. At the term level this is an
+ordinary <code>if</code>: <code>dec P</code> reduces to a
+<code>left</code> or a <code>right</code>, and the matching branch is
+taken, so the whole expression computes and <code>simpl</code> sees
+straight through it. But in a <em>proof</em> about this term,
+<code>destruct (dec P)</code> splits into two cases and, in each, adds
+the evidence to the context: <code>P</code> itself in the
+<code>then</code> case, <code>~ P</code> in the <code>else</code> case.
+The branch and its justification arrive together.</p>
+<h2 id="decidability-is-closed-under-and">Decidability is closed under
+“and”</h2>
+<p>Before decidable propositions are useful you want to build big ones
+from small ones, and the logical connectives all preserve decidability.
+Take conjunction: if you can decide <code>P</code> and you can decide
+<code>Q</code>, you can decide <code>P /\ Q</code>. The reasoning is the
+obvious case analysis — decide <code>P</code>; if it is false, the
+conjunction is false; if it is true, decide <code>Q</code>, and the
+conjunction holds exactly when <code>Q</code> does:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mtext mathvariant="normal">decide </mtext><mspace width="0.333em"></mspace></mrow><mi>P</mi><mspace width="0.278em"></mspace><mo>⇝</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">no</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>⇒</mo><mi>P</mi><mo>∧</mo><mi>Q</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> false</mtext></mrow></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">yes</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>⇒</mo><mrow><mtext mathvariant="normal">decide </mtext><mspace width="0.333em"></mspace></mrow><mi>Q</mi><mo>⇝</mo><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo>∧</mo><mi>Q</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> iff </mtext><mspace width="0.333em"></mspace></mrow><mi>Q</mi><mo stretchy="false" form="postfix">)</mo></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\text{decide } P \;\rightsquigarrow\; \begin{cases} \text{no} &amp; \Rightarrow P \wedge Q \text{ false} \\ \text{yes} &amp; \Rightarrow \text{decide } Q \rightsquigarrow (P \wedge Q \text{ iff } Q) \end{cases}</annotation></semantics></math></p>
+<p>Here is the instance exactly as it appears in <a
+href="coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>:</p>
+<pre class="coq"><code>#[global] Instance and_dec (P Q : Prop) `{Decidable P} `{Decidable Q} : Decidable (P /\ Q).
+destruct H; [destruct H0; [left; auto | right; tauto] | right; tauto].
+Defined.</code></pre>
+<p>The two backtick-brace arguments <code>`{Decidable P}</code> and
+<code>`{Decidable Q}</code> bind the two incoming decision procedures
+under the automatic names <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a> and
+<code>H0</code>. Walking the one-line tactic:</p>
+<ul>
+<li><code>destruct H</code> splits on the decision for <code>P</code>.
+Left branch: <code>P</code> holds. Right branch: <code>~ P</code>
+holds.</li>
+<li>In the <code>P</code>-holds branch, <code>destruct H0</code> splits
+on the decision for <code>Q</code>. If <code>Q</code> holds too,
+<code>left; auto</code> builds the proof of <code>P /\ Q</code>. If
+<code>~ Q</code>, <code>right; tauto</code> builds
+<code>~ (P /\ Q)</code> — a conjunction with a false half is false.</li>
+<li>Back in the <code>~ P</code> branch, <code>right; tauto</code> again
+builds <code>~ (P /\ Q)</code>, since a conjunction with a false half is
+false.</li>
+</ul>
+<p>The instance is closed with <code>Defined</code>, not
+<code>Qed</code>, on purpose: <code>Defined</code> leaves the decision
+procedure transparent, so a decision <em>built</em> from <a
+href="coqdoc/Riktig.Theory.Decidable.html#and_dec"><code>and_dec</code></a>
+still reduces by computation. The disjunction, negation, and implication
+cases (<a
+href="coqdoc/Riktig.Theory.Decidable.html#or_dec"><code>or_dec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Decidable.html#not_dec"><code>not_dec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Decidable.html#impl_dec"><code>impl_dec</code></a>)
+sit right next to it, each the same shape of case analysis.</p>
+<h2 id="reading-a-decision-through-a-plain-boolean">Reading a decision
+through a plain boolean</h2>
+<p>Sometimes you have both: a decision procedure <code>dec P</code> and
+a separate boolean <code>b</code> that is known to reflect the same
+proposition — <code>P</code> holds exactly when <code>b</code> is
+<code>true</code>. Then the two kinds of <code>if</code> agree. This is
+the bridge a program crosses when it wants to restate a clause written
+with <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+in terms of a stdlib boolean comparison such as <code>Nat.ltb</code>. On
+the blackboard:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>P</mi><mo>↔</mo><mi>b</mi><mo>=</mo><mrow><mi>𝗍</mi><mi>𝗋</mi><mi>𝗎</mi><mi>𝖾</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi>dec</mi><mo>&#8289;</mo></mrow><mi>P</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> then </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>1</mn></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> else </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>2</mn></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> then </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>1</mn></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> else </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>2</mn></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\bigl(P \leftrightarrow b = \mathsf{true}\bigr) \;\Longrightarrow\; \Bigl(\text{if } \operatorname{dec} P \text{ then } a_1 \text{ else } a_2\Bigr) \;=\; \Bigl(\text{if } b \text{ then } a_1 \text{ else } a_2\Bigr),</annotation></semantics></math></p>
+<p>because in each of the four tag/value combinations either both sides
+pick the same branch, or the reflection hypothesis is contradicted. The
+lemma, in full, from <a
+href="coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>:</p>
+<pre class="coq"><code>Lemma dec_if_bool (P : Prop) {DP : Decidable P} (b : bool) (A : Type) (a1 a2 : A) :
+  (P &lt;-&gt; b = true) -&gt;
+  (if dec P then a1 else a2) = (if b then a1 else a2).
+Proof.
+  intros Hb.
+  destruct (dec P) as [p | np]; destruct b; try reflexivity.
+  - apply Hb in p; discriminate.
+  - exfalso; apply np, Hb; reflexivity.
+Qed.</code></pre>
+<p>The hypothesis <code>Hb : P &lt;-&gt; b = true</code> is the
+reflection assumption. The proof splits every combination and discards
+the consistent ones:</p>
+<ul>
+<li><code>destruct (dec P) as [p | np]; destruct b</code> produces four
+cases, one for each pairing of the decision’s tag with the boolean’s
+value.</li>
+<li><code>try reflexivity</code> closes the two <em>agreeing</em> cases
+outright — decision says yes and <code>b</code> is <code>true</code>, or
+decision says no and <code>b</code> is <code>false</code> — because both
+sides then pick the same branch.</li>
+<li>The remaining two are contradictory.
+<code>apply Hb in p; discriminate</code>: <code>p : P</code> gives
+<code>b = true</code> through <code>Hb</code>, clashing with the
+<code>b = false</code> of this case.
+<code>exfalso; apply np, Hb; reflexivity</code>: here <code>b</code> is
+<code>true</code>, so <code>Hb</code> yields <code>P</code>, which
+<code>np : ~ P</code> refutes.</li>
+</ul>
+<p>Two cases survive, two cases contradict, and the two forms of
+<code>if</code> are proved equal.</p>
+<h2 id="the-payoff-the-standard-basis-vector">The payoff: the standard
+basis vector</h2>
+<p>Here is the pattern doing real work. In coordinate space — functions
+from a finite index type <code>Fin.t n</code> (the type with exactly
+<code>n</code> distinct values <code>0, 1, ..., n-1</code>) into a field
+<code>F</code> — the <em>standard basis vector</em> <code>e i</code> is
+the function that is <code>1</code> at coordinate <code>i</code> and
+<code>0</code> everywhere else:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mn>1</mn></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>=</mo><mi>j</mi></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mn>0</mn></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>≠</mo><mi>j</mi><mi>.</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">e_i(j) \;=\; \begin{cases} 1 &amp; \text{if } i = j \\ 0 &amp; \text{if } i \neq j. \end{cases}</annotation></semantics></math></p>
+<p>Writing it down needs a branch on “is this coordinate the special
+one?”, and that question, <code>i = j</code>, is an equality of indices
+— a proposition. From <a
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>:</p>
+<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F :=
+  fun j =&gt; if dec (i = j) then 1 else 0.</code></pre>
+<p>This reads exactly like the mathematics: <code>e i</code> at input
+<code>j</code> is <code>if i = j then 1 else 0</code>. It type-checks
+because <code>Fin.t n</code> has decidable equality — the instance
+registered in <a
+href="coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>:</p>
+<pre class="coq"><code>#[global] Instance fin_eq_dec {n : nat} : EqDec (Fin.t n) := Fin.eq_dec.</code></pre>
+<p>With that instance in scope, <code>dec (i = j)</code> resolves:
+instance search finds <a
+href="coqdoc/Riktig.Impl.Decidable.html#fin_eq_dec"><code>fin_eq_dec</code></a>,
+which supplies the standard library’s <code>Fin.eq_dec</code> as the
+decision procedure. Because every piece — <a
+href="coqdoc/Riktig.Impl.Decidable.html#fin_eq_dec"><code>fin_eq_dec</code></a>,
+the <code>sumbool</code> it returns — is transparent, <code>e i j</code>
+<em>computes</em> to <code>1</code> or <code>0</code> on concrete
+indices, so <a
+href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> is a genuine
+function you can evaluate. And when the time comes to prove something
+about <code>e i j</code> — that the basis is orthonormal, that a
+coordinate expansion collapses to a single term — a proof does
+<code>destruct (dec (i = j))</code> and finds <code>i = j</code> waiting
+in one branch and <code>i &lt;&gt; j</code> in the other, the two facts
+the definition itself was branching on, handed over for free.</p>
+<p><em>Next: a decidable total order, where a single decision procedure
+gives <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, and
+<code>&gt;=</code> all at once.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
+href="coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
+classes) · <a
+href="coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Decidable.html#and_dec"><code>and_dec</code></a>,
+the other connectives, <a
+href="coqdoc/Riktig.Theory.Decidable.html#dec_if_bool"><code>dec_if_bool</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>
+(<code>nat</code>, <code>bool</code>, and <code>Fin.t n</code> as
+carriers) · <a
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
+(the standard basis vector <a
+href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>).</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exp's derivative, log, and the kink in ReLU</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="exps-derivative-log-and-the-kink-in-relu">exp’s derivative, log,
+and the kink in ReLU</h1>
+<p>An earlier post pinned down the exponential function without ever
+writing a formula for it, using four laws: <code>exp 0</code> is
+<code>1</code>; <code>exp</code> turns sums into products,
+<code>exp(a+b) = exp(a) * exp(b)</code>; its values are never negative;
+and it is strictly increasing. Those four facts alone already force
+<code>exp</code> to be strictly positive and injective — different
+inputs always give different outputs. This post looks at two places
+where the four laws run out before delivering something you’d also want
+from <code>exp</code> — inverting it, and finding its rate of change.
+The file that works out the second of those also answers a third,
+independent question, about a completely different function: at a sharp
+corner in a function’s graph, what exactly can be said about its rate of
+change on each side, and what has to be left unsaid?</p>
+<h2 id="can-exp-always-be-inverted">Can exp always be inverted?</h2>
+<p>Suppose all you know about a function is the four facts above: it
+sends <code>0</code> to <code>1</code>, it turns sums into products, it
+never goes negative, and it is strictly increasing. Those facts alone
+already guarantee that no two different inputs produce the same output —
+a strictly increasing function can’t repeat a value. That answers half
+of “can this function be inverted”: for a given output, there is <em>at
+most</em> one input that produced it. The other half is a separate
+question: for every positive number you might want as an output, is
+there <em>at least</em> one input that produces it? A function can be
+injective and still miss values — a strictly increasing function on the
+whole number line could, in principle, only ever output numbers bigger
+than 5, and no input would ever produce 3.</p>
+<p>Whether every positive value gets hit turns out to depend on more
+than addition, multiplication, and order. Classically, you’d find the
+input that produces a target value <code>y</code> by taking the supremum
+of all inputs whose output stays below <code>y</code> — a search that
+only works if every bounded set of candidates actually has a least upper
+bound. That “no gaps” property is not implied by being an ordered field.
+The rational numbers are the standard counterexample: the set of
+rationals <code>x</code> with <code>x*x &lt; 2</code> is bounded above,
+yet no rational number is its least upper bound — the gap sits exactly
+where <code>√2</code> should be. Nothing about the four properties above
+— sends <code>0</code> to <code>1</code>, turns sums into products,
+stays nonnegative, is increasing — rules out a function living on a
+number system riddled with gaps like that one, so nothing about them
+forces every positive output to actually get hit.</p>
+<p>Coq’s <a
+href="coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>
+records this as a separate, explicit assumption, rather than something
+the four properties already give:</p>
+<pre class="coq"><code>Context (exp_surj : forall y : F, 0 &lt; y -&gt; {x : F | exp_fn x == y}).
+
+Definition log_fn (y : F) (Hy : 0 &lt; y) : F := proj1_sig (exp_surj y Hy).</code></pre>
+<p><code>exp_surj</code> is exactly the “every positive <code>y</code>
+gets hit” property from above, stated for a positive <code>y</code> and
+an unspecified field <code>F</code>. The type
+<code>{x : F | exp_fn x == y}</code> — a <em>sigma type</em> — is a
+pair: a witness input <code>x</code>, together with a proof that
+<code>exp_fn x</code> really does equal <code>y</code>. That choice of
+type, rather than the more familiar
+<code>exists x, exp_fn x == y</code>, is what lets <a
+href="coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a> be
+an actual definition instead of a bare claim: an ordinary Coq
+<code>exists</code> only asserts that a witness is out there, and
+pulling a concrete value back out of it needs a choice-style axiom,
+which nothing in this codebase relies on. A sigma type carries the
+witness directly, so <code>proj1_sig</code> — “take the first component”
+— reads <a
+href="coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a>
+straight off it.</p>
+<p>With <code>exp_surj</code> granted, <code>exp (log y) == y</code> —
+called <a
+href="coqdoc/Riktig.Theory.Log.html#exp_log"><code>exp_log</code></a> —
+is immediate: it’s <code>proj2_sig</code>, the proof half of the pair,
+read off directly. A less immediate consequence is that <code>log</code>
+inherits monotonicity from <code>exp</code>. Here is the theorem and its
+proof, exactly as they stand in the file:</p>
+<pre class="coq"><code>Lemma log_mono : forall (a b : F) (Ha : 0 &lt; a) (Hb : 0 &lt; b),
+  a &lt; b -&gt; log_fn a Ha &lt; log_fn b Hb.
+Proof.
+  intros a b Ha Hb Hab.
+  apply exp_lt_reflect.
+  rewrite (exp_log a Ha), (exp_log b Hb).
+  exact Hab.
+Qed.</code></pre>
+<p>On the blackboard, the argument runs backwards from the goal:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>a</mi><mo>&lt;</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>b</mi><mspace width="0.278em"></mspace><mo>⇐</mo><mspace width="0.278em"></mspace><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>&lt;</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇔</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>&lt;</mo><mi>b</mi><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> reflects </mtext><mspace width="0.333em"></mspace></mrow><mo>&lt;</mo><mo>;</mo><mspace width="0.222em"></mspace><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>y</mi><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\log a &lt; \log b
+\;\Longleftarrow\; \exp(\log a) &lt; \exp(\log b)
+\;\Longleftrightarrow\; a &lt; b
+\qquad \{\exp \text{ reflects } &lt;;\ \exp(\log y) = y\}.</annotation></semantics></math></p>
+<p><a
+href="coqdoc/Riktig.Theory.Log.html#exp_lt_reflect"><code>exp_lt_reflect</code></a>
+is a small lemma one page earlier —
+<code>exp a &lt; exp b -&gt; a &lt; b</code>, “exp reflects the order,”
+essentially <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_mono"><code>exp_mono</code></a>
+run in reverse — and <code>apply</code>ing it turns the goal
+<code>log a &lt; log b</code> into the seemingly harder
+<code>exp (log a) &lt; exp (log b)</code>. It only looks harder:
+<code>rewrite (exp_log a Ha)</code> and
+<code>rewrite (exp_log b Hb)</code> replace <code>exp (log a)</code> by
+<code>a</code> and <code>exp (log b)</code> by <code>b</code>, since
+that is exactly what <a
+href="coqdoc/Riktig.Theory.Log.html#exp_log"><code>exp_log</code></a>
+says, leaving the goal <code>a &lt; b</code> — which is
+<code>Hab</code>, the hypothesis just given. The proof does no new
+order-theoretic work; it reduces “log is increasing” to “exp is
+increasing,” a fact already in hand.</p>
+<p>The same reduce-to-an-exp-equality-and-let-injectivity-finish-it
+pattern proves the rest of the file’s small law list — <code>log</code>
+turns products into sums, the mirror image of <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_add"><code>exp_add</code></a>.
+Since <code>exp</code> is injective, it is enough to show both sides
+have the same exponential:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>a</mi><mi>b</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>y</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>y</mi><mtext mathvariant="normal">, twice</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>a</mi><mo>+</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">sums-to-products, read backwards</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+\exp(\log(ab)) &amp;= ab &amp;&amp; \{\exp(\log y) = y\}\\
+&amp;= \exp(\log a)\cdot\exp(\log b) &amp;&amp; \{\exp(\log y) = y \text{, twice}\}\\
+&amp;= \exp(\log a + \log b) &amp;&amp; \{\text{sums-to-products, read backwards}\}
+\end{aligned}</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma log_mul : forall (a b : F) (Ha : 0 &lt; a) (Hb : 0 &lt; b),
+  log_fn (a * b) (mul_pos a b Ha Hb) == log_fn a Ha + log_fn b Hb.
+Proof.
+  intros a b Ha Hb.
+  apply exp_injective.
+  rewrite (exp_log (a * b) (mul_pos a b Ha Hb)), exp_add,
+    (exp_log a Ha), (exp_log b Hb).
+  reflexivity.
+Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a>
+reduces an equality of logs to an equality of exps; three rewrites by <a
+href="coqdoc/Riktig.Theory.Log.html#exp_log"><code>exp_log</code></a>
+and one by <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_add"><code>exp_add</code></a>
+turn both sides into <code>a * b</code>, and <code>reflexivity</code>
+closes it.</p>
+<p>None of this — <a
+href="coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a>, <a
+href="coqdoc/Riktig.Theory.Log.html#exp_log"><code>exp_log</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Log.html#log_mono"><code>log_mono</code></a>,
+<a href="coqdoc/Riktig.Theory.Log.html#log_mul"><code>log_mul</code></a>
+— is specific to any particular <code>exp</code>. Every lemma is proved
+for any <code>F</code> and any <code>exp</code> satisfying the four
+original laws plus <code>exp_surj</code>. That means whoever eventually
+builds a concrete exponential function — a power series over the reals,
+say, with surjectivity established from completeness — gets every lemma
+above for free the moment they supply one proof of
+<code>exp_surj</code>, with none of this reasoning to redo. No such
+construction exists in this codebase yet, so there is no concrete
+<code>log</code> to compute a number with today; what exists is the
+guarantee that whenever one shows up, its logarithm comes for free.</p>
+<h2 id="whats-the-slope-of-a-function-with-a-corner">What’s the slope of
+a function with a corner?</h2>
+<p>Consider the simplest function with a corner in its graph: zero for
+every negative input, equal to the input itself for every non-negative
+input, the two pieces meeting at a sharp bend at <code>0</code>. Away
+from that bend, the function is exactly as well-behaved as whichever of
+its two pieces it currently is — the identity line has a definite slope
+of <code>1</code> everywhere, the flat zero line has a definite slope of
+<code>0</code> everywhere, and the function coincides with one or the
+other on an entire stretch around any point that isn’t <code>0</code>
+itself. At the bend, something different happens: approaching from the
+right the slope is heading toward <code>1</code>, approaching from the
+left it’s heading toward <code>0</code> — two different numbers, both
+converging on the same point. Does the function have a single,
+well-defined instantaneous rate of change at <code>0</code>, or does it
+not?</p>
+<p>This is the rectified linear function, ReLU, and away from its corner
+the answer is exactly what the picture suggests: a definite rate of
+change on each side, the two rates different. Making that precise needs
+the notion of derivative from earlier posts: the derivative of a
+function <code>f</code> at a point <code>a</code>, written
+<code>is_deriv f a L</code>, packages the rate of change not as a bare
+number but as a linear map <code>L</code> — the best linear
+approximation of <code>f</code> near <code>a</code>, in the sense that
+the gap <code>f (a + h) - (f a + L h)</code> shrinks faster than
+<code>h</code> itself as <code>h</code> shrinks toward <code>0</code>.
+Size here is measured by a norm <code>‖ · ‖</code>, which for a field
+acting on itself is just absolute value; <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</code></a>
+opens by building exactly that instance — <code>F</code> normed over
+itself via <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> —
+because nothing in the tree supplied it before, and every derivative
+statement in the rest of the file, ReLU’s included, rests on it.</p>
+<p>The file never writes down a single total function
+<code>relu : F -&gt; F</code>. Deciding whether a given field element is
+<code>&gt;= 0</code> is exactly the kind of case split a bare ordered
+field doesn’t license without extra assumptions — the same reason <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> and
+<a href="coqdoc/Riktig.Ops.html#inv"><code>inv</code></a> are taken as
+given operations here rather than built by case analysis. Instead of
+proving a fact about one specific <code>relu</code>, the file proves a
+fact about <em>any</em> function that happens to behave like ReLU on one
+side, which is both more general and reusable by whatever concrete
+<code>relu</code> eventually gets built. The tool that makes this
+possible is a lemma saying that a derivative only depends on a
+function’s behavior in a neighborhood of the point in question:</p>
+<pre class="coq"><code>Lemma is_deriv_of_local_eq : forall (f g : F -&gt; F),
+    Proper (equ ==&gt; equ) f -&gt; Proper (equ ==&gt; equ) g -&gt;
+    forall (a : F) (L : LinearMap F F F) (d : F),
+    0 &lt; d -&gt; (forall h : F, ‖ h ‖ &lt; d -&gt; f (a + h) == g (a + h)) -&gt;
+    is_deriv g a L -&gt; is_deriv f a L.</code></pre>
+<p>If <code>f</code> and <code>g</code> agree everywhere within distance
+<code>d</code> of <code>a</code>, and <code>g</code> is known to have
+derivative <code>L</code> at <code>a</code>, then <code>f</code> has
+that same derivative at <code>a</code> — <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+cannot distinguish the two functions, since it only ever asks about
+points near <code>a</code>.</p>
+<p>In one sentence, using that tool: any function <code>f</code> that
+agrees with <code>x</code> itself at every strictly positive
+<code>x</code> has, at every strictly positive point <code>a</code>, the
+identity map <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_id"><code>lm_id</code></a>
+(the linear map sending <code>h</code> to <code>h</code>) as its
+derivative. On the blackboard, the argument is “swap <code>f</code> for
+the identity function on a neighborhood of <code>a</code>, then read off
+the identity’s own derivative”:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> for all </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with </mtext><mspace width="0.333em"></mspace></mrow><mo stretchy="false" form="postfix">∥</mo><mi>x</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>a</mi><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mi>D</mi><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">f(x) = x \text{ for all } x \text{ with } \|x - a\| &lt; a \quad\Longrightarrow\quad Df(a) = D(\mathrm{id})(a) = \mathrm{lm\_id}.</annotation></semantics></math></p>
+<p>Here is the theorem and its proof exactly as they stand in the
+file:</p>
+<pre class="coq"><code>Theorem is_deriv_relu_pos : forall (f : F -&gt; F),
+  Proper (equ ==&gt; equ) f -&gt;
+  forall a : F, 0 &lt; a -&gt; (forall x : F, 0 &lt; x -&gt; f x == x) -&gt;
+  is_deriv f a lm_id.
+Proof.
+  intros f Pf a Ha Hf.
+  apply (is_deriv_of_local_eq f (fun x : F =&gt; x) Pf (fun x y Hxy =&gt; Hxy)
+    a lm_id a Ha).
+  - intros h Hh.
+    apply Hf.
+    exact (pos_add_of_norm_lt a h Ha Hh).
+  - exact (deriv_lm lm_id a lm_id_bounded_F).
+Qed.</code></pre>
+<p>Walking it against that blackboard step:
+<code>apply (is_deriv_of_local_eq ...)</code> chooses
+<code>g := fun x =&gt; x</code>, the plain identity function, and radius
+<code>d := a</code> — a deliberate choice, because <code>a</code> is
+exactly how far <code>a</code> sits from <code>0</code>, the one point
+<code>f</code> must stay clear of. That choice creates two obligations.
+The first, discharged by
+<code>intros h Hh; apply Hf; exact (pos_add_of_norm_lt a h Ha Hh)</code>,
+is that <code>f</code> and the identity really do agree throughout the
+radius-<code>a</code> neighborhood: <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#pos_add_of_norm_lt"><code>pos_add_of_norm_lt</code></a>
+is the fact that <code>a + h</code> stays positive whenever
+<code>‖h‖ &lt; a</code> and <code>a</code> itself is positive, which is
+precisely what lets <code>Hf</code> — “<code>f</code> agrees with the
+identity on all positive inputs” — apply at <code>a + h</code>. The
+second, <code>exact (deriv_lm lm_id a lm_id_bounded_F)</code>, supplies
+the anchor fact: the identity function’s own derivative at any point is
+the identity map itself, since a linear map is its own exact linear
+approximation everywhere, not merely an approximate one.</p>
+<p>The left branch is the mirror image, with the constantly-zero
+function in place of the identity and the zero linear map <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_const0"><code>lm_const0</code></a>
+in place of <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_id"><code>lm_id</code></a>:</p>
+<pre class="coq"><code>Theorem is_deriv_relu_neg : forall (f : F -&gt; F),
+    Proper (equ ==&gt; equ) f -&gt;
+    forall a : F, a &lt; 0 -&gt; (forall x : F, x &lt; 0 -&gt; f x == 0) -&gt;
+    is_deriv f a lm_const0.</code></pre>
+<p>Neither theorem says anything about <code>a == 0</code>. That’s the
+answer to the question posed at the top of this section: ReLU’s
+right-derivative at the corner is <code>1</code> (<a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_id"><code>lm_id</code></a>),
+its left-derivative is <code>0</code> (<a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_const0"><code>lm_const0</code></a>),
+and a genuine two-sided derivative would force those equal — which they
+are not. There is no radius around <code>0</code> small enough for any
+single linear map to approximate both branches at once, so the file
+proves no theorem there. Once a concrete decidable order lets someone
+actually write <code>relu x := if x &gt;= 0 then x else 0</code>,
+applying <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_relu_pos"><code>is_deriv_relu_pos</code></a>
+or <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_relu_neg"><code>is_deriv_relu_neg</code></a>
+at any nonzero point produces its derivative immediately, with only the
+case split itself left to supply; at <code>0</code>, no amount of
+applying either lemma will produce one, because none exists.</p>
+<h2 id="does-exps-rate-of-change-match-its-own-value">Does exp’s rate of
+change match its own value?</h2>
+<p>A separate question about <code>exp</code>: is its instantaneous rate
+of change at any point exactly equal to its value there — the property
+usually summarized as “<code>exp</code> is its own derivative”? And, the
+same question this whole post keeps returning to: does that follow from
+the four original properties alone, or does it need something else?</p>
+<p>It needs something else, and for a structural reason rather than a
+missing calculation: rate of change is a limiting notion — it talks
+about what happens to a ratio as a gap shrinks toward zero — while the
+four properties (sends <code>0</code> to <code>1</code>, turns sums into
+products, stays nonnegative, is increasing) are purely algebraic
+statements about single inputs and outputs, with no mention of limits or
+shrinking gaps at all. No amount of algebraic manipulation of the four
+properties produces a limiting statement; something limiting has to be
+supplied from outside them.</p>
+<p>Stating the claim at all first needs two pieces of scaffolding the
+four laws don’t supply either. <code>exp_fn : F -&gt; F</code> needs a
+way to measure distance in <code>F</code> itself — the same
+<code>NormedSpace F F</code> instance built for ReLU above — and the
+rate of change, to be stated as a derivative in this codebase’s sense,
+needs to be packaged as a linear map, “multiply by <code>exp a</code>,”
+rather than the bare scalar <code>exp a</code>. <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</code></a>
+builds that scaling linear map generically, for any constant
+<code>c</code>:</p>
+<pre class="coq"><code>Definition scale_map (h : F) : F := c * h.</code></pre>
+<p>together with proofs that it is linear, bundled as
+<code>lm_scale_map c</code>. With that scaffolding in place,
+“<code>exp</code> is its own derivative” is recorded as an explicit
+assumption, the same move as <code>exp_surj</code> for
+<code>log</code>:</p>
+<pre class="coq"><code>Context (exp_is_deriv : forall a : F, is_deriv exp_fn a (lm_scale_map (exp_fn a))).</code></pre>
+<p>Granting it, ordinary chain-rule reasoning goes through mechanically.
+For instance, the function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>↦</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">x \mapsto \exp(-x)</annotation></semantics></math>
+has, at any point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+the derivative “multiply by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">-\exp(-a)</annotation></semantics></math>”
+— on the blackboard, the chain rule applied to the composite of negation
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>exp</mi><annotation encoding="application/x-tex">\exp</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo>∘</mo><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">g</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>D</mi><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>D</mi><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">g</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mspace width="0.167em"></mspace><mo>⋅</mo><mspace width="0.167em"></mspace><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mspace width="0.167em"></mspace><mo>⋅</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mspace width="0.167em"></mspace><mo>⋅</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">D(\exp \circ\, \mathrm{neg})(a)
+= D\exp(-a) \circ D\,\mathrm{neg}(a)
+= (\,\cdot\,\exp(-a)) \circ (\,\cdot\,(-1))
+= \,\cdot\,(-\exp(-a)).</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem is_deriv_exp_neg : forall a : F,
+  is_deriv (fun x : F =&gt; exp_fn (- x)) a (lm_scale_map (- exp_fn (- a))).
+Proof.
+  intros a.
+  apply (is_deriv_L_equ (fun x : F =&gt; exp_fn (- x)) a
+    (lm_comp (lm_scale_map (exp_fn (- a))) lm_neg_map)).
+  - exact (lm_comp_scale_neg (exp_fn (- a))).
+  - exact (deriv_comp neg_map exp_fn a lm_neg_map
+      (lm_scale_map (exp_fn (- a))) exp_fn_proper
+      (is_deriv_neg_map a) (exp_is_deriv (- a))).
+Qed.</code></pre>
+<p>Walking it: <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+is the chain rule — fed the derivative of negation (<a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_neg_map"><code>is_deriv_neg_map</code></a>,
+the middle factor of the blackboard chain) and <code>exp_is_deriv</code>
+at the point <code>- a</code> (the left factor), it produces the
+derivative as the <em>composite</em> linear map
+<code>lm_comp (lm_scale_map (exp_fn (- a))) lm_neg_map</code>; <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_L_equ"><code>is_deriv_L_equ</code></a>
+then replaces that composite by the equal single scaling map
+<code>lm_scale_map (- exp_fn (- a))</code> (the last blackboard step,
+proved as <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#lm_comp_scale_neg"><code>lm_comp_scale_neg</code></a>).
+No further assumptions beyond <code>exp_is_deriv</code> are needed. This
+is the pattern any future caller follows: state the target composite
+function, name which already-known derivatives it’s built from, and hand
+them to <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+or one of its specializations. Nothing here computes a number, because
+<code>exp_is_deriv</code> has no proof supplied for any concrete
+<code>exp</code> in this codebase yet — the theorem is ready the moment
+one is.</p>
+<h2 id="two-things-this-file-doesnt-attempt">Two things this file
+doesn’t attempt</h2>
+<p>Softmax and layer normalization are the natural next targets — both
+are built from <code>exp</code> and division — but neither is proved
+differentiable here. Both are functions on a many-coordinate space, and
+stating a derivative for them at all needs a norm on that whole space,
+which doesn’t exist anywhere in the tree yet (only a norm for matrices
+has been built, not for bare coordinate vectors); both also divide by
+something (a sum of exponentials, a standard deviation), and no rule for
+differentiating <code>1/x</code> itself exists yet either. Both are
+separate pieces of work with their own scaffolding to build, not results
+this post glosses over.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>
+(<code>exp_surj</code>, <a
+href="coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a>, <a
+href="coqdoc/Riktig.Theory.Log.html#log_mono"><code>log_mono</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Log.html#log_mul"><code>log_mul</code></a>) ·
+<a
+href="coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#Field_NormedSpace"><code>Field_NormedSpace</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_relu_pos"><code>is_deriv_relu_pos</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_relu_neg"><code>is_deriv_relu_neg</code></a>,
+<code>exp_is_deriv</code>) · <a
+href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+(the TODO naming exactly this gap).</p>
+</main>
+</body>
+</html>

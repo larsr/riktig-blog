@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a monad is, and why a parser needs one</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="what-a-monad-is-and-why-a-parser-needs-one">What a monad is, and
+why a parser needs one</h1>
+<p>Some computations might not produce an answer. Looking up a key in a
+table gives a value <em>or nothing</em>. Dividing gives a number
+<em>unless</em> the divisor is zero. Parsing the next token gives a
+token <em>or fails</em>. The trouble starts when you want to run several
+such computations one after another, feeding each result into the next.
+Every step has to first check whether the previous one failed, and if it
+did, stop and fail too. Written out by hand, a sequence of three lookups
+becomes three nested case analyses, most of the code being the same
+failure-check copied over and over. A <em>monad</em> is the small
+structure that writes that check exactly once.</p>
+<h2 id="two-operations-sequence-and-inject">Two operations: sequence,
+and inject</h2>
+<p>In Coq a computation that may fail is a value of the
+<code>option</code> type: <code>option A</code> is either
+<code>Some x</code>, an answer, or <code>None</code>, no answer. The
+pattern needs two operations. The first, <em>bind</em>, runs a
+computation and passes its result — if there is one — into a function
+that produces the next computation. The second, <em>return</em>, takes a
+plain value and makes the trivial computation that just yields it. The
+vocabulary is one tiny class per operation, from <a
+href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:</p>
+<pre class="coq"><code>Class HasBind (M : Type -&gt; Type) := bind : forall {A B}, M A -&gt; (A -&gt; M B) -&gt; M B.
+Class HasReturn (M : Type -&gt; Type) := ret : forall {A}, A -&gt; M A.</code></pre>
+<p>The carrier is not a single type but a type <em>constructor</em>
+<code>M : Type -&gt; Type</code> — <code>option</code>, or later a
+parser — because a computation of an <code>A</code> is a value of some
+wrapper type <code>M A</code>. <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+takes an <code>M A</code> and a continuation <code>A -&gt; M B</code>
+and delivers an <code>M B</code>; <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>
+injects an <code>A</code> into <code>M A</code>. The infix notation
+<code>&gt;&gt;=</code> is attached to bind, so
+<code>p &gt;&gt;= f</code> reads “run <code>p</code>, then feed its
+result to <code>f</code>”.</p>
+<p>For <code>option</code>, both operations are a few lines, from <a
+href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>:</p>
+<pre class="coq"><code>#[global] Instance Option_HasBind : HasBind option :=
+  fun A B m f =&gt; match m with
+                 | None =&gt; None
+                 | Some x =&gt; f x
+                 end.
+
+#[global] Instance Option_HasReturn : HasReturn option :=
+  fun A x =&gt; Some x.</code></pre>
+<p>That single <code>match</code> is the null-check, written once. Every
+caller that sequences option-returning steps with <code>&gt;&gt;=</code>
+inherits it and never writes <code>match ... None =&gt; None</code>
+again.</p>
+<h2 id="the-three-laws-that-make-it-a-monad">The three laws that make it
+a monad</h2>
+<p>Operations with the right types are not enough — a sort function of
+type <code>list -&gt; list</code> need not sort. <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> and
+<a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>
+have to <em>behave</em>, and the behaviour is three equations. The <a
+href="coqdoc/Riktig.Interface.Monad.html#Monad"><code>Monad</code></a>
+class bundles the vocabulary with those laws, verbatim from <a
+href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:</p>
+<pre class="coq"><code>Class Monad (M : Type -&gt; Type) `{forall A, EqRel (M A)} `{HasBind M} `{HasReturn M} := {
+  (* Bundled here for the same reason Interface/Monoid.v&#39;s `mon_equiv`
+     and Interface/Category.v&#39;s `hom_equiv` bundle theirs: `bind_proper`
+     applied at reflexivity (both sides literally the same `m`, as in
+     Theory/Monad.v&#39;s `map_compose`) needs `equ` reflexive, and generic
+     rewriting under `==` needs it an Equivalence, one per index A. *)
+  #[global] monad_equiv :: forall A, Equivalence (@equ (M A) _);
+  (* The continuation argument of bind is compared pointwise on its
+     domain A directly (`forall x, f x == g x`), not via `EqRel (A -&gt;
+     M B)`: A itself carries no EqRel in general, and quantifying over
+     literally every x needs none. *)
+  #[global] bind_proper :: forall A B,
+    Proper (equ ==&gt; (fun f g =&gt; forall x, f x == g x) ==&gt; equ) (@bind M _ A B);
+  bind_ret_l : forall A B (x : A) (f : A -&gt; M B), bind (ret x) f == f x;
+  bind_ret_r : forall A (m : M A), bind m ret == m;
+  bind_assoc : forall A B C (m : M A) (f : A -&gt; M B) (g : B -&gt; M C),
+    bind (bind m f) g == bind m (fun x =&gt; bind (f x) g)
+}.</code></pre>
+<p>The equality <code>==</code> is a family of relations, one per index
+<code>A</code>, because <code>M A</code> and <code>M B</code> are
+different types and each needs its own notion of sameness. The three
+laws, on the blackboard — writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><annotation encoding="application/x-tex">\mathbin{&gt;\!\!&gt;\!\!=}</annotation></semantics></math>
+for bind and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>η</mi><annotation encoding="application/x-tex">\eta</annotation></semantics></math>
+for return:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>η</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mi>m</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>η</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>m</mi><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>m</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.222em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\eta(x) \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; f(x), \qquad
+m \mathbin{&gt;\!\!&gt;\!\!=} \eta \;=\; m, \qquad
+(m \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&gt;\!\!&gt;\!\!=} g \;=\; m \mathbin{&gt;\!\!&gt;\!\!=} \big(\lambda x.\ f(x) \mathbin{&gt;\!\!&gt;\!\!=} g\big).</annotation></semantics></math></p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Interface.Monad.html#bind_ret_l"><code>bind_ret_l</code></a>:
+injecting <code>x</code> and then binding into <code>f</code> is just
+<code>f x</code> — <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
+the left of a bind does nothing.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Monad.html#bind_ret_r"><code>bind_ret_r</code></a>:
+binding a computation into <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> gives
+the computation back — <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
+the right does nothing either.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Monad.html#bind_assoc"><code>bind_assoc</code></a>:
+two binds in a row can be regrouped, exactly like the associativity of a
+monoid, but for sequencing.</li>
+</ul>
+<p>For <code>option</code> each law is proved by taking the value apart
+into <code>Some</code> and <code>None</code> and computing. For
+associativity: if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mrow><mi mathvariant="normal">N</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi></mrow></mrow><annotation encoding="application/x-tex">m = \mathrm{None}</annotation></semantics></math>,
+both sides short-circuit to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">N</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi></mrow><annotation encoding="application/x-tex">\mathrm{None}</annotation></semantics></math>;
+if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.222em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">m = \mathrm{Some}\ x</annotation></semantics></math>,
+both sides reduce by the definition of bind to the same thing —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.222em"></mspace><mi>x</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.222em"></mspace><mi>x</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.222em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(\mathrm{Some}\ x \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&gt;\!\!&gt;\!\!=} g
+\;=\; f(x) \mathbin{&gt;\!\!&gt;\!\!=} g
+\;=\; \mathrm{Some}\ x \mathbin{&gt;\!\!&gt;\!\!=} \big(\lambda y.\ f(y) \mathbin{&gt;\!\!&gt;\!\!=} g\big).</annotation></semantics></math></p>
+<p>The proof is the whole thing in one line, from <a
+href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>:</p>
+<pre class="coq"><code>Lemma option_bind_assoc : forall A B C (m : option A) (f : A -&gt; option B) (g : B -&gt; option C),
+  bind (bind m f) g == bind m (fun x =&gt; bind (f x) g).
+Proof. intros A B C m f g. destruct m as [x |]; reflexivity. Qed.</code></pre>
+<p><code>destruct m</code> splits on whether <code>m</code> is
+<code>Some x</code> or <code>None</code>. If it is <code>None</code>,
+both sides short-circuit to <code>None</code>; if it is
+<code>Some x</code>, both sides reduce to <code>bind (f x) g</code>.
+Either way the two sides are equal by computation, which is what
+<code>reflexivity</code> checks. The left-identity law is even shorter —
+the two sides are <em>definitionally</em> equal, so no case split is
+needed:</p>
+<pre class="coq"><code>Lemma option_bind_ret_l : forall A B (x : A) (f : A -&gt; option B),
+  bind (ret x) f == f x.
+Proof. intros A B x f. reflexivity. Qed.</code></pre>
+<p>With the three laws and the fact that <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+respects equality (<a
+href="coqdoc/Riktig.Interface.Monad.html#bind_proper"><code>bind_proper</code></a>),
+<code>option</code> is registered as a <a
+href="coqdoc/Riktig.Interface.Monad.html#Monad"><code>Monad</code></a>,
+and the generic theory — for instance the derived <a
+href="coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a> and its
+functor laws in <a
+href="coqdoc/Riktig.Theory.Monad.html"><code>Theory/Monad.v</code></a> —
+applies to it with no further work.</p>
+<h2 id="a-second-choice-when-the-first-fails">A second choice when the
+first fails</h2>
+<p>Sequencing is only half of what a parser wants. The other half is
+<em>choice</em>: try one parser, and if it fails, try another. That is a
+separate structure, <a
+href="coqdoc/Riktig.Interface.Alternative.html#Alternative"><code>Alternative</code></a>,
+with its own two operations — <a
+href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>,
+the computation that always fails, and <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+(written <code>&lt;|&gt;</code>), which runs its left argument and falls
+back to the right only if the left fails. From <a
+href="coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>:</p>
+<pre class="coq"><code>Class HasFail (M : Type -&gt; Type) := fail : forall {A}, M A.
+Class HasAlt (M : Type -&gt; Type) := alt : forall {A}, M A -&gt; M A -&gt; M A.</code></pre>
+<pre class="coq"><code>Class Alternative (M : Type -&gt; Type) `{forall A, EqRel (M A)} `{HasFail M} `{HasAlt M} := {
+  (* Bundled for the same reason Interface/Monad.v&#39;s `monad_equiv` is:
+     `alt_proper` at reflexivity and generic rewriting under `==` both
+     need `equ` an Equivalence, one per index A. *)
+  #[global] alt_equiv :: forall A, Equivalence (@equ (M A) _);
+  #[global] alt_proper :: forall A, Proper (equ ==&gt; equ ==&gt; equ) (@alt M _ A);
+  alt_assoc : forall A (p q r : M A), alt (alt p q) r == alt p (alt q r);
+  fail_alt_l : forall A (q : M A), alt fail q == q;
+  alt_fail_r : forall A (p : M A), alt p fail == p
+}.</code></pre>
+<p>These three laws say <code>(M A, &lt;|&gt;, fail)</code> is a monoid:
+<code>&lt;|&gt;</code> is associative and <a
+href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
+is a two-sided identity —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>r</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>q</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&lt;|&gt;} r \;=\; p \mathbin{&lt;|&gt;} (q \mathbin{&lt;|&gt;} r), \qquad
+\mathsf{fail} \mathbin{&lt;|&gt;} q \;=\; q, \qquad
+p \mathbin{&lt;|&gt;} \mathsf{fail} \;=\; p</annotation></semantics></math></p>
+<p>— an always-failing alternative on either side of a choice may be
+dropped. Note what is <em>not</em> in the list: commutativity.
+<code>p &lt;|&gt; q</code> is not <code>q &lt;|&gt; p</code> in general,
+because the choice is <em>ordered</em> — it commits to the left as soon
+as the left succeeds. For a parser, that is the definition of <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>,
+from <a
+href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>,
+where <code>Parser S T := S -&gt; option (T * S)</code>:</p>
+<pre class="coq"><code>#[global] Instance Parser_HasAlt (S : Type) : HasAlt (Parser S) :=
+  fun A p q =&gt; fun input =&gt;
+    match p input with
+    | None =&gt; q input
+    | r =&gt; r
+    end.</code></pre>
+<p>Run <code>p</code> on the input; if it returns <code>None</code>, run
+<code>q</code>; otherwise keep <code>p</code>’s result. First success
+wins.</p>
+<h2 id="a-plausible-law-that-is-false">A plausible law that is
+false</h2>
+<p>Now the interesting part. <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+distributes over <code>+</code> and <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+looks like an addition, so it is tempting to expect a distributivity law
+connecting them: binding a choice into <code>f</code> ought to equal
+choosing between the two binds. In symbols,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mover><mo>=</mo><mo accent="false">?</mo></mover><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;\stackrel{?}{=}\; (p \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&lt;|&gt;} (q \mathbin{&gt;\!\!&gt;\!\!=} f).</annotation></semantics></math></p>
+<p>This is false, and the reason is exactly the ordered, committed
+nature of <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>.
+On the left, <code>p &lt;|&gt; q</code> decides <em>first</em>, before
+<code>f</code> is ever consulted. If <code>p</code> succeeds, the choice
+commits to <code>p</code>’s branch — and if <code>f</code> then fails on
+<code>p</code>’s result, the whole left side has failed, with no way
+back to <code>q</code>. On the right, <code>p &gt;&gt;= f</code> and
+<code>q &gt;&gt;= f</code> are each computed in full before the choice
+is made, so if <code>p &gt;&gt;= f</code> fails, the choice quietly
+falls back to <code>q &gt;&gt;= f</code>. The two sides disagree
+precisely when <code>f</code> turns a success of <code>p</code> into a
+failure.</p>
+<p>The counterexample makes this concrete: let <code>p</code> always
+succeed with <code>O</code>, let <code>q</code> always succeed with
+<code>S O</code>, and let <code>f</code> fail exactly on <code>O</code>
+and succeed otherwise. From <a
+href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>:</p>
+<pre class="coq"><code>Definition counter_p : Parser nat nat := ret O.
+Definition counter_q : Parser nat nat := ret (S O).
+Definition counter_f (n : nat) : Parser nat nat :=
+  match n with
+  | O =&gt; fail
+  | S _ =&gt; ret n
+  end.</code></pre>
+<p>Trace both sides on any input. The left side commits to
+<code>p</code>, whose result <code>O</code> sends <code>f</code>
+straight to <a
+href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>O</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; p \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; f\,O \;=\; \mathsf{fail}.</annotation></semantics></math></p>
+<p>The right side lets <code>p &gt;&gt;= f</code> fail and falls back to
+<code>q &gt;&gt;= f</code>, which succeeds with <code>S O</code>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>f</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>S</mi><mspace width="0.167em"></mspace><mi>O</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>S</mi><mspace width="0.167em"></mspace><mi>O</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&lt;|&gt;} (q \mathbin{&gt;\!\!&gt;\!\!=} f) \;=\; \mathsf{fail} \mathbin{&lt;|&gt;} f\,(S\,O) \;=\; S\,O.</annotation></semantics></math></p>
+<p><a
+href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
+on the left, a success on the right: the two are not equal. Here is the
+refutation in full:</p>
+<pre class="coq"><code>Lemma bind_alt_not_distributive :
+  ~ (bind (alt counter_p counter_q) counter_f
+      == alt (bind counter_p counter_f) (bind counter_q counter_f)).
+Proof.
+  intros H.
+  specialize (H O).
+  unfold bind, alt, ret, fail, counter_p, counter_q, counter_f,
+    Parser_HasBind, Parser_HasAlt, Parser_HasReturn, Parser_HasFail
+    in H.
+  simpl in H.
+  discriminate H.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros H</code> assumes the law holds — the goal is its
+negation, so we derive a contradiction from <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>.</li>
+<li><code>specialize (H O)</code> applies the assumed equality at one
+concrete input, the number <code>O</code>. (Parser equality is
+extensional: two parsers are equal when they agree on every input, so a
+single disagreeing input is enough to break it.)</li>
+<li>The <code>unfold</code> and <code>simpl</code> compute both sides at
+that input. The left reduces to <code>None</code>; the right reduces to
+<code>Some (S O, O)</code>.</li>
+<li><code>discriminate H</code> observes that
+<code>None = Some (S O, O)</code> is impossible — they are different
+constructors — and closes the goal.</li>
+</ul>
+<p>A plausible-sounding law, refuted by a three-line construction. The
+lesson is that an equation that “looks like distributivity” is not true
+by resemblance; it has to be checked against what the operations
+actually do, and here the committed choice of <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+is exactly what breaks it.</p>
+<p>There <em>is</em> a restricted form that holds — the two sides agree
+whenever <code>f</code> cannot turn a success of <code>p</code> into a
+failure, which is the one thing the counterexample violates:</p>
+<pre class="coq"><code>Lemma bind_alt_distr_when_no_backtrack :
+  forall S T U (p q : Parser S T) (f : T -&gt; Parser S U),
+    (forall input : S, bind p f input = None -&gt; p input = None) -&gt;
+    bind (alt p q) f == alt (bind p f) (bind q f).</code></pre>
+<p>The hypothesis says: whenever <code>p &gt;&gt;= f</code> fails, it
+was already <code>p</code> that failed, never <code>f</code>. Under that
+condition there is nothing for the right side to fall back to that the
+left side missed, and the distributivity goes through.</p>
+<h2 id="sequencing-and-choice-together">Sequencing and choice,
+together</h2>
+<p>With both structures in place, a parser is written by combining
+<code>&gt;&gt;=</code> and <code>&lt;|&gt;</code>. Two characters in
+sequence, pairing their results, is a bind inside a bind — and it
+computes:</p>
+<pre class="coq"><code>Example test_bind :
+  run (bind (char &quot;a&quot;%char) (fun x =&gt; bind (char &quot;b&quot;%char) (fun y =&gt; ret (x, y)))) &quot;abc&quot;
+    = Some (&quot;a&quot;%char, &quot;b&quot;%char).
+Proof. reflexivity. Qed.</code></pre>
+<p>And an ordered choice takes the first branch that succeeds —
+<code>char "x"</code> fails on <code>"abc"</code>, so the fallback
+<code>char "a"</code> runs:</p>
+<pre class="coq"><code>Example test_alt : run (alt (char &quot;x&quot;%char) (char &quot;a&quot;%char)) &quot;abc&quot; = Some &quot;a&quot;%char.
+Proof. reflexivity. Qed.</code></pre>
+<p>Both are proved by <code>reflexivity</code>: the parser simply runs,
+and the result is what the definitions compute.</p>
+<p><em>Next: building a parser combinator library on these operations —
+<a href="coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>, <a
+href="coqdoc/Riktig.Impl.Parser.html#sepBy1"><code>sepBy1</code></a>,
+and proving each iteration terminates by a shrinking measure on the
+input.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Monad.html#HasBind"><code>HasBind</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Monad.html#HasReturn"><code>HasReturn</code></a>,
+the laws) · <a
+href="coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
+(<code>option</code> as a monad) · <a
+href="coqdoc/Riktig.Theory.Monad.html"><code>Theory/Monad.v</code></a>
+(the derived functor, the negative findings) · <a
+href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Parser.html#bind_alt_not_distributive"><code>bind_alt_not_distributive</code></a>,
+the restricted form).</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What it means for a parser combinator to be correct, and using
+one on a real message format</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="what-it-means-for-a-parser-combinator-to-be-correct-and-using-one-on-a-real-message-format">What
+it means for a parser combinator to be correct, and using one on a real
+message format</h1>
+<p>A parser combinator library gives you small parser values — match one
+character, try this parser or that one, repeat a parser — and ways to
+glue them into bigger parsers. The appeal is that each piece is small
+enough to read on its own, and a parser for a whole grammar is just an
+assembly of pieces, not one large hand-written function that branches on
+everything at once. A separate piece of machinery then goes one step
+further: given a grammar written down as data (parsed from ABNF text,
+the notation RFC 5234 uses to describe text formats), a generic
+interpreter walks that data and <em>builds</em> a parser for it
+automatically — <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>
+does the building, and <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>
+wraps the whole pipeline so it can be handed the grammar as plain
+text.</p>
+<p>Earlier posts built both of these — the combinator library and the
+grammar interpreter — and each was shown <em>working</em>: run on an
+input, output checked by hand. Neither asked the harder question: how do
+you know the combinators behave correctly on inputs nobody wrote a test
+for, or that a grammar-driven parser is guaranteed to work on formats
+nobody built by hand? This post has two parts, each opening with a
+question before any code appears: first, what would it even mean for a
+piece of parsing code to be correct, and can that be proved once instead
+of checked example by example; second, can a text format’s syntax be
+handed over as data, with a program building a working parser from it
+and none of the format’s own logic written down anywhere.</p>
+<h2 id="part-1-proving-the-combinators-correct">Part 1 — proving the
+combinators correct</h2>
+<h3 id="what-does-it-mean-for-parsing-code-to-be-correct">What does it
+mean for parsing code to be correct?</h3>
+<p>Any piece of code that reads text and decides what it means can go
+wrong in two directions. It can claim success on text that does not
+actually have the shape being asked for — read a line like
+<code>"not a date"</code> and hand back a calendar date anyway,
+inventing a match where none exists. Or it can give up on text that does
+have the right shape — refuse a perfectly well-formed line because some
+case was missed when the code was written. A property ruling out the
+first kind of mistake — never inventing a match — is usually called
+<em>soundness</em>. A property ruling out the second — never refusing
+input that fits — is usually called <em>completeness</em>. A
+hand-written parser, built as one large function with a case for
+everything the author thought of, leaves both of these as hopes: the
+author believes every case was covered, but nothing checks it beyond
+whatever tests get written.</p>
+<p>The question worth asking about a combinator library is whether these
+two properties can be proved differently — not per grammar, checked
+example by example, but once, about the small handful of building
+blocks, in a way that then holds automatically for every larger parser
+assembled out of them. That is what the rest of Part 1 does.</p>
+<h3 id="from-the-question-to-the-actual-proofs">From the question to the
+actual proofs</h3>
+<p>The earlier post’s combinator library is proved sound and, where it
+makes sense, complete, one building block at a time, in <a
+href="coqdoc/Riktig.Theory.Parser.html"><code>Theory/Parser.v</code></a>.
+Its opening comment states the coverage precisely, and it is worth being
+explicit about that scope before looking at a single proof: what gets
+proved is a property of the <em>combinators</em> — character-matching,
+sequencing, choice, repetition — not of any one grammar built from them.
+Proving that a parser assembled for some particular message format
+accepts exactly the strings a human reader would say that format allows
+is a different, larger claim about that specific parser, and it is not
+what is proved here. What is proved here is narrower and reusable
+precisely because of that: soundness is established once for the
+primitives and once for each way of combining them (sequencing, choice,
+repetition), so that any parser built by composing those pieces inherits
+soundness automatically, with no separate argument required for the
+parser itself.</p>
+<h3
+id="a-warm-up-exactly-when-the-single-character-combinator-succeeds">A
+warm-up: exactly when the single-character combinator succeeds</h3>
+<p>The most basic combinator reads one item off the input and keeps it
+only if a predicate accepts it. “Correct” for something this small has
+an exact meaning: it should succeed in precisely the cases where there
+is a next item and the predicate holds of it, no more and no less. The
+file proves the two directions separately and then packages them as an
+if-and-only-if:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="monospace">𝚜𝚊𝚝𝚒𝚜𝚏𝚢</mtext><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mi>e</mi><mi>q</mi><mo>,</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>d</mi><mo>,</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mtext mathvariant="monospace">𝚂𝚘𝚖𝚎</mtext><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>,</mo><mi>r</mi><mi>e</mi><mi>s</mi><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>⇔</mo><mtext mathvariant="monospace">𝚞𝚗𝚌𝚘𝚗𝚜</mtext><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mi>e</mi><mi>q</mi><mo>,</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mtext mathvariant="monospace">𝚂𝚘𝚖𝚎</mtext><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>,</mo><mi>r</mi><mi>e</mi><mi>s</mi><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>∧</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>d</mi><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mtext mathvariant="monospace">𝚝𝚛𝚞𝚎</mtext><mi>.</mi></mrow><annotation encoding="application/x-tex">\texttt{satisfy}(seq, pred, s) = \texttt{Some}(c, rest) \iff
+  \texttt{uncons}(seq, s) = \texttt{Some}(c, rest) \land pred(c) = \texttt{true}.</annotation></semantics></math></p>
+<pre class="coq"><code>  (* Soundness: a `satisfy` success really did read one `uncons` step
+     matching the predicate. *)
+  Lemma satisfy_sound : forall seq pred input c rest,
+    satisfy seq pred input = Some (c, rest) -&gt;
+    uncons seq input = Some (c, rest) /\ pred c = true.
+  Proof.
+    intros seq pred input c rest H.
+    unfold satisfy in H.
+    destruct (uncons seq input) as [[c0 rest0] |] eqn:Hun; [ | discriminate].
+    destruct (pred c0) eqn:Hpred; [ | discriminate].
+    injection H as -&gt; -&gt;.
+    split; [reflexivity | exact Hpred].
+  Qed.
+
+  (* Completeness: whenever `uncons` agrees with the predicate,
+     `satisfy` does not spuriously fail. *)
+  Lemma satisfy_complete : forall seq pred input c rest,
+    uncons seq input = Some (c, rest) -&gt; pred c = true -&gt;
+    satisfy seq pred input = Some (c, rest).
+  Proof.
+    intros seq pred input c rest Hun Hpred.
+    unfold satisfy. rewrite Hun, Hpred. reflexivity.
+  Qed.
+
+  Lemma satisfy_spec : forall seq pred input c rest,
+    satisfy seq pred input = Some (c, rest) &lt;-&gt;
+    uncons seq input = Some (c, rest) /\ pred c = true.
+  Proof.
+    intros seq pred input c rest. split.
+    - apply satisfy_sound.
+    - intros [Hun Hpred]. apply satisfy_complete; assumption.
+  Qed.</code></pre>
+<p>Walking it: <a
+href="coqdoc/Riktig.Theory.Parser.html#satisfy_sound"><code>satisfy_sound</code></a>
+unfolds <a
+href="coqdoc/Riktig.Impl.Parser.html#satisfy"><code>satisfy</code></a>
+to the <code>match</code> it actually is, and <code>destruct</code>s
+that match — either reading the next item produced nothing (the proof
+stops there, <code>discriminate</code> closes it because the hypothesis
+claimed a success) or it produced a character that either failed or
+passed the predicate (again, failing closes by
+<code>discriminate</code>). Only one branch survives, and in it
+<code>injection</code> reads the value and leftover straight out of the
+equality — the success could only have arisen because a character really
+was read and really did pass the predicate. <a
+href="coqdoc/Riktig.Theory.Parser.html#satisfy_complete"><code>satisfy_complete</code></a>
+is the converse, a single <code>rewrite</code>: if reading the next item
+and the predicate already agree, unfolding <a
+href="coqdoc/Riktig.Impl.Parser.html#satisfy"><code>satisfy</code></a>
+and rewriting both facts in immediately produces the claimed result. <a
+href="coqdoc/Riktig.Theory.Parser.html#satisfy_spec"><code>satisfy_spec</code></a>
+is neither proof; it is the two glued together with <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+— soundness and completeness stated as one fact. The parser that accepts
+any character at all gets the same treatment for free, with the
+predicate hypothesis simply discarded.</p>
+<p>This is the soundness-and-completeness question from the previous
+section, answered exactly, for the smallest possible piece of parsing
+code. The rest of Part 1 is about whether that answer survives being
+built into something bigger.</p>
+<h3
+id="soundness-composes-prove-it-once-for-sequencing-get-it-for-everything-built-from-it">Soundness
+composes: prove it once for sequencing, get it for everything built from
+it</h3>
+<p>Call the soundness property this way, precisely: whatever a parser
+does, it never invents input out of nowhere, and whatever is left over
+when it succeeds is genuinely a suffix of what it started with —
+recoverable by prepending the exact prefix that was consumed. The file
+states this once, as a property of parsers in general, rather than a
+proof about any one of them:</p>
+<pre class="coq"><code>(* &quot;Whenever this parser succeeds, the leftover really is a suffix of
+   the input&quot; — witnessed concretely by the consumed prefix. This is
+   the general form of &quot;satisfy/many/etc. succeed, the leftover
+   suffix really is a suffix of the original input&quot; from the task
+   description, stated once and composed through bind/ret/alt instead
+   of re-derived combinator by combinator. *)
+Definition ParserSound {T : Type} (p : Parser string T) : Prop :=
+  forall s v s&#39;, p s = Some (v, s&#39;) -&gt; exists prefix, s = prefix ++ s&#39;.</code></pre>
+<p>This is the formal counterpart of “never claims a match on input it
+shouldn’t”: the definition itself demands a witness, a concrete prefix
+that was actually consumed, rather than merely asserting the leftover is
+somehow shorter. The gain from stating it this way is that it can be
+proved for sequencing <em>once</em>, as a fact about any two sound
+parsers glued together, rather than re-derived for every parser that
+happens to sequence two steps (which, since sequencing is how every
+combinator in the library threads work along, is nearly all of them).
+The blackboard argument: if the first parser’s success on <code>s</code>
+leaves <code>rest</code>, witnessed by <code>s = prefix1 ++ rest</code>,
+and the next step’s success on <code>rest</code> leaves <code>s'</code>,
+witnessed by <code>rest = prefix2 ++ s'</code>, then substituting the
+second equation into the first and reassociating <code>++</code> gives
+<code>s = (prefix1 ++ prefix2) ++ s'</code> — a single witness for the
+combined parser:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>f</mi><mi>i</mi><msub><mi>x</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><mi>r</mi><mi>e</mi><mi>s</mi><mi>t</mi><mo>,</mo><mspace width="1.0em"></mspace><mi>r</mi><mi>e</mi><mi>s</mi><mi>t</mi><mo>=</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>f</mi><mi>i</mi><msub><mi>x</mi><mn>2</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msup><mi>s</mi><mo>′</mo></msup><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>s</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>f</mi><mi>i</mi><msub><mi>x</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><mi>p</mi><mi>r</mi><mi>e</mi><mi>f</mi><mi>i</mi><msub><mi>x</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msup><mi>s</mi><mo>′</mo></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">s = prefix_1 \mathbin{+\!\!+} rest, \quad rest = prefix_2 \mathbin{+\!\!+} s&#39;
+\;\Longrightarrow\; s = (prefix_1 \mathbin{+\!\!+} prefix_2) \mathbin{+\!\!+} s&#39;.</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma bind_ParserSound : forall T U (p : Parser string T) (f : T -&gt; Parser string U),
+  ParserSound p -&gt; (forall x, ParserSound (f x)) -&gt; ParserSound (bind p f).
+Proof.
+  intros T U p f Hp Hf s v s&#39; H.
+  unfold bind, Parser_HasBind in H.
+  destruct (p s) as [[x rest] |] eqn:Hps; [ | discriminate].
+  destruct (Hp s x rest Hps) as [prefix1 Heq1].
+  destruct (Hf x rest v s&#39; H) as [prefix2 Heq2].
+  exists (prefix1 ++ prefix2).
+  rewrite Heq1, Heq2, string_append_assoc.
+  reflexivity.
+Qed.</code></pre>
+<p>Walking it: unfolding sequencing (<a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>)
+and <code>destruct</code>ing the first parser’s result rules out its
+failure case (<code>discriminate</code>) and leaves the success case,
+where the first parser’s own soundness (<code>Hp</code>) hands back
+<code>prefix1</code> and the continuation’s soundness (<code>Hf</code>,
+applied at the value and leftover the first parser actually produced)
+hands back <code>prefix2</code>. The witness for the whole thing is just
+their concatenation, and <a
+href="coqdoc/Riktig.Theory.Parser.html#string_append_assoc"><code>string_append_assoc</code></a>
+— the one associativity fact about <code>++</code> this argument needs,
+proved earlier in the file by a routine induction — turns the two
+separate equations into the single one the goal asks for. Choice between
+two parsers gets a companion proof by the same shape, case-splitting on
+whether the first branch matched:</p>
+<pre class="coq"><code>Lemma alt_ParserSound : forall T (p q : Parser string T),
+  ParserSound p -&gt; ParserSound q -&gt; ParserSound (alt p q).
+Proof.
+  intros T p q Hp Hq s v s&#39; H.
+  unfold alt, Parser_HasAlt in H.
+  remember (p s) as ps eqn:Hps.
+  destruct ps as [[v0 s0] |].
+  - simpl in H.
+    injection H as Heqv Heqs&#39;.
+    rewrite &lt;- Heqs&#39;.
+    exact (Hp s v0 s0 (eq_sym Hps)).
+  - simpl in H.
+    exact (Hq s v s&#39; H).
+Qed.</code></pre>
+<p>Walking the choice proof: <code>alt p q</code> runs <code>p</code>
+first, so the case split <code>remember (p s) ... destruct</code>
+mirrors the definition — if <code>p</code> succeeded, the whole result
+<em>is</em> <code>p</code>’s result and <code>p</code>’s own soundness
+witness serves unchanged; if <code>p</code> failed, the result is
+<code>q</code>’s and <code>q</code>’s witness serves. In symbols,
+whichever branch actually ran supplies the prefix:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mrow><mi>𝑝</mi><mi>𝑟</mi><mi>𝑒</mi><mi>𝑓</mi><mi>𝑖</mi><mi>𝑥</mi></mrow><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msup><mi>s</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">s = \mathit{prefix} \mathbin{+\!\!+} s&#39;</annotation></semantics></math>
+either way.</p>
+<p>With sequencing and choice both proved sound, every combinator built
+out of them inherits soundness essentially for free — no new induction
+is needed, only composition. Running two parsers and keeping the first
+result is defined as two nested sequencing steps,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">q</mi><mi mathvariant="normal">L</mi></mrow><mspace width="0.278em"></mspace><mi>p</mi><mspace width="0.278em"></mspace><mi>q</mi><mo>=</mo><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><mi>p</mi><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><mi>q</mi><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>_</mi><mi>.</mi><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.278em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{seqL}\;p\;q = \mathrm{bind}\;p\;(\lambda x.\;
+\mathrm{bind}\;q\;(\lambda \_.\; \mathrm{ret}\;x))</annotation></semantics></math>,
+and its soundness proof is exactly that composition spelled out:</p>
+<pre class="coq"><code>Lemma seqL_ParserSound : forall T U (p : Parser string T) (q : Parser string U),
+  ParserSound p -&gt; ParserSound q -&gt; ParserSound (seqL p q).
+Proof.
+  intros T U p q Hp Hq. unfold seqL. apply bind_ParserSound.
+  - exact Hp.
+  - intros x. apply bind_ParserSound.
+    + exact Hq.
+    + intros _. apply ret_ParserSound.
+Qed.</code></pre>
+<p>Every step is applying a lemma already proved; nothing here
+re-examines what the two sub-parsers actually do. Even repetition — the
+combinator that repeats a parser until it stops matching — inherits
+soundness by induction on the counter that bounds its recursion, using
+the two lemmas above at each step rather than reasoning about strings
+directly. On the blackboard the induction has exactly two cases:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.278em"></mspace><mi>p</mi><mspace width="0.278em"></mspace><mn>0</mn><mo>=</mo><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.278em"></mspace><mi>p</mi><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>+</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mspace width="0.167em"></mspace><mi>p</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> then </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.278em"></mspace><mi>p</mi><mspace width="0.278em"></mspace><mi>n</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{many}\;p\;0 = \mathrm{ret}\;[\,]
+\qquad\text{and}\qquad
+\mathrm{many}\;p\;(n+1) =
+\mathrm{alt}\;(\,p \text{ then } \mathrm{many}\;p\;n\,)\;(\mathrm{ret}\;[\,]),</annotation></semantics></math></p>
+<p>the first sound because returning consumes nothing, the second sound
+by the <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+lemmas applied to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>’s
+soundness and the induction hypothesis.</p>
+<pre class="coq"><code>Lemma many_ParserSound : forall T (p : Parser string T) fuel,
+  ParserSound p -&gt; ParserSound (many p fuel).
+Proof.
+  intros T p fuel Hp.
+  induction fuel as [| c fuel&#39; IH]; simpl.
+  - apply ret_ParserSound.
+  - apply alt_ParserSound.
+    + apply bind_ParserSound.
+      * exact Hp.
+      * intros x. apply bind_ParserSound.
+        -- exact IH.
+        -- intros xs. apply ret_ParserSound.
+    + apply ret_ParserSound.
+Qed.</code></pre>
+<p>The induction hypothesis <code>IH</code> — “repetition is sound at
+the shorter counter” — is exactly what the recursive call needs, so the
+base case (returning immediately, which consumes nothing) and the
+recursive case (composed entirely from the two composition lemmas above)
+close the whole thing without a single new fact about strings. This is
+the sense in which soundness holds “once for the combinators, inherited
+by everything built from them”: a grammar with fifty rules built from
+sequencing, choice, and repetition gets this guarantee automatically,
+with no per-grammar proof obligation at all.</p>
+<h3
+id="the-completeness-half-does-the-repetition-counter-ever-cut-things-off-early">The
+completeness half: does the repetition counter ever cut things off
+early?</h3>
+<p>Repetition is written to recurse on a <em>copy</em> of the input,
+used purely as a bound on the iteration count, because Coq’s termination
+checker needs to see something shrink structurally at every call and the
+actual amount of input the sub-parser will consume isn’t known in
+advance. This raises exactly the completeness question from the first
+section, in a new form: does that artificial counter ever cut the loop
+off early — stop matching before the real input runs out, for no reason
+but that the counter reached zero first?</p>
+<p>The first fact rules out one kind of problem directly: repetition
+never returns failure, no matter what the sub-parser does — for every
+counter
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+and input
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+there is some result
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.278em"></mspace><mi>p</mi><mspace width="0.278em"></mspace><mi>n</mi><mspace width="0.278em"></mspace><mi>s</mi><mo>=</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{many}\;p\;n\;s = \mathrm{Some}(r)</annotation></semantics></math>.</p>
+<pre class="coq"><code>Lemma many_never_fails : forall T (p : Parser string T) fuel input,
+  exists r, many p fuel input = Some r.
+Proof.
+  intros T p fuel input.
+  destruct fuel as [| c fuel&#39;].
+  - simpl. apply ret_always_succeeds.
+  - simpl. apply alt_always_succeeds_of_r. apply ret_always_succeeds.
+Qed.</code></pre>
+<p>This is a case split on the counter alone: at zero, the definition
+unconditionally returns an empty list, and at a nonzero counter the
+outer combinator is a choice whose fallback branch also returns an empty
+list — and returning cannot fail, whatever branch runs. That rules out
+outright failure, but it does not yet say the <em>count</em> of
+repetitions matched is the right one. For that, the file introduces a
+stronger property that the library’s actual character-matching parsers
+all share: a success consumes exactly the one character at the head of
+the string it was run on, no more and no less.</p>
+<pre class="coq"><code>(* `HeadConsuming`: the property `satisfy`/`any`/`exact`/`char` all
+   share, that this codebase&#39;s uses of `many`/`many1` actually feed
+   them — a success consumes exactly the head character of whatever
+   string it is run on. Strictly stronger than `ParserSound` (which
+   only asks for *some* consumed prefix): it pins down the leftover
+   exactly, which is what lets the fuel/actual-input split collapse
+   below. *)
+Definition HeadConsuming {T : Type} (p : Parser string T) : Prop :=
+  forall s v s&#39;, p s = Some (v, s&#39;) -&gt; exists c, s = String c s&#39;.</code></pre>
+<p>For a sub-parser with that property, calling repetition the way this
+codebase actually calls it — with the counter argument set to a literal
+copy of the real input — unfolds cleanly into exactly one step of
+matching, with no leftover bookkeeping about the counter at all:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="monospace">𝚖𝚊𝚗𝚢</mtext><mspace width="0.222em"></mspace><mi>p</mi><mspace width="0.222em"></mspace><mi>s</mi><mspace width="0.222em"></mspace><mi>s</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mtext mathvariant="monospace">𝚂𝚘𝚖𝚎</mtext><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>p</mi><mspace width="0.222em"></mspace><mi>s</mi><mo>=</mo><mtext mathvariant="monospace">𝙽𝚘𝚗𝚎</mtext></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mtext mathvariant="monospace">𝚂𝚘𝚖𝚎</mtext><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo>:</mo><mo>:</mo><mi>x</mi><mi>s</mi><mo>,</mo><mspace width="0.167em"></mspace><mi>r</mi><mi>e</mi><mi>s</mi><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> where </mtext><mspace width="0.333em"></mspace></mrow><mtext mathvariant="monospace">𝚖𝚊𝚗𝚢</mtext><mspace width="0.222em"></mspace><mi>p</mi><mspace width="0.222em"></mspace><msup><mi>s</mi><mo>′</mo></msup><mspace width="0.222em"></mspace><msup><mi>s</mi><mo>′</mo></msup><mo>=</mo><mtext mathvariant="monospace">𝚂𝚘𝚖𝚎</mtext><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mi>s</mi><mo>,</mo><mspace width="0.167em"></mspace><mi>r</mi><mi>e</mi><mi>s</mi><mi>t</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>p</mi><mspace width="0.222em"></mspace><mi>s</mi><mo>=</mo><mtext mathvariant="monospace">𝚂𝚘𝚖𝚎</mtext><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo>,</mo><mspace width="0.167em"></mspace><msup><mi>s</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\texttt{many}\ p\ s\ s \;=\;
+  \begin{cases}
+    \texttt{Some}([\,],\,s) &amp; \text{if } p\ s = \texttt{None} \\
+    \texttt{Some}(v :: xs,\,rest) \text{ where } \texttt{many}\ p\ s&#39;\ s&#39; = \texttt{Some}(xs,\,rest)
+      &amp; \text{if } p\ s = \texttt{Some}(v,\,s&#39;)
+  \end{cases}</annotation></semantics></math></p>
+<pre class="coq"><code>(* Single-step unfolding of the canonical (fuel = actual input) call:
+   match `p` once against `s`, and on success the continuation is
+   *exactly* `many p s&#39; s&#39;` at the leftover `s&#39;` — no fuel bookkeeping
+   left over, because `HeadConsuming` pins the leftover down to be
+   literally the tail of `s`, which is also the fuel&#39;s own tail. *)
+Theorem many_canonical_unfold : forall T (p : Parser string T), HeadConsuming p -&gt;
+  forall s, many p s s =
+    match p s with
+    | None =&gt; Some ([], s)
+    | Some (v, s&#39;) =&gt;
+      match many p s&#39; s&#39; with
+      | Some (xs, rest) =&gt; Some (v :: xs, rest)
+      | None =&gt; None
+      end
+    end.
+Proof.
+  intros T p Hhc s.
+  destruct s as [| c s0].
+  - destruct (p &quot;&quot;) as [[v s&#39;] |] eqn:Hp.
+    + destruct (Hhc _ _ _ Hp) as [c Heq]. discriminate Heq.
+    + reflexivity.
+  - destruct (p (String c s0)) as [[v s1] |] eqn:Hp.
+    + destruct (Hhc _ _ _ Hp) as [c&#39; Heq].
+      injection Heq as _ Hs01.
+      rewrite &lt;- Hs01 in Hp.
+      rewrite &lt;- Hs01.
+      destruct (many_step_some T p c s0 (String c s0) v s0 Hp) as (xs &amp; rest &amp; Hmfuel &amp; Heq&#39;).
+      rewrite Hmfuel. exact Heq&#39;.
+    + exact (many_step_none T p c s0 (String c s0) Hp).
+Qed.</code></pre>
+<p>Walking it: split on whether <code>s</code> is empty. If it is, the
+sub-parser cannot possibly succeed on the empty string while consuming
+exactly one head character (a success there would need to exhibit a head
+character of the empty string, which <code>discriminate</code> rejects),
+so both sides reduce to “stop, empty list” and agree by
+<code>reflexivity</code>. If <code>s</code> is <code>String c s0</code>,
+split on whether the sub-parser matches: on failure, an earlier helper
+lemma (<a
+href="coqdoc/Riktig.Theory.Parser.html#many_step_none"><code>many_step_none</code></a>,
+proved a few lines above by unfolding one step of choice and sequencing)
+already shows both sides equal <code>Some ([], s)</code>. On success,
+consuming exactly one head character means the leftover <code>s1</code>
+must literally equal <code>s0</code> — the counter’s own tail — so a
+second helper (<a
+href="coqdoc/Riktig.Theory.Parser.html#many_step_some"><code>many_step_some</code></a>)
+lines the recursive call up exactly with repetition applied again at
+that same leftover. Nowhere does the counter run short of what the real
+input needs: because each successful match consumes one real character
+<em>and</em> peels one character off the counter in lock step, the two
+never drift apart, and the recursion bottoms out only when the real
+input does. That answers the completeness question posed above: the
+counter is not an approximation of the real stopping point, it tracks it
+exactly.</p>
+<h3 id="what-this-proof-does-not-cover">What this proof does not
+cover</h3>
+<p>Two boundaries are worth stating outright. First, the combinator that
+parses a separator-delimited list — one item, then repeatedly a
+separator followed by another item — gets the same soundness proof as
+repetition, but not the same clean completeness argument. The reason is
+concrete: each repetition of that combinator consumes from <em>two</em>
+sub-parsers, the separator and the item, before the counter is
+decremented by only one character, so the “counter’s tail equals the
+real leftover” argument above, which relies on consuming exactly one
+character per step, does not carry over — a correct version of that
+argument would need to track both sub-parsers’ consumption together, and
+the file leaves that case unproved rather than stating a weaker claim
+under the same name. Second, and more fundamental: nothing here connects
+a combinator-built parser back to an independent description of “the
+language this grammar describes.” What is proved is about the building
+blocks — matching a character, sequencing, choice, repetition — not
+about the claim that a particular grammar, run through the interpreter
+in Part 2, accepts exactly the strings a reader of that grammar would
+expect. That would be a separate, larger theorem, connecting the
+interpreter’s behavior to an independent specification of ABNF’s
+meaning, and it is not attempted here.</p>
+<h2 id="part-2-using-a-grammar-to-build-a-parser-automatically">Part 2 —
+using a grammar to build a parser automatically</h2>
+<h3 id="can-a-grammar-stand-in-for-hand-written-code">Can a grammar
+stand in for hand-written code?</h3>
+<p>Suppose a new text format needs to be read: a line in a configuration
+file, a header in a network request, a record in a log file. The
+ordinary way to get a parser for it is to write one — functions that
+inspect the text piece by piece, one function for each part of the
+format, glued together and tested by hand. There is another possibility.
+Describe the format’s syntax once, as a set of rules — this token, then
+that token, one of several alternatives, zero or more repetitions of
+something, one rule referring to another — and hand those rules to a
+single, completely generic program that reads them and builds a working
+parser on the spot, with none of the format’s own logic written down as
+code anywhere. Does that actually hold up for a format with real
+structure — several rules referring to each other, repetition,
+alternation — or only for a single rule matching one character?</p>
+<h3 id="from-the-grammar-to-a-parser">From the grammar to a parser</h3>
+<p>An earlier post built exactly the generic program the question above
+asks for: give it a grammar (already parsed into data) and the name of
+its starting rule, and it returns a working parser, having written no
+code specific to that grammar anywhere along the way — <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>
+does the building, and <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>
+wraps the whole thing so the grammar can be handed over as ordinary text
+rather than pre-parsed data. That was demonstrated there on a grammar
+with a single rule. Here is a grammar with the structure real formats
+actually have: an HTTP-style header line, the kind of thing that appears
+one per line in a network request, combining alternation, repetition,
+concatenation, and rules that refer to each other. Written the way a
+standards document would present it:</p>
+<pre><code>header = name &quot;:&quot; SP value CRLF
+name   = 1*ALPHA
+value  = 1*(ALPHA / DIGIT / SP)</code></pre>
+<p>One sentence per rule: a <code>header</code> is a <code>name</code>,
+then a literal colon, then a single space, then a <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a>,
+then a line ending; a <code>name</code> is one or more alphabetic
+characters; a <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a> is
+one or more characters that are each either a letter, a digit, or a
+space. <code>ALPHA</code>, <code>DIGIT</code>, <code>SP</code>, and
+<code>CRLF</code> are not defined anywhere in this grammar — they are
+three of RFC 5234’s built-in <em>core rules</em> (letters, digits, the
+space character, and a line ending respectively), which the interpreter
+recognizes by name without the grammar author having to spell them
+out.</p>
+<p>Here is that same grammar as it actually appears in the file, encoded
+as a Coq string. ABNF requires each rule on its own line, so the grammar
+text is built by concatenating each rule with a line-feed character (<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#crlf_s"><code>crlf_s</code></a>,
+defined once and reused) between them; a literal double-quote character
+inside a Coq string is written as two consecutive double quotes, so
+<code>"":""</code> inside the source below is just the two-character
+ABNF token <code>":"</code>:</p>
+<pre class="coq"><code>(* Test: a small realistic message format, not a single-feature toy --
+   an HTTP-style header line (&quot;Host: example com&quot;), combining
+   alternation, repetition, concatenation, rule references, and three
+   different core rules (ALPHA, SP, CRLF) in one grammar. *)
+Definition test_grammar_header :=
+  (&quot;header = name &quot;&quot;:&quot;&quot; SP value CRLF&quot; ++ crlf_s ++
+   &quot;name = 1*ALPHA&quot; ++ crlf_s ++
+   &quot;value = 1*(ALPHA / DIGIT / SP)&quot; ++ crlf_s)%string.
+
+Example test_interp_header :
+  parse_with_abnf test_grammar_header &quot;header&quot; (&quot;Host: example com&quot; ++ crlf_s) 30 =
+    Some (Node &quot;header&quot;
+      (Node &quot;name&quot; (Leaf &quot;H&quot; :: Leaf &quot;o&quot; :: Leaf &quot;s&quot; :: Leaf &quot;t&quot; :: nil)
+       :: Leaf &quot;:&quot;
+          :: Leaf &quot; &quot;
+             :: Node &quot;value&quot;
+                  (Leaf &quot;e&quot; :: Leaf &quot;x&quot; :: Leaf &quot;a&quot; :: Leaf &quot;m&quot; :: Leaf &quot;p&quot; ::
+                   Leaf &quot;l&quot; :: Leaf &quot;e&quot; :: Leaf &quot; &quot; :: Leaf &quot;c&quot; :: Leaf &quot;o&quot; ::
+                   Leaf &quot;m&quot; :: nil)
+                :: Leaf crlf_s :: nil)).
+Proof. reflexivity. Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>
+is the two-stage pipeline described above: it first parses the grammar
+text itself into structured data, then hands that data to <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>
+to build an actual parser function on the fly, and runs that parser on
+the input string — here, <code>"Host: example com"</code> followed by a
+line feed, standing in for one line of an HTTP request. No
+<code>parse_header</code> function was written by hand anywhere in this
+codebase; the grammar text above is the entire specification, and the
+proof that it produces the stated tree is <code>reflexivity</code> — Coq
+runs the whole pipeline (parse the grammar, build the parser, run it on
+the input) and checks the result against the literal value written
+down.</p>
+<p>Read the output tree, and its shape says something worth noticing.
+<code>name</code> and <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a> are
+rules the grammar author actually wrote, and each becomes its own
+labelled <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#Node"><code>Node</code></a>,
+wrapping the individual characters it matched
+(<code>Node "name" [Leaf "H"; Leaf "o"; Leaf "s"; Leaf "t"]</code> for
+<code>"Host"</code>, and similarly for <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a>
+matching <code>"example com"</code>, all eleven characters — including
+the interior space — kept as individual leaves, because <a
+href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a>’s
+rule allows a space anywhere a letter or digit would go). The colon and
+the space between <code>name</code> and <code>SP</code> appear as bare
+<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#Leaf"><code>Leaf</code></a>s
+spliced directly into <code>header</code>’s children, with no wrapping
+node — a quoted literal and a core rule are not user-written rules, so
+the interpreter has no name of the grammar author’s choosing to label
+them with. And the trailing <code>Leaf crlf_s</code> rewards a second
+look: the test input ends in a single line-feed byte, not a full
+carriage-return-then-line-feed pair, and it still matches
+<code>CRLF</code> — RFC 5234’s core rule for line endings accepts any of
+the three common conventions (<code>CR LF</code>, bare <code>LF</code>,
+bare <code>CR</code>), and that acceptance happens automatically because
+<code>CRLF</code> is one of the core rules built into the interpreter,
+not something the grammar author had to reimplement.</p>
+<p>That answers the question this part of the post opened with. Writing
+the grammar as text, in the same style a standards document would use,
+naming the rules that are needed and relying on the core rules RFC 5234
+already supplies for common building blocks (letters, digits,
+whitespace, line endings), and handing the text to <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>
+together with the input to read, is enough — the parser itself is never
+written by hand, only built, once per call, by walking the grammar’s own
+structure.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Parser.html"><code>Theory/Parser.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Parser.html#satisfy_spec"><code>satisfy_spec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Parser.html#ParserSound"><code>ParserSound</code></a>
+and its <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+compositional proof, <a
+href="coqdoc/Riktig.Theory.Parser.html#many_never_fails"><code>many_never_fails</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Parser.html#HeadConsuming"><code>HeadConsuming</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Parser.html#many_canonical_unfold"><code>many_canonical_unfold</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>
+(the <a
+href="coqdoc/Riktig.Impl.Parser.html#Parser"><code>Parser</code></a>
+type and combinators these theorems are about) · <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html"><code>Programs/ABNF/Interp.v</code></a>
+(<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>,
+the core rules, and <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#test_grammar_header"><code>test_grammar_header</code></a>/<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#test_interp_header"><code>test_interp_header</code></a>)
+· <a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>
+(<a
+href="coqdoc/Riktig.Programs.ABNF.Parser.html#parse_abnf"><code>parse_abnf</code></a>,
+the static parser that reads the grammar text itself).</p>
+</main>
+</body>
+</html>

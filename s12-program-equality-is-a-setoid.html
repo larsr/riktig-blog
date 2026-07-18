@@ -87,8 +87,14 @@ Qed.</code></pre>
 <p>For <code>rewrite</code> to fire inside a term, Coq needs to know the
 surrounding operation respects <code>==</code> — a <code>Proper</code>
 instance, the formal statement that a function maps equal inputs to
-equal outputs. <code>conv_abs</code> and the two application rules are
-precisely those facts, packaged:</p>
+equal outputs. For the two term formers that is, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>=</mo><annotation encoding="application/x-tex">=</annotation></semantics></math>
+for convertibility:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><msup><mi>b</mi><mo>′</mo></msup><mo>⟹</mo><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>b</mi><mo>=</mo><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><msup><mi>b</mi><mo>′</mo></msup><mo>,</mo><mspace width="2.0em"></mspace><mi>f</mi><mo>=</mo><msup><mi>f</mi><mo>′</mo></msup><mspace width="0.278em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="0.278em"></mspace><mi>a</mi><mo>=</mo><msup><mi>a</mi><mo>′</mo></msup><mo>⟹</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>a</mi><mo>=</mo><msup><mi>f</mi><mo>′</mo></msup><mspace width="0.167em"></mspace><msup><mi>a</mi><mo>′</mo></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">b = b&#39; \implies \lambda.\,b = \lambda.\,b&#39;,
+\qquad
+f = f&#39; \;\text{and}\; a = a&#39; \implies f\,a = f&#39;\,a&#39;.</annotation></semantics></math></p>
+<p><code>conv_abs</code> and the two application rules are precisely
+those facts, packaged:</p>
 <pre class="coq"><code>#[global] Instance Abs_Proper : Proper (equ ==&gt; equ) Abs.
 Proof.
   intros b b&#39; Hb. apply conv_abs. exact Hb.
@@ -158,7 +164,14 @@ href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a>, then
 the conditional built on it collapses to its then-branch. The optimizer
 knows only <code>b == TRUE</code> — not what <code>b</code> <em>is</em>
 — and simplifies anyway.</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mtext mathvariant="normal">IFB </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mspace width="0.278em"></mspace><mi>g</mi><mspace width="0.278em"></mspace><mi>h</mi><mspace width="0.278em"></mspace><mover><mrow><mo>=</mo><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mrow><mi>b</mi><mspace width="0.167em"></mspace><mo>=</mo><mo>=</mo><mspace width="0.167em"></mspace><mtext mathvariant="normal">TRUE</mtext></mrow></mover><mspace width="0.278em"></mspace><mrow><mtext mathvariant="normal">IFB TRUE </mtext><mspace width="0.333em"></mspace></mrow><mi>g</mi><mspace width="0.278em"></mspace><mi>h</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi></mrow><annotation encoding="application/x-tex">\text{IFB } b\; g\; h \;\overset{b\,==\,\text{TRUE}}{=\!=}\; \text{IFB TRUE } g\; h \;=\!=\; g</annotation></semantics></math></p>
+<p>Writing the conditional as plain application — <code>IFB b g h</code>
+is the term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>h</mi></mrow><annotation encoding="application/x-tex">b\,g\,h</annotation></semantics></math>
+— and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math>
+for the true constant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>.</mi><mi>λ</mi><mi>.</mi><munder><mn>1</mn><mo accent="true">_</mo></munder></mrow><annotation encoding="application/x-tex">\lambda.\lambda.\underline{1}</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.278em"></mspace><mi>g</mi><mspace width="0.278em"></mspace><mi>h</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>T</mi><mspace width="0.278em"></mspace><mi>g</mi><mspace width="0.278em"></mspace><mi>h</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">hypothesis </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mo>=</mo><mi>T</mi><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>T</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> selects its first argument</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">b\;g\;h \;=\; T\;g\;h \quad\{\text{hypothesis } b = T\}\quad =\; g \quad\{T \text{ selects its first argument}\}</annotation></semantics></math></p>
 <pre class="coq"><code>Lemma if_of_true : forall b g h,
   value g -&gt; value h -&gt; b == TRUE -&gt; IFB b g h == g.
 Proof.
@@ -190,32 +203,44 @@ href="coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>
 leans on does the actual computing, and it is worth seeing, because it
 shows the setoid earning the reduction one <a
 href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> at a
-time:</p>
+time. On the blackboard, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>g</mi><mo>↑</mo></msup><annotation encoding="application/x-tex">g^{\uparrow}</annotation></semantics></math>
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+with its free indices raised by one:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mspace width="0.278em"></mspace><mi>g</mi><mspace width="0.278em"></mspace><mi>h</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><msup><mi>g</mi><mo>↑</mo></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mi>h</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>β</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> in the function position</mtext></mrow><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msup><mi>g</mi><mo>↑</mo></msup><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>↦</mo><mi>h</mi><mo stretchy="false" form="postfix">]</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>β</mi><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">substitution undoes the lift</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">T\;g\;h \;=\; (\lambda.\,g^{\uparrow})\;h
+\quad\{\beta \text{ in the function position}\}\quad
+=\; g^{\uparrow}[0 \mapsto h]
+\quad\{\beta\}\quad
+=\; g \quad\{\text{substitution undoes the lift}\}</annotation></semantics></math></p>
 <pre class="coq"><code>Lemma IF_TRUE : forall g h, value g -&gt; value h -&gt; IFB TRUE g h == g.
 Proof.
   intros g h Hg Hh.
-  eapply conv_trans.
-  { apply conv_appl. apply conv_beta. exact Hg. }
-  cbn.
-  eapply conv_trans.
-  { apply conv_beta. exact Hh. }
-  rewrite subst_lift. reflexivity.
+  (* fire the outer redex (TRUE selects its first branch), then the
+     inner one, then cancel the lift the substitution opened. *)
+  calc (IFB TRUE g h)
+    == (App (Abs (lift 1 0 g)) h)
+    == (subst 0 h (lift 1 0 g))
+    == g.
+  - apply conv_appl. apply conv_beta. exact Hg.
+  - apply conv_beta. exact Hh.
+  - rewrite subst_lift. reflexivity.
 Qed.</code></pre>
 <p><code>IFB TRUE g h</code> is <code>App (App TRUE g) h</code>. The
-first <code>conv_trans</code> names an intermediate term and <a
+<code>calc</code> block names the two intermediate terms of the
+blackboard chain, and each bullet then proves one step. First bullet: <a
 href="coqdoc/Riktig.Lambda.Conv.html#conv_appl"><code>conv_appl</code></a>
-aims the work at the function position <code>App TRUE g</code>; there <a
+aims at the function position <code>App TRUE g</code>, where <a
 href="coqdoc/Riktig.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>
 — a single CBV step as a conversion — fires <a
 href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> on
-<code>g</code>, leaving <code>App (Abs (lift 1 0 g)) h</code> after
-<code>cbn</code> computes the substitution. The second
-<code>conv_trans</code> with <a
+<code>g</code>, leaving <code>App (Abs (lift 1 0 g)) h</code>. Second
+bullet: <a
 href="coqdoc/Riktig.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>
 fires that abstraction on <code>h</code>, producing
-<code>subst 0 h (lift 1 0 g)</code>. Finally
+<code>subst 0 h (lift 1 0 g)</code>. Third bullet:
 <code>rewrite subst_lift</code> applies the law
-<code>subst k u (lift 1 k t) = t</code>: substituting into a
+<code>subst k u (lift 1 k t) = t</code> — substituting into a
 freshly-lifted term changes nothing, because <code>g</code> never
 mentions the variable <code>h</code> would fill. So <code>g</code> comes
 back untouched, and <code>reflexivity</code> closes. The discarded
@@ -245,17 +270,17 @@ a program is a rewrite under it.</p>
 combinators and running it.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Conv.v"><code>Lambda/Conv.v</code></a>
+href="coqdoc/Riktig.Lambda.Conv.html"><code>Lambda/Conv.v</code></a>
 (the <code>conv</code> setoid, the <code>Proper</code> instances, <a
 href="coqdoc/Riktig.Lambda.Conv.html#conv_by_eval"><code>conv_by_eval</code></a>)
 · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Church.v"><code>Lambda/Church.v</code></a>
+href="coqdoc/Riktig.Lambda.Church.html"><code>Lambda/Church.v</code></a>
 (Church booleans and pairs, <a
 href="coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>,
 <a
 href="coqdoc/Riktig.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>)
 · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Lambda/Syntax.v"><code>Lambda/Syntax.v</code></a>
+href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
 (the <code>tm</code> datatype, <a
 href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>, and
 the <a

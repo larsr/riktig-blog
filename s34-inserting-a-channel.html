@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inserting a channel between two composed programs</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="inserting-a-channel-between-two-composed-programs">Inserting a
+channel between two composed programs</h1>
+<p>Two programs are wired together: the first computes a value, the
+second consumes it. Between them you would like to slip a
+<em>channel</em> — a step that serializes the value to some wire format
+and deserializes it back again — without changing what the pair
+computes. Intuitively this is obviously fine, <em>provided</em> the
+serialize/deserialize pair is a genuine round trip: whatever you encode,
+you get back unchanged when you decode. This post makes that intuition
+into a theorem, proves it once for any monad, and then runs it on a
+concrete codec built from a standard pairing bijection.</p>
+<h2 id="monads-and-kleisli-composition">Monads and Kleisli
+composition</h2>
+<p>A monad is a way to sequence computations that might fail (or have
+some other effect). It comes with two operations: <code>ret x</code>
+produces the value <code>x</code> with no effect, and
+<code>bind m f</code> — written <code>m &gt;&gt;= f</code> — runs
+<code>m</code>, and if it produced a value, hands that value to
+<code>f</code> to get the next computation. Throughout, <code>==</code>
+is a setoid equality: a chosen equivalence relation, one per result
+type, that every operation must respect. For the <code>option</code>
+monad it is simple — <code>Some a == Some b</code> holds exactly when
+<code>a = b</code>.</p>
+<p>An ordinary function composes with <code>∘</code>: given
+<code>f : A -&gt; B</code> and <code>g : B -&gt; C</code>, the composite
+<code>g ∘ f</code> feeds <code>f</code>’s output into <code>g</code>.
+When the functions are effectful — of the shape <code>A -&gt; M B</code>
+and <code>B -&gt; M C</code>, each returning a value <em>inside</em> the
+monad <code>M</code> — plain <code>∘</code> no longer type-checks:
+<code>f</code>’s output is an <code>M B</code>, but <code>g</code> wants
+a <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>.
+Kleisli composition is the fix. It runs <code>f</code>, then <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s
+its value into <code>g</code>, threading the monad through:</p>
+<pre class="coq"><code>Notation &quot;f &gt;=&gt; g&quot; := (fun x =&gt; bind (f x) g) (at level 55, right associativity).</code></pre>
+<p>So <code>(f &gt;=&gt; g) x</code> is <code>f x &gt;&gt;= g</code>:
+run <code>f</code> on <code>x</code>, and pipe the result into
+<code>g</code>. This is <code>∘</code> for functions that live in a
+monad, and it is what lets us write a pipeline of effectful steps as one
+arrow.</p>
+<h2 id="a-kleisli-isomorphism-a-round-trip-that-lands-on-ret">A Kleisli
+isomorphism: a round trip that lands on <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a></h2>
+<p>The channel we want to insert is a matched encode/decode pair.
+Encoding turns a <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+into some wire representation <code>B'</code>, decoding turns it back;
+both are effectful, so encoding is a Kleisli arrow
+<code>B -&gt; M B'</code> and decoding is <code>B' -&gt; M B</code>. For
+the pair to be a lossless round trip, going one way and back must return
+the original value with no effect — that is, must equal <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>.
+Bundling the two arrows with the two round-trip laws gives a record:</p>
+<pre class="coq"><code>Record KleisliIso (M : Type -&gt; Type) `{Monad M} (A B : Type) := {
+  ki_to : A -&gt; M B;
+  ki_from : B -&gt; M A;
+  ki_fromto : forall a : A, bind (ki_to a) ki_from == ret a;
+  ki_tofrom : forall b : B, bind (ki_from b) ki_to == ret b
+}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>
+is the forward arrow and <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
+the backward one. The law <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_fromto"><code>ki_fromto</code></a>
+says: encode any <code>a</code>, then bind the result through <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
+to decode it, and you are back to <code>ret a</code> — the original
+value, no effect left over. <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_tofrom"><code>ki_tofrom</code></a>
+is the same round trip started from the other side. These two
+<code>bind ... == ret ...</code> equations are the entire content of
+“lossless.” (The round trips land on <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, not
+on the raw identity function, because in a monad the identity for <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> is
+<a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>,
+not <code>fun x =&gt; x</code>.)</p>
+<h2 id="the-theorem-the-channel-is-transparent">The theorem: the channel
+is transparent</h2>
+<p>Now the claim. Take two programs <code>prog1 : A -&gt; M B</code> and
+<code>prog2 : B -&gt; M C</code>, composed as
+<code>prog1 &gt;=&gt; prog2</code>. Given any codec
+<code>KleisliIso M B B'</code>, splicing its encode-then-decode into the
+seam between them leaves the composite unchanged. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>p</mi><mn>1</mn></msub><annotation encoding="application/x-tex">p_1</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>p</mi><mn>2</mn></msub><annotation encoding="application/x-tex">p_2</annotation></semantics></math>
+for the two programs and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+for the codec’s encode (<a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>)
+and decode (<a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>)
+arrows:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>1</mn></msub><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><msub><mi>p</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>p</mi><mn>1</mn></msub><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><mi>e</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><mi>d</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><msub><mi>p</mi><mn>2</mn></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">p_1 \mathbin{&gt;\!=\!&gt;} p_2
+  \;=\;
+  p_1 \mathbin{&gt;\!=\!&gt;} e \mathbin{&gt;\!=\!&gt;} d \mathbin{&gt;\!=\!&gt;} p_2.</annotation></semantics></math></p>
+<p>The whole proof reduces to one small fact about a single value, and
+then a two-line theorem that lifts it under <code>prog1</code>.</p>
+<h3 id="the-heart-one-value-through-the-codec-and-back">The heart: one
+value through the codec and back</h3>
+<p>Fix a value <code>b : B</code>. Encoding it, then binding through
+decode, then running <code>prog2</code>, is the same as running
+<code>prog2 b</code> directly. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><annotation encoding="application/x-tex">\mathbin{&gt;\!\!&gt;\!\!=}</annotation></semantics></math>
+for bind and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>η</mi><annotation encoding="application/x-tex">\eta</annotation></semantics></math>
+for <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, the
+argument is a three-step chain:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mi>e</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>λ</mi><msup><mi>b</mi><mo>′</mo></msup><mi>.</mi><mspace width="0.222em"></mspace><mi>d</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>b</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><msub><mi>p</mi><mn>2</mn></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>e</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>d</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><msub><mi>p</mi><mn>2</mn></msub></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity, right to left</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>η</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><msub><mi>p</mi><mn>2</mn></msub></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the round trip: </mtext><mspace width="0.333em"></mspace></mrow><mi>e</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>d</mi><mo>=</mo><mi>η</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><msub><mi>p</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>η</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is bind’s left unit.</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+e(b) \mathbin{&gt;\!\!&gt;\!\!=} \big(\lambda b&#39;.\ d(b&#39;) \mathbin{&gt;\!\!&gt;\!\!=} p_2\big)
+&amp;= \big(e(b) \mathbin{&gt;\!\!&gt;\!\!=} d\big) \mathbin{&gt;\!\!&gt;\!\!=} p_2 &amp;&amp; \{\text{associativity, right to left}\}\\
+&amp;= \eta(b) \mathbin{&gt;\!\!&gt;\!\!=} p_2 &amp;&amp; \{\text{the round trip: } e(b) \mathbin{&gt;\!\!&gt;\!\!=} d = \eta(b)\}\\
+&amp;= p_2(b) &amp;&amp; \{\eta \text{ is bind&#39;s left unit.}\}
+\end{aligned}
+</annotation></semantics></math></p>
+<p>The first step reassociates the two binds so that the encode and
+decode sit next to each other. The second step is where losslessness is
+spent: <code>(ki_to b) &gt;&gt;= ki_from</code> is exactly the round
+trip <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_fromto"><code>ki_fromto</code></a>
+collapses to <code>ret b</code>. The third step uses the monad law that
+<code>ret b &gt;&gt;= prog2</code> is just <code>prog2 b</code> —
+feeding a pure value straight in. Here is the chain in Coq:</p>
+<pre class="coq"><code>Lemma ki_insert_pointwise : forall b : B,
+  bind (ki_to codec b) (fun b&#39; =&gt; bind (ki_from codec b&#39;) prog2) == prog2 b.
+Proof.
+  intro b.
+  calc (bind (ki_to codec b) (fun b&#39; =&gt; bind (ki_from codec b&#39;) prog2))
+    == (bind (bind (ki_to codec b) (ki_from codec)) prog2)
+    == (bind (ret b) prog2)
+    == (prog2 b).
+  - symmetry. apply bind_assoc.
+  - apply bind_proper.
+    + exact (ki_fromto codec b).
+    + intro x. reflexivity.
+  - apply bind_ret_l.
+Qed.</code></pre>
+<p>The <code>calc</code> block states the three-line chain; each bullet
+below discharges one step:</p>
+<ul>
+<li><code>symmetry. apply bind_assoc</code> is the reassociation. The
+monad’s associativity law <a
+href="coqdoc/Riktig.Interface.Monad.html#bind_assoc"><code>bind_assoc</code></a>
+reads
+<code>(m &gt;&gt;= f) &gt;&gt;= g == m &gt;&gt;= (fun x =&gt; f x &gt;&gt;= g)</code>;
+the chain uses it right-to-left, so <code>symmetry</code> flips it
+before applying.</li>
+<li><code>apply bind_proper</code> handles the middle step. <a
+href="coqdoc/Riktig.Interface.Monad.html#bind_proper"><code>bind_proper</code></a>
+says <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+respects <code>==</code> in both arguments: replace the first argument
+by an equal one and the continuation by a pointwise-equal one, and the
+result is unchanged. Here the first argument
+<code>bind (ki_to codec b) (ki_from codec)</code> is replaced by
+<code>ret b</code> — that is <code>exact (ki_fromto codec b)</code>, the
+codec’s own round-trip law — while the continuation <code>prog2</code>
+is unchanged, so its side is <code>intro x. reflexivity</code>.</li>
+<li><code>apply bind_ret_l</code> is the last step: <a
+href="coqdoc/Riktig.Interface.Monad.html#bind_ret_l"><code>bind_ret_l</code></a>
+is the law <code>bind (ret x) f == f x</code>, turning
+<code>bind (ret b) prog2</code> into <code>prog2 b</code>.</li>
+</ul>
+<h3 id="lifting-it-under-prog1">Lifting it under <code>prog1</code></h3>
+<p>The theorem itself now barely has to work. Both sides start with the
+same <code>prog1</code>; they differ only in the continuation, and <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>
+says those continuations agree on every value <code>b</code>. So one
+appeal to <a
+href="coqdoc/Riktig.Interface.Monad.html#bind_proper"><code>bind_proper</code></a>
+— reflexivity on <code>prog1</code>, the pointwise lemma on the
+continuation — finishes it:</p>
+<pre class="coq"><code>Theorem channel_insertion : forall a : A,
+  (prog1 &gt;=&gt; prog2) a == (prog1 &gt;=&gt; ki_to codec &gt;=&gt; ki_from codec &gt;=&gt; prog2) a.
+Proof.
+  intro a.
+  apply bind_proper.
+  - reflexivity.
+  - intro b. symmetry. exact (ki_insert_pointwise b).
+Qed.</code></pre>
+<p>Unfolding the <code>&gt;=&gt;</code> notation, the left side is
+<code>prog1 a &gt;&gt;= prog2</code> and the right side is
+<code>prog1 a &gt;&gt;= (fun b =&gt; ki_to codec b &gt;&gt;= ...)</code>.
+<a
+href="coqdoc/Riktig.Interface.Monad.html#bind_proper"><code>bind_proper</code></a>
+splits the goal into the two arguments of the outer bind:
+<code>reflexivity</code> on <code>prog1 a</code> (literally the same on
+both sides), and the continuations, which <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>
+matched at every <code>b</code> — used via <code>symmetry</code> because
+the theorem states the plain composite on the left and the channelled
+one on the right. That is the whole proof: the codec’s round trip
+<em>is</em> <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, and
+<a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> is
+what <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+does nothing with.</p>
+<h2 id="a-concrete-channel-the-cantor-pairing-codec">A concrete channel:
+the Cantor pairing codec</h2>
+<p>To see the theorem at work, build a real codec. Cantor’s pairing
+function is a standard-library bijection between <code>nat * nat</code>
+and <code>nat</code>: <code>to_nat</code> packs a pair of naturals into
+a single natural, <code>of_nat</code> unpacks it, and the standard
+library already proves the two round trips <code>cancel_of_to</code> and
+<code>cancel_to_of</code>. Wrapping each direction in <code>Some</code>
+gives a <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+for the <code>option</code> monad — the two round-trip laws are exactly
+those cancellation facts:</p>
+<pre class="coq"><code>Lemma nat_pair_fromto : forall p : nat * nat,
+  bind (Some (to_nat p)) (fun n =&gt; Some (of_nat n)) == Some p.
+Proof.
+  intro p.
+  unfold bind, Option_HasBind, equ, Option_EqRel.
+  rewrite cancel_of_to.
+  reflexivity.
+Qed.
+
+Lemma nat_pair_tofrom : forall n : nat,
+  bind (Some (of_nat n)) (fun p : nat * nat =&gt; Some (to_nat p)) == Some n.
+Proof.
+  intro n.
+  unfold bind, Option_HasBind, equ, Option_EqRel.
+  rewrite cancel_to_of.
+  reflexivity.
+Qed.</code></pre>
+<p>Each proof unfolds the <code>option</code> bind and its equality,
+then rewrites by the matching cancellation law; the two sides become
+identical. Packaging the arrows and laws into the record gives the
+channel:</p>
+<pre class="coq"><code>Definition nat_pair_codec : KleisliIso option (nat * nat) nat :=
+  {| ki_to := fun p : nat * nat =&gt; Some (to_nat p);
+     ki_from := fun n : nat =&gt; Some (of_nat n);
+     ki_fromto := nat_pair_fromto;
+     ki_tofrom := nat_pair_tofrom |}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>
+sends a pair to its single-<code>nat</code> “wire format,” <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
+reads it back. Now two toy programs to sit on either side of it — one
+producing a pair, one consuming it:</p>
+<pre class="coq"><code>Definition split_n (n : nat) : option (nat * nat) := Some (n, n).
+Definition sum_pair (p : nat * nat) : option nat := Some (Nat.add (fst p) (snd p)).</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.KleisliIso.html#split_n"><code>split_n</code></a>
+duplicates its input into a pair; <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#sum_pair"><code>sum_pair</code></a>
+adds the two components back together. The pipeline
+<code>split_n &gt;=&gt; sum_pair</code> takes <code>n</code> to
+<code>n + n</code>. Applying the theorem to exactly this pipeline and
+codec is a one-liner — it type-checks precisely because everything lines
+up:</p>
+<pre class="coq"><code>Example channel_insertion_nat_pair_check :=
+  channel_insertion split_n sum_pair nat_pair_codec.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion_nat_pair_check"><code>channel_insertion_nat_pair_check</code></a>
+is a proof that <code>split_n &gt;=&gt; sum_pair</code> and
+<code>split_n &gt;=&gt; ki_to nat_pair_codec &gt;=&gt; ki_from nat_pair_codec &gt;=&gt; sum_pair</code>
+agree on every input: running <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#split_n"><code>split_n</code></a>
+and then <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#sum_pair"><code>sum_pair</code></a>
+directly gives the same result as running <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#split_n"><code>split_n</code></a>,
+encoding the pair through Cantor’s bijection to a single
+<code>nat</code>, decoding it back, and only then running <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#sum_pair"><code>sum_pair</code></a>.
+The serialization channel is invisible to the answer — which is the
+whole point, and now a checked fact rather than a hope.</p>
+<p><em>Next: connecting this exact equality to a lattice of channel
+fault classes, so that a channel that is allowed to lose or duplicate
+messages gives a refinement statement in place of an exact
+equality.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
+(the <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+record, <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>,
+<a
+href="coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion"><code>channel_insertion</code></a>,
+and the Cantor-pairing example) · <a
+href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, the
+<code>&gt;=&gt;</code> notation, and the monad laws <a
+href="coqdoc/Riktig.Interface.Monad.html#bind_assoc"><code>bind_assoc</code></a>/<a
+href="coqdoc/Riktig.Interface.Monad.html#bind_ret_l"><code>bind_ret_l</code></a>/<a
+href="coqdoc/Riktig.Interface.Monad.html#bind_proper"><code>bind_proper</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
+(the <code>option</code> monad the concrete codec uses).</p>
+</main>
+</body>
+</html>

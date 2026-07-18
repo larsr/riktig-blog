@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parser combinators: associative sequencing, and repetition that
+terminates</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="parser-combinators-associative-sequencing-and-repetition-that-terminates">Parser
+combinators: associative sequencing, and repetition that terminates</h1>
+<p>A parser turns a stream of characters into structured data. The
+textbook way to write one is a single large function that walks the
+input and branches on what it sees. That function is hard to read and
+harder to change: the logic for “a number” is tangled up with the logic
+for “a comma-separated list of numbers,” and neither can be tested on
+its own.</p>
+<p>The combinator style takes the opposite path. A <em>parser</em> is a
+small, self-contained value. There is a tiny parser that matches one
+character, another that matches any character satisfying a predicate,
+and a handful of ways to <em>combine</em> parsers into bigger ones: run
+this one and then that one, try this one or else that one, repeat this
+one as many times as it will go. A parser for a whole grammar is then
+assembled from these pieces, each of which does one thing and can be
+understood alone. This post builds that library in Coq, proves that its
+sequencing operation obeys the algebraic law it should, and then looks
+closely at the one part that is genuinely subtle: how the repetition
+combinators are made to terminate.</p>
+<h2 id="a-parser-is-a-function-from-input-to-leftover-input">A parser is
+a function from input to leftover input</h2>
+<p>Everything rests on one type. A parser over input type <code>S</code>
+producing values of type <code>T</code> is a function that, given some
+input, either fails or returns a value together with the input it did
+not consume:</p>
+<pre class="coq"><code>Definition Parser (S T : Type) := S -&gt; option (T * S).</code></pre>
+<p>The <code>option</code> is the failure channel: <code>None</code>
+means “this parser did not match here.” A success is
+<code>Some (v, rest)</code> — the value <code>v</code> that was parsed,
+and <code>rest</code>, the part of the input still waiting to be read.
+The leftover input is what makes combination possible: the next parser
+in a sequence starts exactly where the previous one stopped.</p>
+<p>Two parsers count as equal when they behave identically on every
+possible input — nothing about their internal shape matters, only their
+results:</p>
+<pre class="coq"><code>#[global] Instance Parser_EqRel (S T : Type) : EqRel (Parser S T) :=
+  fun p q =&gt; forall s, p s = q s.</code></pre>
+<p>This is the <code>==</code> that appears in every law below:
+<code>p == q</code> unfolds to “for all inputs <code>s</code>,
+<code>p s = q s</code>.”</p>
+<h2 id="sequencing-the-monad-structure">Sequencing: the monad
+structure</h2>
+<p>A monad is a way to sequence computations that might fail. It is
+given by two operations: <code>ret x</code> (read <em>return</em>
+<code>x</code>) is the trivial computation that just produces
+<code>x</code> and consumes nothing, and <code>bind p f</code> — written
+<code>p &gt;&gt;= f</code> — runs <code>p</code>, and <em>if</em> it
+produced a value, hands that value to <code>f</code> to choose the next
+computation; if <code>p</code> failed, the whole thing fails and
+<code>f</code> never runs. Sequencing, with automatic short-circuiting
+on failure, is the entire idea.</p>
+<p>For parsers, “fail” is <code>None</code> and “produce a value” also
+threads the leftover input along. Here are the two operations spelled
+out for the <a
+href="coqdoc/Riktig.Impl.Parser.html#Parser"><code>Parser</code></a>
+type:</p>
+<pre class="coq"><code>#[global] Instance Parser_HasBind (S : Type) : HasBind (Parser S) :=
+  fun A B p f =&gt; fun input =&gt;
+    match p input with
+    | None =&gt; None
+    | Some (v, rest) =&gt; f v rest
+    end.
+
+#[global] Instance Parser_HasReturn (S : Type) : HasReturn (Parser S) :=
+  fun A x =&gt; fun input =&gt; Some (x, input).</code></pre>
+<p>Read <code>bind p f</code> as: run <code>p</code> on the input; if it
+fails, fail; if it succeeds with value <code>v</code> and leftover
+<code>rest</code>, run the parser <code>f v</code> starting from
+<code>rest</code>. And <code>ret x</code> is the parser that succeeds
+immediately with <code>x</code>, touching nothing. This is precisely “do
+<code>p</code>, then do the next thing where <code>p</code> left off.”
+Two derived combinators put a convenient face on it — keep the left
+result, or keep the right:</p>
+<pre class="coq"><code>Definition seqL {S T U : Type} (p : Parser S T) (q : Parser S U) : Parser S T :=
+  bind p (fun x =&gt; bind q (fun _ =&gt; ret x)).
+
+Definition seqR {S T U : Type} (p : Parser S T) (q : Parser S U) : Parser S U :=
+  bind p (fun _ =&gt; q).</code></pre>
+<p><code>seqL p q</code> runs both but returns <code>p</code>’s value;
+<code>seqR p q</code> runs both and returns <code>q</code>’s. Both are
+just two binds in a row.</p>
+<h2 id="the-law-sequencing-is-associative">The law: sequencing is
+associative</h2>
+<p>For <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> to
+deserve the name “sequencing,” it must not matter how a chain of three
+steps is grouped. Bracketing the first two together, or the last two
+together, has to give the same parser:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>m</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(m \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&gt;\!\!&gt;\!\!=} g
+  \;=\; m \mathbin{&gt;\!\!&gt;\!\!=} (\lambda x.\; f\,x \mathbin{&gt;\!\!&gt;\!\!=} g).</annotation></semantics></math></p>
+<p>The blackboard argument is short. Apply either side to an input. Both
+begin by running <code>m</code>. If <code>m</code> fails, both sides
+fail — nothing else runs. If <code>m</code> succeeds with value
+<code>v</code> and leftover <code>rest</code>, both sides continue in
+exactly the same way: run <code>f v</code> on <code>rest</code>, and
+whatever that produces, feed it to <code>g</code>. Since the two sides
+agree when <code>m</code> fails and agree when <code>m</code> succeeds,
+they agree on every input. Here is that argument as it appears in the
+file:</p>
+<pre class="coq"><code>Lemma parser_bind_assoc : forall A B C
+    (m : Parser S A) (f : A -&gt; Parser S B) (g : B -&gt; Parser S C),
+  bind (bind m f) g == bind m (fun x =&gt; bind (f x) g).
+Proof.
+  intros A B C m f g input.
+  unfold bind, Parser_HasBind.
+  destruct (m input) as [[v rest] |]; reflexivity.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros A B C m f g input</code> fixes the three parsers and —
+because <code>==</code> means “equal on every input” — one arbitrary
+<code>input</code> to test them on.</li>
+<li><code>unfold bind, Parser_HasBind</code> replaces both <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s by
+their definition, so each side becomes a <code>match</code> on what
+<code>m</code> does to the input.</li>
+<li><code>destruct (m input) as [[v rest] |]</code> is the one case
+split the argument needed: either <code>m input</code> is
+<code>Some (v, rest)</code> or it is <code>None</code>. In <em>both</em>
+branches the two sides have already reduced to the very same expression
+— in the success branch, both are “run <code>f v</code> on
+<code>rest</code>, then <code>g</code>”; in the failure branch, both are
+<code>None</code> — so a single <code>reflexivity</code> closes each.
+That is why the whole proof is one line after the split.</li>
+</ul>
+<p>The two identity laws (<a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> does
+nothing when spliced in on either side) hold the same way, and together
+the three make <code>Parser S</code> a genuine <a
+href="coqdoc/Riktig.Interface.Monad.html#Monad"><code>Monad</code></a>
+instance — the combinators below are written against that abstract
+interface, not against the raw <code>match</code>.</p>
+<h2 id="the-primitive-parsers">The primitive parsers</h2>
+<p>At the bottom are the parsers that actually inspect a character. <a
+href="coqdoc/Riktig.Impl.Parser.html#satisfy"><code>satisfy</code></a>
+reads one item and keeps it only if a predicate accepts it:</p>
+<pre class="coq"><code>Definition satisfy (seq : Seq C S) (pred : C -&gt; bool) : Parser S C :=
+  fun input =&gt;
+    match uncons seq input with
+    | Some (c, rest) =&gt; if pred c then Some (c, rest) else None
+    | None =&gt; None
+    end.</code></pre>
+<p>The <a href="coqdoc/Riktig.Impl.Parser.html#Seq"><code>Seq</code></a>
+argument is just a way to pull the first item off the input — for
+strings, <a
+href="coqdoc/Riktig.Impl.Parser.html#uncons"><code>uncons</code></a>
+splits <code>String c rest</code> into the head character <code>c</code>
+and the tail <code>rest</code>, and fails on the empty string. From <a
+href="coqdoc/Riktig.Impl.Parser.html#satisfy"><code>satisfy</code></a>,
+matching one specific character is a one-liner:</p>
+<pre class="coq"><code>Definition char (c : ascii) : Parser string ascii :=
+  exact stringSeq Ascii.eqb c.</code></pre>
+<p>where <code>exact seq eq_dec c := satisfy seq (eq_dec c)</code> keeps
+the character only when it equals <code>c</code>. There is also a choice
+operator, which the repetition combinators lean on — try the first
+parser, and if it fails, try the second on the <em>same</em> input:</p>
+<pre class="coq"><code>#[global] Instance Parser_HasAlt (S : Type) : HasAlt (Parser S) :=
+  fun A p q =&gt; fun input =&gt;
+    match p input with
+    | None =&gt; q input
+    | r =&gt; r
+    end.</code></pre>
+<p><code>alt p q</code> (this is the <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+in the code below) returns <code>p</code>’s result if <code>p</code>
+matched, and otherwise falls back to <code>q</code>.</p>
+<h2 id="repetition-and-why-it-terminates">Repetition, and why it
+terminates</h2>
+<p>The interesting combinators are the ones that repeat a parser an
+unknown number of times: <code>many p</code> (zero or more),
+<code>many1 p</code> (one or more), and <code>sepBy1 p sep</code> (one
+or more <code>p</code>s separated by <code>sep</code>). These recurse,
+and the number of iterations is not known in advance — it depends on the
+input. Coq will not accept a recursive function unless it can see that
+<em>some</em> argument strictly shrinks at every call; an unbounded loop
+is rejected outright. So how is <a
+href="coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>
+written?</p>
+<p>The technique is to use the input string <em>itself</em> as the thing
+that shrinks. Look at the type: <code>many p</code> has type
+<code>string -&gt; Parser string (list T)</code>, which unfolds to
+<code>string -&gt; string -&gt; option (list T * string)</code> — two
+string arguments. The first is a structural bound that the recursion
+peels one character off at each step; the second is the actual input the
+parser consumes. You start the loop by seeding the bound with a copy of
+the input, calling <code>many p input input</code>. Here is the
+definition:</p>
+<pre class="coq"><code>Fixpoint many {T : Type} (p : Parser string T) (input : string)
+    : Parser string (list T) :=
+  match input with
+  | EmptyString =&gt; ret []
+  | String _ input&#39; =&gt;
+    alt (bind p (fun x =&gt; bind (many p input&#39;) (fun xs =&gt; ret (x :: xs))))
+        (ret [])
+  end.</code></pre>
+<p>Read the two cases. When the bound is <code>EmptyString</code>, stop:
+return the empty list, matching nothing more. When the bound is
+<code>String _ input'</code> — at least one character long — try to
+parse one <code>p</code>, and if that succeeds with value
+<code>x</code>, recurse with <code>many p input'</code> (the bound one
+character shorter) to gather the rest into <code>xs</code>, returning
+<code>x :: xs</code>; if the leading <code>p</code> fails, <a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>’s
+second branch returns the empty list. The recursive call passes
+<code>input'</code>, which is a structural sub-part of
+<code>input</code>, so Coq sees the bound strictly shrink and accepts
+the definition — no separate fuel counter is introduced.</p>
+<p>Why is bounding the loop by the input’s length <em>correct</em>, and
+not just a convenient fiction? Because each iteration that recurses does
+so only after <code>p</code> succeeded once, and a parser that makes
+progress consumes at least one character of the real input: writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>s</mi><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">|s|</annotation></semantics></math>
+for the length of a string
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>,
+a progressing parser satisfies</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo>,</mo><msup><mi>s</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><msup><mi>s</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">|</mo><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">p(s) = \mathrm{Some}(v, s&#39;) \;\implies\; |s&#39;| &lt; |s|,</annotation></semantics></math></p>
+<p>so after
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+iterations the remaining input has length at most
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mi>−</mi><mi>k</mi></mrow><annotation encoding="application/x-tex">|s| - k</annotation></semantics></math>.
+The real input therefore loses at least one character per iteration, and
+the loop can run at most as many times as the input is long. The bound
+is a true upper limit on the iteration count, read straight off the
+input. (It even rescues the pathological case: were <code>p</code> to
+succeed while consuming nothing, a naive <a
+href="coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a> would
+loop forever — here it is simply cut off once the bound runs out.)</p>
+<p><a href="coqdoc/Riktig.Impl.Parser.html#many1"><code>many1</code></a>
+is <a href="coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>
+with the first repetition made mandatory — one <code>p</code>, then <a
+href="coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>:</p>
+<pre class="coq"><code>Definition many1 {T : Type} (p : Parser string T) (input : string)
+    : Parser string (list T) :=
+  bind p (fun x =&gt; bind (many p input) (fun xs =&gt; ret (x :: xs))).</code></pre>
+<p>And <a
+href="coqdoc/Riktig.Impl.Parser.html#sepBy1"><code>sepBy1</code></a>
+uses the same shrinking-bound recursion to parse a non-empty separated
+list — a <code>p</code>, then as many
+<code>sep</code>-then-<code>p</code> groups as follow:</p>
+<pre class="coq"><code>Fixpoint sepBy1 {T U : Type} (p : Parser string T) (sep : Parser string U)
+    (input : string) : Parser string (list T) :=
+  match input with
+  | EmptyString =&gt; bind p (fun x =&gt; ret [x])
+  | String _ input&#39; =&gt;
+    bind p (fun x =&gt;
+      alt (bind sep (fun _ =&gt; bind (sepBy1 p sep input&#39;) (fun xs =&gt; ret (x :: xs))))
+          (ret [x]))
+  end.</code></pre>
+<p>Again the recursion is structural on the bound <code>input</code>,
+peeling <code>String _ input'</code> down toward
+<code>EmptyString</code>, while the real parsing threads through the <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s.
+The parsed prefix — a separator followed by another <code>p</code> —
+always consumes input, so the same length argument justifies the same
+bound.</p>
+<h2 id="running-it">Running it</h2>
+<p>To read a value back out of a finished parse, <code>run</code> throws
+away the leftover input and keeps just the value on success:</p>
+<pre class="coq"><code>Definition run {S T : Type} (p : Parser S T) (input : S) : option T :=
+  match p input with
+  | Some (v, _) =&gt; Some v
+  | None =&gt; None
+  end.</code></pre>
+<p>The three smoke tests in the file exercise a primitive parser,
+sequencing, and choice, each on the concrete input string
+<code>"abc"</code>:</p>
+<pre class="coq"><code>Example test_char : run (char &quot;a&quot;%char) &quot;abc&quot; = Some &quot;a&quot;%char.
+Proof. reflexivity. Qed.
+
+Example test_bind :
+  run (bind (char &quot;a&quot;%char) (fun x =&gt; bind (char &quot;b&quot;%char) (fun y =&gt; ret (x, y)))) &quot;abc&quot;
+    = Some (&quot;a&quot;%char, &quot;b&quot;%char).
+Proof. reflexivity. Qed.
+
+Example test_alt : run (alt (char &quot;x&quot;%char) (char &quot;a&quot;%char)) &quot;abc&quot; = Some &quot;a&quot;%char.
+Proof. reflexivity. Qed.</code></pre>
+<p>Each is proved by <code>reflexivity</code>: the parser and its input
+are concrete, so Coq computes the result and checks it equals the stated
+answer. <a
+href="coqdoc/Riktig.Impl.Parser.html#test_char"><code>test_char</code></a>
+matches the leading <code>a</code>. <a
+href="coqdoc/Riktig.Impl.Parser.html#test_bind"><code>test_bind</code></a>
+sequences “match <code>a</code>, then match <code>b</code>,” returning
+the pair <code>("a", "b")</code> — the second <a
+href="coqdoc/Riktig.Impl.Parser.html#char"><code>char</code></a> started
+from the <code>"bc"</code> that the first one left behind. <a
+href="coqdoc/Riktig.Impl.Parser.html#test_alt"><code>test_alt</code></a>
+tries to match <code>x</code>, fails, and falls back to matching
+<code>a</code>, all without touching the input twice by hand.</p>
+<p>Small parsers, a law that lets them be chained without surprises, and
+a termination measure read off the input itself: that is the whole
+library.</p>
+<p><em>Next: a parser whose grammar is written in the very notation it
+parses, checked against itself letter for letter.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>
+(the <a
+href="coqdoc/Riktig.Impl.Parser.html#Parser"><code>Parser</code></a>
+type, its <a
+href="coqdoc/Riktig.Interface.Monad.html#Monad"><code>Monad</code></a>/<a
+href="coqdoc/Riktig.Interface.Alternative.html#Alternative"><code>Alternative</code></a>
+instances, the primitive and repetition combinators, and the smoke
+tests) · <a
+href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> and
+the monad laws the combinators are written against) · <a
+href="coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>/<a
+href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>,
+the choice operator).</p>
+</main>
+</body>
+</html>

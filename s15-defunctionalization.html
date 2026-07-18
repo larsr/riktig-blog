@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Defunctionalization: closures without closures</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="defunctionalization-closures-without-closures">Defunctionalization:
+closures without closures</h1>
+<p>Suppose your target is a machine, or a language, with no first-class
+functions: it can branch, it can call a fixed set of named routines, it
+can build and take apart data, but it cannot make a new function at run
+time and pass it around. Plenty of real targets look like this — flat
+bytecode, a state machine, C without function pointers, a hardware
+description. And yet the program you want to run <em>is</em>
+higher-order: it builds functions on the fly, stores them, applies them
+later. How do you run a higher-order program on a first-order
+machine?</p>
+<p>The answer, due to John Reynolds (<em>Definitional Interpreters for
+Higher-Order Programming Languages</em>, 1972) and given its modern form
+by Olivier Danvy and Lasse Nielsen (<em>Defunctionalization at
+Work</em>, 2001), is a change of representation called
+<strong>defunctionalization</strong>. The observation is simple: in any
+one program, all the functions that ever get created come from a
+<em>finite</em> list of lambda-abstractions written in the source. A
+function value at run time is always one of those abstractions, plus the
+values it captured from its surroundings. So represent each abstraction
+as a constructor of an ordinary datatype, let that constructor carry the
+captured values as fields, and replace every call <code>f x</code> with
+a call to one dispatcher — traditionally named <code>apply</code> — that
+looks at which constructor <code>f</code> is and does what that
+abstraction would have done. The function space becomes a datatype;
+application becomes a <code>match</code>. No functions survive.</p>
+<p>This post builds a small higher-order program in the lambda calculus,
+defunctionalizes it, and proves the two versions compute the very same
+term.</p>
+<h2 id="the-lambda-calculus-in-three-sentences">The lambda calculus, in
+three sentences</h2>
+<p>The lambda calculus has three kinds of term: a variable, a function
+<code>\x. body</code> (an <em>abstraction</em>), and an application
+<code>f a</code>. We write variables as de Bruijn indices — a variable
+is a number counting how many enclosing <code>\</code> you cross, from
+the inside out, to reach the one that binds it — so
+<code>\x. \y. x</code> is <code>Abs (Abs (Var 1))</code> and the
+identity <code>\x. x</code> is <code>Abs (Var 0)</code>. The datatype is
+exactly that:</p>
+<pre class="coq"><code>Inductive tm : Type :=
+  | Var : nat -&gt; tm
+  | Abs : tm -&gt; tm
+  | App : tm -&gt; tm -&gt; tm.</code></pre>
+<p>For this post <code>tm</code> is just the <em>data</em> our
+higher-order program builds; we will not need reduction, only that two
+terms come out equal.</p>
+<h2 id="a-higher-order-program-a-term-builder">A higher-order program: a
+term-builder</h2>
+<p>Here is a small program that is genuinely higher-order — its state is
+a function. It walks a list of instructions and, at each step, extends a
+continuation <code>k : tm -&gt; tm</code> that records “the term context
+assembled so far”. Two instructions: <code>IArg t</code> says “apply the
+running result to <code>t</code>”, and <a
+href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> says
+“wrap the running result in a lambda”. At the end it feeds a
+<code>base</code> term to the continuation.</p>
+<pre class="coq"><code>Inductive instr : Type :=
+  | IArg : tm -&gt; instr
+  | ILam : instr.
+
+Fixpoint build (base : tm) (is : list instr) (k : tm -&gt; tm) : tm :=
+  match is with
+  | []             =&gt; k base
+  | IArg t :: is&#39;  =&gt; build base is&#39; (fun r =&gt; k (App r t))
+  | ILam   :: is&#39;  =&gt; build base is&#39; (fun r =&gt; k (Abs r))
+  end.</code></pre>
+<p>The continuation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is a real
+function, created fresh at every step and handed to the next call. That
+is the higher-order feature we want to remove. And notice — this is the
+observation defunctionalization rests on — that the functions ever
+stored in <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> come from
+exactly three source abstractions:</p>
+<ul>
+<li>the initial identity <code>fun x =&gt; x</code>, whatever the caller
+passes at the top;</li>
+<li><code>fun r =&gt; k (App r t)</code>, built at an
+<code>IArg t</code> step, capturing <code>t</code> and the enclosing <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>;</li>
+<li><code>fun r =&gt; k (Abs r)</code>, built at an <a
+href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> step,
+capturing the enclosing <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>.</li>
+</ul>
+<p>Three shapes. That finiteness is what makes the technique work.</p>
+<h2 id="the-datatype-and-the-apply-dispatcher">The datatype and the
+apply dispatcher</h2>
+<p>Turn each of the three shapes into a constructor of a first-order
+type <a
+href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a>,
+carrying exactly what that shape captured:</p>
+<pre class="coq"><code>Inductive cont : Type :=
+  | Kid  : cont
+  | Kapp : tm -&gt; cont -&gt; cont
+  | Kabs : cont -&gt; cont.</code></pre>
+<p><a href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>
+is the identity; <code>Kapp t k</code> is
+<code>fun r =&gt; k (App r t)</code> with its captured argument
+<code>t</code> and enclosing continuation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>;
+<code>Kabs k</code> is <code>fun r =&gt; k (Abs r)</code> with its
+enclosing <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. Now the
+one dispatcher. “Apply the continuation <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> to
+<code>v</code>” becomes a <code>match</code> on <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> doing, in
+each case, precisely what the original abstraction did:</p>
+<pre class="coq"><code>Fixpoint apply_clo (k : cont) (v : tm) : tm :=
+  match k with
+  | Kid       =&gt; v
+  | Kapp t k&#39; =&gt; apply_clo k&#39; (App v t)
+  | Kabs k&#39;   =&gt; apply_clo k&#39; (Abs v)
+  end.</code></pre>
+<p><a href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>
+returns its argument, as <code>fun x =&gt; x</code> did.
+<code>Kapp t k'</code> forms <code>App v t</code> and hands it to the
+enclosing <code>k'</code>, as <code>fun r =&gt; k (App r t)</code> did.
+<code>Kabs k'</code> forms <code>Abs v</code> and hands it on. This
+function is structurally recursive on the closure, so it is total — no
+fuel, no well-founded recursion. The defunctionalized program is the
+original walk with the function space replaced by <a
+href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a> and
+the final call replaced by <a
+href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>:</p>
+<pre class="coq"><code>Fixpoint build_d (base : tm) (is : list instr) (k : cont) : tm :=
+  match is with
+  | []             =&gt; apply_clo k base
+  | IArg t :: is&#39;  =&gt; build_d base is&#39; (Kapp t k)
+  | ILam   :: is&#39;  =&gt; build_d base is&#39; (Kabs k)
+  end.</code></pre>
+<p>Compare it line for line with <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>:
+<code>k base</code> became <code>apply_clo k base</code>, the lambda
+<code>fun r =&gt; k (App r t)</code> became the constructor
+<code>Kapp t k</code>, and <code>fun r =&gt; k (Abs r)</code> became
+<code>Kabs k</code>. There is not a single function value left in <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+— <a href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a>
+is plain data.</p>
+<h2 id="the-two-programs-compute-the-same-term">The two programs compute
+the same term</h2>
+<p>The claim to prove: <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+with the identity closure and <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>
+with the identity function return the same term.</p>
+<p>Blackboard version. Write
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⌈</mo><mi>k</mi><mo stretchy="false" form="postfix">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil k \rceil</annotation></semantics></math>
+for the function a closure stands for —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⌈</mo><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mo stretchy="false" form="postfix">⌉</mo><mo>=</mo><mi>λ</mi><mi>v</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">\lceil \mathsf{Kid} \rceil = \lambda v.\,v</annotation></semantics></math>,
+and so on. Then for every instruction list, running the defunctionalized
+walk under a closure
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+equals running the higher-order walk under
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⌈</mo><mi>k</mi><mo stretchy="false" form="postfix">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil k
+\rceil</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><mrow><mi>𝑏</mi><mi>𝑎</mi><mi>𝑠</mi><mi>𝑒</mi></mrow><mspace width="0.278em"></mspace><mrow><mi>𝑖</mi><mi>𝑠</mi></mrow><mspace width="0.278em"></mspace><mi>k</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><mrow><mi>𝑏</mi><mi>𝑎</mi><mi>𝑠</mi><mi>𝑒</mi></mrow><mspace width="0.278em"></mspace><mrow><mi>𝑖</mi><mi>𝑠</mi></mrow><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">⌈</mo><mi>k</mi><mo stretchy="false" form="postfix">⌉</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{build\_d}\;\mathit{base}\;\mathit{is}\;k \;=\; \mathrm{build}\;\mathit{base}\;\mathit{is}\;\lceil k \rceil.</annotation></semantics></math></p>
+<p>That is the general fact; the top-level statement is the case
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow></mrow><annotation encoding="application/x-tex">k =
+\mathsf{Kid}</annotation></semantics></math>, where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⌈</mo><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mo stretchy="false" form="postfix">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil \mathsf{Kid} \rceil</annotation></semantics></math>
+is the identity.</p>
+<p>The bridge is a function <a
+href="coqdoc/Riktig.Lambda.Defunc.html#denote"><code>denote</code></a>
+that reads a closure back as the function it stands for — used only in
+the proof, never in the program:</p>
+<pre class="coq"><code>Fixpoint denote (k : cont) : tm -&gt; tm :=
+  match k with
+  | Kid       =&gt; fun v =&gt; v
+  | Kapp t k&#39; =&gt; fun r =&gt; denote k&#39; (App r t)
+  | Kabs k&#39;   =&gt; fun r =&gt; denote k&#39; (Abs r)
+  end.</code></pre>
+<p>First, dispatching on a closure computes exactly what applying its
+denotation would — <a
+href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>
+is the first-order image of application. On the blackboard, for every
+closure
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+and term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">a</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi></mrow><mspace width="0.278em"></mspace><mi>k</mi><mspace width="0.278em"></mspace><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">⌈</mo><mi>k</mi><mo stretchy="false" form="postfix">⌉</mo><mspace width="0.167em"></mspace><mi>v</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{apply\_clo}\;k\;v \;=\; \lceil k \rceil\,v,</annotation></semantics></math></p>
+<p>proved by induction on the structure of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>:
+the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><annotation encoding="application/x-tex">\mathsf{Kid}</annotation></semantics></math>
+case is the definition of the identity, and each of the other two
+constructors unfolds, on both sides, to the same call on the enclosing
+closure.</p>
+<pre class="coq"><code>Lemma apply_denote : forall k v, apply_clo k v = denote k v.
+Proof.
+  induction k as [| t k&#39; IH | k&#39; IH]; intros v; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+  - rewrite IH. reflexivity.
+Qed.</code></pre>
+<p>Induction on the closure <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. For <a
+href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>, both
+sides are <code>v</code> — <code>reflexivity</code>. For
+<code>Kapp t k'</code>, both sides step to the <code>k'</code> case on
+<code>App v t</code>, and the induction hypothesis <code>IH</code>
+closes it; <code>Kabs k'</code> is the same on <code>Abs v</code>.</p>
+<p>Now the general correctness, by induction on the instruction
+list:</p>
+<pre class="coq"><code>Lemma build_defunc_correct : forall is base k,
+  build_d base is k = build base is (denote k).
+Proof.
+  induction is as [| i is&#39; IH]; intros base k; simpl.
+  - apply apply_denote.
+  - destruct i as [t |].
+    + apply IH.
+    + apply IH.
+Qed.</code></pre>
+<p>The empty list: <code>build_d base [] k</code> is
+<code>apply_clo k base</code> and <code>build base [] (denote k)</code>
+is <code>denote k base</code>, so the goal is exactly <a
+href="coqdoc/Riktig.Lambda.Defunc.html#apply_denote"><code>apply_denote</code></a>.
+For a non-empty list, split on the instruction. On <code>IArg t</code>,
+the defunctionalized side recurses with <code>Kapp t k</code> and the
+higher-order side with <code>denote (Kapp t k)</code> — but that is
+<em>definitionally</em> <code>fun r =&gt; denote k (App r t)</code>, the
+very lambda <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>
+builds, so the two recursive calls line up and the induction hypothesis
+<code>IH</code> finishes. <a
+href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> is
+the same with <code>Kabs k</code>. The whole proof is two
+<code>apply IH</code>s because the datatype’s <a
+href="coqdoc/Riktig.Lambda.Defunc.html#denote"><code>denote</code></a>
+was chosen to match the source abstractions exactly.</p>
+<p>The top-level equality is the identity-closure instance:</p>
+<pre class="coq"><code>Corollary build_defunc_correct_id : forall base is,
+  build_d base is Kid = build base is (fun x =&gt; x).
+Proof.
+  intros base is. exact (build_defunc_correct is base Kid).
+Qed.</code></pre>
+<p><code>denote Kid</code> is <code>fun x =&gt; x</code>, so this is <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build_defunc_correct"><code>build_defunc_correct</code></a>
+at <code>k := Kid</code>, handed over directly.</p>
+<h2 id="one-term-both-ways">One term, both ways</h2>
+<p>Take the instruction list <code>[IArg (Var 1); ILam]</code> over the
+base <code>Var 0</code>. The higher-order <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>
+threads: <code>IArg (Var 1)</code> makes
+<code>fun r =&gt; App r (Var 1)</code>, then <a
+href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> makes
+<code>fun r =&gt; App (Abs r) (Var 1)</code>, then <code>base</code> is
+fed in, giving <code>App (Abs (Var 0)) (Var 1)</code>. The
+defunctionalized <a
+href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+instead accumulates the closure <code>Kabs (Kapp (Var 1) Kid)</code> and
+lets <a
+href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>
+unwind it to the same term. As a chain of equalities, with each step’s
+justification alongside:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mrow><mi>𝖨</mi><mi>𝖠</mi><mi>𝗋</mi><mi>𝗀</mi></mrow><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>1</mn></msub><mo>;</mo><mspace width="0.222em"></mspace><mrow><mi>𝖨</mi><mi>𝖫</mi><mi>𝖺</mi><mi>𝗆</mi></mrow><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mrow><mi>𝖨</mi><mi>𝖠</mi><mi>𝗋</mi><mi>𝗀</mi></mrow><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>1</mn></msub><mo>;</mo><mspace width="0.222em"></mspace><mrow><mi>𝖨</mi><mi>𝖫</mi><mi>𝖺</mi><mi>𝗆</mi></mrow><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">correctness at </mtext><mspace width="0.333em"></mspace></mrow><mi>k</mi><mo>=</mo><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
+\mathrm{build\_d}\;v_0\;[\mathsf{IArg}\,v_1;\ \mathsf{ILam}]\;\mathsf{Kid}
+\;=\; \mathrm{build}\;v_0\;[\mathsf{IArg}\,v_1;\ \mathsf{ILam}]\;(\lambda x.\,x)
+\quad\{\text{correctness at } k = \mathsf{Kid}\}
+</annotation></semantics></math>
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>1</mn></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">computation</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
+\;=\; (\lambda x.\,x)\,v_1
+\quad\{\text{computation}\}
+</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mn>0</mn></msub><mo>,</mo><msub><mi>v</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">v_0, v_1</annotation></semantics></math>
+abbreviate the de Bruijn variables
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">(\lambda x.\,x)\,v_1</annotation></semantics></math>
+is the term the run assembles, not a redex it reduces. The file states
+the same equality as a <code>calc</code> chain — defunctionalized run,
+then higher-order run, then the explicit term — each link checked, not
+asserted:</p>
+<pre class="coq"><code>Example build_worked :
+  build_d (Var 0) [IArg (Var 1); ILam] Kid = App (Abs (Var 0)) (Var 1).
+Proof.
+  calc (build_d (Var 0) [IArg (Var 1); ILam] Kid)
+    == (build (Var 0) [IArg (Var 1); ILam] (fun x =&gt; x))
+    == (App (Abs (Var 0)) (Var 1)).
+  - apply build_defunc_correct_id.
+  - reflexivity.
+Qed.</code></pre>
+<p>The first link is the correctness corollary; the second is plain
+computation. The result <code>App (Abs (Var 0)) (Var 1)</code> is the
+identity lambda applied to <code>Var 1</code> — a term the first-order
+<a
+href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+produced without ever holding a function.</p>
+<p><em>Next: the same lambda terms, put into A-normal form, where every
+intermediate result is named by a let.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Lambda.Defunc.html"><code>Lambda/Defunc.v</code></a>
+(the term-builder, the <a
+href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a>
+datatype, <a
+href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>,
+and the correctness theorem with its worked example).</p>
+</main>
+</body>
+</html>

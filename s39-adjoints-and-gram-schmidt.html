@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adjoints, Gram-Schmidt orthogonalization, and isometries</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="adjoints-gram-schmidt-orthogonalization-and-isometries">Adjoints,
+Gram-Schmidt orthogonalization, and isometries</h1>
+<p>An <em>inner product</em> on a vector space over a field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+pairs two vectors and returns a scalar, written
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u , v\rangle</annotation></semantics></math>.
+It is <em>symmetric</em>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle = \langle v,u\rangle</annotation></semantics></math>),
+additive in each slot
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>+</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u+u&#39;,v\rangle = \langle u,v\rangle + \langle u&#39;,v\rangle</annotation></semantics></math>),
+and pulls scalars out of each slot
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mi>a</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle a \cdot u,v\rangle = a\,\langle
+u,v\rangle</annotation></semantics></math>). As before, <code>==</code>
+is a setoid equality: a chosen equivalence relation every operation must
+respect, not Coq’s equality of raw terms. A <em>linear map</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+between vector spaces respects the same two operations —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><msup><mi>u</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>u</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(u+u&#39;) = f(u) + f(u&#39;)</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>⋅</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a \cdot u) = a \cdot f(u)</annotation></semantics></math>.</p>
+<p>This post is about two things you can do once an inner product and
+linear maps are both in hand: move a linear map to the other side of the
+pairing (its <em>adjoint</em>), and turn any list of vectors into an
+orthogonal one (<em>Gram-Schmidt</em>).</p>
+<h2 id="the-adjoint-moves-a-map-across-the-pairing">The adjoint moves a
+map across the pairing</h2>
+<p>Given a linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mi>V</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">f : V \to V</annotation></semantics></math>,
+ask: is there another map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+that, whenever you pair
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">f\,u</annotation></semantics></math>
+against
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>,
+gives the same scalar as pairing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+against
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mspace width="0.167em"></mspace><mi>w</mi></mrow><annotation encoding="application/x-tex">g\,w</annotation></semantics></math>?
+That is,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle f\,u , w\rangle = \langle u , g\,w
+\rangle</annotation></semantics></math> for all
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>.
+Such a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+is <em>an adjoint of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math></em>
+— it lets you slide
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+off the left slot and onto the right. The definition names exactly this
+relation:</p>
+<pre class="coq"><code>  Definition is_adjoint (f g : LinearMap F V V) : Prop :=
+    forall u w : V, ⟨ f u , w ⟩ == ⟨ u , g w ⟩.</code></pre>
+<p>Nothing here says such a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+exists. Over an infinite-dimensional space it may not, and even in
+finite dimension building one goes through a basis and a matrix
+transpose. So the file proves nothing about <em>existence</em>. What it
+does prove is that an adjoint, <em>if</em> one exists, is determined by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+with no freedom left — plus the algebra of how adjoints interact with
+the identity map and with composition.</p>
+<h2 id="uniqueness-two-adjoints-agree-everywhere">Uniqueness: two
+adjoints agree everywhere</h2>
+<p><strong>The claim, in one sentence:</strong> if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>1</mn></msub><annotation encoding="application/x-tex">g_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>2</mn></msub><annotation encoding="application/x-tex">g_2</annotation></semantics></math>
+are both adjoints of the same
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>,
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mn>1</mn></msub><mspace width="0.167em"></mspace><mi>u</mi><mo>=</mo><msub><mi>g</mi><mn>2</mn></msub><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">g_1\,u = g_2\,u</annotation></semantics></math>
+for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.</p>
+<p><strong>The blackboard argument</strong> runs through the
+<em>difference</em>. To show two vectors are equal it is enough to show
+their difference is zero, and to show a vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+is zero it is enough — this is where positivity of the inner product
+earns its keep — to show
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle w , x\rangle = 0</annotation></semantics></math>
+for <em>every</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+(call this <em>nondegeneracy</em>: only the zero vector is orthogonal to
+everything). Applied to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><msub><mi>g</mi><mn>1</mn></msub><mspace width="0.167em"></mspace><mi>u</mi><mo>−</mo><msub><mi>g</mi><mn>2</mn></msub><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">x = g_1\,u - g_2\,u</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo>−</mo><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>−</mo><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>−</mo><mo stretchy="false" form="prefix">⟨</mo><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>−</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">\langle w , g_1 u - g_2 u\rangle
+ = \langle w , g_1 u\rangle - \langle w , g_2 u\rangle
+ = \langle g_1 u , w\rangle - \langle g_2 u , w\rangle
+ = \langle u , f w\rangle - \langle u , f w\rangle = 0.</annotation></semantics></math></p>
+<p>The two middle scalars are equal <em>because both
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>1</mn></msub><annotation encoding="application/x-tex">g_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>2</mn></msub><annotation encoding="application/x-tex">g_2</annotation></semantics></math>
+are adjoints of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math></em>
+— each rewrites
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><msub><mi>g</mi><mi>i</mi></msub><mspace width="0.167em"></mspace><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle g_i\,u , w\rangle</annotation></semantics></math>
+to the same
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u , f\,w\rangle</annotation></semantics></math>.
+In the file, the statement over <a
+href="coqdoc/Riktig.Theory.Adjoint.html#is_adjoint"><code>is_adjoint</code></a>
+is a one-line restatement:</p>
+<pre class="coq"><code>  Theorem is_adjoint_uniqueness : forall f g1 g2 : LinearMap F V V,
+    is_adjoint g1 f -&gt; is_adjoint g2 f -&gt; forall u : V, g1 u == g2 u.
+  Proof.
+    intros f g1 g2 Hg1 Hg2 u.
+    exact (adjoint_unique f g1 g2 Hg1 Hg2 u).
+  Qed.</code></pre>
+<p>The real work sits in <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#adjoint_unique"><code>adjoint_unique</code></a>,
+which carries the argument above verbatim:</p>
+<pre class="coq"><code>  Theorem adjoint_unique : forall f g1 g2 : LinearMap F V V,
+    (forall u w : V, ⟨ lm_fun g1 u , w ⟩ == ⟨ u , lm_fun f w ⟩) -&gt;
+    (forall u w : V, ⟨ lm_fun g2 u , w ⟩ == ⟨ u , lm_fun f w ⟩) -&gt;
+    forall u : V, lm_fun g1 u == lm_fun g2 u.
+  Proof.
+    intros f g1 g2 Hg1 Hg2 u.
+    apply (sub_eq_zero (lm_fun g1 u) (lm_fun g2 u)).
+    apply inner_nondegenerate.
+    intros w.
+    rewrite (ip_add_r w (lm_fun g1 u) (- lm_fun g2 u)),
+      (ip_neg_r w (lm_fun g2 u)), (ip_sym w (lm_fun g1 u)),
+      (ip_sym w (lm_fun g2 u)), (Hg1 u w), (Hg2 u w).
+    apply invr.
+  Qed.</code></pre>
+<p>Reading the proof:</p>
+<ul>
+<li><code>sub_eq_zero (g1 u) (g2 u)</code> turns the goal
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo>=</mo><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi></mrow><annotation encoding="application/x-tex">g_1 u = g_2 u</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo>+</mo><mi>−</mi><mspace width="0.167em"></mspace><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">g_1 u + {-}\,g_2 u = 0</annotation></semantics></math>
+— the “show the difference is zero” step.</li>
+<li><a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#inner_nondegenerate"><code>inner_nondegenerate</code></a>
+reduces <em>that</em> to: for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo>+</mo><mi>−</mi><mspace width="0.167em"></mspace><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle w , g_1 u + {-}\,g_2 u\rangle = 0</annotation></semantics></math>.
+This is the one step that uses positivity; it holds because a
+positive-definite pairing has no nonzero vector orthogonal to all of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>.</li>
+<li><a
+href="coqdoc/Riktig.Theory.InnerProduct.html#ip_add_r"><code>ip_add_r</code></a>
+splits the right slot:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>−</mi><mspace width="0.167em"></mspace><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle w , g_1 u\rangle +
+\langle w , {-}\,g_2 u\rangle</annotation></semantics></math>. <a
+href="coqdoc/Riktig.Theory.InnerProduct.html#ip_neg_r"><code>ip_neg_r</code></a>
+turns the second pairing into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">-\langle w , g_2 u\rangle</annotation></semantics></math>.</li>
+<li>The two <a
+href="coqdoc/Riktig.Interface.InnerProduct.html#ip_sym"><code>ip_sym</code></a>
+rewrites flip each pairing to put
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mi>i</mi></msub><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">g_i\,u</annotation></semantics></math>
+on the left, so the adjoint hypotheses can fire.</li>
+<li><code>Hg1 u w</code> and <code>Hg2 u w</code> are those hypotheses:
+each rewrites
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><msub><mi>g</mi><mi>i</mi></msub><mspace width="0.167em"></mspace><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle g_i\,u , w\rangle</annotation></semantics></math>
+to the common
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u , f\,w\rangle</annotation></semantics></math>.
+The goal is now
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mi>−</mi><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle u , f w\rangle + {-}\langle u , f w\rangle =
+0</annotation></semantics></math>, which is <a
+href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> — a scalar
+plus its negation is zero.</li>
+</ul>
+<h2
+id="composition-flips-the-order-f_2-circ-f_1-f_1-circ-f_2">Composition
+flips the order:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub><msup><mo stretchy="false" form="postfix">)</mo><mo>*</mo></msup><mo>=</mo><msubsup><mi>f</mi><mn>1</mn><mo>*</mo></msubsup><mo>∘</mo><msubsup><mi>f</mi><mn>2</mn><mo>*</mo></msubsup></mrow><annotation encoding="application/x-tex">(f_2 \circ f_1)^* = f_1^{*} \circ f_2^{*}</annotation></semantics></math></h2>
+<p>The next fact is the one every reader who has met matrix transposes
+will expect: the adjoint of a composite is the composite of the
+adjoints, in the <em>reversed</em> order. Write
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>1</mn></msub><annotation encoding="application/x-tex">g_1</annotation></semantics></math>
+for an adjoint of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>1</mn></msub><annotation encoding="application/x-tex">f_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>2</mn></msub><annotation encoding="application/x-tex">g_2</annotation></semantics></math>
+for an adjoint of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>2</mn></msub><annotation encoding="application/x-tex">f_2</annotation></semantics></math>.
+Then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mn>1</mn></msub><mo>∘</mo><msub><mi>g</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">g_1 \circ g_2</annotation></semantics></math>
+is an adjoint of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">f_2 \circ
+f_1</annotation></semantics></math>. Note the flip:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>2</mn></msub><annotation encoding="application/x-tex">f_2</annotation></semantics></math>
+acts <em>last</em> in the composite but its adjoint
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>2</mn></msub><annotation encoding="application/x-tex">g_2</annotation></semantics></math>
+acts <em>first</em> in the adjoint composite.</p>
+<p><strong>The blackboard argument</strong> slides one map across at a
+time. Writing the composite
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">f_2 \circ f_1</annotation></semantics></math>
+as “apply
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>1</mn></msub><annotation encoding="application/x-tex">f_1</annotation></semantics></math>,
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>2</mn></msub><annotation encoding="application/x-tex">f_2</annotation></semantics></math>”:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><msub><mi>f</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>f</mi><mn>1</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><msub><mi>f</mi><mn>1</mn></msub><mi>u</mi><mo>,</mo><msub><mi>g</mi><mn>2</mn></msub><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>g</mi><mn>2</mn></msub><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">⟩</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\langle f_2(f_1 u) , w\rangle
+ = \langle f_1 u , g_2 w\rangle
+ = \langle u , g_1(g_2 w)\rangle.</annotation></semantics></math></p>
+<p>The first equality is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>2</mn></msub><annotation encoding="application/x-tex">g_2</annotation></semantics></math>
+being an adjoint of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>2</mn></msub><annotation encoding="application/x-tex">f_2</annotation></semantics></math>
+(applied at the vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>1</mn></msub><mi>u</mi></mrow><annotation encoding="application/x-tex">f_1 u</annotation></semantics></math>);
+the second is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>g</mi><mn>1</mn></msub><annotation encoding="application/x-tex">g_1</annotation></semantics></math>
+being an adjoint of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>1</mn></msub><annotation encoding="application/x-tex">f_1</annotation></semantics></math>
+(applied against
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mn>2</mn></msub><mi>w</mi></mrow><annotation encoding="application/x-tex">g_2 w</annotation></semantics></math>).
+The left end is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle (f_2\circ f_1)\,u , w\rangle</annotation></semantics></math>
+and the right end is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>g</mi><mn>1</mn></msub><mo>∘</mo><msub><mi>g</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u , (g_1\circ g_2)\,w\rangle</annotation></semantics></math>,
+which is the adjoint relation for the two composites. In Coq,
+<code>lm_comp f2 f1</code> is the map that applies <code>f1</code> first
+and then <code>f2</code>:</p>
+<pre class="coq"><code>  Theorem is_adjoint_comp : forall f1 g1 f2 g2 : LinearMap F V V,
+    is_adjoint f1 g1 -&gt; is_adjoint f2 g2 -&gt;
+    is_adjoint (lm_comp f2 f1) (lm_comp g1 g2).
+  Proof.
+    intros f1 g1 f2 g2 Hfg1 Hfg2 u w.
+    calc (⟨ f2 (f1 u) , w ⟩)
+      == (⟨ f1 u , g2 w ⟩)      { (Hfg2 (f1 u) w) }
+      == (⟨ u , g1 (g2 w) ⟩)    { (Hfg1 u (g2 w)) }.
+  Qed.</code></pre>
+<p>Reading it: after <code>intros</code>, the goal is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><msub><mi>f</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>f</mi><mn>1</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>g</mi><mn>2</mn></msub><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle f_2(f_1 u) , w\rangle =
+\langle u , g_1(g_2 w)\rangle</annotation></semantics></math> — the two
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_comp"><code>lm_comp</code></a>s
+have unfolded by conversion, since composition of linear maps
+<em>is</em> function composition. The <code>calc</code> block is the
+blackboard chain transcribed: the first step is exactly
+<code>Hfg2</code> (the adjoint relation for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>2</mn></msub><annotation encoding="application/x-tex">f_2</annotation></semantics></math>)
+applied at the point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>1</mn></msub><mi>u</mi></mrow><annotation encoding="application/x-tex">f_1 u</annotation></semantics></math>;
+the second is <code>Hfg1</code> applied against
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mn>2</mn></msub><mi>w</mi></mrow><annotation encoding="application/x-tex">g_2 w</annotation></semantics></math>.
+Two steps, one per slide.</p>
+<h2
+id="gram-schmidt-orthogonalize-by-subtracting-projections">Gram-Schmidt:
+orthogonalize by subtracting projections</h2>
+<p>An inner product gives <em>orthogonality</em>:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+are orthogonal when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle u , v\rangle = 0</annotation></semantics></math>.
+Given a list of vectors, we would like a new list spanning the same
+space but with every pair orthogonal. The standard recipe processes the
+input left to right, and for each new vector subtracts off its
+<em>projection</em> onto every vector already produced, leaving only the
+part pointing in a genuinely new direction. The projection of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+onto the axis through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+is</p>
+<pre class="coq"><code>Definition proj {F V : Type} `{InnerProduct F V} (v u : V) : V :=
+  (⟨ u , v ⟩ * inv (norm2 v)) *: v.</code></pre>
+<p>— the scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mi>/</mi><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\langle u,v\rangle / \lVert v\rVert^2</annotation></semantics></math>
+times
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\lVert v\rVert^2 = \langle v,v\rangle</annotation></semantics></math>.
+The inner loop subtracts one projection per already-processed
+vector:</p>
+<pre class="coq"><code>  Fixpoint gs_aux (done : list V) (v : V) : V :=
+    match done with
+    | nil =&gt; v
+    | cons d done&#39; =&gt; gs_aux done&#39; (v + - proj d v)
+    end.</code></pre>
+<p>and the outer loop folds that over the input, growing an accumulator
+<code>acc</code> of finished vectors, <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_aux"><code>gs_aux</code></a>-ing
+each new input against everything produced so far:</p>
+<pre class="coq"><code>  Fixpoint gs_step (acc vs : list V) : list V :=
+    match vs with
+    | nil =&gt; acc
+    | cons v vs&#39; =&gt; gs_step (acc ++ (gs_aux acc v :: nil)) vs&#39;
+    end.
+
+  Definition gs (vs : list V) : list V := gs_step nil vs.</code></pre>
+<h2 id="the-result-with-its-hypotheses-in-plain-sight">The result, with
+its hypotheses in plain sight</h2>
+<p><strong>The claim:</strong> any two distinct vectors in the output
+<code>gs vs</code> are orthogonal —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><msub><mi>d</mi><mn>2</mn></msub><mo>∈</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">s</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>d</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>d</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">⟨</mo><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><msub><mi>d</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">d_1, d_2 \in \mathrm{gs}(vs),\quad d_1 \neq d_2 \;\implies\; \langle d_1 , d_2 \rangle = 0.</annotation></semantics></math></p>
+<p>But there is a genuine hypothesis that cannot be swept aside. The
+projection of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+onto
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+divides by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">\lVert v\rVert^2</annotation></semantics></math>,
+which is only meaningful when that squared length is nonzero. So the
+theorem is <em>conditional</em>: it assumes every vector the
+construction produces has nonzero squared norm — which is the
+constructive reading of “the input family was linearly independent.”
+That hypothesis is stated explicitly, on the final output, not
+hidden:</p>
+<pre class="coq"><code>  Theorem gs_pairwise_orthogonal : forall vs : list V,
+    (forall d : V, In d (gs vs) -&gt; norm2 d =/= 0) -&gt;
+    forall d1 d2 : V,
+      In d1 (gs vs) -&gt; In d2 (gs vs) -&gt; d1 &lt;&gt; d2 -&gt; orthogonal d1 d2.
+  Proof.
+    intros vs Hnz d1 d2 Hd1 Hd2 Hneq.
+    destruct (gs_step_pairwise vs nil pairwise_orth_nil nonzero_nil Hnz
+                d1 d2 Hd1 Hd2) as [Ho | Heq].
+    - exact Ho.
+    - destruct (Hneq Heq).
+  Qed.</code></pre>
+<p>Reading it: the whole force is in <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_step_pairwise"><code>gs_step_pairwise</code></a>,
+the loop invariant, run from the empty seed. That invariant is carried
+in a slightly different shape from the advertised one — it produces, for
+any two output vectors, <code>orthogonal d1 d2 \/ d1 = d2</code>
+(orthogonal <em>or literally equal</em>) rather than the “distinct
+implies orthogonal” phrasing. The two are classically equivalent, but
+converting between them needs a decision on whether two vectors are
+equal, which the disjunctive form sidesteps; it is the form the
+induction naturally produces and consumes. So here, at the very end,
+that disjunction is unpacked: <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_step_pairwise"><code>gs_step_pairwise</code></a>
+hands back <code>Ho : orthogonal d1 d2</code> or
+<code>Heq : d1 = d2</code>. The first case <em>is</em> the goal. The
+second contradicts the hypothesis <code>Hneq : d1 &lt;&gt; d2</code>, so
+<code>Hneq Heq</code> produces a proof of <code>False</code>, and
+<code>destruct</code> on it closes the goal. The invariant’s three seed
+obligations — the empty list is pairwise orthogonal (<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#pairwise_orth_nil"><code>pairwise_orth_nil</code></a>),
+the empty list has no nonzero-norm obligation to discharge (<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#nonzero_nil"><code>nonzero_nil</code></a>),
+and the output stays nonzero (<code>Hnz</code>, the reader’s hypothesis)
+— are exactly what <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_step_pairwise"><code>gs_step_pairwise</code></a>
+needs, and no more.</p>
+<p>The engine underneath is a single geometric fact, proved separately
+in the file: subtracting the projection of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+onto
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+leaves a residual orthogonal to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>,
+and — crucially for a loop that revisits earlier axes — projecting a
+vector that is <em>already</em> orthogonal to an axis onto that axis
+gives zero, so a repeated subtraction is a harmless no-op. That is what
+lets each new vector be made orthogonal to every earlier one without
+disturbing the orthogonalities already established.</p>
+<h2
+id="an-isometry-preserves-the-whole-inner-product-not-merely-its-own-norm">An
+isometry preserves the whole inner product, not merely its own norm</h2>
+<p>Picture a transformation of a vector space that leaves every vector’s
+length exactly as it was — nothing stretches, nothing shrinks. Does that
+also pin down how any two <em>different</em> vectors stand with respect
+to each other afterward — the angle between them, how far one leans onto
+another along a shared direction — or could such a transformation, while
+leaving every individual length untouched, still scramble those
+relationships? Length is a fact about one vector at a time. The
+relationship between two vectors is a fact about a pair, and fixing
+every one-vector fact does not, on its face, force every two-vector fact
+to come along with it.</p>
+<p>A transformation with the length-preserving property just described
+is called an <em>isometry</em>, and the codebase states it directly:</p>
+<pre class="coq"><code>  Definition is_isometry (f : LinearMap F V V) : Prop :=
+    forall u : V, norm2 (f u) == norm2 u.</code></pre>
+<p>Here
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lVert f\,u\rVert^2 = \lVert u\rVert^2</annotation></semantics></math>
+<em>is</em> the one-vector fact from above — squared length in, squared
+length out, unchanged — and the definition says nothing about pairs of
+distinct vectors at all. Whether the two-vector fact,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo>,</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle f\,u , f\,v\rangle = \langle u,v\rangle</annotation></semantics></math>
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>≠</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u \ne v</annotation></semantics></math>,
+survives anyway is the question the rest of this section answers, and
+the answer needs its own proof: it is not read off the definition for
+free.</p>
+<p><strong>The claim, in one sentence:</strong> if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is an isometry, then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo>,</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle f\,u , f\,v\rangle = \langle u , v\rangle</annotation></semantics></math>
+for <em>every</em> pair
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u, v</annotation></semantics></math>,
+not only when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u = v</annotation></semantics></math>.</p>
+<p><strong>The blackboard argument.</strong> Expanding the norm-squared
+of a sum uses one algebraic fact already on hand:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\lVert u+v\rVert^2 = \lVert u\rVert^2 +
+\lVert v\rVert^2 + (\langle u,v\rangle + \langle v,u\rangle)</annotation></semantics></math>.
+Apply it on both sides of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo>+</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lVert f\,u + f\,v\rVert^2 = \lVert u+v\rVert^2</annotation></semantics></math>
+— which holds because
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is linear, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo>+</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>v</mi><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f\,u + f\,v = f(u+v)</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is an isometry at the point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>v</mi><mo>,</mo><mi>f</mi><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(\lVert fu\rVert^2 + \lVert fv\rVert^2) + (\langle fu,fv\rangle + \langle fv,fu\rangle)
+ = (\lVert u\rVert^2 + \lVert v\rVert^2) + (\langle u,v\rangle + \langle v,u\rangle).</annotation></semantics></math></p>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is an isometry at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+and at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+individually too, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lVert
+fu\rVert^2 = \lVert u\rVert^2</annotation></semantics></math> and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lVert fv\rVert^2 = \lVert v\rVert^2</annotation></semantics></math>
+— the first parenthesised sum is the same quantity on each side, and
+cancels:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>v</mi><mo>,</mo><mi>f</mi><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\langle fu,fv\rangle + \langle fv,fu\rangle = \langle u,v\rangle + \langle v,u\rangle.</annotation></semantics></math></p>
+<p>The inner product is symmetric, so each side is really a value added
+to itself:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\langle fu,fv\rangle + \langle fu,fv\rangle = \langle u,v\rangle + \langle u,v\rangle,</annotation></semantics></math></p>
+<p>and halving both sides — the one step that needs an invertible
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>,
+hence an ordered field’s positivity, not merely symmetry of the inner
+product — gives exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle fu,fv\rangle = \langle u,v\rangle</annotation></semantics></math>.</p>
+<p>The halving step is its own small lemma:</p>
+<pre class="coq"><code>  Lemma double_inj : forall a b : F, a + a == b + b -&gt; a == b.
+  Proof.
+    intros a b Hab.
+    apply (mul_cancel_l two a b two_neq_0).
+    rewrite (field_mul_comm two a), (field_mul_comm two b),
+      (mul_two a), (mul_two b).
+    exact Hab.
+  Qed.</code></pre>
+<p>and the full theorem strings the two together:</p>
+<pre class="coq"><code>  Theorem isometry_preserves_inner : forall f : LinearMap F V V,
+    is_isometry f -&gt; forall u v : V, ⟨ f u , f v ⟩ == ⟨ u , v ⟩.
+  Proof.
+    intros f Hiso u v.
+    assert (Hfuv : norm2 (f u + f v) == norm2 (u + v)).
+    { rewrite &lt;- (lm_add f u v). exact (Hiso (u + v)). }
+    rewrite (norm2_add (f u) (f v)), (norm2_add u v),
+      (Hiso u), (Hiso v) in Hfuv.
+    apply (cancel_l (norm2 u + norm2 v)) in Hfuv.
+    rewrite (ip_sym (f v) (f u)), (ip_sym v u) in Hfuv.
+    exact (double_inj (⟨ f u , f v ⟩) (⟨ u , v ⟩) Hfuv).
+  Qed.</code></pre>
+<p>Reading it:</p>
+<ul>
+<li><code>rewrite &lt;- (lm_add f u v)</code> turns the wanted fact
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>u</mi><mo>+</mo><mi>f</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lVert f u + f
+v\rVert^2 = \lVert u+v\rVert^2</annotation></semantics></math> into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lVert f(u+v)\rVert^2 = \lVert
+u+v\rVert^2</annotation></semantics></math> by linearity, which
+<code>Hiso (u + v)</code> — the isometry hypothesis at the point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>
+— proves directly.</li>
+<li>The two <a
+href="coqdoc/Riktig.Theory.InnerProduct.html#norm2_add"><code>norm2_add</code></a>
+rewrites expand both sides of <code>Hfuv</code> into the four-term sums
+from the blackboard chain; the two <code>Hiso</code> rewrites replace
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">\lVert fu\rVert^2</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">\lVert fv\rVert^2</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">\lVert
+u\rVert^2</annotation></semantics></math> and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">\lVert v\rVert^2</annotation></semantics></math>.</li>
+<li><code>apply (cancel_l (norm2 u + norm2 v))</code> strips the
+now-shared leading summand from both sides of <code>Hfuv</code>, leaving
+exactly the cross-term equation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>v</mi><mo>,</mo><mi>f</mi><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle fu,fv\rangle + \langle fv,fu\rangle == \langle
+u,v\rangle + \langle v,u\rangle</annotation></semantics></math>.</li>
+<li>The two <a
+href="coqdoc/Riktig.Interface.InnerProduct.html#ip_sym"><code>ip_sym</code></a>
+rewrites turn
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>v</mi><mo>,</mo><mi>f</mi><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle fv,fu\rangle</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle
+fu,fv\rangle</annotation></semantics></math> and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle v,u\rangle</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle</annotation></semantics></math>,
+landing on the doubled form <a
+href="coqdoc/Riktig.Theory.Adjoint.html#double_inj"><code>double_inj</code></a>
+expects.</li>
+<li><a
+href="coqdoc/Riktig.Theory.Adjoint.html#double_inj"><code>double_inj</code></a>
+is the halving step: it cancels the shared factor of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>
+(via <a
+href="coqdoc/Riktig.Theory.Field.html#mul_cancel_l"><code>mul_cancel_l</code></a>
+and <a
+href="coqdoc/Riktig.Theory.Order.html#two_neq_0"><code>two_neq_0</code></a>,
+the one place positivity is used) to strip the doubling and deliver the
+theorem exactly.</li>
+</ul>
+<p>No rotation or reflection is instantiated as a concrete <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+in the codebase yet, so there is no ready-made <code>Example</code> to
+run this theorem on at a genuinely pair-scrambling candidate. The one
+witness on hand is the identity map: <code>lm_id u</code> unfolds to
+<code>u</code>, so <code>is_isometry lm_id</code> holds by
+<code>reflexivity</code>, and applying <a
+href="coqdoc/Riktig.Theory.Adjoint.html#isometry_preserves_inner"><code>isometry_preserves_inner</code></a>
+to it says that the identity preserves every inner product — true, if
+unsurprising, since the identity is the transformation that moves
+nothing to begin with.</p>
+<p><em>Next: bilinear maps — linear in each argument separately — and
+why that one property makes them automatically differentiable.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Adjoint.html"><code>Theory/Adjoint.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Adjoint.html#is_adjoint"><code>is_adjoint</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Adjoint.html#is_adjoint_uniqueness"><code>is_adjoint_uniqueness</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Adjoint.html#is_adjoint_comp"><code>is_adjoint_comp</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Adjoint.html#is_isometry"><code>is_isometry</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Adjoint.html#double_inj"><code>double_inj</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Adjoint.html#isometry_preserves_inner"><code>isometry_preserves_inner</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#adjoint_unique"><code>adjoint_unique</code></a>,
+<a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#orthogonal"><code>orthogonal</code></a>,
+<a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#proj"><code>proj</code></a>,
+<a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#inner_nondegenerate"><code>inner_nondegenerate</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
+(<a href="coqdoc/Riktig.Theory.GramSchmidt.html#gs"><code>gs</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_pairwise_orthogonal"><code>gs_pairwise_orthogonal</code></a>)
+· <a
+href="coqdoc/Riktig.Interface.InnerProduct.html"><code>Interface/InnerProduct.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct"><code>InnerProduct</code></a>
+class).</p>
+</main>
+</body>
+</html>

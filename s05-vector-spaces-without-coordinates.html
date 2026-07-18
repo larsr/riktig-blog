@@ -83,7 +83,7 @@ gives the same vector as scaling by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
 and then by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>*</mi><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>*</mi><mo>:</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mi>u</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mi>u</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>b</mi><mi>*</mi><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>*</mi><mo>:</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">a *: (b *: u) \;=\; (a b) *: u \;=\; (b a) *: u \;=\; b *: (a *: u).</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mrow><mi>*</mi><mo>:</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mrow><mi>*</mi><mo>:</mo></mrow><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mi>u</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">scalings fuse</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mi>u</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">scalars commute</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>b</mi><mrow><mi>*</mi><mo>:</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mrow><mi>*</mi><mo>:</mo></mrow><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">scalings split</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">a \mathbin{*:} (b \mathbin{*:} u) \;=\; (a b) \mathbin{*:} u \quad\{\text{scalings fuse}\}\quad =\; (b a) \mathbin{*:} u \quad\{\text{scalars commute}\}\quad =\; b \mathbin{*:} (a \mathbin{*:} u) \quad\{\text{scalings split}\}</annotation></semantics></math></p>
 <p>The two outer equalities collapse and re-expand a nested scaling into
 a single scalar factor; the middle one is just the field’s commutativity
 of multiplication. In Coq:</p>
@@ -141,17 +141,21 @@ So scaling a zero vector gives zero, with no new work:</p>
 <pre class="coq"><code>Theorem scale_zero : forall a : F, a *: (0 : V) == 0.
 Proof.
   intros a.
-  exact (hom_zero (scale a) (scale_l_proper a) (sc_scale_add a)).
+  exact (hom_zero (scale a) (sc_scale_add a)).
 Qed.</code></pre>
 <p>The proof is a single <a
 href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>: hand
 <a
 href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
-the map (<code>scale a</code>), a proof that it respects
-<code>==</code>, and its additivity law, and the group-level result
-applies verbatim. This is the payoff of proving things about structures
-rather than about particular types: a lemma about groups is already a
-lemma about the additive part of every vector space.</p>
+the map (<code>scale a</code>) and its additivity law, and the
+group-level result applies verbatim — the fact that <code>scale a</code>
+respects <code>==</code> isn’t passed by hand at all, it’s found
+automatically (<a
+href="coqdoc/Riktig.Theory.VectorSpace.html#scale_l_proper"><code>scale_l_proper</code></a>,
+registered as an instance right above this theorem in the source, is
+exactly that fact). This is the payoff of proving things about
+structures rather than about particular types: a lemma about groups is
+already a lemma about the additive part of every vector space.</p>
 <h2 id="a-space-of-transformations-one-level-up">A space of
 transformations, one level up</h2>
 <p>Now the twist that gives this post its title. Among all functions
@@ -166,7 +170,7 @@ three guarantees:</p>
 <pre class="coq"><code>Record LinearMap (F U V : Type) {FF : Field F}
     {VU : VectorSpace F U} {VV : VectorSpace F V} := {
   lm_fun :&gt; U -&gt; V;
-  lm_proper : Proper (equ ==&gt; equ) lm_fun;
+  #[global] lm_proper :: Proper (equ ==&gt; equ) lm_fun;
   lm_add : forall u v : U, lm_fun (u + v) == lm_fun u + lm_fun v;
   lm_scale : forall (a : F) (u : U), lm_fun (a *: u) == a *: lm_fun u
 }.</code></pre>
@@ -256,11 +260,11 @@ is not in general
 Applying one transformation and then another is simply not the same as
 applying them in the other order — rotating then reflecting differs from
 reflecting then rotating — so
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>*</mo><mi>g</mi><mo>≠</mo><mi>g</mi><mo>*</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">f * g \neq g * f</annotation></semantics></math>,
-and the ring is honestly noncommutative. Nothing is broken; the axioms a
-ring demands (associativity, units, distributivity) never included
-commutativity of the product, precisely so that structures like this one
-qualify.</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>*</mo><mi>g</mi><mo>≠</mo><mi>g</mi><mo>*</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">f * g \neq g * f</annotation></semantics></math>
+in general, and the ring is noncommutative. Nothing is broken; the
+axioms a ring demands (associativity, units, distributivity) never
+included commutativity of the product, precisely so that structures like
+this one qualify.</p>
 <p>And because
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.167em"></mspace><mi>V</mi></mrow><annotation encoding="application/x-tex">\mathrm{End}\,V</annotation></semantics></math>
 is registered as a ring, every theorem proved once for all rings applies
@@ -274,7 +278,8 @@ Proof.
 Qed.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a> —
-“zero times anything is zero” — is a generic ring lemma. For
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>⋅</mo><mi>f</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">0 \cdot f = 0</annotation></semantics></math>,
+zero times anything is zero — is a generic ring lemma. For
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.167em"></mspace><mi>V</mi></mrow><annotation encoding="application/x-tex">\mathrm{End}\,V</annotation></semantics></math>
 it says the zero map composed after any
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
@@ -287,17 +292,17 @@ a single axiom — “a vector squared is its length” — makes the symmetric
 part of a product equal that inner product.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/VectorSpace.v"><code>Interface/VectorSpace.v</code></a>
+href="coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>
 (the class) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VectorSpace.v"><code>Theory/VectorSpace.v</code></a>
+href="coqdoc/Riktig.Theory.VectorSpace.html"><code>Theory/VectorSpace.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a>,
 <a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_zero"><code>scale_zero</code></a>)
 · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
 (linear maps) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/HomVS.v"><code>Theory/HomVS.v</code></a>
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
 (Hom is a vector space, End V is a ring).</p>
 </main>
 </body>

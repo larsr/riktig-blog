@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A decidable total order, and four comparisons for the price of
+one</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="a-decidable-total-order-and-four-comparisons-for-the-price-of-one">A
+decidable total order, and four comparisons for the price of one</h1>
+<p>A proposition is <strong>decidable</strong> when it comes with a
+decision procedure: a value of type <code>{P} + {~ P}</code> that either
+proves <code>P</code>, tagged on the left, or proves its negation
+<code>~ P</code>, tagged on the right — and computes which. Writing
+<code>if dec P then .. else ..</code> branches on that tag like an
+ordinary <code>if</code>, and in a proof, <code>destruct (dec P)</code>
+hands you <code>P</code> in one branch and <code>~ P</code> in the
+other. This post applies that idea to <em>ordering</em>: a single
+decision procedure for one comparison, from which <code>&lt;</code>,
+<code>&lt;=</code>, <code>&gt;</code>, and <code>&gt;=</code> and all
+their laws follow.</p>
+<h2 id="one-strict-order-decided-everything-else-derived">One strict
+order, decided; everything else derived</h2>
+<p>The specification is a typeclass. It fixes a single strict order <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+(think “less than”), asks that it be decidable and well-behaved, and
+defines the weak order <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>
+(“less than or equal”) as its mirror. From <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html"><code>Interface/DecTotalOrder.v</code></a>:</p>
+<pre class="coq"><code>Class DecTotalOrder (A : Type) := {
+  olt : A -&gt; A -&gt; Prop;
+  ole : A -&gt; A -&gt; Prop;
+  #[global] olt_dec :: forall x y, Decidable (olt x y);
+  #[global] olt_strict :: StrictOrder olt;
+  olt_total : forall x y, olt x y \/ x = y \/ olt y x;
+  ole_nlt   : forall x y, ole x y &lt;-&gt; ~ olt y x;
+}.</code></pre>
+<p>Reading the fields: <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+and <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>
+are the two order relations. Then three demands on <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>.
+<a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt_dec"><code>olt_dec</code></a>
+is the single decision procedure — for every pair <code>x y</code>,
+<code>olt x y</code> is decidable, so the program can branch on it. <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt_strict"><code>olt_strict</code></a>
+asks that <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+be a <code>StrictOrder</code>, standard-library shorthand for
+<em>irreflexive</em> (<code>x &lt; x</code> never holds) and
+<em>transitive</em> (<code>x &lt; y</code> and <code>y &lt; z</code>
+give <code>x &lt; z</code>). <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt_total"><code>olt_total</code></a>
+is trichotomy: any two elements compare one of exactly three ways —
+<code>x &lt; y</code>, or <code>x = y</code>, or <code>y &lt; x</code>.
+The last field, <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole_nlt"><code>ole_nlt</code></a>,
+is the definition tying the two relations together:
+<code>x &lt;= y</code> means precisely <em>not</em>
+<code>y &lt; x</code>.</p>
+<p>The other two comparisons need no new content — they are the same two
+relations with their arguments swapped:</p>
+<pre class="coq"><code>Definition ogt {A} `{DecTotalOrder A} (x y : A) : Prop := olt y x.
+Definition oge {A} `{DecTotalOrder A} (x y : A) : Prop := ole y x.</code></pre>
+<p><code>x &gt; y</code> is just <code>y &lt; x</code>;
+<code>x &gt;= y</code> is just <code>y &lt;= x</code>. So the four
+comparisons <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>,
+<code>&gt;=</code> all trace back to one relation <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>,
+and its one decider <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt_dec"><code>olt_dec</code></a>
+settles every one of them — decide <code>olt y x</code> and you have
+decided <code>x &gt; y</code> too. Four comparisons for the price of
+one.</p>
+<h2 id="the-order-laws-follow-antisymmetry">The order laws follow:
+antisymmetry</h2>
+<p>The point of stating the axioms so sparely is that the <em>rest</em>
+of the order’s behaviour is a consequence, proved once, for every type
+that satisfies the class. Take antisymmetry: if <code>x &lt;= y</code>
+and <code>y &lt;= x</code>, then <code>x</code> and <code>y</code> are
+equal. The whole argument runs through trichotomy — of the three ways
+<code>x</code> and <code>y</code> can compare, the two strict ones are
+each ruled out by one of the hypotheses, leaving only equality:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>≤</mo><mi>y</mi><mspace width="0.222em"></mspace><mo>∧</mo><mspace width="0.222em"></mspace><mi>y</mi><mo>≤</mo><mi>x</mi><mo>;</mo><mspace width="1.0em"></mspace><mrow><mtext mathvariant="normal">trichotomy gives </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>&lt;</mo><mi>y</mi><mspace width="0.167em"></mspace><mo>∨</mo><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>y</mi><mspace width="0.167em"></mspace><mo>∨</mo><mspace width="0.167em"></mspace><mi>y</mi><mo>&lt;</mo><mi>x</mi><mo>;</mo><mspace width="1.0em"></mspace><mi>x</mi><mo>&lt;</mo><mi>y</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> contradicts </mtext><mspace width="0.333em"></mspace></mrow><mi>y</mi><mo>≤</mo><mi>x</mi><mo>,</mo><mspace width="1.0em"></mspace><mi>y</mi><mo>&lt;</mo><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> contradicts </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>≤</mo><mi>y</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">x \le y \ \wedge\ y \le x; \quad \text{trichotomy gives } x&lt;y \,\vee\, x=y \,\vee\, y&lt;x; \quad x&lt;y \text{ contradicts } y \le x, \quad y&lt;x \text{ contradicts } x \le y.</annotation></semantics></math></p>
+<p>Here is the proof exactly as it stands in <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>:</p>
+<pre class="coq"><code>Lemma ole_antisym : forall x y : A, ole x y -&gt; ole y x -&gt; x = y.
+  intros x y X Y; destruct (olt_total x y) as [XY|[E|YX]].
+  - now destruct (proj1 (ole_nlt y x) Y).
+  - exact E.
+  - now destruct (proj1 (ole_nlt x y) X).
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros x y X Y</code> names the two elements and the two
+hypotheses, <code>X : ole x y</code> and <code>Y : ole y x</code>.</li>
+<li><code>destruct (olt_total x y)</code> invokes trichotomy, splitting
+into the three cases <code>XY : olt x y</code>, <code>E : x = y</code>,
+and <code>YX : olt y x</code>.</li>
+<li>First case, <code>olt x y</code>. Reading <code>Y : ole y x</code>
+through <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole_nlt"><code>ole_nlt</code></a>
+(its forward direction, <code>proj1 (ole_nlt y x)</code>) yields
+<code>~ olt x y</code> — which contradicts <code>XY</code>, and
+<code>now destruct</code> closes it.</li>
+<li>Middle case, <code>E : x = y</code>, is the goal itself:
+<code>exact E</code>.</li>
+<li>Third case, <code>olt y x</code>, is symmetric: reading
+<code>X : ole x y</code> through <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole_nlt"><code>ole_nlt</code></a>
+yields <code>~ olt y x</code>, contradicting <code>YX</code>.</li>
+</ul>
+<p>The companion laws — reflexivity of <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>,
+its transitivity, the bridge <code>olt x y -&gt; ole x y</code> — sit
+beside this one in the same file, each a short run through the same
+axioms.</p>
+<h2 id="decidable-equality-for-free-from-the-order">Decidable equality,
+for free, from the order</h2>
+<p>A total order carries enough information to decide <em>equality</em>
+as well — which is worth having, because equality of two elements is
+itself a proposition, not something you can test directly. The idea: to
+decide <code>x = y</code>, compare in both directions. If
+<code>x &lt; y</code>, they differ (equal things cannot compare strictly
+— that is irreflexivity). If <code>y &lt; x</code>, likewise. If neither
+strict comparison holds, trichotomy has only one option left,
+<code>x = y</code>. As a decision by cases:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>dec</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>=</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mi>x</mi><mo>≠</mo><mi>y</mi></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>&lt;</mo><mi>y</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">else </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>=</mo><mi>y</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> contradicts irreflexivity</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>x</mi><mo>≠</mo><mi>y</mi></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>y</mi><mo>&lt;</mo><mi>x</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">same argument</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>x</mi><mo>=</mo><mi>y</mi></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">otherwise</mtext><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">trichotomy, both strict cases excluded</mtext><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">
+\operatorname{dec}(x = y) \;=\;
+\begin{cases}
+x \neq y &amp; \text{if } x &lt; y \quad \{\text{else } x = y \text{ contradicts irreflexivity}\} \\
+x \neq y &amp; \text{if } y &lt; x \quad \{\text{same argument}\} \\
+x = y &amp; \text{otherwise} \quad \{\text{trichotomy, both strict cases excluded}\}.
+\end{cases}
+</annotation></semantics></math></p>
+<p>Since <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+is decidable, both comparisons are decisions the machine can make, so
+this whole procedure computes. From <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>:</p>
+<pre class="coq"><code>#[global] Instance ord_eq_dec : EqDec A.
+Proof.
+  intros x y.
+  destruct (dec (olt x y)) as [XY|NXY].
+  - right; intros E; subst y; exact (StrictOrder_Irreflexive x XY).
+  - destruct (dec (olt y x)) as [YX|NYX].
+    + right; intros E; subst y; exact (StrictOrder_Irreflexive x YX).
+    + left; destruct (olt_total x y) as [XY|[E|YX]];
+        [contradiction | exact E | contradiction].
+Defined.</code></pre>
+<p><code>EqDec A</code> is exactly “equality on <code>A</code> is
+decidable.” The proof decides it by two uses of the order’s own
+decider:</p>
+<ul>
+<li><code>destruct (dec (olt x y))</code> asks whether
+<code>x &lt; y</code>. If yes (<code>XY</code>), then <code>right</code>
+— they are unequal — and to prove <code>x &lt;&gt; y</code>, assume
+<code>E : x = y</code>, substitute, and
+<code>StrictOrder_Irreflexive x XY</code> refutes
+<code>x &lt; x</code>.</li>
+<li>If <code>x &lt; y</code> is false (<code>NXY</code>),
+<code>destruct (dec (olt y x))</code> asks the other direction. If
+<code>y &lt; x</code> (<code>YX</code>), the same irreflexivity argument
+gives <code>right</code> again.</li>
+<li>If both strict comparisons fail, <code>left</code> — they are equal
+— and trichotomy (<code>olt_total x y</code>) is invoked: its two strict
+alternatives are already excluded (<code>contradiction</code>), so only
+<code>exact E</code>, the equality, remains.</li>
+</ul>
+<p>The instance is <code>Defined</code>, keeping it transparent, so
+<code>dec (x = y)</code> genuinely computes on a concrete type.</p>
+<h2 id="a-concrete-instance-strings-in-dictionary-order">A concrete
+instance: strings in dictionary order</h2>
+<p>All of the above is stated for an abstract <code>A</code>. The moment
+a real type is shown to satisfy <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder"><code>DecTotalOrder</code></a>,
+every one of those results — the four comparisons, antisymmetry,
+decidable equality — holds for it. Strings are one such type. They are
+ordered by comparing their sequences of characters left to right, the
+ordinary dictionary order, which <a
+href="coqdoc/Riktig.Impl.Orders.html"><code>Impl/Orders.v</code></a>
+builds by <em>pullback</em>: a string is mapped to its list of
+characters (an injective map), and lists are compared lexicographically,
+so the string order is the character-list order transported back.</p>
+<pre class="coq"><code>#[global] Instance String_DecTotalOrder : DecTotalOrder string :=
+  DecTotalOrder_pullback list_ascii_of_string list_ascii_of_string_inj.</code></pre>
+<p>With that instance in scope, <code>dec (olt s t)</code> decides
+string ordering, and because every part is transparent it reduces on
+closed strings. The file closes with computation checks — each a claim
+that a comparison reduces to a definite <code>true</code> or
+<code>false</code>, verified by <code>Logic.eq_refl</code>, meaning Coq
+confirms the two sides are equal purely by computing:</p>
+<pre class="coq"><code>Check Logic.eq_refl : (if dec (olt &quot;abc&quot;%string &quot;abd&quot;%string) then true else false) = true.
+Check Logic.eq_refl : (if dec (olt &quot;b&quot;%string &quot;abc&quot;%string) then true else false) = false.</code></pre>
+<p>The first computes to <code>true</code>: <code>"abc"</code> precedes
+<code>"abd"</code> because they agree until the third character, where
+<code>c</code> precedes <code>d</code>. The second computes to
+<code>false</code>: <code>"b"</code> does <em>not</em> precede
+<code>"abc"</code>, since <code>b</code> comes after <code>a</code> at
+the very first character. Decidable equality — the <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html#ord_eq_dec"><code>ord_eq_dec</code></a>
+instance from the previous section, now specialized to strings —
+computes on the same strings:</p>
+<pre class="coq"><code>Check Logic.eq_refl : (if dec (&quot;ab&quot;%string = &quot;ab&quot;%string) then true else false) = true.</code></pre>
+<p>The same construction, applied to different embeddings, gives orders
+on <code>ascii</code> and <code>byte</code>; <code>nat</code>,
+<code>N</code>, <code>Z</code>, and the canonical rationals
+<code>Qc</code> are instances directly. Every one of them inherits
+antisymmetry and decidable equality without another line of proof.</p>
+<p><em>Next: writing everyday algorithms — Euclid’s greatest common
+divisor, binary search — as plain recursive terms that compare with
+these deciders.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html"><code>Interface/DecTotalOrder.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder"><code>DecTotalOrder</code></a>
+class, <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ogt"><code>ogt</code></a>/<a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#oge"><code>oge</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html#ole_antisym"><code>ole_antisym</code></a>,
+the other order laws, <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html#ord_eq_dec"><code>ord_eq_dec</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.Orders.html"><code>Impl/Orders.v</code></a>
+(<code>nat</code>, <code>Z</code>, <code>string</code>, and the pullback
+construction).</p>
+</main>
+</body>
+</html>

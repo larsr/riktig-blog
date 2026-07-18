@@ -29,6 +29,10 @@ something.</strong></p>
 assumes they know what “riktig” is, or because it name-drops a
 destination three topics away, or because it sounds like marketing copy
 — cut it.</p>
+<p>This also means: never assume the reader already knows what the post
+is about to define. Do not open with “we already know X” or lean on a
+name the reader hasn’t been given yet. See Rule 8 for the required shape
+this forces on every post.</p>
 <h2 id="rule-1--no-project-framing-in-tool-building-posts">Rule 1 — no
 project framing in tool-building posts</h2>
 <p>Do not write “riktig,” “the project,” “verified software,”
@@ -136,14 +140,21 @@ and the later calc-chain posts, is the house style — use it for every
 proof shown:</p>
 <ol type="1">
 <li>State the theorem in one sentence of English.</li>
-<li>Show the blackboard-style equational chain (LaTeX/math, one
-line).</li>
+<li>Show the blackboard-style version in real LaTeX math — inline
+<code>$...$</code> or display <code>$$...$$</code> (the build renders
+both via pandoc’s <code>--mathml</code>; never fake math with ASCII art,
+unicode approximations, or a code block). For an equational proof this
+is the displayed chain of equalities, each step annotated with the law
+that justifies it.</li>
 <li>Show the real Coq
 <code>Theorem</code>/<code>Proof</code>/<code>Qed</code> block, pasted
 verbatim.</li>
 <li>Walk it: one short sentence per proof step, connecting the Coq
 tactic to the blackboard step it corresponds to.</li>
 </ol>
+<p>Both halves are required every time: a Coq proof displayed without
+its LaTeX-math counterpart fails this rule, and so does a math chain
+whose Coq version is only described.</p>
 <p>Do not paraphrase a theorem statement. Do not write <code>...</code>
 inside a displayed Coq block to elide something — either show the whole
 thing or don’t show it. A garbled or partial quote is worse than none
@@ -174,6 +185,20 @@ CLAUDE.md (no American sports/military/startup-hype idiom — “unlock,”
 “move the needle,” “battle-tested,” etc.) — that rule is unaffected and
 still in force, it is a narrower special case of “plain, precise
 language” that this document generalizes.</p>
+<p>A second, stricter register applies to blog prose specifically, on
+top of CLAUDE.md’s general list: avoid inflated-sounding engineering
+phrasing that asserts authority without saying anything checkable —
+“load-bearing,” “honest” used as a hedge word (“an honest hypothesis,”
+“the honest thing to do,” “honestly required”), “the real story,” “the
+key insight,” and similar. (CLAUDE.md allows “load-bearing” as ordinary
+engineering vocabulary elsewhere in the project; for blog prose it still
+reads as jargon and should be avoided.) Say the actual reason instead:
+not “this hypothesis is honestly required” but “the theorem needs this
+hypothesis because, without it, <code>exp</code> need not be surjective,
+and <code>log</code> has nothing to invert.” Use plain computer science
+and mathematics vocabulary — the words a textbook or a patient colleague
+would use — not the words a project’s own internal notes would use about
+itself.</p>
 <h2 id="rule-7--never-write-about-code-that-doesnt-exist">Rule 7 — never
 write about code that doesn’t exist</h2>
 <p>If a topic in docs/BLOG-SYLLABUS.md is marked “needs implementation,”
@@ -185,9 +210,52 @@ procedural, not a matter of trying harder: read the actual current
 anything from it, every time, no exceptions, even if you (the writing
 agent) believe you already know its contents from earlier in the same
 session.</p>
+<h2 id="rule-8--problem-then-formalization-then-proof-then-usage">Rule 8
+— problem, then formalization, then proof, then usage</h2>
+<p>Every post moves through four movements, in this order, and does not
+skip or reorder them:</p>
+<ol type="1">
+<li><strong>The problem being modeled.</strong> State the real
+mathematical or computational situation the post is about, in plain
+language, with NO reference to Coq, no class/record/type name, no
+implementation detail of any kind. A reader must understand the
+underlying question — what is being asked, and why it isn’t already
+obvious — before seeing a single line of code or a single structure
+name.</li>
+<li><strong>The formalization.</strong> Only now introduce the actual
+Coq structure or definition, and connect it explicitly back to part 1:
+which field or law captures which piece of the problem just stated.</li>
+<li><strong>The proof.</strong> Walk the actual theorem(s), per Rule 5’s
+format.</li>
+<li><strong>How to use it.</strong> Concrete usage — instantiate at a
+real example, run it, show the output, or show how a caller invokes the
+construction.</li>
+</ol>
+<p><strong>Bad</strong> (starts from the implementation): “A <a
+href="../coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+is a class with three fields: <a
+href="../coqdoc/Riktig.Interface.Determinant.html#det_mf"><code>det_mf</code></a>,
+a multilinear form; <a
+href="../coqdoc/Riktig.Interface.Determinant.html#det_alt"><code>det_alt</code></a>,
+a proof it is alternating; and <a
+href="../coqdoc/Riktig.Interface.Determinant.html#det_basis_1"><code>det_basis_1</code></a>,
+a normalization law.” A reader has been handed field names before being
+told what problem those fields solve.</p>
+<p><strong>Good</strong> (starts from the problem): “Given a linear map
+from a space to itself, is there a single number that says whether it
+stretches volume, shrinks it, or flips orientation — and can that number
+be pinned down by its own defining properties, without ever writing down
+a matrix or a formula for computing it? … Coq calls this collection of
+properties a <a
+href="../coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+class: …”</p>
+<p>This rule governs the whole post’s shape, not just its opening
+paragraph — a post that states the problem well in one sentence and then
+digresses back into implementation details before the formalization
+section still fails this rule.</p>
 <h2 id="grading">Grading</h2>
 <p>Before a rewritten post is considered done, grade it against these
-seven rules, A/B/C each, and report the grades. A post below B on any
+eight rules, A/B/C each, and report the grades. A post below B on any
 rule is not finished. The previous audit’s grading scale still applies;
 this document adds Rules 1, 2 (tightened), 4, and 7 to it.</p>
 </main>

@@ -32,15 +32,17 @@ says, then what it needs, then the proof.</p>
 <h2 id="the-claim-in-engineering-terms">The claim, in engineering
 terms</h2>
 <p>You have a table of records — say <code>n</code> rows, each holding
-an <code>A</code>-value and a <code>B</code>-value. There are two
-standard ways to store it:</p>
+an <code>A</code>-value and a <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>-value.
+There are two standard ways to store it:</p>
 <ul>
 <li><strong>Array of structs (AoS):</strong> one array of <code>n</code>
 records. As a type: a function from row index to record,
 <code>Fin n -&gt; A * B</code>.</li>
 <li><strong>Struct of arrays (SoA):</strong> two arrays side by side —
-all the <code>A</code>-values, then all the <code>B</code>-values. As a
-type: a <em>pair</em> of functions,
+all the <code>A</code>-values, then all the <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>-values.
+As a type: a <em>pair</em> of functions,
 <code>(Fin n -&gt; A) * (Fin n -&gt; B)</code>.</li>
 </ul>
 <p>The second layout is the transformation behind columnar databases and
@@ -55,21 +57,20 @@ side is a vector space at all, what <code>≅</code> means when a machine
 checks it, and the proof. In the repository the destination is <a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>
 in <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>.</p>
+href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>.</p>
 <h2 id="step-1-both-sides-are-vector-spaces-for-free">Step 1: both sides
 are vector spaces, for free</h2>
 <p>Post #1’s structures were abstract: “any carrier with these
 operations and laws.” An <em>instance</em> is a proof that a concrete
 type keeps that promise — the repository has the expected ones
 (<code>Z</code> is a ring, <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Zr.v"><code>Impl/Zr.v</code></a>;
+href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>;
 <code>Q</code> with <code>Qeq</code> as its <code>==</code> is a field,
-<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Qf.v"><code>Impl/Qf.v</code></a>).
-The two instances the theorem needs are <em>constructions</em>: they
-build a new vector space from old ones.</p>
+<a href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>). The
+two instances the theorem needs are <em>constructions</em>: they build a
+new vector space from old ones.</p>
 <p><strong>Functions into a space form a space</strong> (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Pointwise.v"><code>Theory/Pointwise.v</code></a>).
+href="coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>).
 If <code>V</code> is a vector space, so is <code>X -&gt; V</code>, for
 any <code>X</code>: every operation acts at each point,</p>
 <pre class="coq"><code>#[global] Instance PW_Add {X M : Type} `{HasAdd M} : HasAdd (X -&gt; M) :=
@@ -84,7 +85,7 @@ Proof. intros f x. apply mon_idl. Qed.</code></pre>
 arbitrary point <code>x</code> — and there it is <code>M</code>’s own
 law. That single file makes <code>nat -&gt; Q</code>,
 <code>Fin n -&gt; F</code> (n-dimensional coordinate space, <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/FinVec.v"><code>Impl/FinVec.v</code></a>),
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>),
 and both sides of today’s isomorphism into vector spaces with no new
 proofs. (One production note, in passing: an instance whose carrier is
 <code>X -&gt; M</code> can send Coq’s instance search into infinite
@@ -92,7 +93,7 @@ recursion when the carrier is unknown; this file once ran the compiler
 out of memory before <code>Hint Mode</code> annotations confined the
 search.)</p>
 <p><strong>Pairs of spaces form a space</strong> (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/ProdVS.v"><code>Theory/ProdVS.v</code></a>).
+href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>).
 <code>A * B</code> with componentwise operations and componentwise
 equality — the same argument, two components instead of many points.</p>
 <p>Now both sides of the claim are vector spaces, assembled from the two
@@ -109,12 +110,12 @@ tables and then converting must equal converting and then adding. The
 maps that commute with the algebra are the <strong>linear maps</strong>:
 functions <code>f</code> with <code>f (u + v) == f u + f v</code> and
 <code>f (a *: u) == a *: f u</code>, respecting <code>==</code> (<a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Interface/LinearMap.v"><code>Interface/LinearMap.v</code></a>;
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>;
 they get a proper treatment in post #9). So the repository’s notion of
 isomorphism-of-representations, <a
 href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> in
 <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>,
+href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>,
 is: two linear maps that undo each other.</p>
 <pre class="coq"><code>Record VSIso (F U V : Type) {FF : Field F}
     {VU : VectorSpace F U} {VV : VectorSpace F V} := {
@@ -178,9 +179,10 @@ Qed.</code></pre>
 <h2 id="what-was-proved-plainly">What was proved, plainly</h2>
 <ul>
 <li>For every field <code>F</code>, every index type <code>X</code>, and
-every pair of <code>F</code>-vector spaces <code>A</code>,
-<code>B</code>: splitting a table into columns and zipping columns into
-a table are linear maps, and they are mutually inverse (<a
+every pair of <code>F</code>-vector spaces <code>A</code>, <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>:
+splitting a table into columns and zipping columns into a table are
+linear maps, and they are mutually inverse (<a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>,
 <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>).
@@ -195,7 +197,7 @@ one composes with: <a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_unitor"><code>vsiso_unitor</code></a>
 (<code>A × () ≅ A</code> — dropping an empty column; the one-point type
 <code>unit</code> is itself a vector space, <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/UnitVS.v"><code>Theory/UnitVS.v</code></a>),
+href="coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>),
 <a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_braiding"><code>vsiso_braiding</code></a>
 (<code>A × B ≅ B × A</code> — field order in a record is irrelevant), <a
@@ -214,26 +216,25 @@ free to choose on other grounds.</li>
 growable coefficient lists where <code>[1; 0; 0]</code> and
 <code>[1]</code> are the same vector — equality by lookup-with-default,
 so trailing zeros vanish by <em>definition</em> — are <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ListVS.v"><code>Impl/ListVS.v</code></a>,
+href="coqdoc/Riktig.Impl.ListVS.html"><code>Impl/ListVS.v</code></a>,
 with the concrete <code>Q</code> demonstration <a
 href="coqdoc/Riktig.Impl.Qf.html#q_trailing_zeros"><code>q_trailing_zeros</code></a>
-in <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/Qf.v"><code>Impl/Qf.v</code></a>.)</p>
+in <a href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>.)</p>
 <p><em>Next: the lambda evaluator leaves the building — Coq extraction
 to a real binary you can run on your shell. And after that: order,
 norms, bases, and complex numbers, because analysis is
 knocking.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/VSIso.v"><code>Theory/VSIso.v</code></a>
+href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>
 (VSIso, unitor, braiding, associator, AoS ≅ SoA) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/Pointwise.v"><code>Theory/Pointwise.v</code></a>
+href="coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>
 (functions inherit structure) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/UnitVS.v"><code>Theory/UnitVS.v</code></a>
+href="coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>
 / <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Theory/ProdVS.v"><code>Theory/ProdVS.v</code></a>
+href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>
 (unit and product spaces) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/theories/Impl/ListVS.v"><code>Impl/ListVS.v</code></a>
+href="coqdoc/Riktig.Impl.ListVS.html"><code>Impl/ListVS.v</code></a>
 (the trailing-zeros setoid).</p>
 </main>
 </body>

@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partial derivatives, the gradient, and the Jacobian: the chain
+rule is matrix multiplication</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="partial-derivatives-the-gradient-and-the-jacobian-the-chain-rule-is-matrix-multiplication">Partial
+derivatives, the gradient, and the Jacobian: the chain rule is matrix
+multiplication</h1>
+<p>A function of one variable changes at one rate: at a point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+a single number
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>f</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f&#39;(a)</annotation></semantics></math>
+says how fast the output moves when the input does. A function of
+several inputs and several outputs has no single such number. Move the
+first input and every output responds at its own rate; move the second
+input and all the outputs respond at different rates again. A map from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+inputs to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+outputs carries
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">m \times n</annotation></semantics></math>
+rates of change at every point — one per input-output pair. Three
+questions come with that picture. What <em>single object</em> records
+all those rates at once, so that “the derivative at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>”
+still means one thing? What exactly is one of the individual rates — a
+<em>partial</em> derivative — and why is it well defined? And when two
+such functions are composed, why do their tables of rates combine by the
+strange-looking row-times-column rule of matrix multiplication, rather
+than entry by entry?</p>
+<p>This post answers all three with one idea: the derivative at a point
+is a <em>linear map</em>, the partial derivatives are that map’s values
+on basis vectors, the Jacobian is that map’s matrix once bases are
+chosen — and composing linear maps is what matrix multiplication
+computes, so the chain rule for Jacobians is bookkeeping, not new
+analysis.</p>
+<h2 id="the-derivative-at-a-point-is-a-linear-map">The derivative at a
+point is a linear map</h2>
+<p>Recalled briefly from earlier in this series: a <em>normed space</em>
+is a vector space over an ordered field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+together with a norm
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>⋅</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert\cdot\rVert</annotation></semantics></math>
+measuring the size of a vector, and a <em>linear map</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is a function between vector spaces with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">L(u + v) = L(u) + L(v)</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>c</mi><mspace width="0.167em"></mspace><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">L(c\,u) = c\,L(u)</annotation></semantics></math>.
+The derivative of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+is the linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+that best approximates
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+near
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>:
+the error of the approximation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>≈</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a + h) \approx f(a) + L(h)</annotation></semantics></math>
+shrinks faster than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>
+itself,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="2.0em"></mspace><mrow><mtext mathvariant="normal">for every </mtext><mspace width="0.333em"></mspace></mrow><mi>ε</mi><mo>&gt;</mo><mn>0</mn><mo>,</mo><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> once </mtext><mspace width="0.333em"></mspace></mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><mi>δ</mi><mo stretchy="false" form="prefix">(</mo><mi>ε</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\lVert f(a+h) - f(a) - L(h) \rVert \;\le\; \varepsilon\,\lVert h \rVert
+\qquad \text{for every } \varepsilon &gt; 0,
+\text{ once } \lVert h \rVert &lt; \delta(\varepsilon).
+</annotation></semantics></math></p>
+<p>In Coq that is a definition, not a metaphor. Throughout,
+<code>==</code> is the equivalence relation each type carries (for the
+rationals it is “same value,” not syntactic equality), and
+<code>lm_bounded L</code> says there is a constant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert L(u)\rVert \le C\,\lVert u \rVert</annotation></semantics></math>
+for all
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+— the continuity condition a linear map needs in an infinite-dimensional
+space, harmless in a finite-dimensional one:</p>
+<pre class="coq"><code>Definition is_deriv (f : U -&gt; V) (a : U) (L : LinearMap F U V) : Prop :=
+  lm_bounded L /\
+  forall eps : F, 0 &lt; eps -&gt;
+    exists delta : F, 0 &lt; delta /\
+      forall h : U, ‖ h ‖ &lt; delta -&gt;
+        ‖ f (a + h) + - (f a + L h) ‖ &lt;= eps * ‖ h ‖.</code></pre>
+<p>Read it back against the problem: <code>f</code> is the function of
+several variables, <code>a</code> the point, and <code>L</code> the one
+object that records <em>all</em> the rates of change at once — feed
+<code>L</code> a displacement <code>h</code> in any direction and it
+returns the first-order response of every output simultaneously. Nothing
+in the definition mentions coordinates, columns, or entries.</p>
+<p>Two facts about this definition are proved where it lives and are
+used below. First, the derivative is unique: if
+<code>is_deriv f a L1</code> and <code>is_deriv f a L2</code> then
+<code>L1 == L2</code> (theorem <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>).
+Second, the derivative of a composite is the composite of the
+derivatives — the coordinate-free chain rule:</p>
+<pre class="coq"><code>Theorem deriv_comp : forall (f : U -&gt; V) (g : V -&gt; W) (a : U)
+    (Lf : LinearMap F U V) (Lg : LinearMap F V W),
+  Proper (equ ==&gt; equ) g -&gt;
+  is_deriv f a Lf -&gt; is_deriv g (f a) Lg -&gt;
+  is_deriv (fun u : U =&gt; g (f u)) a (lm_comp Lg Lf).</code></pre>
+<p>Here <code>lm_comp Lg Lf</code> is the composition
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mi>g</mi></msub><mo>∘</mo><msub><mi>L</mi><mi>f</mi></msub></mrow><annotation encoding="application/x-tex">L_g \circ L_f</annotation></semantics></math>
+as a linear map, and <code>Proper (equ ==&gt; equ) g</code> says
+<code>g</code> sends equivalent arguments to equivalent results — a side
+condition the proof needs in order to move <code>g</code> across an
+equivalence of arguments. The analytic content is the expected two-part
+estimate: the composite’s error splits into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>’s
+own error at the increment
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a+h) - f(a)</annotation></semantics></math>,
+plus
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mi>g</mi></msub><annotation encoding="application/x-tex">L_g</annotation></semantics></math>
+applied to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>’s
+error, and both parts are of order
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert h \rVert</annotation></semantics></math>
+because each factor’s error is and each linear map is bounded. That
+proof was walked in the earlier derivative post; this post
+<em>consumes</em> it.</p>
+<h2
+id="a-partial-derivative-is-the-derivative-applied-to-a-basis-vector">A
+partial derivative is the derivative applied to a basis vector</h2>
+<p>Coordinates enter through a basis. Recalled from the basis post: a
+<code>Basis n F U</code> packages
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+basis vectors <code>basis_vec B : Fin.t n -&gt; U</code> (where
+<code>Fin.t n</code> is the type of indices
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0,\dots,n-1</annotation></semantics></math>)
+together with a linear coordinate map
+<code>basis_coords B : LinearMap F U (Fin.t n -&gt; F)</code>, and two
+round-trip laws saying that building a vector from its coordinates and
+reading coordinates off a built vector both give back what they started
+from.</p>
+<p>The classical
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>f</mi><mi>/</mi><mi>∂</mi><msub><mi>x</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\partial f/\partial x_i</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+is the rate of change of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+along the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
+coordinate direction — that is, the response of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>’s
+best linear approximation to the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
+basis vector. So once the derivative-as-a-linear-map exists, the partial
+derivative is not a new limit to define; it is an application:</p>
+<pre class="coq"><code>Definition partial_at {n : nat} (L : LinearMap F U V) (B : Basis n F U)
+    (i : Fin.t n) : V :=
+  L (basis_vec B i).</code></pre>
+<p>Each argument answers to the problem statement. <code>L</code> is the
+total derivative (the object recording all rates); <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+is the choice of directions worth naming — partial derivatives do not
+exist until someone picks coordinates, and the definition makes that
+dependence a visible argument instead of a convention; <code>i</code>
+says which direction; and the result is a vector of <code>V</code>: the
+first-order response of <em>all</em> the outputs to a unit step along
+direction
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>.
+Note that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>∂</mi><mi>i</mi></msub><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\partial_i f(a)</annotation></semantics></math>
+is a value in the codomain, not a number — the numbers appear only after
+the codomain, too, gets coordinates.</p>
+<p>For this to deserve the notation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>∂</mi><mi>i</mi></msub><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\partial_i f(a)</annotation></semantics></math>
+the answer must not depend on which derivative witness was used.</p>
+<p><strong>Statement.</strong> Any two derivatives of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+have the same partial derivatives.</p>
+<p>On the blackboard: derivatives are unique, so this is one application
+of uniqueness. If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mn>1</mn></msub><annotation encoding="application/x-tex">L_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mn>2</mn></msub><annotation encoding="application/x-tex">L_2</annotation></semantics></math>
+both satisfy the error estimate at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+take any
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+and any
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\varepsilon &gt; 0</annotation></semantics></math>,
+and test both estimates (each run at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>)
+at the scaled displacement
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mi>t</mi><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">h = t\,u</annotation></semantics></math>
+for a small
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">t &gt; 0</annotation></semantics></math>.
+The triangle inequality sandwiches the difference of the two linear maps
+between the two errors:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><mi>ε</mi><mspace width="0.167em"></mspace><mi>t</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">
+t\,\lVert L_1(u) - L_2(u) \rVert
+  \;=\; \lVert L_1(h) - L_2(h) \rVert
+  \;\le\; \lVert f(a{+}h) - f(a) - L_2(h) \rVert
+        + \lVert f(a{+}h) - f(a) - L_1(h) \rVert
+  \;\le\; \varepsilon\, t\, \lVert u \rVert ,
+</annotation></semantics></math></p>
+<p>and cancelling
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+leaves
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert L_1(u) - L_2(u)\rVert \le \varepsilon\,\lVert u\rVert</annotation></semantics></math>.
+A nonnegative quantity below
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\varepsilon\,\lVert u\rVert</annotation></semantics></math>
+for <em>every</em> positive
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>
+is zero, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">L_1(u) = L_2(u)</annotation></semantics></math>
+at every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+— in particular at each basis vector:</p>
+<pre class="coq"><code>Lemma partial_at_welldef : forall (n : nat) (f : U -&gt; V) (a : U)
+    (L1 L2 : LinearMap F U V) (B : Basis n F U) (i : Fin.t n),
+  is_deriv f a L1 -&gt; is_deriv f a L2 -&gt;
+  partial_at L1 B i == partial_at L2 B i.
+Proof.
+  intros n f a L1 L2 B i HD1 HD2.
+  exact (deriv_unique f a L1 L2 HD1 HD2 (basis_vec B i)).
+Qed.</code></pre>
+<p>The walk is one step: <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>
+delivers <code>L1 == L2</code>, which for linear maps means “equal at
+every argument,” and the proof term applies that pointwise fact at the
+argument <code>basis_vec B i</code> — exactly the blackboard’s “in
+particular at each basis vector.”</p>
+<h2 id="the-jacobian-is-the-matrix-of-the-derivative">The Jacobian is
+the matrix of the derivative</h2>
+<p>The earlier representation post established that a matrix is not a
+definition of a linear map but a <em>description</em> of one: given a
+basis <code>BU</code> of the domain (size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>)
+and a basis <code>BV</code> of the codomain (size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>),
+the matrix of a linear map has, in column
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>,
+the <code>BV</code>-coordinates of the map’s value on the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+domain basis vector —</p>
+<pre class="coq"><code>Definition mat_of (f : LinearMap F U V) : Matrix m n F :=
+  fun i j =&gt; basis_coords BV (f (basis_vec BU j)) i.</code></pre>
+<p>— and this reading-off is a bijection between linear maps and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">m \times n</annotation></semantics></math>
+matrices (a <code>Matrix m n F</code> is literally a function
+<code>Fin.t m -&gt; Fin.t n -&gt; F</code>, a rectangle of scalars). The
+Jacobian of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+is nothing beyond this: the matrix, in the chosen bases, of the
+derivative at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>.</p>
+<pre class="coq"><code>Definition jacobian {f : U -&gt; V} {a : U} {L : LinearMap F U V}
+    (Hd : is_deriv f a L) : Matrix m n F :=
+  mat_of BU BV L.</code></pre>
+<p>The argument <code>Hd</code> deserves a pause: the matrix is computed
+from <code>L</code> alone, but the definition takes the
+<em>evidence</em> <code>Hd : is_deriv f a L</code> rather than a bare
+linear map, so that “the Jacobian of <code>f</code> at <code>a</code>”
+can only be formed for an <code>L</code> that actually is the derivative
+— and by <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>,
+any two admissible <code>L</code>s give the same matrix up to
+<code>==</code>.</p>
+<p><strong>Statement.</strong> Column
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+of the Jacobian consists of the codomain coordinates of the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+partial derivative.</p>
+<p>On the blackboard this is the definition meeting the definition:
+entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+of the matrix of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is coordinate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">L(b_j)</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">L(b_j)</annotation></semantics></math>
+<em>is</em> the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+partial derivative, so</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>J</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mrow><mi>i</mi><mi>j</mi></mrow></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">s</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mi>i</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">s</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>∂</mi><mi>j</mi></msub><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mi>i</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\big(J_f(a)\big)_{ij}
+  \;=\; \Big( \mathrm{coords}\big( L(b_j) \big) \Big)_i
+  \;=\; \Big( \mathrm{coords}\big( \partial_j f(a) \big) \Big)_i .
+</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem jacobian_col : forall {f : U -&gt; V} {a : U} {L : LinearMap F U V}
+    (Hd : is_deriv f a L) (i : Fin.t m) (j : Fin.t n),
+  jacobian Hd i j == basis_coords BV (partial_at L BU j) i.
+Proof.
+  intros f a L Hd i j.
+  reflexivity.
+Qed.</code></pre>
+<p>The proof is <code>reflexivity</code> and that is the point: both
+sides unfold to the same expression
+<code>basis_coords BV (L (basis_vec BU j)) i</code>, one through the
+definition of <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+and one through the definition of <a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>.
+The calculus notation (“the Jacobian’s columns are the partial
+derivatives”) and the linear-algebra notation (“the matrix’s columns are
+the images of the basis vectors, in coordinates”) are the same
+sentence.</p>
+<p>Two corollaries of the picture cost nothing. First, the
+<strong>gradient</strong>: when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is scalar-valued — codomain
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+itself, viewed as a one-dimensional space over itself — the Jacobian is
+a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">1 \times n</annotation></semantics></math>
+matrix. Its single row, with entries
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>f</mi><mi>/</mi><mi>∂</mi><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><mi>∂</mi><mi>f</mi><mi>/</mi><mi>∂</mi><msub><mi>x</mi><mi>n</mi></msub></mrow><annotation encoding="application/x-tex">\partial f/\partial x_1, \dots,
+\partial f/\partial x_n</annotation></semantics></math>, is what
+calculus calls the gradient of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+(often displayed as a column by transposing). No separate definition is
+needed: the gradient is the Jacobian at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">m = 1</annotation></semantics></math>.
+Second, a function that is already linear (and bounded) is its own
+derivative everywhere, so its Jacobian at every point is just its own
+matrix:</p>
+<pre class="coq"><code>Example jacobian_of_linear : forall (g : LinearMap F U V)
+    (Hb : lm_bounded g) (a : U),
+  jacobian (deriv_lm g a Hb) == mat_of BU BV g.
+Proof.
+  intros g Hb a.
+  reflexivity.
+Qed.</code></pre>
+<p>Again <code>reflexivity</code>: <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>
+discards the evidence and applies <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+to the linear map inside, and <code>deriv_lm g a Hb</code> (the theorem
+that a bounded linear map is its own derivative at any point) carries
+<code>g</code> itself as that linear map.</p>
+<h2 id="the-chain-rule-is-matrix-multiplication">The chain rule is
+matrix multiplication</h2>
+<p>Now the third question: why does composing functions
+<em>multiply</em> matrices?</p>
+<p><strong>Statement.</strong> The Jacobian of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">g \circ f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+is the matrix product of the Jacobian of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a)</annotation></semantics></math>
+and the Jacobian of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>J</mi><mi>g</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><msub><mi>J</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
+J_{g \circ f}(a) \;=\; J_g\big(f(a)\big)\; J_f(a).
+</annotation></semantics></math></p>
+<p>The reasoning splits into one analysis fact and one algebra fact,
+both already on the table. Analysis: the derivative of the composite is
+the <em>composition</em> of the derivatives — that is <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+above, and it is where all the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>–<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
+work lives. Algebra: writing maps in bases turns composition into matrix
+product,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>g</mi></msub><mo>∘</mo><msub><mi>L</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>g</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mo>,</mo><mspace width="2.0em"></mspace><mtext mathvariant="normal">entrywise</mtext><mspace width="1.0em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>g</mi></msub><mo>∘</mo><msub><mi>L</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><munder><mo>∑</mo><mi>k</mi></munder><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>g</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mrow><mi>i</mi><mi>k</mi></mrow></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\big[\!\big[\, L_g \circ L_f \,\big]\!\big]
+  \;=\; \big[\!\big[\, L_g \,\big]\!\big]\,
+        \big[\!\big[\, L_f \,\big]\!\big],
+\qquad\text{entrywise}\quad
+\big[\!\big[\, L_g \circ L_f \,\big]\!\big]_{ij}
+  = \sum_{k} \big[\!\big[\, L_g \,\big]\!\big]_{ik}\,
+             \big[\!\big[\, L_f \,\big]\!\big]_{kj},
+</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo>⋅</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\![\,\cdot\,]\!]</annotation></semantics></math>
+is the matrix of a map in the chosen bases. That algebra fact is the
+representation theorem’s composition law, proved in the earlier matrices
+post; its Coq name and statement:</p>
+<pre class="coq"><code>Theorem mat_of_comp : forall (g : LinearMap F V W) (f : LinearMap F U V),
+  mat_of BU BW (lm_comp g f)
+    == mat_mul (mat_of BV BW g) (mat_of BU BV f).
+Proof.
+  intros g f i j.
+  exact (mat_of_coords BV BW g (f (basis_vec BU j)) i).
+Qed.</code></pre>
+<p>One sentence of walk, since it is consumed twice below: entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+of the left side is coordinate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(f(b_j))</annotation></semantics></math>,
+and the computation rule <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
+— coordinates of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(v)</annotation></semantics></math>
+equal the matrix of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+applied to the coordinates of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+— read at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">v = f(b_j)</annotation></semantics></math>
+produces exactly the sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>k</mi></msub><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>i</mi><mi>k</mi></mrow></msub><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_k [\![g]\!]_{ik}\, [\![f]\!]_{kj}</annotation></semantics></math>,
+which is entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+of the right side.</p>
+<p>With both facts in place, the chain rule for Jacobians is their
+juxtaposition:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>g</mi></msub><mo>∘</mo><msub><mi>L</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>g</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mi>L</mi><mi>f</mi></msub><mspace width="0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>J</mi><mi>g</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>J</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">
+J_{g\circ f}(a)
+  \;=\; \big[\!\big[\, L_g \circ L_f \,\big]\!\big]
+  \;=\; \big[\!\big[\, L_g \,\big]\!\big]\, \big[\!\big[\, L_f \,\big]\!\big]
+  \;=\; J_g\big(f(a)\big)\, J_f(a),
+</annotation></semantics></math></p>
+<p>the first equality by <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+(plus uniqueness:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mi>g</mi></msub><mo>∘</mo><msub><mi>L</mi><mi>f</mi></msub></mrow><annotation encoding="application/x-tex">L_g \circ L_f</annotation></semantics></math>
+<em>is</em> the composite’s derivative), the second by <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>,
+the third by the definition of the two factor Jacobians. In Coq the
+statement comes in two flavours. The engine version makes the derivative
+hypotheses explicit and speaks <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>:</p>
+<pre class="coq"><code>Theorem jacobian_comp : forall (f : U -&gt; V) (g : V -&gt; W) (a : U)
+    (Lf : LinearMap F U V) (Lg : LinearMap F V W),
+  is_deriv f a Lf -&gt; is_deriv g (f a) Lg -&gt;
+  is_deriv (fun u : U =&gt; g (f u)) a (lm_comp Lg Lf) -&gt;
+  mat_of BU BW (lm_comp Lg Lf)
+    == mat_mul (mat_of BV BW Lg) (mat_of BU BV Lf).
+Proof.
+  intros f g a Lf Lg Hf Hg Hgf.
+  exact (mat_of_comp BU BV BW Lg Lf).
+Qed.</code></pre>
+<p>And the readable version speaks <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>
+directly, using <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+to <em>manufacture</em> the composite’s derivative evidence rather than
+assuming it:</p>
+<pre class="coq"><code>Theorem jacobian_chain_rule : forall (f : U -&gt; V) (g : V -&gt; W) (a : U)
+    (Lf : LinearMap F U V) (Lg : LinearMap F V W)
+    (Pg : Proper (equ ==&gt; equ) g)
+    (Hf : is_deriv f a Lf) (Hg : is_deriv g (f a) Lg),
+  jacobian n p BU BW (deriv_comp f g a Lf Lg Pg Hf Hg)
+    == mat_mul (jacobian m p BV BW Hg) (jacobian n m BU BV Hf).
+Proof.
+  intros f g a Lf Lg Pg Hf Hg.
+  exact (mat_of_comp BU BV BW Lg Lf).
+Qed.</code></pre>
+<p>Walking <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>
+clause by clause: <code>Hf</code> and <code>Hg</code> are the two
+derivatives being consumed —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+differentiable at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+with derivative <code>Lf</code>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+differentiable at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a)</annotation></semantics></math>
+with derivative <code>Lg</code> — and <code>Pg</code> is the same
+respectful-of-equivalence side condition <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+always needs. The term <code>deriv_comp f g a Lf Lg Pg Hf Hg</code> in
+the statement <em>is</em> the composite’s derivative evidence, so the
+left side is the Jacobian of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">g \circ f</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+taken between the outer bases <code>BU</code> and <code>BW</code>. The
+right side is the matrix product of the two factor Jacobians, with the
+middle basis <code>BV</code> appearing once in each factor — the shared
+index
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+of the entrywise sum ranges over the middle space’s basis. The proof is
+a single <a
+href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>:
+after <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>
+unfolds to <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
+both sides are precisely the two sides of <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>
+applied to <code>Lg</code> and <code>Lf</code>. The derivative
+hypotheses are never touched by the proof — their role was to pin down
+<em>which</em> linear maps get represented, and all remaining content is
+the algebra of representation. That is the answer to the third question:
+matrices multiply because composition of linear maps, pushed through
+coordinates, is the row-times-column sum — and the chain rule is
+composition.</p>
+<h2 id="running-it-partial-derivatives-with-visible-numbers">Running it:
+partial derivatives with visible numbers</h2>
+<p>The definitions above compute. The concrete stage is the coordinate
+plane <code>Fin.t 2 -&gt; Q</code> — pairs of rationals indexed by
+<code>Fin.F1</code> (first) and <code>Fin.FS Fin.F1</code> (second) —
+with its standard basis <code>FinVec_Basis 2</code>, whose basis vectors
+are the Kronecker tuples
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">e_i(j) = 1</annotation></semantics></math>
+if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>=</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i = j</annotation></semantics></math>,
+else
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+and whose coordinate map is the identity. A matrix acts on coordinates
+through <code>mat_vec_lm A</code>, the linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>↦</mo><mi>A</mi><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">v \mapsto A\,v</annotation></semantics></math>.
+The examples below live at the end of the Jacobian source file and
+compile with the library; <code>2#1</code> is the rational
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>/</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">2/1</annotation></semantics></math>,
+and <code>vm_compute</code> asks Coq to fully evaluate both sides before
+comparing.</p>
+<p>Take the linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mi>x</mi><mo>+</mo><mn>3</mn><mi>y</mi><mo>,</mo><mspace width="0.278em"></mspace><mn>5</mn><mi>x</mi><mo>+</mo><mn>7</mn><mi>y</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(x,y) = (2x + 3y,\; 5x + 7y)</annotation></semantics></math>
+and, for composing,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo>,</mo><mspace width="0.278em"></mspace><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(u,v) = (u + v,\; v)</annotation></semantics></math>:</p>
+<pre class="coq"><code>Definition Af : Matrix 2 2 Q := matQ2 (2#1) (3#1) (5#1) (7#1).
+Definition Bg : Matrix 2 2 Q := matQ2 (1#1) (1#1) (0#1) (1#1).</code></pre>
+<p>(<code>matQ2 a11 a12 a21 a22</code> builds the evident
+<code>Matrix 2 2 Q</code> row by row.) Since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is linear it is its own derivative everywhere, so its partial
+derivatives should be the columns of its matrix:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>f</mi><mi>/</mi><mi>∂</mi><mi>x</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>5</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\partial f/\partial x = (2, 5)</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>f</mi><mi>/</mi><mi>∂</mi><mi>y</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>7</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\partial f/\partial y = (3, 7)</annotation></semantics></math>.
+They are, by evaluation:</p>
+<pre class="coq"><code>Example partial_x_of_f :
+     partial_at (mat_vec_lm Af) (FinVec_Basis 2) Fin.F1 Fin.F1 == (2#1)%Q
+  /\ partial_at (mat_vec_lm Af) (FinVec_Basis 2) Fin.F1 (Fin.FS Fin.F1)
+       == (5#1)%Q.
+Proof. split; vm_compute; reflexivity. Qed.
+
+Example partial_y_of_f :
+     partial_at (mat_vec_lm Af) (FinVec_Basis 2) (Fin.FS Fin.F1) Fin.F1
+       == (3#1)%Q
+  /\ partial_at (mat_vec_lm Af) (FinVec_Basis 2) (Fin.FS Fin.F1)
+       (Fin.FS Fin.F1) == (7#1)%Q.
+Proof. split; vm_compute; reflexivity. Qed.</code></pre>
+<p>Each conjunct is one number: <a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>
+applies the map to a basis vector, the sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>j</mi></msub><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mspace width="0.167em"></mspace><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sum_j A_{ij}\, e_1(j)</annotation></semantics></math>
+collapses to a column entry, and <code>vm_compute</code> reduces both
+sides to literal rationals that <code>reflexivity</code> compares.
+Assembling all four entries with <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+against the standard bases reads the whole matrix back — the Jacobian
+matrix of the linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is its own matrix, entry by entry:</p>
+<pre class="coq"><code>Example jacobian_matrix_of_f :
+     mat_of (FinVec_Basis 2) (FinVec_Basis 2) (mat_vec_lm Af) Fin.F1 Fin.F1
+       == (2#1)%Q
+  /\ mat_of (FinVec_Basis 2) (FinVec_Basis 2) (mat_vec_lm Af) Fin.F1
+       (Fin.FS Fin.F1) == (3#1)%Q
+  /\ mat_of (FinVec_Basis 2) (FinVec_Basis 2) (mat_vec_lm Af)
+       (Fin.FS Fin.F1) Fin.F1 == (5#1)%Q
+  /\ mat_of (FinVec_Basis 2) (FinVec_Basis 2) (mat_vec_lm Af)
+       (Fin.FS Fin.F1) (Fin.FS Fin.F1) == (7#1)%Q.
+Proof. repeat split; vm_compute; reflexivity. Qed.</code></pre>
+<p>For the chain rule with numbers: composing gives
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>7</mn><mi>x</mi><mo>+</mo><mn>10</mn><mi>y</mi><mo>,</mo><mspace width="0.278em"></mspace><mn>5</mn><mi>x</mi><mo>+</mo><mn>7</mn><mi>y</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(f(x,y)) = (7x + 10y,\; 5x + 7y)</annotation></semantics></math>,
+so the composite’s
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>-partial
+should be
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>7</mn><mo>,</mo><mn>5</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(7, 5)</annotation></semantics></math>
+— and that should equal the first column of the matrix product
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>B</mi><mi>g</mi></msub><msub><mi>A</mi><mi>f</mi></msub></mrow><annotation encoding="application/x-tex">B_g A_f</annotation></semantics></math>.
+The general theorem instantiates in one line, and the numbers check by
+evaluation:</p>
+<pre class="coq"><code>Example chain_rule_concrete :
+  mat_of (FinVec_Basis 2) (FinVec_Basis 2)
+      (lm_comp (mat_vec_lm Bg) (mat_vec_lm Af))
+    == mat_mul (mat_of (FinVec_Basis 2) (FinVec_Basis 2) (mat_vec_lm Bg))
+         (mat_of (FinVec_Basis 2) (FinVec_Basis 2) (mat_vec_lm Af)).
+Proof.
+  exact (mat_of_comp (FinVec_Basis 2) (FinVec_Basis 2) (FinVec_Basis 2)
+           (mat_vec_lm Bg) (mat_vec_lm Af)).
+Qed.
+
+Example partial_x_of_g_after_f :
+     partial_at (lm_comp (mat_vec_lm Bg) (mat_vec_lm Af)) (FinVec_Basis 2)
+       Fin.F1 Fin.F1 == (7#1)%Q
+  /\ partial_at (lm_comp (mat_vec_lm Bg) (mat_vec_lm Af)) (FinVec_Basis 2)
+       Fin.F1 (Fin.FS Fin.F1) == (5#1)%Q
+  /\ mat_mul Bg Af Fin.F1 Fin.F1 == (7#1)%Q
+  /\ mat_mul Bg Af (Fin.FS Fin.F1) Fin.F1 == (5#1)%Q.
+Proof. repeat split; vm_compute; reflexivity. Qed.</code></pre>
+<p>One boundary of the demonstration should be stated plainly.
+Everything above the norm — <a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
+the whole basis-and-matrix layer — needs only a field, vector spaces,
+and bases, which is why these examples reduce to literal rationals. But
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+itself mentions a norm, and the library currently defines no norm
+instance on the carrier <code>Fin.t n -&gt; Q</code> (its matrix-norm
+file records that gap explicitly), so the statements that
+<em>mention</em> <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+— <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>
+— are exercised here at the abstract level, as in <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_of_linear"><code>jacobian_of_linear</code></a>,
+rather than re-instantiated at <code>Q</code>. For the linear maps in
+this section that costs nothing: a linear map is its own derivative, so
+the columns computed by <a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>
+are its partial derivatives in exactly the sense the rest of the post
+proves.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at_welldef"><code>partial_at_welldef</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_col"><code>jacobian_col</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_comp"><code>jacobian_comp</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>,
+and the concrete <code>Q</code> examples) · <a
+href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>
+— a matrix acting on coordinates) · <a
+href="coqdoc/Riktig.Impl.FinVecBasis.html"><code>Impl/FinVecBasis.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.FinVecBasis.html#FinVec_Basis"><code>FinVec_Basis</code></a>,
+the standard basis).</p>
+</main>
+</body>
+</html>

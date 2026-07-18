@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilinear maps, and why they're automatically
+differentiable</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="bilinear-maps-and-why-theyre-automatically-differentiable">Bilinear
+maps, and why they’re automatically differentiable</h1>
+<p>A <em>linear map</em> between vector spaces over a field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+is a function that respects addition and scaling:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><msup><mi>u</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>u</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(u + u&#39;) = f(u) + f(u&#39;)</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>⋅</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a \cdot u) = a \cdot f(u)</annotation></semantics></math>,
+writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">a \cdot u</annotation></semantics></math>
+for the scaling action of a scalar on a vector (the code writes it
+<code>*:</code>). Everything a linear map does is fixed by what it does
+to a basis, and it carries the zero vector to the zero vector. As always
+in this development, <code>==</code> is a setoid equality — a chosen
+equivalence relation every operation must respect — not equality of raw
+Coq terms.</p>
+<p>This post is about the next step up: maps of <em>two</em> vector
+arguments that are linear in each one separately. They behave very
+differently from linear maps in one respect that turns out to matter for
+calculus, and the consequence is that establishing bilinearity is
+already enough to make such a map differentiable, with no further
+analysis to check by hand.</p>
+<h2 id="a-bilinear-map-is-linear-in-each-slot-separately">A bilinear map
+is linear in each slot separately</h2>
+<pre class="coq"><code>Record BilinearMap (F U V W : Type) {FF : Field F}
+    {VU : VectorSpace F U} {VV : VectorSpace F V}
+    {VW : VectorSpace F W} := {
+  bm_fun :&gt; U -&gt; V -&gt; W;
+  #[global] bm_proper :: Proper (equ ==&gt; equ ==&gt; equ) bm_fun;
+  bm_add_l : forall (u u&#39; : U) (v : V),
+    bm_fun (u + u&#39;) v == bm_fun u v + bm_fun u&#39; v;
+  bm_scale_l : forall (a : F) (u : U) (v : V),
+    bm_fun (a *: u) v == a *: bm_fun u v;
+  bm_add_r : forall (u : U) (v v&#39; : V),
+    bm_fun u (v + v&#39;) == bm_fun u v + bm_fun u v&#39;;
+  bm_scale_r : forall (a : F) (u : U) (v : V),
+    bm_fun u (a *: v) == a *: bm_fun u v
+}.</code></pre>
+<p>The record is data — a <em>choice</em> of map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+together with proofs that it obeys four laws. Fix the second argument
+and it is linear in the first (<a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_add_l"><code>bm_add_l</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_scale_l"><code>bm_scale_l</code></a>);
+fix the first and it is linear in the second (<a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_add_r"><code>bm_add_r</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_scale_r"><code>bm_scale_r</code></a>).
+The extra <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_proper"><code>bm_proper</code></a>
+field says
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+respects the setoid equality in both arguments.</p>
+<p>Here is the one distinction to get right, because it is what makes
+bilinearity genuinely different from linearity. A bilinear map is
+<em>not</em> a linear map on the product space
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>×</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">U \times V</annotation></semantics></math>.
+If it were, scaling the pair
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(u,v)</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+would scale the output once, by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>.
+But scaling the pair scales <em>both</em> coordinates, and each scaling
+pulls out its own factor of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>,</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>⋅</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>⋅</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">b(a \cdot u,\; a \cdot v) = a \cdot \big(a \cdot b(u,v)\big) = a^2 \cdot b(u,v).</annotation></semantics></math></p>
+<p>Scaling the input pair by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+scales the output by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>a</mi><mn>2</mn></msup><annotation encoding="application/x-tex">a^2</annotation></semantics></math>,
+not by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>.
+Linear in each slot; quadratic on the pair. That single fact — that the
+output picks up the scalar <em>twice</em> — is exactly what will produce
+the quadratic remainder that makes the map differentiable.</p>
+<h2
+id="one-structure-builds-another-fixing-a-slot-gives-a-linear-map">One
+structure builds another: fixing a slot gives a linear map</h2>
+<p>Before the calculus, one clean algebraic consequence. If you hold the
+first argument of a bilinear map fixed at some
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>,
+what remains is a function of one vector — and it is a genuine <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+because <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_add_r"><code>bm_add_r</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_scale_r"><code>bm_scale_r</code></a>
+are precisely the two linear-map laws for that function. The file
+packages exactly this:</p>
+<pre class="coq"><code>  Definition bm_appl (u : U) : LinearMap F V W :=
+    @Build_LinearMap F V W FF VV VW (fun v : V =&gt; b u v)
+      (bm_appl_proper u)
+      (bm_add_r b u)
+      (fun (a : F) (v : V) =&gt; bm_scale_r b a u v).</code></pre>
+<p>Read the three proof arguments: the additivity law of the new linear
+map is <code>bm_add_r b u</code> — the right-slot additivity of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+with the first argument frozen at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+— and its scaling law is <code>bm_scale_r b a u v</code>, the right-slot
+scaling law, likewise frozen. Fixing a slot of a bilinear map hands you
+a linear map for free, with no new proof obligations: the laws you need
+are the laws you already have.</p>
+<p>This immediately buys a fact that would otherwise take its own
+argument. A linear map sends the zero vector to the zero vector; so a
+bilinear map, fed the zero vector in <em>either</em> slot, returns
+zero.</p>
+<p><strong>The claim:</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.167em"></mspace><mi>u</mi><mspace width="0.167em"></mspace><mn>0</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">b\,u\,0 = 0</annotation></semantics></math>
+for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.</p>
+<p><strong>The blackboard argument</strong> is one sentence:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>↦</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>u</mi><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">v \mapsto b\,u\,v</annotation></semantics></math>
+is a linear map (that is <code>bm_appl u</code>), and every linear map
+kills zero (that is <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_zero"><code>lm_zero</code></a>),
+so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.167em"></mspace><mi>u</mi><mspace width="0.167em"></mspace><mn>0</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">b\,u\,0 = 0</annotation></semantics></math>.
+The Coq is that sentence, verbatim:</p>
+<pre class="coq"><code>  Theorem bm_zero_r : forall u : U, b u 0 == 0.
+  Proof.
+    intros u.
+    exact (lm_zero (bm_appl u)).
+  Qed.</code></pre>
+<p><code>lm_zero (bm_appl u)</code> is the general “linear maps send
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>”
+lemma instantiated at the linear map you get by freezing the first slot
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.
+Nothing about bilinearity had to be re-proved: the linear-map machinery
+applies the moment <a
+href="coqdoc/Riktig.Theory.Bilinear.html#bm_appl"><code>bm_appl</code></a>
+exhibits the fixed-slot map as linear.</p>
+<h2 id="bilinearity-forces-differentiability">Bilinearity forces
+differentiability</h2>
+<p>Now the reason bilinear maps are worth isolating. Recall what it
+means for a function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+to be differentiable at a point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+with <em>derivative</em> a bounded linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>:
+the error left after the linear approximation,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>L</mi><mspace width="0.167em"></mspace><mi>h</mi></mrow><annotation encoding="application/x-tex">f(a+h) - f(a) - L\,h</annotation></semantics></math>,
+must shrink faster than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert h\rVert</annotation></semantics></math>
+itself. Precisely, for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\varepsilon &gt; 0</annotation></semantics></math>
+there is a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\delta &gt; 0</annotation></semantics></math>
+such that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>L</mi><mspace width="0.167em"></mspace><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert f(a+h) - f(a) - L\,h\rVert \le \varepsilon\,\lVert h\rVert</annotation></semantics></math>
+whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><mi>δ</mi></mrow><annotation encoding="application/x-tex">\lVert h\rVert &lt; \delta</annotation></semantics></math>.
+The derivative is the best linear map through the point;
+differentiability is the promise that the leftover is negligible next to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>.</p>
+<p>Take a bilinear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>:</mo><mi>U</mi><mo>×</mo><mi>V</mi><mo>→</mo><mi>W</mi></mrow><annotation encoding="application/x-tex">B : U \times V \to W</annotation></semantics></math>,
+regarded as a function of the single pair argument
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">p = (u,v)</annotation></semantics></math>,
+and a base point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>,</mo><msub><mi>v</mi><mn>0</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(u_0, v_0)</annotation></semantics></math>.
+The claimed derivative is the map sending a displacement
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(du, dv)</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>B</mi><mspace width="0.167em"></mspace><msub><mi>u</mi><mn>0</mn></msub><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B\,du\,v_0 + B\,u_0\,dv</annotation></semantics></math>
+— vary the first slot alone, plus vary the second slot alone:</p>
+<pre class="coq"><code>  Definition bilinear_deriv_fun (p : U * V) : W :=
+    B (fst p) v0 + B u0 (snd p).</code></pre>
+<p>This is a <code>LinearMap F (U * V) W</code> (its additivity and
+scaling laws follow from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>’s
+slot-wise laws — the file proves <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_deriv_add"><code>bilinear_deriv_add</code></a>
+and <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_deriv_scale"><code>bilinear_deriv_scale</code></a>
+for exactly this). The question is whether it is the
+<em>derivative</em>: is the leftover quadratically small?</p>
+<h3 id="the-remainder-is-a-single-cross-term">The remainder is a single
+cross term</h3>
+<p><strong>The blackboard argument</strong> expands
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">B(u_0 + du,\; v_0 + dv)</annotation></semantics></math>
+by bilinearity — right slot first, then each half in the left slot:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>B</mi><mspace width="0.167em"></mspace><msub><mi>u</mi><mn>0</mn></msub><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><msub><mi>u</mi><mn>0</mn></msub><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">B(u_0 + du,\; v_0 + dv)
+ = B\,u_0\,v_0 \;+\; B\,du\,v_0 \;+\; B\,u_0\,dv \;+\; B\,du\,dv.</annotation></semantics></math></p>
+<p>Four terms. The first is the value
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><msub><mi>u</mi><mn>0</mn></msub><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>=</mo><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>,</mo><msub><mi>v</mi><mn>0</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">B\,u_0\,v_0 = B(u_0,v_0)</annotation></semantics></math>.
+The middle two are precisely the claimed linear approximation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>B</mi><mspace width="0.167em"></mspace><msub><mi>u</mi><mn>0</mn></msub><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B\,du\,v_0 +
+B\,u_0\,dv</annotation></semantics></math>. Subtract off the value and
+the linear part, and <em>exactly one</em> term survives — the cross term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B\,du\,dv</annotation></semantics></math>,
+the one where <em>both</em> displacements act. That is the quadratic
+term promised by the “scales twice” observation earlier:</p>
+<pre class="coq"><code>  Lemma bilinear_remainder_eq : forall (du : U) (dv : V),
+    B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)) == B du dv.
+  Proof.
+    intros du dv.
+    rewrite (bm_add_r B (u0 + du) v0 dv), (bm_add_l B u0 du v0),
+      (bm_add_l B u0 du dv).
+    exact (four_term_cancel (B u0 v0) (B du v0) (B u0 dv) (B du dv)).
+  Qed.</code></pre>
+<p>Reading it: <code>bm_add_r B (u0+du) v0 dv</code> splits the right
+slot, turning
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">B(u_0+du)(v_0+dv)</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B(u_0+du)\,v_0 + B(u_0+du)\,dv</annotation></semantics></math>.
+The two <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_add_l"><code>bm_add_l</code></a>
+rewrites then split the left slot of each piece, producing all four
+terms. <a
+href="coqdoc/Riktig.Theory.AbGroup.html#four_term_cancel"><code>four_term_cancel</code></a>
+is a pure abelian-group rearrangement:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">(a + b + c + d) - (a + (b + c)) = d</annotation></semantics></math>.
+What is left is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B\,du\,dv</annotation></semantics></math>,
+and nothing else.</p>
+<h3 id="the-cross-term-is-quadratically-small">The cross term is
+quadratically small</h3>
+<p>So differentiability comes down to: is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert B\,du\,dv\rVert</annotation></semantics></math>
+small compared to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert (du,dv)\rVert</annotation></semantics></math>?
+On the product space we measure a pair by the <em>sum norm</em>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert (du,dv)\rVert = \lVert du\rVert + \lVert
+dv\rVert</annotation></semantics></math>; call this
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert h\rVert</annotation></semantics></math>.
+Assume
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+is <em>bounded</em> — there is a constant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">C \ge 0</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>B</mi><mspace width="0.167em"></mspace><mi>u</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert B\,u\,v\rVert \le C\,\lVert u\rVert\,
+\lVert v\rVert</annotation></semantics></math> always (a hypothesis,
+exactly as for linear maps, not a field of the record). Since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert du\rVert</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert dv\rVert</annotation></semantics></math>
+are each at most their sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert h\rVert</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">\lVert B\,du\,dv\rVert \le C\,\lVert du\rVert\,\lVert dv\rVert
+ \le C\,\lVert h\rVert\,\lVert h\rVert.</annotation></semantics></math></p>
+<p>This is quadratic in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert h\rVert</annotation></semantics></math>,
+and <em>that</em> is why it is negligible: for a target
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>,
+choosing the neighbourhood radius
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>ε</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>C</mi><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\delta = \varepsilon \cdot (1 + C)^{-1}</annotation></semantics></math>
+forces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>≤</mo><mi>ε</mi></mrow><annotation encoding="application/x-tex">C\,\lVert h\rVert \le
+\varepsilon</annotation></semantics></math> whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><mi>δ</mi></mrow><annotation encoding="application/x-tex">\lVert h\rVert &lt; \delta</annotation></semantics></math>,
+which turns the quadratic bound
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>⋅</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">C\,\lVert h\rVert \cdot \lVert h\rVert</annotation></semantics></math>
+into the required
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo>⋅</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\varepsilon \cdot \lVert h\rVert</annotation></semantics></math>.
+The file proves exactly this padding estimate:</p>
+<pre class="coq"><code>  Lemma bilinear_remainder_bound : forall C : F, 0 &lt;= C -&gt;
+    (forall (u : U) (v : V), ‖ B u v ‖ &lt;= C * ‖ u ‖ * ‖ v ‖) -&gt;
+    forall eps : F, 0 &lt; eps -&gt;
+    forall (du : U) (dv : V),
+      ‖ du ‖ + ‖ dv ‖ &lt; eps * inv (1 + C) -&gt;
+      ‖ B du dv ‖ &lt;= eps * (‖ du ‖ + ‖ dv ‖).</code></pre>
+<p>The proof is a chain of monotonicity steps: bound
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert B\,du\,dv\rVert</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">C\,\lVert du\rVert\,\lVert dv\rVert</annotation></semantics></math>
+(the boundedness hypothesis), raise each factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>,</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert du\rVert, \lVert dv\rVert</annotation></semantics></math>
+to the sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert
+du\rVert + \lVert dv\rVert</annotation></semantics></math>, and finally
+use
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>&lt;</mo><mi>ε</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>C</mi><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\lVert h\rVert &lt;
+\varepsilon\,(1+C)^{-1}</annotation></semantics></math> to collapse one
+surviving factor of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>h</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">C\,\lVert
+h\rVert</annotation></semantics></math> to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>.
+This is the one place where bilinearity demands genuine analysis rather
+than algebra — precisely because the remainder is the <em>product</em>
+of two small quantities, not the <em>sum</em> of two small
+quantities.</p>
+<h3 id="the-theorem">The theorem</h3>
+<p>Both halves assemble into the theorem. Differentiability in this
+development is a pair: the derivative is a bounded linear map, and the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>/<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
+remainder estimate holds. The proof supplies one half from <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_deriv_bounded"><code>bilinear_deriv_bounded</code></a>
+and the other from the two lemmas above:</p>
+<pre class="coq"><code>  Theorem bilinear_is_deriv : bm_bounded B -&gt;
+    is_deriv (fun p : U * V =&gt; B (fst p) (snd p)) (u0, v0) bilinear_deriv_lm.
+  Proof.
+    intros Hbb.
+    split.
+    - exact (bilinear_deriv_bounded Hbb).
+    - destruct Hbb as [C [HC HCb]].
+      intros eps Heps.
+      exists (eps * inv (1 + C)).
+      split.
+      + apply mul_pos.
+        * exact Heps.
+        * apply pos_inv. apply one_plus_nonneg_pos. exact HC.
+      + intros [du dv] Hh.
+        simpl.
+        unfold lm_fun, bilinear_deriv_lm, bilinear_deriv_fun; simpl.
+        calc (‖ B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)) ‖)
+          == (‖ B du dv ‖)
+          == (eps * ‖ (du, dv) ‖).
+        * apply eq_le. apply norm_proper. exact (bilinear_remainder_eq du dv).
+        * unfold vnorm, Prod_HasNorm, prod_norm; simpl.
+          exact (bilinear_remainder_bound C HC HCb eps Heps du dv Hh).
+  Qed.</code></pre>
+<p>Reading it: <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+breaks differentiability into its two obligations. The first,
+<code>bilinear_deriv_bounded Hbb</code>, discharges “the derivative is a
+bounded linear map.” For the second, unpacking the boundedness witness
+gives the constant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>;
+then for a given <code>eps</code> the proof <em>offers the radius</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>ε</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>C</mi><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\delta = \varepsilon\,(1+C)^{-1}</annotation></semantics></math>
+with <code>exists (eps * inv (1 + C))</code>, shows it is positive (<a
+href="coqdoc/Riktig.Theory.Order.html#mul_pos"><code>mul_pos</code></a>
+— a positive scalar times a positive inverse), and takes an arbitrary
+displacement <code>(du, dv)</code> inside that radius. The closing
+<code>calc</code> chain is the two-step estimate laid out above: the
+norm of the leftover <em>equals</em> the norm of the cross term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B\,du\,dv</annotation></semantics></math>
+(that is <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_eq"><code>bilinear_remainder_eq</code></a>,
+applied under <a
+href="coqdoc/Riktig.Interface.Norm.html#norm_proper"><code>norm_proper</code></a>
+since equal vectors have equal norms), and that cross term is bounded by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\varepsilon\,\lVert (du,dv)\rVert</annotation></semantics></math>
+(that is <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_bound"><code>bilinear_remainder_bound</code></a>).
+The unfolding of <a
+href="coqdoc/Riktig.Theory.ProdVS.html#prod_norm"><code>prod_norm</code></a>
+is where the sum norm
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert (du,dv)\rVert = \lVert du\rVert + \lVert dv\rVert</annotation></semantics></math>
+meets the shape the bound was proved in.</p>
+<p>So bilinearity is not merely <em>compatible</em> with
+differentiability — it forces it. Once a map is shown linear in each
+slot and bounded, its derivative is written down explicitly (vary one
+slot at a time, add), and the error is a single cross term whose norm is
+a product of two small things, hence quadratically small. No limits are
+computed by hand; the one genuine analysis step is the padding estimate,
+and it is the same estimate for every bilinear map at once.</p>
+<p><em>Next: matrix multiplication is a bilinear map, so this theorem
+gives its derivative — and the associativity behind backpropagation —
+for free.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+record and its four laws) · <a
+href="coqdoc/Riktig.Theory.Bilinear.html"><code>Theory/Bilinear.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Bilinear.html#bm_appl"><code>bm_appl</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Bilinear.html#bm_zero_r"><code>bm_zero_r</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html"><code>Theory/BilinearDeriv.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_deriv_fun"><code>bilinear_deriv_fun</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_eq"><code>bilinear_remainder_eq</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_bound"><code>bilinear_remainder_bound</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_is_deriv"><code>bilinear_is_deriv</code></a>).</p>
+</main>
+</body>
+</html>

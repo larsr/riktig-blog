@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>When the obvious compiler is wrong: SKI, revisited</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="when-the-obvious-compiler-is-wrong-ski-revisited">When the
+obvious compiler is wrong: SKI, revisited</h1>
+<p>Here is a question that sounds like it should have an obvious answer.
+Take a program written the ordinary way, out of function definitions
+that take a parameter and a body mentioning it, and mechanically rewrite
+it into an equivalent program built from nothing but three fixed, closed
+building blocks, combined only by writing them next to each other — no
+parameters anywhere, nothing ever filled in by matching a name.
+Classically the three building blocks are called
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>,
+and their behavior is pinned down once and for all by three rewrite
+rules:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>→</mo><mi>x</mi><mspace width="2.0em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mo>→</mo><mi>x</mi><mspace width="2.0em"></mspace><mi>S</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>→</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">I\,x \to x \qquad K\,x\,y \to x \qquad S\,f\,g\,x \to f\,x\,(g\,x)</annotation></semantics></math></p>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>
+just returns its argument;
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>
+returns its first argument and throws the second away;
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>
+hands a shared argument
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+to both
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+and combines the two results. There is a standard, purely mechanical
+procedure for turning any function definition into an expression built
+only from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>:
+eliminate one parameter at a time, working from the innermost definition
+outward, by a case analysis on the shape of the body — a bare occurrence
+of the parameter becomes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>,
+anything not mentioning it gets wrapped in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>
+so a future argument is discarded, and an application gets split with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>
+so a future argument reaches both halves. It looks exactly the way a
+compiler ought to look: syntax-directed, no guesswork, nothing that
+could plausibly go wrong.</p>
+<p>Here is the question that procedure raises, and it is not as
+obviously “yes” as it looks. Run the original program one step —
+substitute an argument into a function body, the ordinary way.
+Separately, run the rewritten combinator version by its own three fixed
+rules, as far as it goes. Do the two sides still describe the same
+computation, step for step? Does simplifying the combinator version
+always land on (or simplify further into) the combinator translation of
+wherever the original program’s one step landed — or could the
+translation merely happen to <em>end up</em> looking equivalent once
+everything is fully run, while disagreeing about the intermediate stops,
+or even disagreeing permanently?</p>
+<p>There is a genuine reason to worry, and it has nothing to do with any
+particular program — it is a fact about the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>/<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>/<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>
+rewriting system by itself. Two already-fully-simplified
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>/<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>/<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>
+expressions can compute exactly the same function on every future
+argument and still be different, unrelated pieces of syntax, with no
+rewrite connecting one to the other. <code>S (K f) (K g)</code> and
+<code>K (f g)</code> are the standard instance: give either one more
+argument
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>,
+and both simplify to <code>f g</code> — but with no argument yet
+supplied, neither simplifies into the other. <code>S (K f) (K g)</code>
+needs three arguments before its rule can fire and only has two;
+<code>K (f g)</code> needs two and only has one; both are already stuck.
+A rewriting system built purely from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>
+has no rule for identifying two expressions just because they will
+always behave alike on some future input — it only ever simplifies a
+term when an argument is actually supplied and drives a step forward. If
+the translation procedure above ever produces one of these two shapes at
+one point in a computation and the other shape at a different point, the
+mechanical rewriting rules will not recognize them as the same, and a
+step-for-step correspondence can fail without either side doing anything
+unreasonable.</p>
+<p>Here is a concrete case built to test exactly that. Take the function
+of two arguments that applies the first to the second,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.278em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\lambda x.\lambda y.\; x\,y)</annotation></semantics></math>,
+and apply it to a small function of its own,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>z</mi><mi>.</mi><mspace width="0.278em"></mspace><mi>z</mi><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\lambda z.\; z\,w)</annotation></semantics></math>,
+for some other fixed value
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>.
+Running this one step substitutes the small function in for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>:
+the result is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>z</mi><mi>.</mi><mspace width="0.278em"></mspace><mi>z</mi><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>y</mi></mrow><annotation encoding="application/x-tex">\lambda y.\; (\lambda z.\; z\,w)\,y</annotation></semantics></math>
+— the same computation with one level of application unfolded,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+renamed to keep pointing at the same thing because it now sits one
+binder deeper than it used to, which is the ordinary bookkeeping every
+substitution performs when it crosses a fresh binder. Translate both the
+two-step program and its one-step-reduced version separately by the
+mechanical elimination procedure above, and simplify each as far as it
+goes. Do the two results land on the same combinator expression — or on
+a pair connected by further simplification — or do they diverge the way
+<code>S(Kf)(Kg)</code> and <code>K(fg)</code> can diverge? That is a
+checkable question, not a matter of opinion, and it is exactly what the
+rest of this post checks.</p>
+<h2 id="formalizing-the-rewrite">Formalizing the rewrite</h2>
+<p><a
+href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
+represents a function-definition-style program (a lambda term) with
+three constructors — a variable, an abstraction that binds one, or an
+application — using de Bruijn indices, where a variable is a number
+counting the binders crossed on the way out to whichever one bound it.
+The combinator side gets its own type, <a
+href="coqdoc/Riktig.Lambda.SKI.html#comb"><code>comb</code></a>, in <a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>: the
+three combinators, named <a
+href="coqdoc/Riktig.Lambda.SKI.html#CS"><code>CS</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CK"><code>CK</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CI"><code>CI</code></a> (bare
+<code>S</code>/<code>I</code> would collide with other library names in
+scope), an inert placeholder <code>CVar n</code> standing in for an
+opaque, untouched argument, and application written <code>f @@ x</code>.
+The three rewrite rules from the opening section become three
+constructors of a one-step relation on <a
+href="coqdoc/Riktig.Lambda.SKI.html#comb"><code>comb</code></a>, plus
+two rules letting a step happen inside either side of an application;
+its reflexive-transitive closure is written <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar"><code>cstar</code></a>.</p>
+<p>The mechanical elimination procedure — case-split on the shape of the
+body, <code>I</code> for the bare parameter, <code>K</code> for anything
+that doesn’t mention it, <code>S</code> to split every application — is
+the function <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a>
+(“bracket abstraction”), read straight from <a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>:</p>
+<pre class="coq"><code>Fixpoint babs (t : comb) : comb :=
+  match t with
+  | CVar O =&gt; CI
+  | CVar (S n) =&gt; CK @@ CVar n
+  | CApp f a =&gt; CS @@ babs f @@ babs a
+  | c =&gt; CK @@ c
+  end.</code></pre>
+<p><a
+href="coqdoc/Riktig.Lambda.SKI.html#translate"><code>translate</code></a>
+compiles a whole lambda term by calling <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> once per
+abstraction:</p>
+<pre class="coq"><code>Fixpoint translate (t : tm) : comb :=
+  match t with
+  | Var n =&gt; CVar n
+  | Abs b =&gt; babs (translate b)
+  | App f a =&gt; translate f @@ translate a
+  end.</code></pre>
+<p>A one-redex correctness fact already holds for this pair: applying a
+bracket-abstracted term to one argument reduces to substituting that
+argument in. What that single-redex fact does not say — and what the
+opening question is really asking — is whether the whole,
+recursively-applied translation keeps tracking substitution once a
+substitution happens <em>underneath a second abstraction</em>, which is
+exactly the shape of the concrete case above (the parameter
+<code>x</code> sits inside the body of the inner <code>λy</code>). The
+Coq development states the opening section’s worry precisely, as a
+proved theorem named <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate_not_step_simulation"><code>translate_not_step_simulation</code></a>:
+translating the two-step program and translating its one-step reduct,
+then normalizing both, gives two different <a
+href="coqdoc/Riktig.Lambda.SKI.html#comb"><code>comb</code></a> values.
+The next section proves it.</p>
+<p>The remedy is a one-line change to the case analysis: before deciding
+to split an application with <code>S</code>, check whether the parameter
+being eliminated actually occurs anywhere inside it, using a boolean
+occurrence test:</p>
+<pre class="coq"><code>Fixpoint occurs0 (t : comb) : bool :=
+  match t with
+  | CVar O =&gt; true
+  | CApp f a =&gt; occurs0 f || occurs0 a
+  | _ =&gt; false
+  end.</code></pre>
+<p>Only fall back to a structural <code>S</code>-split when the
+parameter genuinely occurs; otherwise collapse the whole subterm behind
+a single <code>K</code>, with every remaining index shifted down by one
+(<a href="coqdoc/Riktig.Lambda.SKI.html#cdown1"><code>cdown1</code></a>)
+rather than splitting it apart and re-wrapping each half in its own
+<code>K</code>:</p>
+<pre class="coq"><code>Fixpoint babs2 (t : comb) : comb :=
+  match t with
+  | CVar O =&gt; CI
+  | CApp f a =&gt;
+      if occurs0 (CApp f a) then CS @@ babs2 f @@ babs2 a
+      else CK @@ cdown1 (CApp f a)
+  | c =&gt; CK @@ cdown1 c
+  end.</code></pre>
+<pre class="coq"><code>Fixpoint translate2 (t : tm) : comb :=
+  match t with
+  | Var n =&gt; CVar n
+  | Abs b =&gt; babs2 (translate2 b)
+  | App f a =&gt; translate2 f @@ translate2 a
+  end.</code></pre>
+<p>This directly addresses the failure mode from the opening section:
+the naive procedure always splits an application with <code>S</code>,
+regardless of whether the parameter occurs in it, so it can produce an
+<code>S (K f) (K g)</code>-shaped tree in a place where a fresh
+translation of a substituted term would instead produce a
+<code>K (f g)</code>-shaped tree — two shapes the rewriting rules alone
+can never identify. Checking occurrence first means the choice of
+<code>S</code> versus <code>K</code> depends only on where the parameter
+actually appears, which is exactly the information substitution changes,
+so translating-then-substituting and substituting-then-translating end
+up making the same choice at every step. The Coq development proves this
+directly, as <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>:
+every one-step reduction of the original program is matched by zero or
+more rewriting steps of its <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2"><code>translate2</code></a>
+translation. The rest of this post proves both theorems.</p>
+<h2 id="proving-the-naive-rewrite-really-does-disagree">Proving the
+naive rewrite really does disagree</h2>
+<p>State the concrete case from the opening section in the de Bruijn
+notation <a
+href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
+uses:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>y</mi><annotation encoding="application/x-tex">y</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>z</mi><annotation encoding="application/x-tex">z</annotation></semantics></math>
+become indices <code>1</code>, <code>0</code>, <code>0</code> at their
+respective depths, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>z</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>z</mi><mspace width="0.167em"></mspace><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\lambda x.\lambda y.\,
+x\,y)\,(\lambda z.\, z\,w)</annotation></semantics></math> is
+<code>App (Abs (Abs (App (Var 1) (Var 0)))) (Abs (App (Var 0) (Var 1)))</code>,
+and its one-step reduct is
+<code>subst 0 (Abs (App (Var 0) (Var 1))) (Abs (App (Var 1) (Var 0)))</code>
+— substituting the argument for <code>x</code> in the body of the outer
+abstraction, using the same <a
+href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>
+function the source language’s own step relation uses. The theorem:
+translating and normalizing both sides gives different <a
+href="coqdoc/Riktig.Lambda.SKI.html#comb"><code>comb</code></a>
+values.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">f</mi></mrow><mn>200</mn></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.278em"></mspace><mi>t</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≠</mo><mspace width="0.278em"></mspace><msub><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">f</mi></mrow><mn>200</mn></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.278em"></mspace><msup><mi>t</mi><mo>′</mo></msup><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mi>t</mi><mo>→</mo><msup><mi>t</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">\mathrm{nf}_{200}\big(\mathrm{translate}\;t\big) \;\neq\; \mathrm{nf}_{200}\big(\mathrm{translate}\;t&#39;\big), \qquad t \longrightarrow t&#39;</annotation></semantics></math></p>
+<p>Verbatim from <a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>:</p>
+<pre class="coq"><code>Example translate_not_step_simulation :
+  nf 200 (translate (App (Abs (Abs (App (Var 1) (Var 0))))
+                          (Abs (App (Var 0) (Var 1)))))
+  &lt;&gt; nf 200 (translate
+       (subst 0 (Abs (App (Var 0) (Var 1))) (Abs (App (Var 1) (Var 0))))).
+Proof. discriminate. Qed.</code></pre>
+<p>Walking it: <code>nf 200</code> runs the fuelled combinator
+normalizer for up to two hundred rewrite steps on each side, far more
+than either side needs to reach a point where no rewrite rule applies
+any longer, so both arguments to <code>&lt;&gt;</code> are concrete,
+fully-simplified <a
+href="coqdoc/Riktig.Lambda.SKI.html#comb"><code>comb</code></a> values
+by the time <code>discriminate</code> runs. <code>discriminate</code>
+then closes the goal by Coq’s structural equality check on those two
+values, which finds a mismatch immediately — no search needed, because
+the values are already computed.</p>
+<p>Printing what the normalizer actually lands on (checked directly
+against these definitions, with
+<code>Compute (nf 200 (translate t)).</code> and the matching line for
+the reduct) makes the mismatch visible rather than merely asserted:</p>
+<pre><code>nf 200 (translate t)  = CS @@ (CK @@ (CS @@ CI @@ (CK @@ CVar 0))) @@ CI
+
+nf 200 (translate t&#39;) = CS @@ (CS @@ (CS @@ (CK @@ CS) @@ (CK @@ CI))
+                                    @@ (CS @@ (CK @@ CK) @@ (CK @@ CVar 0))) @@ CI</code></pre>
+<p>The left tree comes from plugging the compiled argument straight into
+the one <code>CVar 0</code> slot the already-compiled body left open for
+it. The right tree comes from taking the fully substituted program at
+face value and bracket-abstracting it again from nothing, where the slot
+that used to hold a bare variable now holds a whole application and gets
+split with <code>S</code>. Both trees, given enough further opaque
+arguments, behave the same way — that is what it means for the two
+lambda terms to be one reduction step apart — but with no argument yet
+applied, they are different, and <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate"><code>translate</code></a>
+produces one or the other depending on whether the substitution happened
+before or after translation. Substitution and translation do not commute
+for <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a>/<a
+href="coqdoc/Riktig.Lambda.SKI.html#translate"><code>translate</code></a>,
+and a step-for-step simulation theorem for them, as stated, is
+false.</p>
+<h2 id="proving-the-fix-simulates-every-step">Proving the fix simulates
+every step</h2>
+<p><a href="coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a>
+satisfies the same one-redex law <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> did:
+applying a bracket-abstracted term to one argument rewrites, in zero or
+more steps, to the result of substituting that argument in —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">s</mi><mn mathvariant="normal">2</mn></mrow><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mi>u</mi><mspace width="0.278em"></mspace><msup><mo>→</mo><mo>*</mo></msup><mspace width="0.278em"></mspace><mi>t</mi><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>:=</mo><mi>u</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">\mathrm{babs2}(t)\;u \;\longrightarrow^{*}\; t[0 := u]</annotation></semantics></math></p>
+<p>— proved the same way as before, with one extra case for the branch
+where the parameter does not occur:</p>
+<pre class="coq"><code>Lemma babs2_correct : forall t u, cstar (babs2 t @@ u) (csub u t).
+Proof.
+  induction t as [ | | | n | f IHf a IHa]; intros u; simpl.
+  - eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - destruct n as [| n]; simpl.
+    + eapply cstar_step. { apply cstep_I. } apply cstar_refl.
+    + eapply cstar_step. { apply cstep_K. } apply cstar_refl.
+  - destruct (occurs0 f || occurs0 a) eqn:Hocc.
+    + eapply cstar_step. { apply cstep_S. }
+      eapply cstar_trans. { apply cstar_app1. apply IHf. }
+      apply cstar_app2. apply IHa.
+    + eapply cstar_step. { apply cstep_K. }
+      apply orb_false_iff in Hocc. destruct Hocc as [H1 H2].
+      rewrite (csub_no_occurs0 f u H1), (csub_no_occurs0 a u H2).
+      apply cstar_refl.
+Qed.</code></pre>
+<p>The first four branches match <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs_correct"><code>babs_correct</code></a>
+exactly (<code>CVar 0</code> steps by <code>I</code>, everything else
+atomic steps by <code>K</code>). The fifth branch splits on whether the
+parameter occurs in the application: if it does, one <code>S</code>-step
+followed by the two induction hypotheses closes it, the same as before;
+if it does not, a single <code>K</code>-step lands directly on
+<code>csub u f @@ csub u a</code>, and the helper lemma <a
+href="coqdoc/Riktig.Lambda.SKI.html#csub_no_occurs0"><code>csub_no_occurs0</code></a>
+— substituting into a term that never mentions the parameter is the same
+as just shifting its other indices down — shows that is exactly
+<code>cdown1 f @@ cdown1 a</code>, the same destination reached by a
+shorter route.</p>
+<p>A one-redex law is not enough by itself, though — proving that a step
+deep inside a term is simulated needs substitution to agree with
+translation at <em>every</em> abstraction depth, not only the outermost
+one. <code>csubst2 k w t</code> is the combinator-level mirror of
+substitution at depth <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. The
+theorem: translating a substituted lambda term gives <em>the same</em>
+combinator term, not merely one that further simplifies to match, as
+translating the pieces separately and then performing the matching
+combinator-level substitution.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.278em"></mspace><mi>k</mi><mspace width="0.278em"></mspace><mi>u</mi><mspace width="0.278em"></mspace><mi>t</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><mi>k</mi><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><mi>u</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><mi>t</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{translate2}\big(\mathrm{subst}\;k\;u\;t\big) \;=\; \mathrm{csubst2}\;k\;\big(\mathrm{translate2}\;u\big)\;\big(\mathrm{translate2}\;t\big)</annotation></semantics></math></p>
+<p>Verbatim from <a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>:</p>
+<pre class="coq"><code>Theorem translate2_subst_gen : forall t k u,
+  translate2 (subst k u t) = csubst2 k (translate2 u) (translate2 t).
+Proof.
+  induction t as [n | b IH | f IHf a IHa]; intros k u; simpl.
+  - destruct (Nat.ltb n k) eqn:E1.
+    + reflexivity.
+    + destruct (Nat.eqb n k) eqn:E2.
+      * apply Nat.eqb_eq in E2. subst n. apply translate2_lift.
+      * reflexivity.
+  - rewrite IH. apply babs2_csubst_comm.
+  - rewrite IHf, IHa. reflexivity.
+Qed.</code></pre>
+<p>Walking it, one case per shape of <code>t</code>:</p>
+<ul>
+<li><strong><code>t = Var n</code>.</strong> <a
+href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a> and
+<a href="coqdoc/Riktig.Lambda.SKI.html#csubst2"><code>csubst2</code></a>
+make the identical three-way split on how <code>n</code> compares to <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> — untouched
+below <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>,
+replaced at <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, shifted
+down above <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> — so the
+first and third branches close by <code>reflexivity</code> outright. The
+middle branch, where <code>n</code> equals <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, needs <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_lift"><code>translate2_lift</code></a>,
+a companion lemma stating that translation commutes with re-indexing the
+same way it needs to commute with substitution.</li>
+<li><strong><code>t = Abs b</code>.</strong> The induction hypothesis
+<code>IH</code> handles the body, and <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs2_csubst_comm"><code>babs2_csubst_comm</code></a>
+shows that pushing a substitution through one more <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a> at a
+deeper index matches bracket-abstracting a term that was already
+substituted into. This is exactly the step that fails for <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a>: it
+holds for <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a>
+because its choice between <code>S</code> and <code>K</code> depends on
+<a
+href="coqdoc/Riktig.Lambda.SKI.html#occurs0"><code>occurs0</code></a>,
+which shifts and substitutes predictably, in a way the unconditional
+structural recursion of <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> does
+not.</li>
+<li><strong><code>t = App f a</code>.</strong> Both sides are congruent
+in the two subterms; <code>rewrite IHf, IHa</code> finishes it.</li>
+</ul>
+<p>The shape actually needed downstream — substitution at depth
+<code>0</code>, the shape a single reduction step produces, i.e. the
+displayed equation at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">k = 0</annotation></semantics></math>
+— follows as a corollary:</p>
+<pre class="coq"><code>Corollary translate2_subst0 : forall t u,
+  translate2 (subst 0 u t) = csub (translate2 u) (translate2 t).
+Proof.
+  intros t u. rewrite (translate2_subst_gen t 0 u). apply csubst2_0.
+Qed.</code></pre>
+<p>With that in hand, the simulation theorem for a single step is three
+lines:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>→</mo><msup><mi>t</mi><mo>′</mo></msup><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><mi>t</mi><mspace width="0.278em"></mspace><msup><mo>→</mo><mo>*</mo></msup><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><msup><mi>t</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">t \longrightarrow t&#39; \quad\Longrightarrow\quad \mathrm{translate2}\;t \;\longrightarrow^{*}\; \mathrm{translate2}\;t&#39;</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem translate2_step_star : forall t t&#39;,
+  step t t&#39; -&gt; cstar (translate2 t) (translate2 t&#39;).
+Proof.
+  intros t t&#39; H. induction H as [b v Hv | f f&#39; a Hs IH | v a a&#39; Hv Hs IH].
+  - simpl. eapply cstar_trans. { apply babs2_correct. }
+    rewrite (translate2_subst0 b v). apply cstar_refl.
+  - simpl. apply cstar_app1. exact IH.
+  - simpl. apply cstar_app2. exact IH.
+Qed.</code></pre>
+<p>Walking it, one case per constructor of the step relation:</p>
+<ul>
+<li><strong>A beta step.</strong> The redex <code>App (Abs b) v</code>
+translates to <code>babs2 (translate2 b) @@ translate2 v</code>, which
+<a
+href="coqdoc/Riktig.Lambda.SKI.html#babs2_correct"><code>babs2_correct</code></a>
+reduces to <code>csub (translate2 v) (translate2 b)</code>; rewriting
+with <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_subst0"><code>translate2_subst0</code></a>
+turns that into <code>translate2 (subst 0 v b)</code>, which is exactly
+the translation of the reduct, so <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_refl"><code>cstar_refl</code></a>
+closes the goal — the two sides meet exactly, with no further rewriting
+needed to reconcile them.</li>
+<li><strong>A step inside the function, or inside the argument, of an
+application.</strong> Pure congruence: the induction hypothesis is
+wrapped in <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_app1"><code>cstar_app1</code></a>
+or <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_app2"><code>cstar_app2</code></a>,
+matching the corresponding congruence rule of the source language’s own
+step relation.</li>
+</ul>
+<p>Extending from one step to a whole sequence of steps,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><msup><mo>→</mo><mo>*</mo></msup><msup><mi>t</mi><mo>′</mo></msup><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><mi>t</mi><mspace width="0.278em"></mspace><msup><mo>→</mo><mo>*</mo></msup><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><msup><mi>t</mi><mo>′</mo></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">t \longrightarrow^{*} t&#39; \quad\Longrightarrow\quad
+\mathrm{translate2}\;t \;\longrightarrow^{*}\; \mathrm{translate2}\;t&#39;,</annotation></semantics></math></p>
+<p>is ordinary induction, chaining <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_trans"><code>cstar_trans</code></a>
+along the way:</p>
+<pre class="coq"><code>Theorem translate2_star_sim : forall t t&#39;,
+  star t t&#39; -&gt; cstar (translate2 t) (translate2 t&#39;).
+Proof.
+  intros t t&#39; H. induction H as [t0 | t0 u v Hstep _ IH].
+  - apply cstar_refl.
+  - eapply cstar_trans. { apply translate2_step_star. exact Hstep. } exact IH.
+Qed.</code></pre>
+<p>An empty sequence of steps needs nothing (<a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_refl"><code>cstar_refl</code></a>);
+a sequence that starts with one step followed by more steps applies <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>
+to the first step and chains the rest on by transitivity.</p>
+<h2 id="running-it-on-the-case-that-broke-the-naive-translation">Running
+it on the case that broke the naive translation</h2>
+<p>The concrete case from the opening section, run back through <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2"><code>translate2</code></a>
+instead of <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate"><code>translate</code></a>,
+is now a positive instance of the theorem rather than a counterexample
+to it:</p>
+<pre class="coq"><code>Example translate2_simulates_the_counterexample :
+  cstar (translate2 (App (Abs (Abs (App (Var 1) (Var 0))))
+                          (Abs (App (Var 0) (Var 1)))))
+        (translate2
+           (subst 0 (Abs (App (Var 0) (Var 1))) (Abs (App (Var 1) (Var 0))))).
+Proof.
+  apply translate2_step_star. apply step_beta. constructor.
+Qed.</code></pre>
+<p>The proof is <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>
+applied to the same <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>
+fact that produced the disagreement earlier. Checked directly,
+<code>Compute (nf 200 (translate2 t)).</code> and the matching line for
+the reduct both come out as
+<code>CS @@ (CK @@ (CS @@ CI @@ (CK @@ CVar 0))) @@ CI</code> — the
+shorter of the two trees from the earlier section. The
+occurrence-checking translation of the reduct lands exactly where the
+occurrence-checking translation of the original redex already was;
+substituting first and translating second, or translating first and
+substituting second, now reach the same place.</p>
+<h2 id="what-is-proved-and-what-is-not">What is proved, and what is
+not</h2>
+<p><a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>
+and <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_star_sim"><code>translate2_star_sim</code></a>
+are a forward simulation: every reduction step of the source language,
+taken one at a time, has a matching sequence of zero or more combinator
+rewrites underneath the translation. That is soundness of the
+compilation — a step in the original program is never lost or
+misrepresented once compiled to combinators. It is not a correspondence
+in the other direction. Nothing proved here shows that every combinator
+rewrite available on <code>translate2 t</code> corresponds to some step
+of <code>t</code> in the source language (the combinator rewriting rules
+can take shortcuts a source-language step never would), and nothing
+shows that reaching a combinator normal form implies the original term
+reaches one, or the other way around. That converse direction —
+completeness of the compilation, rather than soundness — is a different
+theorem and was not attempted here.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a> (<a
+href="coqdoc/Riktig.Lambda.SKI.html#translate_not_step_simulation"><code>translate_not_step_simulation</code></a>,
+<a href="coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2"><code>translate2</code></a>,
+<a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_subst_gen"><code>translate2_subst_gen</code></a>,
+<a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>,
+<a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_star_sim"><code>translate2_star_sim</code></a>)
+· <a
+href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
+(the lambda terms and <a
+href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>/<a
+href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>
+translated from).</p>
+</main>
+</body>
+</html>

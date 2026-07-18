@@ -44,7 +44,22 @@ href="../coqdoc/Riktig.Theory.Group.html#neg_involutive"><code>neg_involutive</c
 the group-hom lemmas (<a
 href="../coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>/<a
 href="../coqdoc/Riktig.Theory.Group.html#hom_neg"><code>hom_neg</code></a>)
-with a concrete instance shown running.</li>
+with a concrete instance shown running. 2a. <strong>What a calculational
+proof compiles to</strong> [has code: Lib/Calc.v, Lambda/CalcExamples.v]
+— the <code>calc x == y { law } == z { law }</code> chains used
+throughout the series are a tactic, not a language feature: the written
+chain’s endpoints are unified against the goal, each step becomes a
+<code>transitivity</code> over the registered equivalence relation, and
+each justification is closed by trying rewrite forward, rewrite
+backward, apply, symmetric apply. The post must also explain the three
+ideas that make this work and that the whole series leans on: setoid
+equality (why <code>==</code> is a chosen equivalence relation per type,
+not Coq’s built-in <code>=</code> — <code>Q</code>’s
+<code>1/2 == 2/4</code> as the motivating case), typeclass resolution
+(how Coq finds the <code>Transitive</code> instance for the relation in
+the goal), and implicit arguments (why <code>calc</code> steps can omit
+the carrier and relation entirely). Filename <code>s02a-...</code> so it
+sorts between posts 2 and 3.</li>
 <li><strong>Commutative structure: abelian groups and rings</strong>
 [new] — <a
 href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup"><code>AbGroup</code></a>’s
@@ -188,6 +203,278 @@ proved and walked, no liveness mixed in.</li>
 its other half] — the fairness hypothesis stated precisely, the liveness
 theorem that needs it, why it’s honest to require it.</li>
 </ol>
+<h2 id="part-6--decidable-propositions-and-everyday-algorithms">Part 6 —
+Decidable propositions and everyday algorithms</h2>
+<ol start="27" type="1">
+<li><strong>Decidable propositions: if commands with proofs
+attached</strong> [has code: Interface/Decidable.v, Theory/Decidable.v,
+Impl/Decidable.v] — the <a
+href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>/<a
+href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
+href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
+vocabulary, <code>if dec P then .. else ..</code> behaving like an
+ordinary <code>if</code> while handing the branch fact to the proof,
+closure under the logic connectives.</li>
+<li><strong>A decidable total order, and four comparisons for the price
+of one</strong> [has code: Interface/DecTotalOrder.v,
+Theory/DecTotalOrder.v, Impl/Orders.v] —
+<code>&lt;</code>/<code>&lt;=</code>/<code>&gt;</code>/<code>&gt;=</code>
+all derived from one decision procedure, the order laws that follow for
+free, concrete instances (nat, Z, strings, …).</li>
+<li><strong>Euclid’s algorithm and binary search, proved
+directly</strong> [has code: Programs/Gcd.v, Theory/Gcd.v,
+Programs/BinarySearch.v, Theory/BinarySearch.v] — programs written as
+plain recursive lambda terms with <code>Fix</code>-based termination,
+correctness by straightforward induction, no separate “algorithm”
+vs. “proof.”</li>
+<li><strong>Merge and merge sort</strong> [has code: Programs/Merge.v,
+Theory/Merge.v, Programs/MergeSort.v, Theory/MergeSort.v] — merge as one
+lambda term over a <a
+href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder"><code>DecTotalOrder</code></a>,
+the permutation and sortedness theorems that make “sorted” mean
+something.</li>
+<li><strong>Quicksort, proved</strong> [has code: Programs/Quicksort.v,
+Theory/Quicksort.v] — the Lomuto partition invariant, <a
+href="../coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Quicksort.html#qsort_frame"><code>qsort_frame</code></a>,
+why the proof stays short.</li>
+</ol>
+<h2 id="part-7--monads-parsers-and-channels-between-programs">Part 7 —
+Monads, parsers, and channels between programs</h2>
+<ol start="32" type="1">
+<li><strong>What a monad is, and why a parser needs one</strong> [has
+code: Interface/Monad.v, Interface/Alternative.v, Theory/Monad.v,
+Impl/OptionMonad.v] — the bind/return laws motivated by sequencing
+computations that can fail, <a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative"><code>Alternative</code></a>’s
+<a
+href="../coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>/<a
+href="../coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>,
+and the refuted law
+<code>bind (alt p q) f == alt (bind p f) (bind q f)</code> as a genuine
+cautionary tale (a plausible law that is simply false).</li>
+<li><strong>A parser combinator library, formally</strong> [has code:
+Impl/Parser.v] — <code>Parser S T := S -&gt; option (T * S)</code>, the
+sequencing/<a
+href="../coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#sepBy1"><code>sepBy1</code></a>
+combinators, termination proved via a shrinking-input measure rather
+than assumed.</li>
+<li><strong>Inserting a channel between two composed programs</strong>
+[has code: Theory/KleisliIso.v] — Kleisli composition as “the
+<code>&gt;=&gt;</code> version of <code>∘</code>,” the channel-insertion
+theorem, and a concrete worked example (the Cantor-pairing codec) run
+through it.</li>
+<li><strong>A parser that parses its own grammar</strong> [has code:
+Programs/ABNF/*] — RFC 5234’s ABNF grammar, parsed by a parser built
+from that same grammar, checked letter-for-letter against itself —
+self-hosting as a real, checkable property.</li>
+</ol>
+<h2 id="part-8--linear-algebra-the-rest-of-it">Part 8 — Linear algebra,
+the rest of it</h2>
+<ol start="36" type="1">
+<li><strong>A basis you can compute with</strong> [extends s05:
+Interface/Basis.v, Theory/Basis.v, Impl/FinVec.v, Impl/FinVecBasis.v] —
+the standard basis vector <a
+href="../coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>
+(<code>if dec (i = j) then 1 else 0</code>), the delta-collapse theorem
+<a
+href="../coqdoc/Riktig.Impl.FinVecBasis.html#lincomb_std"><code>lincomb_std</code></a>
+that makes “coordinates” a real round trip.</li>
+<li><strong>Vector spaces you get for free</strong> [has code:
+Theory/Pointwise.v, Theory/ProdVS.v, Theory/UnitVS.v, Theory/HomVS.v,
+Theory/FieldVS.v, Theory/VSIso.v] — products, the unit space, function
+spaces, <a
+href="../coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a>, and
+a field acting on itself, all vector spaces with zero new code; <a
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+as the right notion of “these are the same vector space.”</li>
+<li><strong>Kernels, images, and what a linear map forgets</strong> [has
+code: Theory/KerIm.v] — <a
+href="../coqdoc/Riktig.Theory.KerIm.html#Ker"><code>Ker</code></a>/<a
+href="../coqdoc/Riktig.Theory.KerIm.html#Im"><code>Im</code></a> as
+subspaces, and an honest account of rank-nullity: stated, not yet
+proved, and why that’s said plainly.</li>
+<li><strong>Adjoints and Gram-Schmidt</strong> [has code:
+Theory/Adjoint.v, Theory/GramSchmidt.v] — adjoint uniqueness,
+<code>(f∘g)* = g*∘f*</code>, orthogonalization as repeated
+projection.</li>
+</ol>
+<h2 id="part-9--bilinear-maps-differentiation-and-attention">Part 9 —
+Bilinear maps, differentiation, and attention</h2>
+<ol start="40" type="1">
+<li><strong>Bilinear maps, and why they’re automatically
+differentiable</strong> [has code: Interface/Bilinear.v,
+Theory/Bilinear.v, Theory/BilinearDeriv.v] — linear in each slot
+separately (not linear on the product), the quadratic-remainder argument
+that makes differentiability free once bilinearity is established.</li>
+<li><strong>Matrix multiplication is a bilinear map, and backprop is
+associativity</strong> [has code: Theory/MatMulBilinear.v,
+Theory/MatVec.v, Theory/Backprop.v] — <a
+href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+as a bounded bilinear map, the Jacobian, and the one-sentence idea that
+makes backprop unsurprising.</li>
+<li><strong>Attention, reassociated</strong> [has code:
+Impl/Attention.v, Examples/AttentionLayer.v] — the machine-checked
+cost-model win (2n²d vs. 2nd²), one setoid rewrite of associativity
+making a simple and an efficient implementation provably equal.</li>
+</ol>
+<h2
+id="part-10--specifications-without-instances-and-building-number-systems">Part
+10 — Specifications without instances, and building number systems</h2>
+<ol start="43" type="1">
+<li><strong>What real numbers need, and why we don’t build them</strong>
+[has code: Interface/Reals.v] — completeness stated as a specification
+(an ordered field where every bounded set has a least upper bound), no
+concrete instance, and why leaving it unimplemented is the honest choice
+rather than a gap.</li>
+<li><strong>exp, characterized by its laws</strong> [has code:
+Interface/Exp.v, Theory/Exp.v] — the four laws that pin <code>exp</code>
+down, injectivity and strict positivity as consequences, no formula
+required.</li>
+<li><strong>The integral as a specification</strong> [has code:
+Interface/Integral.v, Theory/Integral.v] — the same specification-first
+move as exp, applied to integration.</li>
+<li><strong>Complex numbers, for any field with a notion of
+“positive”</strong> [has code: Impl/Complex.v] — <code>C F</code> is a
+field whenever <code>F</code> is formally real
+(Interface/FormallyReal.v’s one-line axiom), so <code>C Q</code> exists
+by typeclass resolution alone, no bespoke construction.</li>
+</ol>
+<h2 id="part-11--new-ground-2026-07-18-wave">Part 11 — New ground
+(2026-07-18 wave)</h2>
+<ol start="47" type="1">
+<li><strong>The determinant, characterized abstractly, and multiplied
+for any field</strong> [has code: Interface/Determinant.v,
+Impl/DetInterface.v, Impl/DetMulGeneral.v] — sequel to entry 21. A <a
+href="../coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+class: multilinear, alternating, normalized against a chosen basis, with
+no reference to any concrete computation; <a
+href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
+satisfies it; and <code>det(AB) = det(A)det(B)</code> unconditionally
+for any field, via the “uniqueness of an alternating multilinear form”
+argument rather than the Leibniz-sum route the name “Cauchy-Binet”
+suggests.</li>
+<li><strong>A subspace always has a basis</strong> [has code:
+Theory/SubspaceBasis.v] — sequel to entry 38. Induction on ambient
+dimension: split off a hyperplane, recurse, and either the subspace was
+already inside the hyperplane or a witness vector gets adjoined — the
+two disclosed axioms this needs (classical choice, indefinite
+description) and exactly why an abstract field forces them.</li>
+<li><strong>Safety isn’t enough: prefix delivery needs an
+acknowledgement</strong> [has code: Channel/Ack.v, Channel/GoBackN.v,
+Channel/ABP.v] — sequel to entries 25-26. A concrete counterexample
+where the alternating-bit protocol delivers a genuine subsequence that
+is NOT a prefix, why sliding-window delivery gets prefix for free, and
+the stop-and-wait-with-ack protocol that recovers it for the two-value
+protocol by halting on silence.</li>
+<li><strong>When the obvious compiler is wrong: SKI, revisited</strong>
+[has code: Lambda/SKI.v] — sequel to entry 13. A machine-checked
+counterexample showing the textbook bracket-abstraction translation does
+not simulate lambda-calculus reduction step for step (weak combinatory
+reduction isn’t extensional), and the one-line occurs-check fix that
+restores it, with a real simulation theorem.</li>
+<li><strong>What it means for a parser combinator to be correct, and
+using one to read a real message format</strong> [has code:
+Theory/Parser.v, Programs/ABNF/*.v] — sequel to entries 33 and 35.
+Soundness (“never invents input”) and completeness (“never spuriously
+fails”) stated and proved for the combinator library itself, not just
+checked on worked examples; then a full worked walkthrough of taking a
+small but realistic message format (not the one-rule toy grammar in
+entry 35), writing its ABNF grammar as text, and using <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>
+to get a working parser with no hand-written parsing code.</li>
+<li><strong>exp’s derivative, log, and an honest kink in ReLU</strong>
+[has code: Theory/Log.v, Theory/MLDerivatives.v] — sequel to entry 44.
+Why <code>log</code> and <code>exp</code>’s own derivative both need a
+hypothesis this codebase’s four <a
+href="../coqdoc/Riktig.Interface.Exp.html#Exp"><code>Exp</code></a> laws
+don’t supply (surjectivity, i.e. completeness) and say so explicitly
+instead of hiding it; ReLU’s one-sided derivatives, proved for real away
+from zero, with no claim at the kink where the classical function
+genuinely isn’t differentiable.</li>
+<li><strong>Curry, uncurry, and what “isomorphism” buys you over “round
+trip”</strong> [has code: Theory/BilinearVS.v, Theory/VSIso.v] — sequel
+to entry 5. Bilinear maps form a vector space the same way linear maps
+do; curry and uncurry already round-tripped, but packaging that round
+trip as a formal vector-space isomorphism is a strictly stronger,
+reusable fact — and the same treatment gives every <a
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> a
+categorical <code>≅</code>, for free.</li>
+<li><strong>Teaching <code>ring</code> to a typeclass tower</strong>
+[has code: Theory/Group.v, Theory/Ring.v, Theory/Field.v, Impl/Zr.v,
+Impl/Qf.v] — an <code>autorewrite</code> database that closes routine
+group identities in one line, and why Coq’s
+<code>ring</code>/<code>field</code> tactics cannot be registered on an
+abstract <a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring"><code>Ring</code></a>/<a
+href="../coqdoc/Riktig.Interface.Field.html#Field"><code>Field</code></a>
+class at all (commutativity isn’t assumed in general; a Section-local
+registration doesn’t survive the section closing) — only at a concrete
+carrier like <code>Z</code> or <code>Q</code>.</li>
+</ol>
+<h2
+id="part-12--multivariate-calculus-in-use-and-a-little-mechanics">Part
+12 — Multivariate calculus in use, and a little mechanics</h2>
+<p>41a. <strong>Gradients and partial derivatives you can point
+to</strong> [has code: Theory/Derivative.v (<a
+href="../coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>),
+Theory/Jacobian.v, Theory/MatVec.v] — how to actually work with
+functions of several variables in proofs: a derivative is a linear map,
+a partial derivative is that map applied to one basis vector, the
+Jacobian is its matrix against chosen bases, and the chain rule is
+matrix multiplication. Worked usage: extract a partial derivative from a
+concrete map, and show <a
+href="../coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>
+consuming two derivatives. Filename <code>s41a-...</code> so it sorts
+after entry 41. 55. <strong>Energy is conserved because the Hamiltonian
+equations say so</strong> [has code: Theory/Hamiltonian.v] — for
+one-dimensional motion, define
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mo>,</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msup><mi>p</mi><mn>2</mn></msup><mi>/</mi><mn>2</mn><mi>m</mi><mo>+</mo><mi>V</mi><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">H(q,p) = p^2/2m + V(q)</annotation></semantics></math>,
+take Hamilton’s equations
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi>q</mi><mo accent="true">̇</mo></mover><mo>=</mo><mi>p</mi><mi>/</mi><mi>m</mi></mrow><annotation encoding="application/x-tex">\dot q = p/m</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi>p</mi><mo accent="true">̇</mo></mover><mo>=</mo><mi>−</mi><msup><mi>V</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\dot p = -V&#39;(q)</annotation></semantics></math>
+as hypotheses on a pair of paths, and prove
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mi>d</mi><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mi>H</mi><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\frac{d}{dt} H(q(t), p(t)) = 0</annotation></semantics></math>
+from the sum, product (bilinear), and chain rules alone. Math first, Coq
+beside it, per Rule 5. 56. <strong>The action: mass times velocity times
+distance</strong> [has code: Theory/Action.v] — the dimensional-analysis
+observation that a quantity built from a moving body must scale linearly
+in its mass, its velocity, and the distance travelled, and the theorem
+behind it: the integral of momentum over position equals the integral of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mspace width="0.167em"></mspace><msup><mi>v</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">m\,v^2</annotation></semantics></math>
+over time,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mrow><mi>q</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><mrow><mi>q</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow></msubsup><mi>p</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>q</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>m</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mspace width="0.167em"></mspace><mi>d</mi><mi>t</mi></mrow><annotation encoding="application/x-tex">\int_{q(a)}^{q(b)} p\,dq \;=\; \int_a^b m\,v(t)^2\,dt</annotation></semantics></math>,
+proved by change of variables (chain rule + the fundamental theorem of
+calculus, the latter a disclosed hypothesis since the <a
+href="../coqdoc/Riktig.Interface.Integral.html#Integral"><code>Integral</code></a>
+interface deliberately states no FTC law). Scaling in the mass is
+integral linearity; additivity over path segments is integral
+additivity. Math notation first, then the Coq rendering of the same
+statements.</p>
+<h2 id="part-13--from-specification-to-executable">Part 13 — From
+specification to executable</h2>
+<ol start="57" type="1">
+<li><strong>From a sorting specification to a running binary, one
+datatype at a time</strong> [has code: theories/Programs/Memprog/*;
+needs code: Theory/Memprog/MemLaws.v — do not write this post before
+that file exists with at least one proved rewrite law] — the refinement
+chain: a memory-monad program, its expression level, stack frames,
+machine code, x86-64 bytes, and an ELF image, each a separate datatype
+with its own emulator, all agreeing on the same inputs by
+<code>vm_compute</code>, and the final bytes running as a native Linux
+process with checked exit codes (<code>make memprog-elf</code>). The
+post walks the swap program through every level including its actual ELF
+bytes, shows one within-level program transformation as a calc chain
+over the memory-law algebra, and states plainly which cross-level links
+are proved and which are open obligations
+(<code>Theory/Memprog/Obligations.v</code> is the honest ledger). The
+problem movement: hand-compilation is a sequence of unchecked design
+decisions, and every one is a place where correctness silently dies; the
+post’s claim is that each step can instead be a rewrite with respect to
+an equivalence on what memory means.</li>
+</ol>
 <h2 id="notes-for-whoever-writes-these">Notes for whoever writes
 these</h2>
 <ul>
@@ -195,15 +482,49 @@ these</h2>
 syllabus entry, docs/BLOG-STYLE.md, and the real <code>.v</code> file(s)
 named in its status marker — never an old blog post as a source, not
 even to “see what’s already been said”).</li>
-<li>Parts 1-2 (entries 1-10) are the first wave: everything there has
-code today. Start there.</li>
-<li>Part 3 splits: entries 11-14 have code now: entries 15-16 are
-blocked on new Coq work (a separate, explicitly scoped task, not bundled
-into a writing task).</li>
-<li>Parts 4-5 are rewrites of existing posts and can start once Part 1-3
-sets the tone, or in parallel if the writing agent is explicitly handed
-this syllabus + style doc and told not to consult the old posts at
-all.</li>
+<li>Parts 1-2 (entries 1-10) were the first wave: everything there has
+code today, and is written (blog/s01-s10).</li>
+<li>Part 3 splits: entries 11-14 have code and are written (s11-s14);
+entries 15-16 are blocked on new Coq work (a separate, explicitly scoped
+task, not bundled into a writing task) — do not write those two posts
+until that code exists and compiles.</li>
+<li>Parts 4-10 are the current wave: 4-5 are rewrites of existing posts,
+6-10 are new ground (the parser/monad track, the rest of linear algebra,
+bilinear maps and attention, and specification-only interfaces). Every
+entry in 4-10 has real code today and can be written now, independently
+and in parallel — hand the writing agent this syllabus +
+docs/BLOG-STYLE.md and tell it not to consult old posts at all (Parts
+6-10 have no old post to consult in the first place).</li>
+<li>This syllabus’s scope is “every theory with a blog-worthy story” —
+it deliberately does not enumerate every single <code>.v</code> file
+(e.g. the Category track’s concrete instances <a
+href="../coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>/<a
+href="../coqdoc/Riktig.Impl.VectCat.html"><code>Impl/VectCat.v</code></a>/
+<a
+href="../coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>/<a
+href="../coqdoc/Riktig.Impl.CatFunctors.html"><code>Impl/CatFunctors.v</code></a>
+are folded into entries 7-10 as their worked examples, not separate
+posts; <a
+href="../coqdoc/Riktig.Impl.CliffordFin.html"><code>Impl/CliffordFin.v</code></a>
+is entry 6’s/22’s worked example, not standalone). If a writing agent
+finds a file with no home above and a genuinely self-contained idea
+worth its own post, that is a signal to extend this syllabus, not to
+skip the file silently.</li>
+<li>Part 11 (entries 47-54) is a second wave, added 2026-07-18 after new
+Coq work landed on top of the “complete” 46-post syllabus. Each entry
+names which earlier entry it’s a sequel to (recap that entry’s idea in
+two or three sentences, same as any other cross-reference — never by
+bare number). Entry 51 additionally needs one thing no other entry does:
+a realistic worked message format (something with 3-6 rules — a simple
+key-value line, a small fixed-format record, anything genuinely
+message-shaped, NOT the one-rule digit grammar entry 35 already uses)
+written as ABNF text and run through <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_abnf"><code>parse_with_abnf</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>,
+with the actual Coq <code>Example</code> and its output shown, not just
+described. If no such <code>Example</code> exists in the tree yet, add
+one to a <code>.v</code> file first (a small, real, compiling example —
+not prose describing what one would look like), per Rule 7.</li>
 </ul>
 </main>
 </body>

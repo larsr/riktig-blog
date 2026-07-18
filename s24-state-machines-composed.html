@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State machines and composing them through a channel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="state-machines-and-composing-them-through-a-channel">State
+machines and composing them through a channel</h1>
+<p>A protocol has two ends. A sender reads a stream of application
+messages and decides what to put on the wire; a receiver reads what
+comes off the wire and decides what to hand back to the application.
+Both ends are small state machines: they remember something (a sequence
+number, whether they are waiting for an acknowledgement) and react to
+each input by emitting an output and moving to a new state. This post
+models such an endpoint as a <strong>Mealy machine</strong>, runs one,
+and — the point of the exercise — composes two of them through a channel
+and proves exactly what relation the composite induces between the
+messages that went in and the messages that came out.</p>
+<p>A Mealy machine is the automaton whose output depends on
+<strong>both</strong> the current state and the current input. (Its
+cousin, the Moore machine, lets the output depend on the state alone; a
+Mealy machine is the one you want when the reply must be a function of
+what just arrived, not only of where you were.) That is the whole
+distinction, and it is why a single step produces one output per
+input.</p>
+<p>This post leans on one idea from its companion: a channel is not a
+probability but a <strong>relation</strong> between the finite list of
+messages that was sent and the finite list that could be received. A
+<em>perfect</em> channel relates each sent trace only to itself. A
+<em>lossy-and-duplicating</em> channel, written <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
+relates a sent trace to any trace you get by dropping some messages and
+repeating others. Both are just two-argument predicates on traces, and
+either can be slotted into the composition below.</p>
+<h2 id="a-mealy-machine-and-running-it">A Mealy machine, and running
+it</h2>
+<p>An endpoint is a start state and a step function that turns a state
+and an input into a new state paired with an output:</p>
+<pre class="coq"><code>Record Mealy (S I O : Type) := {
+  m_init : S;
+  m_step : S -&gt; I -&gt; S * O;
+}.</code></pre>
+<p>To run a machine on a whole list of inputs, thread the state through
+and collect one output per input, in order:</p>
+<pre class="coq"><code>Fixpoint run {S I O : Type} (m : Mealy S I O) (s : S) (is : list I)
+    : S * list O :=
+  match is with
+  | [] =&gt; (s, [])
+  | i :: is&#39; =&gt;
+      let (s1, o) := m_step m s i in
+      let (s2, os) := run m s1 is&#39; in
+      (s2, o :: os)
+  end.
+
+Definition run_from_init {S I O : Type} (m : Mealy S I O) (is : list I)
+    : S * list O :=
+  run m (m_init m) is.</code></pre>
+<p><code>run</code> on the empty input returns the state unchanged and
+no output. On <code>i :: is'</code> it takes one step to get an output
+<code>o</code> and a next state <code>s1</code>, runs the rest from
+<code>s1</code>, and puts <code>o</code> at the front of whatever came
+out. <a
+href="coqdoc/Riktig.Channel.Mealy.html#run_from_init"><code>run_from_init</code></a>
+just starts from the machine’s own initial state and keeps only the
+output list — the <em>output trace</em> the endpoint produces.</p>
+<h2 id="composing-two-endpoints-through-a-channel">Composing two
+endpoints through a channel</h2>
+<p>Now glue a sender and a receiver together. The sender turns an
+application trace into a wire trace; the channel relates that sent wire
+trace to a possibly-different received wire trace; the receiver turns
+the received wire trace back into an application trace. The composite is
+the relation on application traces that holds when there is
+<em>some</em> pair of wire traces making all three steps line up:</p>
+<pre class="coq"><code>Definition composed_trace (app_in app_out : list App) : Prop :=
+  exists wire_sent wire_recv,
+    snd (run_from_init snd_m app_in) = wire_sent /\
+    chan wire_sent wire_recv /\
+    snd (run_from_init rcv_m wire_recv) = app_out.</code></pre>
+<p>Here <code>snd_m</code> is the sender machine, <code>rcv_m</code> the
+receiver, and <code>chan</code> any channel relation on wire traces —
+deliberately abstract, so a perfect channel and a faulty one plug into
+the same definition. The two endpoints never share memory; they
+communicate only through <code>chan</code>, exactly as two real protocol
+ends communicate only over the wire.</p>
+<h2 id="the-worked-example-two-echo-endpoints">The worked example: two
+echo endpoints</h2>
+<p>The simplest genuine endpoint is a pass-through — an <em>echo</em>
+machine that outputs whatever it reads and keeps no state (its state
+type is <code>unit</code>):</p>
+<pre class="coq"><code>Definition relay_m : Mealy unit App App :=
+  {| m_init := tt; m_step := fun _ a =&gt; (tt, a) |}.</code></pre>
+<p>Its step <code>fun _ a =&gt; (tt, a)</code> ignores the state and
+returns the input as the output — a Mealy machine whose output is a
+function of the input. Running it reproduces its input list exactly: for
+every input list
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>𝑖</mi><mi>𝑠</mi></mrow><annotation encoding="application/x-tex">\mathit{is}</annotation></semantics></math>
+and (trivial) state
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">n</mi></mrow><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.278em"></mspace><mi>s</mi><mspace width="0.278em"></mspace><mrow><mi>𝑖</mi><mi>𝑠</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>*</mi><mo>,</mo><mspace width="0.222em"></mspace><mrow><mi>𝑖</mi><mi>𝑠</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{run}\;\mathrm{relay}\;s\;\mathit{is} \;=\; (\ast,\ \mathit{is}),</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>*</mi><annotation encoding="application/x-tex">\ast</annotation></semantics></math>
+is the unique value of the one-element state type. The proof is a
+two-line induction:</p>
+<pre class="coq"><code>Lemma run_relay : forall (is : list App) (s : unit),
+  run relay_m s is = (tt, is).
+Proof.
+  intros is.
+  induction is as [| a is IH]; intros s.
+  - destruct s. reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.</code></pre>
+<p>The empty case: <code>run</code> on <code>[]</code> gives
+<code>(s, [])</code>, and the only value of type <code>unit</code> is
+<code>tt</code>, so <code>destruct s</code> turns <code>s</code> into
+<code>tt</code> and both sides are <code>(tt, [])</code>. The cons case:
+one step of the echo machine emits <code>a</code> and stays in state
+<code>tt</code>, the inductive hypothesis <code>IH</code> rewrites the
+recursive call to <code>(tt, is)</code>, and the result
+<code>(tt, a :: is)</code> is what we wanted.</p>
+<p>Now put an echo sender and an echo receiver on the two ends of a
+<strong>perfect</strong> channel. Nothing anywhere alters a message, so
+the trace that comes out equals the trace that went in. On the
+blackboard, reading the three conjuncts of <a
+href="coqdoc/Riktig.Channel.Mealy.html#composed_trace"><code>composed_trace</code></a>
+left to right:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑟</mi><mi>𝑒</mi><mi>𝑐</mi><mi>𝑣</mi></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">receiver echoes</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑠</mi><mi>𝑒</mi><mi>𝑛</mi><mi>𝑡</mi></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">perfect channel</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">sender echoes</mtext><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathit{app\_out} \;=\; \mathit{wire\_recv} \quad\{\text{receiver echoes}\} \;=\; \mathit{wire\_sent} \quad\{\text{perfect channel}\} \;=\; \mathit{app\_in} \quad\{\text{sender echoes}\}.</annotation></semantics></math></p>
+<p>Here is the theorem and its proof, verbatim:</p>
+<pre class="coq"><code>Theorem composed_trace_perfect_relay : forall app_in app_out : list App,
+  composed_trace relay_m relay_m perfect app_in app_out -&gt;
+  app_out = app_in.
+Proof.
+  intros app_in app_out [wire_sent [wire_recv [Hsent [Hperfect Hrecv]]]].
+  unfold run_from_init in Hsent, Hrecv.
+  rewrite run_relay in Hsent. simpl in Hsent.
+  rewrite run_relay in Hrecv. simpl in Hrecv.
+  unfold perfect in Hperfect.
+  (* app_out and app_in are the two ends of one equality chain through
+     the wire: received = sent because the channel is perfect, and each
+     relay copies its input verbatim. *)
+  calc app_out
+    == wire_recv { Hrecv }
+    == wire_sent { Hperfect }
+    == app_in    { Hsent }.
+Qed.</code></pre>
+<p>Walking it against the blackboard chain. The <code>intros</code>
+pattern unpacks the existential: it names the two wire traces and the
+three facts
+<code>Hsent : snd (run_from_init relay_m app_in) = wire_sent</code>,
+<code>Hperfect : perfect wire_sent wire_recv</code>, and
+<code>Hrecv : snd (run_from_init relay_m wire_recv) = app_out</code>.
+Rewriting with <a
+href="coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>
+(after unfolding <a
+href="coqdoc/Riktig.Channel.Mealy.html#run_from_init"><code>run_from_init</code></a>)
+computes each relay’s output: <code>Hsent</code> becomes
+<code>wire_sent = app_in</code> and <code>Hrecv</code> becomes
+<code>wire_recv = app_out</code>. <code>unfold perfect</code> in
+<code>Hperfect</code> turns the channel fact into
+<code>wire_recv = wire_sent</code>. The <code>calc</code> block is the
+blackboard chain, machine-checked: it reads
+<code>app_out == wire_recv == wire_sent == app_in</code>, and each
+<code>{ ... }</code> names the single fact justifying that step —
+<code>Hrecv</code> for <code>app_out = wire_recv</code>,
+<code>Hperfect</code> for <code>wire_recv = wire_sent</code>,
+<code>Hsent</code> for <code>wire_sent = app_in</code>. The checker
+confirms the two endpoints of the chain really are the goal
+(<code>app_out = app_in</code>) and fills each step by the named fact.
+Two echo endpoints over a perfect channel are the identity on traces —
+nothing was added, lost, or moved.</p>
+<h2 id="swapping-in-a-faulty-channel">Swapping in a faulty channel</h2>
+<p>The composition is transparent: the echo endpoints add nothing, so
+whatever relation the channel imposes is exactly the relation the
+composite imposes. Replace <a
+href="coqdoc/Riktig.Channel.Trace.html#perfect"><code>perfect</code></a>
+with the faulty <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+and the same three-step reading gives, on paper,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mo>,</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mo>,</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>:</mo></mrow><annotation encoding="application/x-tex">\mathrm{composed}(\mathit{app\_in}, \mathit{app\_out}) \;\Longrightarrow\; \mathrm{lossy\_dup}(\mathit{app\_in}, \mathit{app\_out}):</annotation></semantics></math></p>
+<p>the sender relay forces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑠</mi><mi>𝑒</mi><mi>𝑛</mi><mi>𝑡</mi></mrow><mo>=</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow></mrow><annotation encoding="application/x-tex">\mathit{wire\_sent} = \mathit{app\_in}</annotation></semantics></math>
+and the receiver relay forces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑟</mi><mi>𝑒</mi><mi>𝑐</mi><mi>𝑣</mi></mrow><mo>=</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow></mrow><annotation encoding="application/x-tex">\mathit{wire\_recv} = \mathit{app\_out}</annotation></semantics></math>
+(both by <a
+href="coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>,
+exactly as in the perfect case), and substituting those two equalities
+into the channel fact <code>lossy_dup wire_sent wire_recv</code> leaves
+<code>lossy_dup app_in app_out</code>. The source file proves the
+perfect-channel theorem shown above and stops there; this faulty-channel
+counterpart is the same substitution argument with the channel fact
+carried through instead of collapsed to an equality, and is stated here
+on paper only. The conclusion it points at: the fault class of the wire
+is exactly the fault class the application sees, because the endpoints
+in between are faithful.</p>
+<p>That is the ground a real protocol has to improve on: with echo
+endpoints the application inherits every fault of the wire. A sender and
+receiver that instead track sequence numbers and acknowledgements are
+Mealy machines with genuine state, and the point of their state is to
+make the composite relation <em>better</em> than the channel they run
+over.</p>
+<p><em>Next: the alternating-bit protocol, whose sender and receiver do
+keep that state, and the safety theorem that holds over a
+lossy-and-duplicating channel unconditionally.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Channel.Mealy.html"><code>Channel/Mealy.v</code></a>
+(<a
+href="coqdoc/Riktig.Channel.Mealy.html#Mealy"><code>Mealy</code></a>,
+<code>run</code>, <a
+href="coqdoc/Riktig.Channel.Mealy.html#composed_trace"><code>composed_trace</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Mealy.html#relay_m"><code>relay_m</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Mealy.html#composed_trace_perfect_relay"><code>composed_trace_perfect_relay</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
+(<a
+href="coqdoc/Riktig.Channel.Trace.html#perfect"><code>perfect</code></a>
+and <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
+the channel relations).</p>
+</main>
+</body>
+</html>

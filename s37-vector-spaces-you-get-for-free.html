@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New vector spaces from old: pointwise, products, and spaces of
+maps</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="new-vector-spaces-from-old-pointwise-products-and-spaces-of-maps">New
+vector spaces from old: pointwise, products, and spaces of maps</h1>
+<p>A <em>vector space</em> over a field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+is a set whose elements you can add (with a zero and negatives, addition
+commutative and associative) and <em>scale</em> by an element of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>,
+subject to four compatibility laws: scaling distributes over vector sums
+and over scalar sums, two scalings compose by multiplying the scalars,
+and scaling by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+changes nothing. That is the whole definition — no basis, no
+coordinates. Throughout, <code>==</code> is a <em>setoid</em> equality:
+a chosen equivalence relation that every operation must respect, not
+Coq’s built-in equality of terms.</p>
+<p>Here is the observation this whole post turns on. Once you have
+<em>one</em> vector space, a whole family of others arrives with
+essentially no new work, because each one borrows its operations and its
+laws from a space you already have. Functions into a vector space, pairs
+of vector spaces, the trivial one-point space, a field regarded as a
+space over itself, and even the linear maps between two spaces — every
+one of them is a vector space, and in each case the proof is the same
+short move: <em>do the operation at each point (or each component), and
+every law holds because it already holds underneath.</em></p>
+<h2 id="functions-into-a-space-pointwise">Functions into a space,
+pointwise</h2>
+<p>Fix any type <code>X</code> and any vector space <code>V</code>. The
+functions <code>X -&gt; V</code> form a vector space. There is nothing
+to invent: the operations act at each argument, and equality is
+agreement at every argument.</p>
+<pre class="coq"><code>#[global] Instance PW_EqRel {X M : Type} `{EqRel M} : EqRel (X -&gt; M) :=
+  fun f g =&gt; forall x, f x == g x.
+
+#[global] Instance PW_Zero {X M : Type} `{Zero M} : Zero (X -&gt; M) :=
+  fun _ =&gt; 0.
+
+#[global] Instance PW_Add {X M : Type} `{HasAdd M} : HasAdd (X -&gt; M) :=
+  fun f g x =&gt; f x + g x.
+
+#[global] Instance PW_Neg {X M : Type} `{HasNeg M} : HasNeg (X -&gt; M) :=
+  fun f x =&gt; - f x.
+
+#[global] Instance PW_Scale {X F V : Type} `{HasScale F V} : HasScale F (X -&gt; V) :=
+  fun a f x =&gt; a *: f x.</code></pre>
+<p>The zero function returns <code>V</code>’s zero everywhere; the sum
+<code>f + g</code> is the function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>↦</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">x \mapsto f(x) + g(x)</annotation></semantics></math>;
+scaling <code>a *: f</code> is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>↦</mo><mi>a</mi><mo>⋅</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">x \mapsto a \cdot f(x)</annotation></semantics></math>,
+writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>⋅</mi><annotation encoding="application/x-tex">\cdot</annotation></semantics></math>
+for the scaling <code>*:</code>. Now take one of the four scaling laws
+and watch it fall out point by point. Scaling distributes over a sum of
+functions:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>a</mi><mo>⋅</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>v</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the pointwise definitions of </mtext><mspace width="0.333em"></mspace></mrow><mo>+</mo><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> and </mtext><mspace width="0.333em"></mspace></mrow><mi>⋅</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>a</mi><mo>⋅</mo><mi>v</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the same law one level down: distributivity in </mtext><mspace width="0.333em"></mspace></mrow><mi>V</mi><mrow><mtext mathvariant="normal">, at </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>+</mo><mi>a</mi><mo>⋅</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the pointwise definitions again.</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+(a \cdot (u + v))(x) &amp;= a \cdot \big(u(x) + v(x)\big) &amp;&amp; \{\text{the pointwise definitions of } + \text{ and } \cdot\}\\
+&amp;= a \cdot u(x) + a \cdot v(x) &amp;&amp; \{\text{the same law one level down: distributivity in } V \text{, at } x\}\\
+&amp;= (a \cdot u + a \cdot v)(x) &amp;&amp; \{\text{the pointwise definitions again.}\}
+\end{aligned}
+</annotation></semantics></math></p>
+<p>In Coq the whole thing is: fix a point, and appeal to the
+<code>V</code>-level law there.</p>
+<pre class="coq"><code>Lemma pw_scale_add : forall (a : F) (u v : X -&gt; V),
+  a *: (u + v) == a *: u + a *: v.
+Proof. intros a u v x. apply sc_scale_add. Qed.</code></pre>
+<p><code>intros a u v x</code> fixes the scalar, the two functions, and
+— crucially — a single argument <code>x</code>, because equality of
+functions here <em>is</em> equality at every <code>x</code>. Once
+<code>x</code> is fixed both sides are ordinary elements of
+<code>V</code>, and <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#sc_scale_add"><code>sc_scale_add</code></a>
+is exactly <code>V</code>’s law
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>+</mo><mi>a</mi><mo>⋅</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">a \cdot (u + v) = a \cdot u + a \cdot v</annotation></semantics></math>.
+One line, because the work was already done in <code>V</code>.</p>
+<p>The other laws are identical in shape
+(<code>apply sc_add_scale</code>, <code>apply sc_scale_scale</code>,
+<code>apply sc_scale_1</code>, each after <code>intros ... x</code>), so
+the full vector-space structure assembles with no genuinely new argument
+anywhere:</p>
+<pre class="coq"><code>#[global] Instance PW_VectorSpace : VectorSpace F (X -&gt; V) :=
+  @Build_VectorSpace F (X -&gt; V) _ PW_AbGroup PW_Scale PW_ScaleLaws.</code></pre>
+<p>Because the construction is itself generic, it <em>iterates</em>:
+functions into functions into <code>V</code> are a vector space too,
+found by instance search with no extra code, which the file records as a
+check —</p>
+<pre class="coq"><code>Example pw_vs_nested (F V : Type) (HF : Field F) (HV : VectorSpace F V) :
+  VectorSpace F (nat -&gt; bool -&gt; V) := _.</code></pre>
+<p>The <code>:= _</code> means Coq is asked to <em>find</em> the
+structure on <code>nat -&gt; bool -&gt; V</code>; it succeeds by peeling
+one arrow, then the next, then landing on <code>V</code>.</p>
+<h2 id="the-same-move-four-more-times">The same move, four more
+times</h2>
+<p>The remaining constructions differ only in what “at each point”
+means.</p>
+<p><strong>Products.</strong> For vector spaces <code>A</code> and <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>,
+the pairs <code>A * B</code> form a vector space with everything acting
+componentwise —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mn>1</mn></msub><mo>,</mo><msub><mi>b</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mn>2</mn></msub><mo>,</mo><msub><mi>b</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mn>1</mn></msub><mo>+</mo><msub><mi>a</mi><mn>2</mn></msub><mo>,</mo><mspace width="0.222em"></mspace><msub><mi>b</mi><mn>1</mn></msub><mo>+</mo><msub><mi>b</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a_1, b_1) + (a_2, b_2) = (a_1 + a_2,\ b_1 + b_2)</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mo>⋅</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a \cdot (u, v) = (a \cdot u,\ a \cdot v)</annotation></semantics></math>
+— and equality the conjunction of the two componentwise equalities. Each
+law splits into its first and second component and is discharged by the
+corresponding law in <code>A</code> and in <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+(<code>intros [u1 u2] ...; split; apply ...</code>).</p>
+<p><strong>The one-point space.</strong> <code>unit</code>, with its
+single inhabitant <code>tt</code>, is a vector space over <em>any</em>
+field. The cleanest equality is the relation that holds of every pair —
+so every law is literally a proof of <code>True</code>:</p>
+<pre class="coq"><code>Lemma unit_scale_add : forall (a : F) (u v : unit),
+  a *: (u + v) == a *: u + a *: v.
+Proof. intros a u v. exact I. Qed.</code></pre>
+<p>This is the zero-dimensional space, and it will be the neutral
+element when we start regrouping products below.</p>
+<p><strong>A field over itself.</strong> A field <code>F</code> is a
+vector space over <code>F</code> where <em>scaling is just
+multiplication</em>. There is no separate structure to check: the four
+scaling laws are the ring laws <code>F</code> already satisfies, handed
+over verbatim.</p>
+<pre class="coq"><code>#[global] Instance Field_Scale : HasScale F F := mult.
+
+#[global] Instance Field_ScaleLaws : ScaleLaws F F :=
+  @Build_ScaleLaws F F _ _ Field_Scale
+    field_sc_proper ring_distl ring_distr ring_mul_assoc ring_mul_1l.</code></pre>
+<p>Read the second definition slot by slot: distributivity of scaling
+over a vector sum <em>is</em> <a
+href="coqdoc/Riktig.Interface.Ring.html#ring_distl"><code>ring_distl</code></a>,
+scaling by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+<em>is</em> <a
+href="coqdoc/Riktig.Interface.Ring.html#ring_mul_1l"><code>ring_mul_1l</code></a>,
+and so on. No new proofs, just a re-labelling of laws <code>F</code>
+already had.</p>
+<p><strong>Linear maps.</strong> The most striking case: the <em>linear
+maps</em> from <code>U</code> to <code>V</code> — the functions
+respecting <code>==</code>, sums, and scaling — are themselves a vector
+space, <code>Hom U V</code>. Add two maps pointwise, scale a map
+pointwise, and each result is again linear because the laws hold in
+<code>V</code> at every point; the vector-space laws for
+<code>Hom U V</code> then reduce, once more, to the laws in
+<code>V</code>:</p>
+<pre class="coq"><code>Lemma hom_scale_add : forall (a : F) (f g : Hom),
+  a *: (f + g) == a *: f + a *: g.
+Proof.
+  intros a f g u.
+  apply sc_scale_add.
+Qed.</code></pre>
+<p>The same two-line rhythm — introduce a point <code>u</code>, appeal
+to the <code>V</code>-level law — now applied to a space whose
+<em>elements are transformations</em>. A space of maps is a space in its
+own right.</p>
+<h2 id="when-are-two-of-these-the-same-space">When are two of these “the
+same” space?</h2>
+<p>These constructions produce many spaces that are visibly different as
+data yet ought to count as the same space. <code>A * unit</code> carries
+a useless second component; <code>A * B</code> and <code>B * A</code>
+differ only in the order of a pair; and — the case worth the name — a
+function returning a <em>record</em>, <code>X -&gt; A * B</code>, holds
+exactly the same information as a <em>pair of functions</em>,
+<code>(X -&gt; A) * (X -&gt; B)</code>.</p>
+<p>The right notion of sameness for vector spaces is an
+<em>isomorphism</em>: a linear map one way, a linear map back, and a
+proof that each undoes the other. In the code that is a four-field
+record:</p>
+<pre class="coq"><code>Record VSIso (F U V : Type) {FF : Field F}
+    {VU : VectorSpace F U} {VV : VectorSpace F V} := {
+  vsi_to : LinearMap F U V;
+  vsi_from : LinearMap F V U;
+  vsi_fromto : forall u : U, vsi_from (vsi_to u) == u;
+  vsi_tofrom : forall v : V, vsi_to (vsi_from v) == v
+}.</code></pre>
+<p>The two <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+fields are the maps; the last two fields are the round-trip laws —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">\mathrm{from}(\mathrm{to}(u)) = u</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">\mathrm{to}(\mathrm{from}(v)) = v</annotation></semantics></math>:
+go over and back and you are where you started, in either direction.
+Anything true of one carrier transports to the other by rewriting along
+these two laws.</p>
+<p>The main isomorphism is the record/column one,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>→</mo><mi>A</mi><mo>×</mo><mi>B</mi><mspace width="0.278em"></mspace><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">X \to A \times B \;\;\cong\;\; (X \to A) \times (X \to B).</annotation></semantics></math></p>
+<p>Splitting <code>f</code> into its two columns goes forward, zipping a
+pair of functions back into one goes backward, and both round-trips hold
+at every point:</p>
+<pre class="coq"><code>Lemma soa_fromto : forall f : X -&gt; A * B,
+  (fun x : X =&gt; (fst (f x), snd (f x))) == f.
+Proof.
+  intros f x.
+  split.
+  - reflexivity.
+  - reflexivity.
+Qed.</code></pre>
+<p>Splitting <code>f</code> into its first and second components and
+re-pairing them at each <code>x</code> rebuilds <code>f</code> on the
+nose — the <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+breaks the pair equality into its two halves, each an identity. The full
+isomorphism bundles that with the other round-trip and the two linear
+maps:</p>
+<pre class="coq"><code>Definition vsiso_soa :
+  @VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols :=
+  @Build_VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols
+    soa_split soa_merge soa_fromto soa_tofrom.</code></pre>
+<p>Take <code>X</code> to be <code>Fin n</code>, the type of positions
+<code>0, …, n-1</code>. Then <code>X -&gt; A * B</code> is an <em>array
+of structs</em> — <code>n</code> slots, each a record — and
+<code>(X -&gt; A) * (X -&gt; B)</code> is a <em>struct of arrays</em> —
+one array of the <code>A</code> fields beside one array of the <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+fields. <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>
+is a machine-checked certificate that these two memory layouts hold the
+same vector, so a program may switch between them freely. The same file
+proves the small structural isomorphisms too — dropping a
+<code>unit</code> factor, swapping a pair, reassociating a nested
+product — and shows them composing, so a regrouping like
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>×</mo><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo>×</mo><mn>𝟏</mn><mo stretchy="false" form="postfix">)</mo><mo>≅</mo><mi>B</mi><mo>×</mo><mi>A</mi></mrow><annotation encoding="application/x-tex">A \times (B \times \mathbf{1}) \cong B \times A</annotation></semantics></math>
+is assembled from those pieces rather than proved by hand.</p>
+<p><em>Next: the kernel and image of a linear map — the vectors it sends
+to zero and the vectors it actually reaches — are subspaces, and what
+rank-nullity would say about their dimensions.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>
+(functions into a space) · <a
+href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>
+(products) · <a
+href="coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>
+(the one-point space) · <a
+href="coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>
+(a field over itself) · <a
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
+(linear maps as a space) · <a
+href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>
+(isomorphisms, <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>).</p>
+</main>
+</body>
+</html>

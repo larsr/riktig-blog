@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liveness for the alternating-bit protocol: one surviving copy per
+burst is enough</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="liveness-for-the-alternating-bit-protocol-one-surviving-copy-per-burst-is-enough">Liveness
+for the alternating-bit protocol: one surviving copy per burst is
+enough</h1>
+<p>The alternating-bit protocol tags each message with one bit, flipping
+it each time it moves on to the next message, so that a receiver
+expecting a particular bit can tell a fresh message from a stale
+retransmission over a channel that both loses and duplicates packets.
+The safety theorem for that protocol says: whatever the receiver
+delivers is a <em>subsequence</em> of what the application sent — no
+message is corrupted, duplicated, or reordered on its way out. That
+theorem holds unconditionally, with no assumption about the channel’s
+behaviour at all.</p>
+<p>And that is exactly its limit. A channel that quietly drops every
+single packet satisfies every hypothesis of the safety theorem: it
+delivers the empty list, and the empty list is a subsequence of
+anything. Safe, and useless. Safety promises nothing <em>wrong</em>
+comes out; it does not promise anything comes out. This post is about
+the missing half — a precise statement of what it takes for messages to
+actually <em>arrive</em>, and the theorem that follows from it.</p>
+<h2 id="you-cannot-prove-arrival-from-nothing">You cannot prove arrival
+from nothing</h2>
+<p>There is no getting around this by being cleverer with the proof. The
+drops-everything channel is a real behaviour of the
+lossy-and-duplicating relation the protocol runs over, and against it no
+protocol delivers anything. So “everything sent is delivered” is simply
+false as a statement about <em>all</em> channels in that class. If we
+want a theorem that concludes delivery, we must add a hypothesis that
+excludes the adversary — a promise that the channel does not lose
+<em>everything</em>, that it is in some sense fair.</p>
+<p>Stated plainly: liveness is not a fact we can prove about arbitrary
+channels. It is a fact we prove <em>conditionally</em>, on an explicit
+assumption about the channel, and the whole content of the theorem is
+making that assumption precise and showing it is exactly enough. Naming
+the assumption is not a weakness of the result. It is the result.</p>
+<h2 id="the-fairness-hypothesis-stated-precisely">The fairness
+hypothesis, stated precisely</h2>
+<p>Fairness here is finitary and local: it asks that, burst by burst, at
+least one copy of each message’s burst survives the channel. It does not
+ask for a <em>lossless</em> channel — copies may still be lost and
+duplicated freely within a burst — only that the burst is not lost
+<em>entirely</em>. Here is the hypothesis, from <a
+href="coqdoc/Riktig.Channel.Fairness.html"><code>Channel/Fairness.v</code></a>,
+defined by recursion on the message list in lock-step with how the
+sender lays out its bursts:</p>
+<pre class="coq"><code>Fixpoint fair_wire (b : bit) (ms : list M) (k : nat) (wire : list Packet) : Prop :=
+  match ms with
+  | [] =&gt; wire = []
+  | m :: ms&#39; =&gt;
+      exists w1 w2,
+        wire = w1 ++ w2 /\
+        lossy_dup (sender_burst b m k) w1 /\
+        w1 &lt;&gt; [] /\
+        fair_wire (negb b) ms&#39; k w2
+  end.</code></pre>
+<p>Read it against the sender’s own structure. For an empty message
+list, the wire is empty. For <code>m :: ms'</code>, the wire splits as
+<code>w1 ++ w2</code>, where <code>w1</code> is what the channel
+produced from <code>m</code>’s burst — related to that burst by the same
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+relation as always, so arbitrary loss and duplication <em>within</em>
+the burst are still permitted — and <a
+href="coqdoc/Riktig.Impl.Attention.html#w2"><code>w2</code></a> is what
+it produced from the rest of the stream, recursively fair, with the bit
+flipped (<code>negb b</code>). The one new clause, the whole of
+fairness, is <code>w1 &lt;&gt; []</code>: the fragment for
+<code>m</code>’s burst is nonempty. At least one copy of each message
+gets through.</p>
+<p>Two things are worth noticing about this being an
+<em>assumption</em>, not a derived fact. First, it constrains the
+channel: it is a stronger condition than plain <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
+picking out the fair channels from the adversarial ones. Second, it is
+genuinely satisfiable only when the sender actually sends copies — if
+the budget <code>k = 0</code>, every burst is empty, <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+cannot conjure a packet from an empty input, so no nonempty
+<code>w1</code> can be <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>-related
+to an empty burst, and <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>
+becomes unsatisfiable for a nonempty message list. That is the right
+degenerate behaviour: with nothing sent, fairness has nothing to
+promise.</p>
+<p>To check that this hypothesis is not an unrelated model bolted onto
+the side, one lemma confirms it <em>refines</em> the relation safety
+already reasons about — a fair wire is in particular a <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+wire of the sender’s whole stream,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">r</mi></mrow><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mi>s</mi><mo>,</mo><mi>k</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mi>m</mi><mi>s</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.278em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{fair}_b(ms, k, w) \;\Longrightarrow\; \mathrm{lossy\_dup}\bigl(\mathrm{sent}(b, ms, k),\; w\bigr),</annotation></semantics></math></p>
+<p>proved by induction on <code>ms</code>, concatenating the per-burst
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+fragments back together:</p>
+<pre class="coq"><code>Lemma fair_wire_lossy_dup : forall (k : nat) (ms : list M) (b : bit) (wire : list Packet),
+  fair_wire b ms k wire -&gt; lossy_dup (sender_stream b ms k) wire.
+Proof.
+  intros k ms.
+  induction ms as [| m ms&#39; IH]; intros b wire H.
+  - simpl in H. rewrite H. simpl. apply lossy_dup_nil.
+  - simpl in H. destruct H as [w1 [w2 [Hwire [H1 [Hne H2]]]]].
+    rewrite Hwire. simpl.
+    apply lossy_dup_app.
+    + exact H1.
+    + apply (IH (negb b) w2 H2).
+Qed.</code></pre>
+<p>So <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>
+says everything <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+said, plus the per-burst survival clause. It is the same channel, with
+fairness added on top, not a different channel.</p>
+<h2 id="one-surviving-copy-delivers-exactly-one-message">One surviving
+copy delivers exactly one message</h2>
+<p>The engine of the liveness proof is the burst-level counterpart of
+the safety proof’s crux lemma. There, a burst delivered <em>at most</em>
+one message. Here, given that the burst’s fragment is nonempty, it
+delivers <em>exactly</em> one — the message — and flips the expected
+bit. The reasoning is the same homogeneity argument: every surviving
+packet is the same record <code>{| pkt_bit := b; pkt_msg := m |}</code>,
+so if any survive, the first matches the expected bit <code>b</code>,
+delivers <code>m</code>, and flips the expectation away from all the
+rest. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">D_e(w)</annotation></semantics></math>
+for what the receiver delivers from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+starting at expectation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N_e(w)</annotation></semantics></math>
+for its final expectation,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>w</mi><mo>≠</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mi>m</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><msub><mi>N</mi><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>¬</mo><mi>b</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy\_dup}\bigl(\mathrm{burst}_b(m,k),\, w\bigr) \;\wedge\; w \neq [\,] \;\Longrightarrow\; D_b(w) = [m] \;\wedge\; N_b(w) = \neg b.</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma burst_delivery_fair : forall (b : bit) (m : M) (k : nat) (w : list Packet),
+  lossy_dup (sender_burst b m k) w -&gt; w &lt;&gt; [] -&gt;
+  deliver b w = [m] /\ next_bit b w = negb b.
+Proof.
+  intros b m k w H Hne.
+  assert (Hall : forall p, In p w -&gt; p = {| pkt_bit := b; pkt_msg := m |}).
+  { apply (lossy_dup_preserves_all_eq {| pkt_bit := b; pkt_msg := m |}
+             (sender_burst b m k) w H).
+    intros p Hp. apply (sender_burst_all_eq b m k p Hp). }
+  destruct w as [| p w&#39;].
+  - destruct (Hne eq_refl).
+  - assert (Hp : p = {| pkt_bit := b; pkt_msg := m |}).
+    { apply Hall. simpl. left. reflexivity. }
+    rewrite Hp. simpl.
+    rewrite (eqb_bit_true b b eq_refl). simpl.
+    assert (Hall&#39; : forall q, In q w&#39; -&gt; q = {| pkt_bit := b; pkt_msg := m |}).
+    { intros q Hq. apply Hall. simpl. right. exact Hq. }
+    assert (Hneq : pkt_bit ({| pkt_bit := b; pkt_msg := m |}) &lt;&gt; negb b).
+    { simpl. intros Heq. apply (negb_neq b). symmetry. exact Heq. }
+    destruct (deliver_homog_neq {| pkt_bit := b; pkt_msg := m |} w&#39; (negb b) Hall&#39; Hneq)
+      as [Hd Hn].
+    rewrite Hd. rewrite Hn.
+    split; reflexivity.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>Hall</code> is homogeneity again: every packet in the received
+fragment <code>w</code> is the record
+<code>{| pkt_bit := b; pkt_msg := m |}</code>, from <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_preserves_all_eq"><code>lossy_dup_preserves_all_eq</code></a>
+fed <a
+href="coqdoc/Riktig.Channel.ABP.html#sender_burst_all_eq"><code>sender_burst_all_eq</code></a>.</li>
+<li><code>destruct w</code>. The empty case contradicts the nonemptiness
+hypothesis <code>Hne</code> directly (<code>Hne eq_refl</code>) — this
+is the one place the survival clause is consumed at the burst
+level.</li>
+<li>In the <code>p :: w'</code> case, <code>p</code> is the record (from
+<code>Hall</code>), its bit is <code>b</code>, so <a
+href="coqdoc/Riktig.Channel.ABP.html#eqb_bit_true"><code>eqb_bit_true</code></a>
+fires the match: <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
+emits <code>pkt_msg = m</code> and recurses with the flipped bit
+<code>negb b</code>.</li>
+<li>The tail <code>w'</code> is still all copies of the same record
+(<code>Hall'</code>), whose bit <code>b</code> no longer matches the
+flipped expectation <code>negb b</code> (<code>Hneq</code>), so <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_neq"><code>deliver_homog_neq</code></a>
+says the tail delivers nothing and leaves the bit at
+<code>negb b</code>. Result: <code>deliver b w = [m]</code> and
+<code>next_bit b w = negb b</code>.</li>
+</ul>
+<h2 id="the-liveness-theorem-proved-and-walked">The liveness theorem,
+proved and walked</h2>
+<p>Now the induction over the message list, carrying the running bit
+exactly as the safety proof did. The claim is the strongest possible
+one: over a fair wire, the receiver delivers the message list
+<em>exactly</em> — not merely a subsequence of it, but all of it, in
+order:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">r</mi></mrow><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mi>s</mi><mo>,</mo><mi>k</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>m</mi><mi>s</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{fair}_b(ms, k, w) \;\Longrightarrow\; D_b(w) = ms.</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma abp_liveness_gen : forall (k : nat) (ms : list M) (b : bit) (wire : list Packet),
+  fair_wire b ms k wire -&gt; deliver b wire = ms.
+Proof.
+  intros k ms.
+  induction ms as [| m ms&#39; IH]; intros b wire H.
+  - simpl in H. rewrite H. reflexivity.
+  - simpl in H. destruct H as [w1 [w2 [Hwire [H1 [Hne H2]]]]].
+    rewrite Hwire.
+    rewrite (deliver_app w1 w2 b).
+    destruct (burst_delivery_fair b m k w1 H1 Hne) as [Hd Hn].
+    rewrite Hd. rewrite Hn. simpl.
+    rewrite (IH (negb b) w2 H2).
+    reflexivity.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><strong>Base case, <code>ms = []</code>.</strong> Fairness forces
+<code>wire = []</code>, and <code>deliver b [] = []</code>, which is
+<code>ms</code>.</li>
+<li><strong>Inductive case, <code>ms = m :: ms'</code>.</strong>
+Unfolding <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>
+gives the split <code>wire = w1 ++ w2</code>, with
+<code>H1 : lossy_dup (sender_burst b m k) w1</code>, the fairness clause
+<code>Hne : w1 &lt;&gt; []</code>, and
+<code>H2 : fair_wire (negb b) ms' k w2</code>.</li>
+<li><code>rewrite (deliver_app w1 w2 b)</code> splits the receiver at
+the burst boundary:
+<code>deliver b wire = deliver b w1 ++ deliver (next_bit b w1) w2</code>.</li>
+<li><code>destruct (burst_delivery_fair b m k w1 H1 Hne)</code> —
+<strong>this is where fairness is spent.</strong> The nonemptiness
+<code>Hne</code> is the third argument handed to <a
+href="coqdoc/Riktig.Channel.Fairness.html#burst_delivery_fair"><code>burst_delivery_fair</code></a>;
+it is precisely what turns “at most one message” into “exactly one.” The
+result is <code>Hd : deliver b w1 = [m]</code> and
+<code>Hn : next_bit b w1 = negb b</code>.</li>
+<li>Rewriting with <code>Hd</code> and <code>Hn</code> reduces the goal
+to <code>m :: deliver (negb b) w2 = m :: ms'</code>, and the induction
+hypothesis <code>IH</code> on the fair tail <a
+href="coqdoc/Riktig.Impl.Attention.html#w2"><code>w2</code></a> (with
+the flipped bit <code>negb b</code>) gives
+<code>deliver (negb b) w2 = ms'</code>.</li>
+</ul>
+<p>The theorem stated for the sender’s own starting bit is the immediate
+corollary:</p>
+<pre class="coq"><code>Theorem abp_liveness : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
+  fair_wire b0 ms k wire -&gt; deliver b0 wire = ms.
+Proof.
+  intros k b0 ms wire H.
+  apply (abp_liveness_gen k ms b0 wire H).
+Qed.</code></pre>
+<p>Contrast the two conclusions. Safety concluded
+<code>subseq (deliver b0 wire) ms</code> from a bare <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+hypothesis. Liveness concludes the equality
+<code>deliver b0 wire = ms</code> — everything sent, delivered, in order
+— from the stronger <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>
+hypothesis. The gap between “a subsequence” and “the whole list” is
+exactly the gap between the two hypotheses, and it is entirely paid for
+by the one clause <code>w1 &lt;&gt; []</code>.</p>
+<h2 id="a-sanity-check-the-perfect-channel">A sanity check: the perfect
+channel</h2>
+<p>One special case pins the whole thing down. Over a <em>perfect</em>
+channel — where received equals sent, no loss and no duplication at all
+— the receiver should deliver the message list on the nose. The perfect
+channel is the tightest relation:</p>
+<pre class="coq"><code>Definition perfect s r : Prop := r = s.</code></pre>
+<p>and delivery is exact, provided the sender actually retransmits at
+least once:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>&gt;</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>w</mi><mo>=</mo><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mn>0</mn></msub><mo>,</mo><mi>m</mi><mi>s</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><msub><mi>b</mi><mn>0</mn></msub></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>m</mi><mi>s</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">k &gt; 0 \;\wedge\; w = \mathrm{sent}(b_0, ms, k) \;\Longrightarrow\; D_{b_0}(w) = ms.</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem abp_collapse_perfect : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
+  k &gt; 0 -&gt; perfect (sender_stream b0 ms k) wire -&gt; deliver b0 wire = ms.
+Proof.
+  intros k b0 ms wire Hk Hp.
+  unfold perfect in Hp.
+  rewrite Hp.
+  apply (abp_collapse_perfect_gen k ms b0 Hk).
+Qed.</code></pre>
+<p>The <code>k &gt; 0</code> hypothesis earns its place. With
+<code>k = 0</code> the sender emits an empty burst for every message, so
+<code>sender_stream b0 ms 0 = []</code> and the perfect channel
+faithfully delivers nothing — which equals <code>ms</code> only when
+<code>ms</code> is itself empty. A single retransmission attempt is all
+it takes over a channel that loses nothing; the theorem asks for exactly
+that and no more. It follows the same discipline as the fairness
+hypothesis: state the minimal condition the conclusion truly needs, and
+no larger one.</p>
+<p>What is genuinely left open is fairness in its full, infinite form —
+“a message offered infinitely often is eventually delivered” — which
+needs the sender, channel, and receiver modelled as infinite streams
+rather than finite lists. That is a different and larger construction
+than the finite setting here supports, and it is not attempted — the
+finitary per-burst statement above is what is actually proved.</p>
+<p><em>Next: with channels between programs understood, the parser and
+monad track — sequencing computations that can fail.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
+(<a
+href="coqdoc/Riktig.Channel.Trace.html#perfect"><code>perfect</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app"><code>lossy_dup_app</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
+(the sender and receiver, the safety theorem) · <a
+href="coqdoc/Riktig.Channel.Fairness.html"><code>Channel/Fairness.v</code></a>
+(<a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Fairness.html#burst_delivery_fair"><code>burst_delivery_fair</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Fairness.html#abp_liveness"><code>abp_liveness</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Fairness.html#abp_collapse_perfect"><code>abp_collapse_perfect</code></a>).</p>
+</main>
+</body>
+</html>

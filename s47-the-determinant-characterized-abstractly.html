@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The determinant, characterized abstractly, and multiplied for any
+field</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="the-determinant-characterized-abstractly-and-multiplied-for-any-field">The
+determinant, characterized abstractly, and multiplied for any field</h1>
+<p>A linear map from a space to itself can, once a basis is chosen, be
+written down as a grid of numbers, and that grid can be fed through a
+recursive computation that produces one scalar: the determinant.
+Choosing a different basis gives a different grid, but earlier work
+showed the resulting scalar comes out the same either way — an argument
+that rested on one further fact, itself simply assumed at the time: that
+the determinant of a composed map is the product of the two maps’
+individual determinants.</p>
+<p>That leaves two questions unresolved. First: can “how much a linear
+map scales volume, and whether it reverses orientation” be pinned down
+by a short list of properties that number has to have — the way “there
+is an identity element” and “the operation is associative” pin down what
+a group’s multiplication has to do, without reference to any one
+particular group — rather than by a step-by-step procedure for computing
+it? And if such a list of properties can be written down, does anything
+actually have them, or could the list turn out to describe nothing at
+all? Second: is the multiplication fact used before actually true — for
+every number system in which “linear map” and “scalar” make sense, not
+only the number systems well-behaved enough to test two numbers for
+equality, which is what the earlier argument secretly needed?</p>
+<h2 id="pinning-the-number-down-by-its-own-properties">Pinning the
+number down by its own properties</h2>
+<p>Three properties answer the first question, each one stated without
+saying anything about how you would compute a value with them. A form
+that eats as many vectors as the space has dimensions is
+<em>multilinear</em> if scaling or adding in one argument position, with
+every other position held fixed, scales or adds the output the same way
+— “linear in each direction separately,” stated by replacing one
+argument at a time:</p>
+<pre class="coq"><code>Record MultilinearForm (n : nat) (F V : Type) {FF : Field F}
+    {VV : VectorSpace F V} := {
+  mf_fun :&gt; (Fin.t n -&gt; V) -&gt; F;
+  #[global] mf_proper :: Proper (@famEq V _ n ==&gt; equ) mf_fun;
+  mf_add : forall (vs : Fin.t n -&gt; V) (i : Fin.t n) (x y : V),
+    mf_fun (upd vs i (x + y)) == mf_fun (upd vs i x) + mf_fun (upd vs i y);
+  mf_scale : forall (vs : Fin.t n -&gt; V) (i : Fin.t n) (a : F) (x : V),
+    mf_fun (upd vs i (a *: x)) == a * mf_fun (upd vs i x)
+}.</code></pre>
+<p><code>upd vs i x</code> is the family <code>vs</code> with position
+<code>i</code> replaced by <code>x</code>; <a
+href="coqdoc/Riktig.Interface.Bilinear.html#mf_add"><code>mf_add</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Bilinear.html#mf_scale"><code>mf_scale</code></a>
+are exactly the additivity and homogeneity statements above, one
+position at a time. A form is <em>alternating</em> if feeding it two
+equal arguments in two different positions always produces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+— “the measurement degenerates the moment two of the directions being
+compared coincide”:</p>
+<pre class="coq"><code>Record Alternating {n : nat} {F V : Type} {FF : Field F}
+    {VV : VectorSpace F V} (m : MultilinearForm n F V) := {
+  alt_repeat : forall (vs : Fin.t n -&gt; V) (i j : Fin.t n),
+    i &lt;&gt; j -&gt; vs i == vs j -&gt; m vs == 0
+}.</code></pre>
+<p>A determinant is one further requirement stacked on top of both:
+alternating, multilinear, and equal to exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+on a fixed reference set of directions (a chosen basis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>)
+— the piece that turns “some scaling factor” into “the specific scaling
+factor a particular map applies,” the way fixing what
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+metre” means turns “a length” into a number you can compare across
+rulers.</p>
+<pre class="coq"><code>Record Determinant (n : nat) (F V : Type) {FF : Field F}
+    {VV : VectorSpace F V} (B : Basis n F V) := {
+  det_mf :&gt; MultilinearForm n F V;
+  det_alt : Alternating det_mf;
+  det_basis_1 : det_mf (basis_vec B) == 1
+}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.Determinant.html#det_mf"><code>det_mf</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Determinant.html#det_alt"><code>det_alt</code></a>
+are the first two properties from above, packaged together; <a
+href="coqdoc/Riktig.Interface.Determinant.html#det_basis_1"><code>det_basis_1</code></a>
+is the third, <code>basis_vec B</code> being the family of vectors the
+chosen basis consists of. Nothing in this record mentions a matrix, an
+entry, a sign, or a recursive computation. It is data, not a search: a
+<a
+href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+is a <em>choice</em> of such a form, supplied by whoever builds one, the
+same way a basis is a chosen list of vectors rather than something
+automatic instance resolution goes looking for on its own.</p>
+<h2 id="does-anything-actually-have-these-properties">Does anything
+actually have these properties?</h2>
+<p>A list of properties with nothing satisfying it describes an empty
+set. The recursive-computation determinant from earlier work — call it
+<a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, the
+one that expands along a matrix’s first column and runs on rational
+numbers by plain computation — needs to be checked against every field
+of the record above: linear in each row, alternating, and equal to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+on the identity matrix (the standard basis, read as a matrix). Take
+multilinearity in one row first — additivity, precisely:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with row </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> replaced by </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with row </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>=</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with row </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>=</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(A \text{ with row } i \text{ replaced by } x+y) \;=\; \det(A \text{ with row } i = x) + \det(A \text{ with row } i = y).</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma detM_mf_add : forall (n : nat) (vs : Fin.t n -&gt; Fin.t n -&gt; F)
+      (i : Fin.t n) (x y : Fin.t n -&gt; F),
+    detM (upd vs i (x + y)) == detM (upd vs i x) + detM (upd vs i y).
+  Proof.
+    intros n; destruct n as [| p]; intros vs i x y.
+    - exact (Fin.case0
+               (fun i0 : Fin.t 0 =&gt;
+                  detM (upd vs i0 (x + y)) == detM (upd vs i0 x) + detM (upd vs i0 y))
+               i).
+    - rewrite (detM_upd_eq_upd_row (S p) vs i (x + y)),
+        (detM_upd_eq_upd_row (S p) vs i x), (detM_upd_eq_upd_row (S p) vs i y).
+      exact (det_rowI_add p i vs x y).
+  Qed.</code></pre>
+<p>The
+dimension-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+case is vacuous (there is no <code>i : Fin.t 0</code> to point at, so
+<code>Fin.case0</code> disposes of it outright); in dimension
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mi>S</mi><mspace width="0.167em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">n = S\,p</annotation></semantics></math>,
+the one-slot family update <a
+href="coqdoc/Riktig.Interface.Bilinear.html#upd"><code>upd</code></a>
+used by the abstract record and the row-surgery operation <a
+href="coqdoc/Riktig.Impl.Elim.html#upd_row"><code>upd_row</code></a>
+used by the concrete matrix code are shown to agree pointwise (<a
+href="coqdoc/Riktig.Impl.DetInterface.html#detM_upd_eq_upd_row"><code>detM_upd_eq_upd_row</code></a>),
+and once they are rewritten to match, an already-proved row-additivity
+lemma <a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>
+closes the goal directly — a translation between two equivalent ways of
+describing “replace one row,” not new mathematics. Scaling is the same
+shape, one lemma over, and the alternating property comes straight from
+an already-proved lemma <a
+href="coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>.
+Assembled, <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> becomes a
+value of the <a
+href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+record:</p>
+<pre class="coq"><code>  (* THE INSTANCE: detM satisfies the abstract Determinant spec. *)
+  Definition detM_Determinant (n : nat) :
+      Determinant n F (Fin.t n -&gt; F) (FinVec_Basis n) :=
+    @Build_Determinant n F (Fin.t n -&gt; F) FF _ (FinVec_Basis n)
+      (detM_mf n) (detM_alt n) (detM_basis_1 n).</code></pre>
+<p>and Coq accepts a small resolution check confirming the pieces fit
+together unaided:</p>
+<pre class="coq"><code>Example detM_determinant_check (F : Type) (FF : Field F) (n : nat) :
+  Determinant n F (Fin.t n -&gt; F) (FinVec_Basis n) := detM_Determinant n.</code></pre>
+<p>The list of properties is satisfiable, and satisfiable by exactly the
+computation anyone would expect it to be.</p>
+<h2
+id="a-theorem-that-costs-nothing-extra-swapping-two-arguments-flips-the-sign">A
+theorem that costs nothing extra: swapping two arguments flips the
+sign</h2>
+<p>Because <a
+href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+is a real record with real fields, anything provable from <a
+href="coqdoc/Riktig.Interface.Bilinear.html#mf_add"><code>mf_add</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Bilinear.html#alt_repeat"><code>alt_repeat</code></a>
+alone is true of <em>every</em> determinant, on every field, for every
+basis — without ever touching <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>. Here is
+one such fact: swapping the values an alternating multilinear form reads
+at two distinct positions negates the form’s value.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><munder><munder><mi>b</mi><mo accent="true">⏟</mo></munder><mi>i</mi></munder><mo>,</mo><mi>…</mi><mo>,</mo><munder><munder><mi>a</mi><mo accent="true">⏟</mo></munder><mi>j</mi></munder><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mspace width="0.167em"></mspace><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><munder><munder><mi>a</mi><mo accent="true">⏟</mo></munder><mi>i</mi></munder><mo>,</mo><mi>…</mi><mo>,</mo><munder><munder><mi>b</mi><mo accent="true">⏟</mo></munder><mi>j</mi></munder><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mi>a</mi><mo>=</mo><msub><mi>v</mi><mi>i</mi></msub><mo>,</mo><mspace width="0.222em"></mspace><mi>b</mi><mo>=</mo><msub><mi>v</mi><mi>j</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">m(\dots, \underbrace{b}_{i}, \dots, \underbrace{a}_{j}, \dots) \;=\; -\,m(\dots, \underbrace{a}_{i}, \dots, \underbrace{b}_{j}, \dots), \qquad a = v_i,\ b = v_j.</annotation></semantics></math></p>
+<p>The proof is one trick, run twice. Set
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>W</mi><annotation encoding="application/x-tex">W</annotation></semantics></math>
+to be
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+with <em>both</em> positions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+forced to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a+b</annotation></semantics></math>;
+since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>W</mi><annotation encoding="application/x-tex">W</annotation></semantics></math>
+then has two distinct positions holding the same value, <a
+href="coqdoc/Riktig.Interface.Bilinear.html#alt_repeat"><code>alt_repeat</code></a>
+gives
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>W</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m(W) = 0</annotation></semantics></math>
+outright. Expanding that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+by additivity, first in position
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>,
+then in position
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
+and writing only the two active slots:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mn>0</mn></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">two equal slots: alternating</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">additivity in slot </mtext><mspace width="0.333em"></mspace></mrow><mi>j</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mspace width="1.0em"></mspace><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">additivity in slot </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>…</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>…</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>…</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">repeated-slot terms vanish: alternating</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+0 &amp;= m(\ldots, a+b, \ldots, a+b, \ldots)
+  &amp;&amp; \{\text{two equal slots: alternating}\}\\
+&amp;= m(\ldots, a+b, \ldots, a, \ldots) + m(\ldots, a+b, \ldots, b, \ldots)
+  &amp;&amp; \{\text{additivity in slot } j\}\\
+&amp;= m(\ldots, a, \ldots, a, \ldots) + m(\ldots, b, \ldots, a, \ldots)\\
+&amp;\quad + m(\ldots, a, \ldots, b, \ldots) + m(\ldots, b, \ldots, b, \ldots)
+  &amp;&amp; \{\text{additivity in slot } i\}\\
+&amp;= m(\ldots, b, \ldots, a, \ldots) + m(\ldots, a, \ldots, b, \ldots)
+  &amp;&amp; \{\text{repeated-slot terms vanish: alternating}\}
+\end{aligned}</annotation></semantics></math></p>
+<p>The two surviving terms are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+of the swapped family and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(v)</annotation></semantics></math>
+itself, and their sum being zero makes each the negative of the
+other.</p>
+<pre class="coq"><code>  Theorem mf_swap_neg : forall (vs : Fin.t n -&gt; V) (i j : Fin.t n),
+    i &lt;&gt; j -&gt; m (fswap vs i j) == - m vs.
+  Proof.
+    intros vs i j Hij.
+    pose (a := vs i). pose (b := vs j).
+    pose (VS&#39; := upd vs i (a + b)).
+    assert (Hji : j &lt;&gt; i) by (intro Heq; apply Hij; symmetry; exact Heq).
+    (* m (upd VS&#39; j a) + m (upd VS&#39; j b) == 0, from alt_repeat at W. *)
+    assert (HW0 : m (upd VS&#39; j a) + m (upd VS&#39; j b) == 0).
+    { assert (HWi : upd VS&#39; j (a + b) i == a + b)
+        by (rewrite (u_off VS&#39; j i (a + b) Hji); unfold VS&#39;; exact (u_at vs i (a+b))).
+      assert (HWj : upd VS&#39; j (a + b) j == a + b) by exact (u_at VS&#39; j (a+b)).
+      assert (HW0&#39; : m (upd VS&#39; j (a + b)) == 0).
+      { apply (alt_repeat Halt (upd VS&#39; j (a + b)) i j Hij). rewrite HWi, HWj. reflexivity. }
+      rewrite &lt;- HW0&#39;.
+      symmetry.
+      exact (mf_add m VS&#39; j a b). }
+    (* Second summand m (upd VS&#39; j b) == m vs. *)
+    assert (HP2val : m (upd VS&#39; j b) == m vs).
+    { assert (HVS&#39;j : b == VS&#39; j) by (unfold VS&#39;; symmetry; exact (u_off vs i j (a+b) Hij)).
+      assert (HP2 : forall k, upd VS&#39; j b k == VS&#39; k) by (intros k; exact (u_idem VS&#39; j b HVS&#39;j k)).
+      assert (Hm_P2 : m (upd VS&#39; j b) == m VS&#39;) by (apply (mf_proper m); exact HP2).
+      assert (Hexp2 : m VS&#39; == m (upd vs i a) + m (upd vs i b))
+        by exact (mf_add m vs i a b).
+      assert (HVSia : forall k, upd vs i a k == vs k)
+        by (intros k; exact (u_idem vs i a (reflexivity a) k)).
+      assert (Hm1 : m (upd vs i a) == m vs) by (apply (mf_proper m); exact HVSia).
+      assert (Hm2 : m (upd vs i b) == 0).
+      { apply (alt_repeat Halt (upd vs i b) i j Hij).
+        rewrite (u_at vs i b), (u_off vs i j b Hij). reflexivity. }
+      rewrite Hm_P2, Hexp2, Hm1, Hm2.
+      exact (mon_idr (m vs)). }
+    (* First summand m (upd VS&#39; j a) == m (fswap vs i j). *)
+    assert (HP1val : m (upd VS&#39; j a) == m (fswap vs i j)).
+    { assert (Hreorder : forall k, upd VS&#39; j a k == upd (upd vs j a) i (a + b) k).
+      { intros k. unfold VS&#39;. exact (u_comm vs i j (a+b) a Hij k). }
+      assert (Hm_P1 : m (upd VS&#39; j a) == m (upd (upd vs j a) i (a + b)))
+        by (apply (mf_proper m); exact Hreorder).
+      assert (Hexp3 : m (upd (upd vs j a) i (a + b))
+                    == m (upd (upd vs j a) i a) + m (upd (upd vs j a) i b))
+        by exact (mf_add m (upd vs j a) i a b).
+      assert (HT1 : m (upd (upd vs j a) i a) == 0).
+      { apply (alt_repeat Halt (upd (upd vs j a) i a) i j Hij).
+        rewrite (u_at (upd vs j a) i a), (u_off (upd vs j a) i j a Hij), (u_at vs j a).
+        reflexivity. }
+      assert (HT2 : forall k, upd (upd vs j a) i b k == fswap vs i j k).
+      { intros k.
+        destruct (dec (i = k)) as [Hik | Hik].
+        - rewrite &lt;- Hik, (u_at (upd vs j a) i b).
+          symmetry. exact (fswap_at_i vs i j).
+        - destruct (dec (j = k)) as [Hjk | Hjk].
+          + rewrite &lt;- Hjk, (u_off (upd vs j a) i j b Hij), (u_at vs j a).
+            symmetry. exact (fswap_at_j vs i j Hij).
+          + rewrite (u_off (upd vs j a) i k b Hik), (u_off vs j k a Hjk).
+            symmetry. unfold fswap.
+            rewrite (swap_fin_ne n i j k (fun Heq =&gt; Hik (eq_sym Heq)) (fun Heq =&gt; Hjk (eq_sym Heq))).
+            reflexivity. }
+      assert (HT2m : m (upd (upd vs j a) i b) == m (fswap vs i j))
+        by (apply (mf_proper m); exact HT2).
+      rewrite Hm_P1, Hexp3, HT1, HT2m.
+      exact (mon_idl (m (fswap vs i j))). }
+    (* Assemble: m (upd VS&#39; j a) == - m (upd VS&#39; j b) (from HW0), then
+       substitute both known values. *)
+    assert (Hneg : m (upd VS&#39; j a) == - m (upd VS&#39; j b))
+      by exact (neg_unique_l (m (upd VS&#39; j b)) (m (upd VS&#39; j a)) HW0).
+    rewrite HP1val, HP2val in Hneg.
+    exact Hneg.
+  Qed.</code></pre>
+<p>Line for line, this is the trick just described: <code>HW0</code>
+records that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">first summand</mtext><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">second summand</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m(\text{first summand}) + m(\text{second summand}) = 0</annotation></semantics></math>,
+read off <a
+href="coqdoc/Riktig.Interface.Bilinear.html#alt_repeat"><code>alt_repeat</code></a>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>W</mi><annotation encoding="application/x-tex">W</annotation></semantics></math>;
+<code>HP2val</code> shows the second summand reduces to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(v)</annotation></semantics></math>
+— an inner update that turns out to be idempotent, feeding <a
+href="coqdoc/Riktig.Interface.Bilinear.html#mf_add"><code>mf_add</code></a>
+again, with one of <em>its</em> two pieces sent to zero by <a
+href="coqdoc/Riktig.Interface.Bilinear.html#alt_repeat"><code>alt_repeat</code></a>
+applied to a fresh equal pair; <code>HP1val</code> shows the first
+summand reduces, symmetrically, to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+of the swapped family; and the closing <code>assert Hneg</code> reads
+the two known values back into <code>HW0</code>’s equation to conclude
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">swap</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(\text{swap}) = -m(v)</annotation></semantics></math>.
+Read as a fact about a determinant specifically, this is immediate —
+plug in its own multilinear form and its own alternating witness:</p>
+<pre class="coq"><code>Theorem det_swap_neg : forall (n : nat) (F V : Type) {FF : Field F}
+    {VV : VectorSpace F V} (B : Basis n F V) (D : Determinant n F V B)
+    (vs : Fin.t n -&gt; V) (i j : Fin.t n),
+  i &lt;&gt; j -&gt; D (fswap vs i j) == - D vs.
+Proof.
+  intros n F V FF VV B D vs i j Hij.
+  exact (mf_swap_neg (det_mf D) (det_alt D) vs i j Hij).
+Qed.</code></pre>
+<p>Nothing about <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, no first
+column, no minors: this follows from the three properties alone, for any
+structure matching them.</p>
+<h2 id="the-determinant-multiplies-for-every-field">The determinant
+multiplies, for every field</h2>
+<p>Here is the theorem that settles the second question left open at the
+start:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(A) \cdot \det(B)</annotation></semantics></math>,
+for square matrices over <em>any</em> field — no assumption that the
+field’s equality can be decided, which was exactly what the earlier
+argument needed and never justified. The obvious route — write out the
+determinant as a sum over all
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>!</mi></mrow><annotation encoding="application/x-tex">n!</annotation></semantics></math>
+permutations and match up terms from the product — needs a fact about
+permutation signs (that composing two permutations multiplies their
+signs) that takes real work to set up. There is a shorter route, the
+classical argument for <em>uniqueness of an alternating multilinear
+form</em>, and it goes through two much smaller pieces instead.</p>
+<p><strong>Piece one: any row-additive, alternating function is
+antisymmetric under swapping two rows.</strong> This does not need <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> at all —
+it is a fact about <em>any</em> function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+from matrices to the field that respects row-additivity and vanishes on
+repeated rows. Write
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u, v</annotation></semantics></math>
+for rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i, j</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>;
+feeding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+the matrix with rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+<em>both</em> set to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>
+gives
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+(repeated rows), and expanding that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+by additivity, first in row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+then in row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
+leaves exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mrow><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with rows </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> swapped</mtext></mrow></mrow><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(A) + g(\text{$A$ with rows $i,j$ swapped})</annotation></semantics></math>,
+with the other two terms sent to zero along the way by the same
+repeated-row rule — the same
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(u+v)</annotation></semantics></math>-in-both-slots
+chain displayed for <a
+href="coqdoc/Riktig.Theory.Determinant.html#mf_swap_neg"><code>mf_swap_neg</code></a>
+above, now stated directly for row surgery on matrices rather than for
+the positions of an abstract form. In compressed form:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>M</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with rows </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>,</mo><mi>j</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> swapped</mtext></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">swapped</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mspace width="0.167em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">0 \;=\; g(M_1) \;=\; g(A) + g(A \text{ with rows } i,j \text{ swapped})
+\;\Longrightarrow\; g(\text{swapped}) = -\,g(A).</annotation></semantics></math></p>
+<pre class="coq"><code>  Theorem g_swap_antisym : forall (n:nat) (g : Matrix n n F -&gt; F),
+    Proper (equ ==&gt; equ) g -&gt;
+    (forall (i:Fin.t n)(A:Matrix n n F)(r1 r2:Fin.t n-&gt;F),
+       g (upd_row A i (fun k=&gt;r1 k+r2 k)) == g(upd_row A i r1)+g(upd_row A i r2)) -&gt;
+    (forall (A:Matrix n n F)(i j:Fin.t n), i&lt;&gt;j -&gt; (forall c, A i c==A j c) -&gt; g A == 0) -&gt;
+    forall (A:Matrix n n F)(i j:Fin.t n), i&lt;&gt;j -&gt; g (row_swap A i j) == - g A.
+  Proof.
+    intros n g Hproper Hadd Halt A i j Hij.
+    assert (Hji : j &lt;&gt; i) by (intros Heq; apply Hij; exact (eq_sym Heq)).
+    set (u := A i). set (v := A j).
+    set (N1 := upd_row A j (fun k=&gt;u k+v k)).
+    set (M1 := upd_row N1 i (fun k=&gt;u k+v k)).
+    (* rows i, j of M1 both equal u + v, so g M1 == 0 by alternating. *)
+    assert (HM1i : forall c, M1 i c == u c + v c).
+    { intros c. exact (upd_row_at n N1 i (fun k=&gt;u k+v k) c). }
+    assert (HM1j : forall c, M1 j c == u c + v c).
+    { intros c.
+      transitivity (N1 j c).
+      - exact (upd_row_ne n N1 i j (fun k=&gt;u k+v k) c Hji).
+      - exact (upd_row_at n A j (fun k=&gt;u k+v k) c). }
+    assert (HM1zero : g M1 == 0).
+    { apply (Halt M1 i j Hij). intros c. rewrite (HM1i c), (HM1j c). reflexivity. }
+    (* M1 expands, in row i, into g (upd_row N1 i u) + g (upd_row N1 i v). *)
+    assert (HM1exp : g M1 == g (upd_row N1 i u) + g (upd_row N1 i v)).
+    { exact (Hadd i N1 u v). }
+    (* g (upd_row N1 i u) == g A: N1&#39;s row i is already u, so this is
+       g N1 itself, and N1 expands (row j) into g A plus a zero term
+       (rows i, j both u). *)
+    assert (Hleft : g (upd_row N1 i u) == g A).
+    { assert (HN1i : forall c, N1 i c == u c).
+      { intros c. exact (upd_row_ne n A j i (fun k=&gt;u k+v k) c Hij). }
+      assert (Heq1 : upd_row N1 i u == upd_row N1 i (N1 i)).
+      { apply upd_row_change_pointwise. intros k. symmetry. exact (HN1i k). }
+      assert (Heq2 : upd_row N1 i (N1 i) == N1).
+      { exact (upd_row_self n N1 i). }
+      rewrite Heq1, Heq2.
+      unfold N1.
+      transitivity (g (upd_row A j u) + g (upd_row A j v)).
+      - exact (Hadd j A u v).
+      - assert (H1 : g (upd_row A j u) == 0).
+        { apply (Halt (upd_row A j u) i j Hij). intros c.
+          transitivity (A i c).
+          - exact (upd_row_ne n A j i u c Hij).
+          - transitivity (u c); [reflexivity |].
+            symmetry. exact (upd_row_at n A j u c). }
+        assert (H2 : g (upd_row A j v) == g A).
+        { assert (HAjv : upd_row A j v == A).
+          { assert (Hveq : forall c, v c == A j c) by (intros c; reflexivity).
+            transitivity (upd_row A j (A j)).
+            - apply upd_row_change_pointwise. exact Hveq.
+            - exact (upd_row_self n A j). }
+          apply Hproper. exact HAjv. }
+        rewrite H1, H2.
+        exact (mon_idl (g A)). }
+    (* g (upd_row N1 i v) == g (row_swap A i j): reorder the two updates
+       (they commute, i &lt;&gt; j), then expand row j; one term IS the swap,
+       the other has rows i, j both v (killed by alternating). *)
+    assert (Hright : g (upd_row N1 i v) == g (row_swap A i j)).
+    { assert (Hcomm : upd_row N1 i v == upd_row (upd_row A i v) j (fun k=&gt;u k+v k)).
+      { unfold N1. exact (upd_row_comm n A j i (fun k=&gt;u k+v k) v Hji). }
+      rewrite Hcomm.
+      set (A2 := upd_row A i v).
+      transitivity (g (upd_row A2 j u) + g (upd_row A2 j v)).
+      - exact (Hadd j A2 u v).
+      - assert (H1 : g (upd_row A2 j u) == g (row_swap A i j)).
+        { assert (Heq3 : upd_row A2 j u == row_swap A i j).
+          { unfold A2. exact (upd_row_row_swap_eq n A i j Hij). }
+          apply Hproper. exact Heq3. }
+        assert (H2 : g (upd_row A2 j v) == 0).
+        { apply (Halt (upd_row A2 j v) i j Hij). intros c.
+          transitivity (v c).
+          - transitivity (A2 i c).
+            + exact (upd_row_ne n A2 j i v c Hij).
+            + exact (upd_row_at n A i v c).
+          - symmetry. exact (upd_row_at n A2 j v c). }
+        rewrite H1, H2.
+        exact (mon_idr (g (row_swap A i j))). }
+    assert (HM1full : g M1 == g A + g (row_swap A i j)).
+    { rewrite HM1exp, Hleft, Hright. reflexivity. }
+    assert (Hsum : g A + g (row_swap A i j) == 0).
+    { transitivity (g M1); [symmetry; exact HM1full | exact HM1zero]. }
+    exact (neg_unique_r (g A) (g (row_swap A i j)) Hsum).
+  Qed.</code></pre>
+<p><code>M1</code> is the matrix with rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+both forced to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>,
+so <code>g M1 == 0</code> by hypothesis (<code>HM1zero</code>);
+expanding it in row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+(<code>HM1exp</code>) gives two pieces, and each is chased down
+separately — <code>Hleft</code> shows the piece with row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+restored to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+collapses back to <code>g A</code>, <code>Hright</code> shows the piece
+with row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+set to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+is, after reordering the two independent row updates and expanding once
+more in row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>,
+exactly <code>g</code> of the swapped matrix. Adding the two known
+values and cancelling gives the antisymmetry. This is proved
+<em>once</em>, about an arbitrary such
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+— a lemma about row-additive alternating functions in general, with no
+reference to <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>.</p>
+<p><strong>Piece two: uniqueness.</strong> Any row-additive,
+homogeneous, alternating function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
+matrices agrees with <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, up to the
+single scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(I)</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">g(A) \;=\; g(I) \cdot \det(A).</annotation></semantics></math></p>
+<p>The proof expands
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>’s
+rows as linear combinations of standard basis rows (<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#row_expand"><code>row_expand</code></a>,
+reused for both
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+and <a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>,
+since it needs only row-additivity and homogeneity), reducing the claim
+to matching
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>det</mi></mrow><annotation encoding="application/x-tex">g(I)\cdot\det</annotation></semantics></math>
+on every matrix whose rows are drawn from the standard basis. On such a
+matrix, indexed by a function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mrow><mi mathvariant="normal">F</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow><mspace width="0.222em"></mspace><mi>n</mi><mo>→</mo><mrow><mi mathvariant="normal">F</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow><mspace width="0.222em"></mspace><mi>n</mi></mrow><annotation encoding="application/x-tex">f : \mathrm{Fin}\ n \to \mathrm{Fin}\ n</annotation></semantics></math>:
+if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+repeats a value, two rows coincide and both sides are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+by the alternating property (<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#basis_rows_g_eq_detM"><code>basis_rows_g_eq_detM</code></a>,
+the “repeat” branch); otherwise one swap of positions strictly reduces
+the count of positions where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+disagrees with the identity (piece one gives the antisymmetry the
+induction needs at each swap), and the induction bottoms out at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow></mrow><annotation encoding="application/x-tex">f = \mathrm{id}</annotation></semantics></math>,
+where both sides are visibly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">g(I)\cdot 1</annotation></semantics></math>.
+Injectivity of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is never assumed or needed — the two cases (a repeat, or a swap that
+strictly shrinks the count) are exhaustive on their own.</p>
+<pre class="coq"><code>  Theorem g_row_expand_eq : forall (N:nat) (g : Matrix N N F -&gt; F),
+    Proper (equ ==&gt; equ) g -&gt;
+    (forall (i:Fin.t N)(A:Matrix N N F)(r1 r2:Fin.t N-&gt;F),
+       g (upd_row A i (fun k=&gt;r1 k+r2 k)) == g(upd_row A i r1)+g(upd_row A i r2)) -&gt;
+    (forall (i:Fin.t N)(A:Matrix N N F)(c:F)(r0:Fin.t N-&gt;F),
+       g (upd_row A i (fun k=&gt;c*r0 k)) == c*g(upd_row A i r0)) -&gt;
+    (forall (A:Matrix N N F)(i j:Fin.t N), i&lt;&gt;j -&gt; (forall c, A i c==A j c) -&gt; g A == 0) -&gt;
+    forall A : Matrix N N F, g A == g mat_id * detM A.
+  Proof.
+    intros N g Hproper Hadd Hscale Halt A.
+    assert (Hg_exp := row_expand N N g Hproper Hadd Hscale A).
+    assert (Hd_exp := det_row_expand N A).
+    assert (Hpoint : forall f : Fin.t N -&gt; Fin.t N,
+      prodF (fun i =&gt; A i (f i)) * g (basis_rowsP f)
+        == g mat_id * (prodF (fun i =&gt; A i (f i)) * detM (basis_rowsP f))).
+    { intros f.
+      transitivity (prodF (fun i =&gt; A i (f i)) * (g mat_id * detM (basis_rowsP f))).
+      - apply ring_mul_proper; [reflexivity |].
+        exact (basis_rows_g_eq_detM N g Hproper Hadd Halt f).
+      - transitivity ((prodF (fun i =&gt; A i (f i)) * g mat_id) * detM (basis_rowsP f)).
+        + symmetry. exact (ring_mul_assoc (prodF (fun i =&gt; A i (f i))) (g mat_id) (detM (basis_rowsP f))).
+        + transitivity ((g mat_id * prodF (fun i =&gt; A i (f i))) * detM (basis_rowsP f)).
+          * apply ring_mul_proper; [| reflexivity]. exact (field_mul_comm (prodF (fun i =&gt; A i (f i))) (g mat_id)).
+          * exact (ring_mul_assoc (g mat_id) (prodF (fun i =&gt; A i (f i))) (detM (basis_rowsP f))). }
+    rewrite Hg_exp.
+    rewrite (fsum_ext N N
+      (fun f =&gt; prodF (fun i =&gt; A i (f i)) * g (basis_rowsP f))
+      (fun f =&gt; g mat_id * (prodF (fun i =&gt; A i (f i)) * detM (basis_rowsP f)))
+      Hpoint).
+    rewrite (fsum_scale N N (g mat_id)
+      (fun f =&gt; prodF (fun i =&gt; A i (f i)) * detM (basis_rowsP f))).
+    apply ring_mul_proper; [reflexivity |]. symmetry. exact Hd_exp.
+  Qed.</code></pre>
+<p><code>Hg_exp</code> and <code>Hd_exp</code> are <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#row_expand"><code>row_expand</code></a>
+applied to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+and (via <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#det_row_expand"><code>det_row_expand</code></a>)
+to <a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
+itself — both write their argument as a sum, over every function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+from row-indices to row-indices, of an entry-product times the value at
+the standard-basis matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>E</mi><mi>f</mi></msub><annotation encoding="application/x-tex">E_f</annotation></semantics></math>
+that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+picks out. On the blackboard the whole theorem is the chain</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><munder><mo>∑</mo><mi>f</mi></munder><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><munder><mo>∏</mo><mi>i</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mo>,</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo stretchy="false" form="postfix">)</mo></mrow></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>E</mi><mi>f</mi></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">row expansion of </mtext><mspace width="0.333em"></mspace></mrow><mi>g</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><munder><mo>∑</mo><mi>f</mi></munder><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><munder><mo>∏</mo><mi>i</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mo>,</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo stretchy="false" form="postfix">)</mo></mrow></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>E</mi><mi>f</mi></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the induction on standard-basis matrices</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∑</mo><mi>f</mi></munder><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><munder><mo>∏</mo><mi>i</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mo>,</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo stretchy="false" form="postfix">)</mo></mrow></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mspace width="0.167em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>E</mi><mi>f</mi></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">factor the constant out of the sum</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">row expansion of </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo>,</mo><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> read backwards</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+g(A) &amp;= \sum_{f} \Bigl(\prod_i A_{i,f(i)}\Bigr)\, g(E_f)
+  &amp;&amp; \{\text{row expansion of } g\}\\
+&amp;= \sum_{f} \Bigl(\prod_i A_{i,f(i)}\Bigr)\, g(I)\,\det(E_f)
+  &amp;&amp; \{\text{the induction on standard-basis matrices}\}\\
+&amp;= g(I) \sum_{f} \Bigl(\prod_i A_{i,f(i)}\Bigr)\, \det(E_f)
+  &amp;&amp; \{\text{factor the constant out of the sum}\}\\
+&amp;= g(I)\,\det(A)
+  &amp;&amp; \{\text{row expansion of } \det, \text{ read backwards}\}
+\end{aligned}</annotation></semantics></math></p>
+<p><code>Hpoint</code> is the second step, where the induction (<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#basis_rows_g_eq_detM"><code>basis_rows_g_eq_detM</code></a>)
+enters: term by term,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>det</mi></mrow><annotation encoding="application/x-tex">g(I)\cdot\det</annotation></semantics></math>
+agree on every one of those standard-basis matrices. <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#fsum_ext"><code>fsum_ext</code></a>
+turns that termwise agreement into agreement of the sums, <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#fsum_scale"><code>fsum_scale</code></a>
+is the third step, factoring
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(I)</annotation></semantics></math>
+out, and <code>Hd_exp</code> read backwards is the last.</p>
+<p><strong>Assembling the product law.</strong> Fix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+and apply piece two to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>:=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(A) := \det(AB)</annotation></semantics></math>
+— which is row-additive, homogeneous, and alternating in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
+because row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A \cdot B</annotation></semantics></math>
+is built from row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+alone, linearly, and equal rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+force equal rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A\cdot B</annotation></semantics></math>:</p>
+<pre class="coq"><code>  Definition g_mulB {N:nat} (B : Matrix N N F) (A : Matrix N N F) : F := detM (mat_mul A B).</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_mulB"><code>g_mulB</code></a>
+needs to be shown row-additive, homogeneous, and alternating before
+piece two applies to it. The first two follow because row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A\cdot B</annotation></semantics></math>
+is built from row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+alone, linearly, through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+— an algebraic fact about matrix multiplication (<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#mat_mul_upd_row"><code>mat_mul_upd_row</code></a>,
+not shown here) feeding the already-proved row-additivity and
+row-scaling lemmas for <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>. The
+third, that equal rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+force <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_mulB"><code>g_mulB</code></a>
+to vanish, is a two-line consequence of <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>’s own
+alternating property — equal rows in, equal rows out:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>=</mo><msub><mi>A</mi><mi>j</mi></msub><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><msub><mo stretchy="false" form="postfix">)</mo><mi>i</mi></msub><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><msub><mo stretchy="false" form="postfix">)</mo><mi>j</mi></msub><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">A_i = A_j \;\Longrightarrow\; (AB)_i = (AB)_j
+\;\Longrightarrow\; \det(AB) = 0.</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma g_mulB_alt : forall (N:nat)(B:Matrix N N F)(A:Matrix N N F)(i j:Fin.t N),
+    i&lt;&gt;j -&gt; (forall c, A i c == A j c) -&gt; g_mulB B A == 0.
+  Proof.
+    intros N B A i j Hij Heq. unfold g_mulB.
+    apply (detM_alternating N (mat_mul A B) i j Hij).
+    intros c. unfold mat_mul. apply bigopF_ext. intros l.
+    apply ring_mul_proper; [exact (Heq l) | reflexivity].
+  Qed.</code></pre>
+<p>Uniqueness then finishes it in three steps:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">piece two, at </mtext><mspace width="0.333em"></mspace></mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>:=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.222em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">commutativity of the field multiplication</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo>=</mo><mi>B</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+\det(AB) &amp;= \det(I \cdot B)\cdot\det(A)
+  &amp;&amp; \{\text{piece two, at } g(A) := \det(AB),\ g(I) = \det(I \cdot B)\}\\
+&amp;= \det(A)\cdot\det(I \cdot B)
+  &amp;&amp; \{\text{commutativity of the field multiplication}\}\\
+&amp;= \det(A)\cdot\det(B)
+  &amp;&amp; \{I \cdot B = B\}
+\end{aligned}</annotation></semantics></math></p>
+<pre class="coq"><code>  Theorem detM_mul : forall (N:nat)(A B:Matrix N N F), detM (mat_mul A B) == detM A * detM B.
+  Proof.
+    intros N A B.
+    destruct N as [| p0].
+    - transitivity (1:F).
+      + exact (detM_0 (mat_mul A B)).
+      + transitivity ((1:F)*1).
+        * symmetry. exact (ring_mul_1l 1).
+        * apply ring_mul_proper; symmetry; [exact (detM_0 A) | exact (detM_0 B)].
+    - assert (Hg := g_row_expand_eq (S p0) (g_mulB B) (g_mulB_proper (S p0) B)
+                 (fun i A&#39; r1 r2 =&gt; g_mulB_add (S p0) p0 eq_refl B i A&#39; r1 r2)
+                 (fun i A&#39; c r0 =&gt; g_mulB_scale (S p0) p0 eq_refl B i A&#39; c r0)
+                 (g_mulB_alt (S p0) B) A).
+      unfold g_mulB in Hg.
+      transitivity (detM (mat_mul mat_id B) * detM A).
+      + exact Hg.
+      + transitivity (detM A * detM (mat_mul mat_id B)).
+        * exact (field_mul_comm (detM (mat_mul mat_id B)) (detM A)).
+        * apply ring_mul_proper; [reflexivity |].
+          apply detM_proper. exact (mat_mul_1l (S p0) (S p0) B).
+  Qed.</code></pre>
+<p>Dimension
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+is a one-line special case (the determinant of any empty matrix is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>).
+Otherwise, <code>Hg</code> is <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_row_expand_eq"><code>g_row_expand_eq</code></a>
+read at <code>g_mulB B</code>: it says
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(I\cdot B)\cdot\det(A)</annotation></semantics></math>
+directly. <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_1l"><code>mat_mul_1l</code></a>
+erases the leftover identity, and <a
+href="coqdoc/Riktig.Interface.Field.html#field_mul_comm"><code>field_mul_comm</code></a>
+puts the two factors in the expected order. No decidable equality
+anywhere — the whole route runs on <code>Fin.t</code>’s equality, which
+is always decidable regardless of what the field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+is, and on the field’s own axioms alone.</p>
+<h2 id="running-the-arithmetic">Running the arithmetic</h2>
+<p>Fix two
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
+matrices over the rationals — a nonsingular one, <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#mat3_ns_g"><code>mat3_ns_g</code></a>,
+and a second, <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#mat3_b_g"><code>mat3_b_g</code></a>.
+Both sides of the product law evaluate to the same number independently,
+by conversion, before the theorem above is ever invoked to relate
+them:</p>
+<pre class="coq"><code>Example detM_mulGeneral_Q_compute_lhs :
+  detM (mat_mul mat3_ns_g mat3_b_g) == ((-15)#1)%Q.
+Proof. reflexivity. Qed.
+
+Example detM_mulGeneral_Q_compute_rhs :
+  detM mat3_ns_g * detM mat3_b_g == ((-15)#1)%Q.
+Proof. reflexivity. Qed.</code></pre>
+<p>and applying <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
+itself to this pair of matrices is a one-line call, standing in place of
+either computation:</p>
+<pre class="coq"><code>Example detM_mulGeneral_Q :
+  detM (mat_mul mat3_ns_g mat3_b_g) == detM mat3_ns_g * detM mat3_b_g.
+Proof. exact (detM_mul 3 mat3_ns_g mat3_b_g). Qed.</code></pre>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Determinant.html"><code>Interface/Determinant.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Determinant.html#det_mf"><code>det_mf</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Determinant.html#det_alt"><code>det_alt</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Determinant.html#det_basis_1"><code>det_basis_1</code></a>)
+· <a
+href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Bilinear.html#Alternating"><code>Alternating</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.DetInterface.html"><code>Impl/DetInterface.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.DetInterface.html#detM_mf_add"><code>detM_mf_add</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetInterface.html#detM_Determinant"><code>detM_Determinant</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetInterface.html#detM_determinant_check"><code>detM_determinant_check</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Determinant.html#mf_swap_neg"><code>mf_swap_neg</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Determinant.html#det_swap_neg"><code>det_swap_neg</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html"><code>Impl/DetMulGeneral.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_swap_antisym"><code>g_swap_antisym</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_row_expand_eq"><code>g_row_expand_eq</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>,
+the concrete
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
+checks).</p>
+</main>
+</body>
+</html>

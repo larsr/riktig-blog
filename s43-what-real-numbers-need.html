@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What real numbers need: least-upper-bound completeness</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="what-real-numbers-need-least-upper-bound-completeness">What real
+numbers need: least-upper-bound completeness</h1>
+<p>A <strong>field</strong> is a set with <code>+</code>,
+<code>*</code>, a zero, a one, negation, and inverses of everything
+except zero, obeying the ordinary arithmetic laws — the rationals
+<code>Q</code> are the standard example. An <strong>ordered
+field</strong> adds a total order <code>&lt;=</code> that is compatible
+with the arithmetic: adding the same thing to both sides preserves the
+order, and the product of two nonnegative elements is nonnegative. The
+rationals are an ordered field too. So what separates the real numbers
+from the rationals is not any of the algebra and not the order — it is
+one further property, which this post is about.</p>
+<h2 id="the-property-q-is-missing">The property <code>Q</code> is
+missing</h2>
+<p>Take the set of rationals whose square is at most two:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mo stretchy="false" form="prefix">{</mo><mspace width="0.167em"></mspace><mi>q</mi><mo>∣</mo><mi>q</mi><mo>⋅</mo><mi>q</mi><mo>≤</mo><mn>2</mn><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">P = \{\, q \mid q \cdot q \le 2 \,\}.</annotation></semantics></math></p>
+<p>This set is inhabited (it contains <code>1</code>) and it is bounded
+above (by <code>2</code>, say — nothing in it exceeds <code>2</code>).
+Ask for its <em>least</em> upper bound, the smallest rational that sits
+above every element of <code>P</code>. There isn’t one. Any rational
+upper bound can be nudged down a little and still be an upper bound,
+closing in on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mn>2</mn></msqrt><annotation encoding="application/x-tex">\sqrt 2</annotation></semantics></math>
+from above without ever reaching it, because
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mn>2</mn></msqrt><annotation encoding="application/x-tex">\sqrt 2</annotation></semantics></math>
+is not rational. The candidate boundary falls outside the number system.
+That single failure — a bounded, inhabited set with no least upper bound
+— is the one thing that makes <code>Q</code> “gappy” and the reals
+“complete”.</p>
+<p><strong>Least-upper-bound completeness</strong> is the axiom that
+closes the gap: every inhabited, bounded-above set does have a least
+upper bound (a <em>supremum</em>) inside the system. That, plus the
+ordered-field structure, is the whole specification of the real
+numbers.</p>
+<h2 id="the-specification-in-full">The specification, in full</h2>
+<p>Here is the entire class, verbatim from <a
+href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>.
+It takes a type <code>R</code> that is already a <a
+href="coqdoc/Riktig.Interface.Field.html#Field"><code>Field</code></a>
+and asks for a compatible total order and the completeness axiom:</p>
+<pre class="coq"><code>Class Reals (R : Type) `{Field R} := {
+  (* Total order, compatible with the setoid equality. *)
+  r_le         : Rel R;
+  r_le_proper  : Proper (equ ==&gt; equ ==&gt; iff) r_le;
+  r_le_refl    : forall x : R, r_le x x;
+  r_le_trans   : forall x y z : R, r_le x y -&gt; r_le y z -&gt; r_le x z;
+  r_le_antisym : forall x y : R, r_le x y -&gt; r_le y x -&gt; x == y;
+  r_le_total   : forall x y : R, r_le x y \/ r_le y x;
+
+  (* Ordered-field compatibility. *)
+  r_le_add_compat : forall x y z : R, r_le x y -&gt; r_le (x + z) (y + z);
+  r_le_mul_compat : forall x y : R, r_le 0 x -&gt; r_le 0 y -&gt; r_le 0 (x * y);
+
+  (* Least-upper-bound completeness: every inhabited set bounded above
+     has a supremum.  This is the axiom Q cannot satisfy — the set
+     { q | q * q &lt;= 2 } is inhabited and bounded but has no rational
+     supremum — and the one existence theorems (IVT, MVT) consume. *)
+  r_complete : forall P : R -&gt; Prop,
+    (exists x : R, P x) -&gt;
+    (exists b : R, forall x : R, P x -&gt; r_le x b) -&gt;
+    exists s : R,
+      (forall x : R, P x -&gt; r_le x s) /\
+      (forall b : R, (forall x : R, P x -&gt; r_le x b) -&gt; r_le s b)
+}.</code></pre>
+<p>Read it in three groups. The first six fields introduce the order <a
+href="coqdoc/Riktig.Interface.Reals.html#r_le"><code>r_le</code></a> and
+its laws: it respects the field’s own equality <code>==</code> (<a
+href="coqdoc/Riktig.Interface.Reals.html#r_le_proper"><code>r_le_proper</code></a>),
+it is reflexive, transitive, antisymmetric, and total — that is exactly
+what makes <code>&lt;=</code> a total order rather than a partial one.
+The next two fields, <a
+href="coqdoc/Riktig.Interface.Reals.html#r_le_add_compat"><code>r_le_add_compat</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Reals.html#r_le_mul_compat"><code>r_le_mul_compat</code></a>,
+are the compatibility conditions that turn “a field with an order” into
+“an <em>ordered</em> field”: you may add the same <code>z</code> to both
+sides of an inequality, and a product of two nonnegative elements stays
+nonnegative.</p>
+<p>The last field, <a
+href="coqdoc/Riktig.Interface.Reals.html#r_complete"><code>r_complete</code></a>,
+is the real content. Read it as a sentence about an arbitrary set
+<code>P : R -&gt; Prop</code>. <em>If</em> <code>P</code> is inhabited
+(<code>exists x, P x</code>) <em>and</em> bounded above
+(<code>exists b</code> above every element), <em>then</em> there exists
+an <code>s</code> that is (i) an upper bound —
+<code>forall x, P x -&gt; r_le x s</code> — and (ii) the <em>least</em>
+one: any other upper bound <code>b</code> satisfies
+<code>r_le s b</code>, so <code>s</code> sits below every competitor.
+Those two conjuncts are the definition of “least upper bound”, written
+out with no appeal to anything outside the class.</p>
+<h2 id="no-instance-on-purpose">No instance — on purpose</h2>
+<p>One thing must be said plainly. <a
+href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>
+is the file quoted above and nothing else: it states the class and
+closes with one line,</p>
+<pre class="coq"><code>#[global] Hint Mode Reals ! - : typeclass_instances.</code></pre>
+<p>which only tells Coq’s instance search to wait until it knows the
+carrier type <code>R</code> before trying to solve a <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals"><code>Reals</code></a>
+goal. There is no <code>Instance</code> anywhere in the file. Nowhere
+does the file exhibit a concrete type and prove it satisfies <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals"><code>Reals</code></a>.
+The specification says <em>what</em> a real-number system must satisfy
+and stops there.</p>
+<p>That is deliberate, and it is worth being clear about why it is a
+reasonable choice rather than an unfinished one.</p>
+<p>Building an actual model of <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals"><code>Reals</code></a>
+means constructing the reals — as Dedekind cuts, or as equivalence
+classes of Cauchy sequences of rationals, or by importing Coq’s
+standard-library <code>R</code> — and then discharging every field of
+the class for that construction. Each of these is a substantial,
+self-contained development in its own right, and they have essentially
+nothing to do with the things one <em>proves using</em> completeness.
+The intermediate value theorem, the mean value theorem, the existence of
+suprema in any argument that needs them — these are statements about
+<em>any</em> type satisfying <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals"><code>Reals</code></a>,
+and their proofs quote <a
+href="coqdoc/Riktig.Interface.Reals.html#r_complete"><code>r_complete</code></a>
+and the order laws by name, never the internal machinery of cuts or
+sequences. The file comment names this split directly: “Impl/ Rstd.v
+(stdlib R, classical) and later a constructive Cauchy build are the
+intended models; everything downstream programs against this class
+only.”</p>
+<p>The reward for the split is concrete. Anything proved generically
+against the <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals"><code>Reals</code></a>
+class — with a <code>Context {R : Type} `{Reals R}</code> at the top,
+the way <a
+href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>
+proves things against <a
+href="coqdoc/Riktig.Interface.Exp.html#Exp"><code>Exp</code></a> — holds
+automatically for <em>every</em> model the class will ever have. Prove
+the intermediate value theorem once from <a
+href="coqdoc/Riktig.Interface.Reals.html#r_complete"><code>r_complete</code></a>,
+and it is simultaneously a theorem about the classical stdlib reals and
+about the constructive Cauchy reals, the moment either instance is
+supplied. The construction is a plug fitted later into a socket whose
+shape is already fixed; the theorems are wired to the socket, not the
+plug.</p>
+<p>So this short file has exactly one thing to show, and it has shown
+it: the eight order-and-compatibility laws and the one completeness
+axiom that, together, are the definition of a real-number system — with
+the construction left as the separate task it genuinely is.</p>
+<p><em>Next: the same specification-first move applied to a single
+function — <code>exp</code> pinned down by four laws, with no formula
+written at all.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>
+(the complete-ordered-field spec) · <a
+href="coqdoc/Riktig.Interface.Field.html"><code>Interface/Field.v</code></a>
+(the field it builds on).</p>
+</main>
+</body>
+</html>

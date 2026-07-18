@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kernels, images, and what a linear map forgets</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="kernels-images-and-what-a-linear-map-forgets">Kernels, images,
+and what a linear map forgets</h1>
+<p>A <em>linear map</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">f : U \to V</annotation></semantics></math>
+between two vector spaces is a function that respects the structure: it
+sends a sum to the sum of the images,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(u + v) = f(u) + f(v)</annotation></semantics></math>,
+and it commutes with scaling,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>⋅</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a \cdot u) = a \cdot f(u)</annotation></semantics></math>.
+From those two facts alone a linear map sends the zero vector to the
+zero vector, because zero is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>⋅</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">0 \cdot u</annotation></semantics></math>
+for any
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.</p>
+<p>Two subsets tell you almost everything about such a map. The
+<em>kernel</em> is everything the map collapses to zero — what it
+<em>forgets</em>. The <em>image</em> is everything the map actually
+reaches — what it can <em>produce</em>. This post shows both, defined
+directly, and proves that each is a <em>subspace</em>: a subset closed
+under the vector-space operations, hence a vector space in its own right
+with the inherited operations. It ends with rank-nullity — the theorem
+relating their sizes — which is here <em>stated</em> precisely but not
+yet proved, for a reason given at the end.</p>
+<h2 id="the-kernel-what-the-map-sends-to-zero">The kernel: what the map
+sends to zero</h2>
+<p>The kernel of <code>f</code> is the predicate “<code>f</code> sends
+this vector to zero” (throughout the code, <code>==</code> is a setoid
+equality — a chosen equivalence relation every operation respects — not
+Coq’s built-in equality of terms):</p>
+<pre class="coq"><code>  Definition ker_pred (u : U) : Prop := f u == 0.</code></pre>
+<p>To call this a subspace we owe three closure facts: the zero vector
+is in it, it is closed under addition, and it is closed under
+scaling.</p>
+<p>Zero is immediate — <code>f 0 == 0</code> is the zero-preservation
+noted above, recorded here as <code>lm_zero f</code>:</p>
+<pre class="coq"><code>  Lemma ker_zero : ker_pred 0.
+  Proof. exact (lm_zero f). Qed.</code></pre>
+<p>Addition is the first real step. If <code>f</code> forgets
+<code>u</code> and forgets <code>v</code>, it forgets
+<code>u + v</code>, because on a sum <code>f</code> splits and the two
+zeros collapse:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mo>+</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">f(u + v) \;=\; f(u) + f(v) \;=\; 0 + 0 \;=\; 0.</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma ker_add : forall u v : U, ker_pred u -&gt; ker_pred v -&gt; ker_pred (u + v).
+  Proof.
+    intros u v Hu Hv.
+    unfold ker_pred in Hu, Hv |- *.
+    calc (f (u + v))
+      == (f u + f v)          { (lm_add f u v) }
+      == ((0 : V) + f v)      { Hu }
+      == ((0 : V) + (0 : V))  { Hv }
+      == (0 : V)              { mon_idl }.
+  Qed.</code></pre>
+<p><code>intros u v Hu Hv</code> names the two vectors and the
+hypotheses <code>f u == 0</code>, <code>f v == 0</code>.
+<code>unfold ker_pred</code> turns the goal from “<code>u + v</code> is
+in the kernel” into the plain equation <code>f (u + v) == 0</code>. The
+<code>calc</code> block is the blackboard chain transcribed step for
+step, each step justified by the law in braces:
+<code>lm_add f u v</code> replaces <code>f (u + v)</code> by
+<code>f u + f v</code>; then <code>Hu</code> rewrites <code>f u</code>
+to <code>0</code>, and <code>Hv</code> rewrites <code>f v</code> to
+<code>0</code>, leaving <code>0 + 0</code>. Finally <a
+href="coqdoc/Riktig.Interface.Monoid.html#mon_idl"><code>mon_idl</code></a>
+— the law <code>0 + x == x</code> — collapses <code>0 + 0</code> to
+<code>0</code>.</p>
+<p>Scaling is the same shape, one step shorter. If <code>f</code>
+forgets <code>u</code>, it forgets every scalar multiple
+<code>a *: u</code>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>⋅</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>⋅</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">f(a \cdot u) \;=\; a \cdot f(u) \;=\; a \cdot 0 \;=\; 0.</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma ker_scale : forall (a : F) (u : U), ker_pred u -&gt; ker_pred (a *: u).
+  Proof.
+    intros a u Hu.
+    unfold ker_pred in Hu |- *.
+    calc (f (a *: u))
+      == (a *: f u)     { (lm_scale f a u) }
+      == (a *: (0 : V)) { Hu }
+      == (0 : V)        { scale_zero }.
+  Qed.</code></pre>
+<p><code>lm_scale f a u</code> pulls the scalar out through
+<code>f</code>, giving <code>a *: f u</code>; <code>Hu</code> rewrites
+<code>f u</code> to <code>0</code>; and <a
+href="coqdoc/Riktig.Theory.VectorSpace.html#scale_zero"><code>scale_zero</code></a>
+— the fact that scaling the zero vector gives zero — finishes. Bundle
+the three closure lemmas and the kernel is registered as a subspace:</p>
+<pre class="coq"><code>  #[global] Instance Ker_SubspacePred : SubspacePred F U ker_pred := {|
+    sp_zero  := ker_zero;
+    sp_add   := ker_add;
+    sp_scale := ker_scale
+  |}.</code></pre>
+<h2 id="the-image-what-the-map-reaches">The image: what the map
+reaches</h2>
+<p>The image is the dual idea — a vector <code>v</code> is in it when
+<em>some</em> <code>u</code> maps onto it:</p>
+<pre class="coq"><code>  Definition im_pred (v : V) : Prop := exists u : U, f u == v.</code></pre>
+<p>The closure proofs now carry a witness. Membership of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mn>1</mn></msub><mo>+</mo><msub><mi>v</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">v_1 + v_2</annotation></semantics></math>
+needs a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msub><mi>v</mi><mn>1</mn></msub><mo>+</mo><msub><mi>v</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">f(u) = v_1 + v_2</annotation></semantics></math>;
+if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>u</mi><mn>1</mn></msub><annotation encoding="application/x-tex">u_1</annotation></semantics></math>
+reaches
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>v</mi><mn>1</mn></msub><annotation encoding="application/x-tex">v_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>u</mi><mn>2</mn></msub><annotation encoding="application/x-tex">u_2</annotation></semantics></math>
+reaches
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>v</mi><mn>2</mn></msub><annotation encoding="application/x-tex">v_2</annotation></semantics></math>,
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mn>1</mn></msub><mo>+</mo><msub><mi>u</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">u_1 + u_2</annotation></semantics></math>
+reaches the sum:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>1</mn></msub><mo>+</mo><msub><mi>u</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>1</mn></msub><mo>+</mo><msub><mi>v</mi><mn>2</mn></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">f(u_1 + u_2) \;=\; f(u_1) + f(u_2) \;=\; v_1 + v_2.</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma im_add : forall v1 v2 : V, im_pred v1 -&gt; im_pred v2 -&gt; im_pred (v1 + v2).
+  Proof.
+    intros v1 v2 Hv1 Hv2.
+    destruct Hv1 as [u1 Hu1].
+    destruct Hv2 as [u2 Hu2].
+    exists (u1 + u2).
+    calc (f (u1 + u2))
+      == (f u1 + f u2)  { (lm_add f u1 u2) }
+      == (v1 + f u2)    { Hu1 }
+      == (v1 + v2)      { Hu2 }.
+  Qed.</code></pre>
+<p>The two <code>destruct</code>s unpack the existentials into concrete
+preimages <code>u1</code>, <code>u2</code> with <code>f u1 == v1</code>
+and <code>f u2 == v2</code>; <code>exists (u1 + u2)</code> proposes
+their sum as the preimage of <code>v1 + v2</code>; and the
+<code>calc</code> chain — <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_add"><code>lm_add</code></a>
+to split <code>f</code> over the sum, then <code>Hu1</code> and
+<code>Hu2</code> — lands on <code>v1 + v2</code> exactly as the
+blackboard line does. Scaling is the analogous one-witness argument
+(<code>exists (a *: u)</code>), and again the three facts register the
+image as a subspace:</p>
+<pre class="coq"><code>  #[global] Instance Im_SubspacePred : SubspacePred F V im_pred := {|
+    sp_zero  := im_zero;
+    sp_add   := im_add;
+    sp_scale := im_scale
+  |}.</code></pre>
+<p>Because both are subspaces, <code>Ker f</code> and <code>Im f</code>
+are themselves vector spaces — Coq builds those structures by instance
+search, with no further input, which the file records as a check:</p>
+<pre class="coq"><code>Example ker_vs_check (F U V : Type) (FF : Field F)
+  (VU : VectorSpace F U) (VV : VectorSpace F V) (f : LinearMap F U V) :
+  VectorSpace F (Ker f) := _.</code></pre>
+<p>The <code>:= _</code> asks Coq to <em>find</em> the vector-space
+structure on <code>Ker f</code>; it succeeds by combining the subspace
+instance above with the generic fact that any subspace is a vector
+space.</p>
+<h2 id="rank-nullity-stated-not-proved">Rank-nullity: stated, not
+proved</h2>
+<p>There is a famous theorem waiting here. The kernel measures how much
+<code>f</code> forgets; the image measures how much it reaches; and
+their dimensions are not independent — they must add up to the dimension
+of the domain. Every dimension the domain spends being forgotten is one
+it does not spend reaching something new:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>dim</mi><mo>&#8289;</mo></mrow><mi>U</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>dim</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>ker</mi><mo>&#8289;</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mrow><mi>dim</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>im</mi><mo>&#8289;</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\dim U \;=\; \dim(\ker f) + \dim(\operatorname{im} f).</annotation></semantics></math></p>
+<p>The codebase states exactly this, phrased so it type-checks as a
+proposition today: <em>given</em> a basis of size <code>n</code> for
+<code>U</code>, a basis of size <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> for
+<code>Ker f</code>, and a basis of size <code>r</code> for
+<code>Im f</code>, the claim is <code>n = k + r</code>.</p>
+<pre class="coq"><code>Definition rank_nullity_statement : Prop :=
+  forall (F U V : Type) (FF : Field F)
+    (VU : VectorSpace F U) (VV : VectorSpace F V)
+    (f : LinearMap F U V) (n : nat) (Bn : Basis n F U)
+    (k : nat) (Bk : Basis k F (Ker f)) (r : nat) (Br : Basis r F (Im f)),
+    n = Nat.add k r.</code></pre>
+<p>This is a <code>Definition</code> of a <code>Prop</code>, not a
+<code>Theorem</code> — it names the statement without asserting it. It
+is not proved in this codebase, and the file is candid about why. To
+even <em>reach</em> the statement without being handed those bases, one
+first needs the fact that every subspace of a finite-dimensional space
+has a basis at all, of some bounded size:</p>
+<pre class="coq"><code>Definition subspace_has_basis_statement : Prop :=
+  forall (F V : Type) (FF : Field F) (VV : VectorSpace F V) (n : nat)
+    (Bn : Basis n F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
+    exists k : nat, k &lt;= n /\ exists Bk : Basis k F (Sub V P), True.</code></pre>
+<p>That missing fact is the Steinitz exchange lemma — extend a basis of
+a subspace to a basis of the whole space — which is genuine dimension
+theory not yet built here. So the file does exactly this much: the
+kernel and image are constructed and proved to be subspaces, the theorem
+relating their dimensions is written down precisely, and the lemma it
+would rest on is named rather than quietly assumed. Stating a goal you
+have not reached, and saying plainly that you have not reached it, is
+part of doing this carefully.</p>
+<p><em>Next: adjoints and Gram-Schmidt — turning a basis into an
+orthogonal one by repeated projection.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.KerIm.html"><code>Theory/KerIm.v</code></a>
+(<a href="coqdoc/Riktig.Theory.KerIm.html#Ker"><code>Ker</code></a>/<a
+href="coqdoc/Riktig.Theory.KerIm.html#Im"><code>Im</code></a> as
+subspaces, <a
+href="coqdoc/Riktig.Theory.KerIm.html#rank_nullity_statement"><code>rank_nullity_statement</code></a>).</p>
+</main>
+</body>
+</html>

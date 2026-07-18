@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Complex numbers over any formally real field</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="complex-numbers-over-any-formally-real-field">Complex numbers
+over any formally real field</h1>
+<p>A <strong>field</strong> is a set with addition and multiplication
+behaving the way they do in the rationals: both are associative and
+commutative, multiplication distributes over addition, there is a
+<code>0</code> and a <code>1</code>, and — the property that makes it a
+field rather than merely a ring — every element except <code>0</code>
+has a multiplicative inverse. That last clause is what lets you divide:
+<code>inv x</code> is the thing you multiply <code>x</code> by to get
+<code>1</code>, and it exists for every <code>x</code> that is not
+zero.</p>
+<p>Now try to build the complex numbers on top of an arbitrary field
+<code>F</code>. Represent a complex number as a pair
+<code>(a, b)</code>, meaning
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">a + b\,i</annotation></semantics></math>.
+Adding and multiplying such pairs is straightforward algebra. The
+interesting operation is division, because the inverse of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">a + b\,i</annotation></semantics></math>
+is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi>a</mi><mo>−</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">\frac{a - b\,i}{a^2 + b^2}.</annotation></semantics></math></p>
+<p>That formula divides by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">a^2 + b^2</annotation></semantics></math>.
+For it to make sense whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">a + b\,i</annotation></semantics></math>
+is nonzero, we need
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">a^2 + b^2</annotation></semantics></math>
+to be nonzero whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+are not both zero. Over the rationals that is obvious — a sum of two
+squares is a sum of two nonnegative numbers, zero only when both are.
+But over an arbitrary field it can fail: in a field where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+is itself a square, say
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn><mo>=</mo><msup><mi>j</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">-1 = j^2</annotation></semantics></math>,
+the sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>1</mn><mn>2</mn></msup><mo>+</mo><msup><mi>j</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1^2 + j^2 = 1 + (-1) = 0</annotation></semantics></math>
+vanishes with neither summand zero, and the formula divides by zero. So
+building complex numbers over <code>F</code> needs a hypothesis, and the
+hypothesis is exactly the one that rules this out.</p>
+<h2 id="formal-reality-the-one-line-hypothesis">Formal reality: the
+one-line hypothesis</h2>
+<p>The property is called <strong>formal reality</strong>. Here is its
+entire definition, from <a
+href="coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>:</p>
+<pre class="coq"><code>Class FormallyReal (F : Type) `{Field F} :=
+  fr_sos : forall a b : F, a * a + b * b == 0 -&gt; a == 0.</code></pre>
+<p>One axiom, <a
+href="coqdoc/Riktig.Interface.FormallyReal.html#fr_sos"><code>fr_sos</code></a>
+(“sum of squares”): if <code>a*a + b*b == 0</code>, then
+<code>a == 0</code>. By the symmetry of the statement <code>b</code>
+must vanish too — that companion fact is <a
+href="coqdoc/Riktig.Theory.Field.html#fr_sos_r"><code>fr_sos_r</code></a>
+in <a
+href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>,
+proved in three lines by commuting the two squares and appealing to <a
+href="coqdoc/Riktig.Interface.FormallyReal.html#fr_sos"><code>fr_sos</code></a>.
+Equivalently:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+is not a sum of two squares. The rationals <code>Q</code> and the reals
+<code>R</code> are formally real, because their <em>order</em> makes
+every square nonnegative and a sum of nonnegatives zero only when each
+is zero. The complex numbers are famously not formally real
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>1</mn><mn>2</mn></msup><mo>+</mo><msup><mi>i</mi><mn>2</mn></msup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1^2 + i^2 = 0</annotation></semantics></math>)
+— which is the whole reason <code>i</code> cannot itself live in a
+formally real <code>F</code>.</p>
+<p>This is precisely the missing fact from the division formula, and
+nothing more. We are not asking <code>F</code> to be ordered, or
+complete, or the rationals specifically — only that a sum of two squares
+cannot vanish unless both squares do.</p>
+<h2 id="the-construction">The construction</h2>
+<p>Complex numbers over <code>F</code> are pairs with named projections,
+from <a
+href="coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>:</p>
+<pre class="coq"><code>Record C (F : Type) := mkC { re : F; im : F }.</code></pre>
+<p>Two of them are equal when their real and imaginary parts are equal
+componentwise — this is why every proof below <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>s
+a goal about <code>C F</code> into a real-part obligation and an
+imaginary-part obligation:</p>
+<pre class="coq"><code>#[global] Instance C_EqRel : EqRel (C F) :=
+  fun z w =&gt; re z == re w /\ im z == im w.</code></pre>
+<p>Multiplication is the ordinary rule
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>d</mi><mspace width="0.167em"></mspace><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>c</mi><mo>−</mo><mi>b</mi><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>d</mi><mo>+</mo><mi>b</mi><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">(a + b\,i)(c + d\,i) = (ac - bd) + (ad + bc)\,i</annotation></semantics></math>,
+written componentwise:</p>
+<pre class="coq"><code>#[global] Instance C_Mult : HasMult (C F) :=
+  fun z w =&gt; mkC (re z * re w + - (im z * im w))
+                 (re z * im w + im z * re w).</code></pre>
+<p>The quantity
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">a^2 + b^2</annotation></semantics></math>
+gets a name of its own, <code>norm2</code>, and the inverse is the
+division formula from the top, spelled out in components — real part
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">a \cdot (a^2+b^2)^{-1}</annotation></semantics></math>,
+imaginary part
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>b</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-b \cdot (a^2+b^2)^{-1}</annotation></semantics></math>:</p>
+<pre class="coq"><code>Definition norm2 (z : C F) : F := re z * re z + im z * im z.
+
+(* inv 0 is garbage (inv of 0 in F); the field law only speaks for
+   z =/= 0, where norm2 z is invertible by formal reality. *)
+#[global] Instance C_Inv : HasInv (C F) :=
+  fun z =&gt; mkC (re z * inv (norm2 z)) (- im z * inv (norm2 z)).</code></pre>
+<p>For <code>z = 0</code> this divides by
+<code>inv (norm2 0) = inv 0</code>, which is garbage — but the field law
+only ever speaks about <code>inv z</code> for <code>z</code> nonzero,
+and there <code>norm2 z</code> is invertible. Making that precise is
+where formal reality does its work.</p>
+<h2 id="where-the-hypothesis-enters">Where the hypothesis enters</h2>
+<p>The bridge is a single lemma: away from the origin,
+<code>norm2 z</code> is nonzero. On the blackboard, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">z = a + b\,i</annotation></semantics></math>:
+suppose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z \neq 0</annotation></semantics></math>
+and, for contradiction,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a^2 + b^2 = 0</annotation></semantics></math>.
+Then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo>=</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>=</mo><mn>0</mn><mspace width="0.278em"></mspace><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> and </mtext><mspace width="0.333em"></mspace></mrow><mspace width="0.278em"></mspace><mi>b</mi><mo>=</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>z</mi><mo>=</mo><mn>0</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">a^2 + b^2 = 0
+\;\Longrightarrow\; a = 0 \;\text{ and }\; b = 0
+\;\Longrightarrow\; z = 0,</annotation></semantics></math></p>
+<p>where the first implication is formal reality (once for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+once for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+by symmetry) — contradicting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z \neq 0</annotation></semantics></math>.
+The proof of this lemma is the <em>only</em> place in the whole
+construction that touches <a
+href="coqdoc/Riktig.Interface.FormallyReal.html#fr_sos"><code>fr_sos</code></a>.</p>
+<pre class="coq"><code>Lemma norm2_nonzero : forall z : C F, z =/= 0 -&gt; norm2 z =/= 0.
+Proof.
+  intros z Hz Hn.
+  apply Hz. split.
+  - exact (fr_sos (re z) (im z) Hn).
+  - exact (fr_sos_r (re z) (im z) Hn).
+Qed.</code></pre>
+<p>Read it by contradiction, which is how the <code>=/=</code> (meaning
+“not equal”) goals unfold. Assume <code>z =/= 0</code> and, for
+contradiction, <code>norm2 z == 0</code> (that is <code>Hn</code>). To
+derive the contradiction we show <code>z == 0</code>, i.e. both
+components vanish: <a
+href="coqdoc/Riktig.Interface.FormallyReal.html#fr_sos"><code>fr_sos</code></a>
+gives <code>re z == 0</code> from <code>Hn</code>, and its companion <a
+href="coqdoc/Riktig.Theory.Field.html#fr_sos_r"><code>fr_sos_r</code></a>
+gives <code>im z == 0</code>. Together they contradict <code>Hz</code>.
+Without formal reality this lemma is simply false, and everything below
+collapses.</p>
+<h2 id="the-inverse-law-in-full">The inverse law, in full</h2>
+<p>Now the field law that formal reality was for:
+<code>inv z * z == 1</code> for <code>z</code> nonzero. Multiplying
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">(a N^{-1}) - (b N^{-1})\,i</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">a + b\,i</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">N = a^2 + b^2</annotation></semantics></math>,
+the real component runs</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><msup><mi>a</mi><mn>2</mn></msup><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">distributivity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>N</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>N</mi><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> by definition</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>1</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">inverse law — the step that needs </mtext><mspace width="0.333em"></mspace></mrow><mi>N</mi><mo>≠</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+a^2 N^{-1} + b^2 N^{-1} &amp;= (a^2+b^2)\,N^{-1} &amp;&amp; \{\text{distributivity}\}\\
+&amp;= N\,N^{-1} &amp;&amp; \{N = a^2 + b^2 \text{ by definition}\}\\
+&amp;= 1 &amp;&amp; \{\text{inverse law — the step that needs } N \neq 0\}
+\end{aligned}</annotation></semantics></math></p>
+<p>and the imaginary component cancels by commutativity alone:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>b</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>−</mo><mi>b</mi><mi>a</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">ab\,N^{-1} - ba\,N^{-1} = 0.</annotation></semantics></math></p>
+<p>The real part is where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">N \neq 0</annotation></semantics></math>
+is spent — it is the step
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N\,N^{-1} = 1</annotation></semantics></math>.
+The <a href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>-level
+law splits into exactly those two components:</p>
+<pre class="coq"><code>Lemma c_invl : forall z : C F, z =/= 0 -&gt; inv z * z == 1.
+Proof.
+  intros z Hz. split.
+  - apply (cinv_re (re z) (im z) (norm2 z)).
+    + exact (norm2_nonzero z Hz).
+    + reflexivity.
+  - exact (cinv_im (re z) (im z) (norm2 z)).
+Qed.</code></pre>
+<p>The <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+produces the real-part goal and the imaginary-part goal. The real part
+is discharged by a helper <a
+href="coqdoc/Riktig.Impl.Complex.html#cinv_re"><code>cinv_re</code></a>
+applied at <code>n := norm2 z</code>, which asks for two things: that
+<code>n =/= 0</code> (supplied by <code>norm2_nonzero z Hz</code> — the
+hypothesis, cashed in) and that <code>a*a + b*b == n</code> (true by
+<code>reflexivity</code>, since <code>norm2 z</code> is <em>defined</em>
+as <code>a*a + b*b</code>). The imaginary part is the helper <a
+href="coqdoc/Riktig.Impl.Complex.html#cinv_im"><code>cinv_im</code></a>,
+which needs no hypothesis at all — the imaginary component cancels for
+algebraic reasons alone.</p>
+<p>The helper <a
+href="coqdoc/Riktig.Impl.Complex.html#cinv_re"><code>cinv_re</code></a>
+is where the blackboard real-part chain actually runs:</p>
+<pre class="coq"><code>Lemma cinv_re : forall a b n : F,
+  n =/= 0 -&gt; a * a + b * b == n -&gt;
+  (a * inv n) * a + - ((- b * inv n) * b) == 1.
+Proof.
+  intros a b n Hn Heq.
+  rewrite (mul_neg_l b (inv n)), (mul_neg_l (b * inv n) b), neg_involutive.
+  rewrite (mul_inv_shuffle a n), (mul_inv_shuffle b n), &lt;- ring_distl, Heq.
+  exact (field_invl n Hn).
+Qed.</code></pre>
+<p>Walking it against the blackboard chain:</p>
+<ul>
+<li>The first <code>rewrite</code> line clears the double negation.
+<code>- b * inv n</code> is <code>-(b * inv n)</code>, so
+<code>(- b * inv n) * b</code> is <code>-((b * inv n) * b)</code>, and
+the outer negation in front of it cancels by <a
+href="coqdoc/Riktig.Theory.Group.html#neg_involutive"><code>neg_involutive</code></a>.
+The expression is now
+<code>(a * inv n) * a + (b * inv n) * b</code>.</li>
+<li><a
+href="coqdoc/Riktig.Impl.Complex.html#mul_inv_shuffle"><code>mul_inv_shuffle</code></a>
+at <code>a</code> and at <code>b</code> reassociates each term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>⋅</mo><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">(x \cdot n^{-1}) \cdot x</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>⋅</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n^{-1} \cdot (x \cdot x)</annotation></semantics></math>,
+giving
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n^{-1}(a \cdot a) + n^{-1}(b \cdot b)</annotation></semantics></math>.</li>
+<li><code>&lt;- ring_distl</code> factors the shared
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">n^{-1}</annotation></semantics></math>
+back out (distributivity, used right-to-left):
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n^{-1}(a \cdot a + b \cdot b)</annotation></semantics></math>.</li>
+<li><code>Heq</code> replaces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>⋅</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a \cdot a + b \cdot b</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>,
+leaving
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n^{-1} \cdot n</annotation></semantics></math>.</li>
+<li><code>field_invl n Hn</code> is the field law that
+<code>inv n * n == 1</code> — and this is the one step that consumes
+<code>Hn</code>, the proof that <code>n</code> is nonzero.</li>
+</ul>
+<p>That single use of <a
+href="coqdoc/Riktig.Interface.Field.html#field_invl"><code>field_invl</code></a>,
+reachable only because <a
+href="coqdoc/Riktig.Impl.Complex.html#norm2_nonzero"><code>norm2_nonzero</code></a>
+supplied <code>Hn</code>, is the entire dependence of the complex field
+on formal reality. Every other field law for <code>C F</code> —
+associativity, distributivity, commutativity, the additive group
+structure — is proved over <code>Field F</code> alone, with no mention
+of order or formal reality.</p>
+<h2 id="the-complex-rationals-for-free">The complex rationals, for
+free</h2>
+<p>Assemble all the laws and you get an instance
+<code>C_Field : Field (C F)</code> that holds whenever <code>F</code> is
+a formally real field. Nothing in it is specific to any particular
+<code>F</code>. So to obtain the complex rationals as a genuine field,
+the only new obligation is the one hypothesis: that <code>Q</code> is
+formally real. That single instance lives in <a
+href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>, proved
+from <code>Q</code>’s order (a rational square is nonnegative, a sum of
+two nonnegative rationals is zero only when both are):</p>
+<pre class="coq"><code>#[global] Instance Q_FormallyReal : FormallyReal Q := Qfr_sos.</code></pre>
+<p>And then, in the same file, the complex rationals are a field with no
+further construction — the underscore asks Coq to find the field
+structure, and its instance resolution assembles it, reaching for <a
+href="coqdoc/Riktig.Impl.Qof.html#Q_FormallyReal"><code>Q_FormallyReal</code></a>
+at exactly the point the inverse law needs it:</p>
+<pre class="coq"><code>Example cq_field_check : Field (C Q) := _.</code></pre>
+<p>The file compiles as it stands, so the <code>_</code> really is
+filled by resolution alone. That makes the point of the post concrete:
+register one fact about the rationals — a sum of two rational squares
+vanishes only at zero — and the complex rationals, with working
+addition, multiplication, and division, appear at once, without a single
+line of code written specifically for them.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>
+(the one-line axiom) · <a
+href="coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>
+(<code>C F</code>, its ring and field structure) · <a
+href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Field.html#fr_sos_r"><code>fr_sos_r</code></a>,
+the companion of <a
+href="coqdoc/Riktig.Interface.FormallyReal.html#fr_sos"><code>fr_sos</code></a>)
+· <a href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>
+(<code>Q</code> is formally real, and <code>Field (C Q)</code> by
+resolution).</p>
+</main>
+</body>
+</html>

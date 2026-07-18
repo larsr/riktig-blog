@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quicksort, proved: a sorted permutation of the range, in
+place</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="quicksort-proved-a-sorted-permutation-of-the-range-in-place">Quicksort,
+proved: a sorted permutation of the range, in place</h1>
+<p>Quicksort sorts a range of memory in place. It picks one element as a
+<em>pivot</em>, rearranges the range so that everything smaller sits to
+the pivot’s left and everything larger to its right, and then sorts
+those two sides the same way. The rearranging step is called
+<em>partition</em>, and it is where all the interesting reasoning lives:
+the rest is two recursive calls on strictly smaller ranges. This post
+takes the Lomuto partition scheme, states the invariant that makes it
+correct, and proves that the whole algorithm produces a sorted
+permutation of its input while leaving everything outside the range
+untouched.</p>
+<h2 id="a-recursive-lambda-term-with-a-termination-measure">A recursive
+lambda term with a termination measure</h2>
+<p>As in the two preceding posts, the algorithm is written as a plain
+recursive term rather than through any elaboration machinery. Two pieces
+of vocabulary carry over. A <em>decidable proposition</em> is one whose
+truth can be computed, so that <code>if dec P then .. else ..</code> is
+an ordinary <code>if</code> whose chosen branch also hands the proof the
+fact it just decided. Quicksort here is generic in a bare boolean
+comparison <code>leb : V -&gt; V -&gt; bool</code>; the correctness file
+will later add exactly two laws about it — totality and transitivity —
+that turn <code>leb</code> into a total preorder.</p>
+<p>A function that calls itself on smaller arguments is not
+automatically accepted by Coq: the checker insists on a reason the
+recursion stops. The reason is supplied explicitly with <code>Fix</code>
+over a well-founded measure. Here is the Lomuto partition, verbatim from
+<a
+href="coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>.
+It works over an abstract memory — a type <code>mem</code> with
+<code>read : mem -&gt; nat -&gt; V</code> and
+<code>swap : mem -&gt; nat -&gt; nat -&gt; mem</code> — so nothing below
+depends on how the memory is actually represented:</p>
+<pre class="coq"><code>  (* Lomuto partition via Fix on i with measure hi - i.
+     pivot = m[hi], scan i from lo to hi-1. *)
+  Definition part (m0 : mem) (store0 i0 hi : nat) : mem * nat.
+  refine (Fix (well_founded_ltof _ (fun i =&gt; hi - i)) (fun _ =&gt; mem -&gt; nat -&gt; mem * nat)
+    (fun i rec m store =&gt;
+      if dec (i &lt; hi)
+      then if dec (leb (read m i) (read m hi) = true)
+           then rec (S i) _ (swap m i store) (S store)
+           else rec (S i) _ m store
+      else (swap m store hi, store))
+    i0 m0 store0).
+  all: unfold ltof; abstract lia.
+  Defined.</code></pre>
+<p>The pivot is the value at the top index <a
+href="coqdoc/Riktig.Programs.Memprog.X86.html#hi"><code>hi</code></a>. A
+cursor <code>i</code> scans upward from <code>lo</code>; the measure
+<code>hi - i</code> shrinks on every recursive call, and the two holes
+<code>_</code> are the proofs that it does, discharged in one line by
+<code>abstract lia</code> (kept abstract so the generated proof term
+stays small). A second pointer, <code>store</code>, marks the boundary
+of the “small” region. When <code>read m i</code> is at most the pivot,
+the element is swapped down to <code>store</code> and <code>store</code>
+advances; otherwise the cursor moves on alone. When the scan reaches <a
+href="coqdoc/Riktig.Programs.Memprog.X86.html#hi"><code>hi</code></a>,
+the pivot is swapped into place at <code>store</code>, and
+<code>store</code> is returned as its final index.</p>
+<p>Because <code>Fix</code> is opaque to computation, a companion lemma
+unfolds it one step. This is the only place the fixpoint is ever taken
+apart; every proof afterwards rewrites with this equation instead:</p>
+<pre class="coq"><code>  Lemma part_step m store i hi :
+    part m store i hi =
+      if dec (i &lt; hi)
+      then if dec (leb (read m i) (read m hi) = true)
+           then part (swap m i store) (S store) (S i) hi
+           else part m store (S i) hi
+      else (swap m store hi, store).
+  Proof.
+    unfold part at 1. rewrite Fix_eq.
+    - reflexivity.
+    - intros x f g Hfg.
+      do 2 (apply functional_extensionality; intro).
+      destruct (dec (x &lt; hi)); [|reflexivity].
+      destruct (dec (_ = true)); rewrite Hfg; reflexivity.
+  Qed.</code></pre>
+<p><code>rewrite Fix_eq</code> replaces one layer of the fixpoint by its
+body; the second bullet is the obligation that the body uses its
+recursive argument in the same way whichever function is plugged in,
+which is what <code>Fix_eq</code> demands before it will unfold.</p>
+<h2 id="why-partition-needs-an-invariant-at-all">Why partition needs an
+invariant at all</h2>
+<p>Partition promises something precise: when it finishes, the pivot
+sits at some index <code>p</code>, everything to the left of
+<code>p</code> is at most the pivot, and everything to the right is at
+least the pivot. That promise is what lets the two recursive sorts be
+glued back together — sort the left, sort the right, and the pivot
+already separates them, so the concatenation is sorted with no
+comparison across the seam.</p>
+<p>Nothing about swapping elements around guarantees that promise on its
+own. Suppose the scan moved elements without keeping track of what it
+had already seen. When it finally drops the pivot at <code>store</code>,
+why should everything below <code>store</code> be small and everything
+above be large? If a large element had been left below
+<code>store</code>, the pivot would land in the wrong spot, the left
+half would contain something bigger than the pivot, and gluing two
+sorted halves would produce an unsorted whole — silently, with no error.
+The invariant is the running promise that this cannot happen. It says:
+the region <code>[lo, store)</code> already holds elements at most the
+pivot, and the region <code>[store, i)</code> already holds elements
+strictly greater. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">m[k]</annotation></semantics></math>
+for the value at index
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+for the store boundary, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">v = m[hi]</annotation></semantics></math>
+for the pivot value:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>o</mi><mo>≤</mo><mi>s</mi><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>h</mi><mi>i</mi><mo>,</mo><mspace width="2.0em"></mspace><mo>∀</mo><mi>k</mi><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mo>,</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>:</mo><mspace width="0.222em"></mspace><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>≤</mo><mi>v</mi><mo>,</mo><mspace width="2.0em"></mspace><mo>∀</mo><mi>k</mi><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mi>s</mi><mo>,</mo><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo>:</mo><mspace width="0.222em"></mspace><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>&gt;</mo><mi>v</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">lo \le s \le i \le hi, \qquad \forall k \in [lo, s):\ m[k] \le v, \qquad \forall k \in [s, i):\ m[k] &gt; v.</annotation></semantics></math></p>
+<p>Here it is, verbatim from <a
+href="coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>:</p>
+<pre class="coq"><code>  Definition scan_inv (m : mem) (lo store i hi : nat) : Prop :=
+    lo &lt;= store /\ store &lt;= i /\ i &lt;= hi /\
+    (forall k, lo &lt;= k &lt; store -&gt; leb (read m k) (read m hi) = true) /\
+    (forall k, store &lt;= k &lt; i -&gt; leb (read m k) (read m hi) = false).</code></pre>
+<p>Every scan step preserves it: when <code>read m i</code> is at most
+the pivot the swap extends the small region by one, and when it is
+greater the cursor advances and the large region grows by one. Because
+the invariant holds all the way to <code>i = hi</code>, the final swap
+plants the pivot exactly where small ends and large begins. That
+conclusion is packaged as the partition’s postcondition — pivot bounds,
+a <em>frame</em> saying cells outside the range are untouched, a
+permutation of the range, and the two pivot-ordering facts. In symbols,
+if partitioning turns memory
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>m</mi><mo>′</mo></msup><annotation encoding="application/x-tex">m&#39;</annotation></semantics></math>
+with the pivot at index
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>∼</mo><annotation encoding="application/x-tex">\sim</annotation></semantics></math>
+means “is a permutation of”:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mi>s</mi><mo>≤</mo><mi>p</mi><mo>≤</mo><mi>h</mi><mi>i</mi><mo>,</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the pivot lands in the range</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>∀</mo><mi>k</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>k</mi><mo>&lt;</mo><mi>s</mi><mspace width="0.222em"></mspace><mo>∨</mo><mspace width="0.222em"></mspace><mi>h</mi><mi>i</mi><mo>&lt;</mo><mi>k</mi><mo>⟹</mo><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>,</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">frame: outside cells untouched</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>s</mi><mi>.</mi><mi>.</mi><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mo>∼</mo><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>s</mi><mi>.</mi><mi>.</mi><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mo>,</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">no element lost or invented</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>∀</mo><mi>k</mi><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mo>,</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo><mo>:</mo><mspace width="0.222em"></mspace><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>≤</mo><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>p</mi><mo stretchy="false" form="postfix">]</mo><mo>,</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">left of the pivot: at most it</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>∀</mo><mi>k</mi><mo>∈</mo><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mo>,</mo><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mo>:</mo><mspace width="0.222em"></mspace><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>p</mi><mo stretchy="false" form="postfix">]</mo><mo>≤</mo><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right of the pivot: at least it</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+&amp; s \le p \le hi, &amp;&amp; \{\text{the pivot lands in the range}\}\\
+&amp; \forall k,\ k &lt; s \ \vee\ hi &lt; k \implies m&#39;[k] = m[k], &amp;&amp; \{\text{frame: outside cells untouched}\}\\
+&amp; m[s..hi] \sim m&#39;[s..hi], &amp;&amp; \{\text{no element lost or invented}\}\\
+&amp; \forall k \in [lo, p):\ m&#39;[k] \le m&#39;[p], &amp;&amp; \{\text{left of the pivot: at most it}\}\\
+&amp; \forall k \in (p, hi]:\ m&#39;[p] \le m&#39;[k]. &amp;&amp; \{\text{right of the pivot: at least it}\}
+\end{aligned}
+</annotation></semantics></math></p>
+<pre class="coq"><code>  Definition part_out (m : mem) (lo store hi : nat) (m&#39; : mem) (p : nat) : Prop :=
+    store &lt;= p &lt;= hi /\
+    (forall k, k &lt; store \/ hi &lt; k -&gt; read m&#39; k = read m k) /\
+    Permutation (slice m store (S hi - store)) (slice m&#39; store (S hi - store)) /\
+    (forall k, lo &lt;= k &lt; p -&gt; leb (read m&#39; k) (read m&#39; p) = true) /\
+    (forall k, p &lt; k &lt;= hi -&gt; leb (read m&#39; p) (read m&#39; k) = true).</code></pre>
+<p>Here <code>slice m lo n := map (read m) (seq lo n)</code> is the list
+of values the range actually holds — the observable content of memory
+that the permutation and sortedness statements talk about.</p>
+<h2 id="the-frame-theorem-in-full">The frame theorem, in full</h2>
+<p>The three main theorems all go by well-founded induction on the pair
+<code>(lo, hi)</code>, via the measure <code>S hi - lo</code>, and each
+rewrites the recursion open with <a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_step_part"><code>qsort_step_part</code></a>
+(the analogue of <a
+href="coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a>
+for the outer recursion) and then appeals to the partition
+postcondition. The shortest of the three is the <em>frame</em>: sorting
+the range <code>[lo, hi]</code> changes no cell outside it —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>&lt;</mo><mi>l</mi><mi>o</mi><mspace width="0.222em"></mspace><mo>∨</mo><mspace width="0.222em"></mspace><mi>h</mi><mi>i</mi><mo>&lt;</mo><mi>k</mi><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">q</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.222em"></mspace><mi>m</mi><mspace width="0.222em"></mspace><mi>l</mi><mi>o</mi><mspace width="0.222em"></mspace><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">k &lt; lo \ \vee\ hi &lt; k \;\implies\; (\mathrm{qsort}\ m\ lo\ hi)[k] = m[k].</annotation></semantics></math></p>
+<p>The argument is short because every step is a named fact rather than
+fresh work — the two recursive calls stay within their sub-ranges, so a
+cell outside the whole range is outside both, and the partition’s own
+frame covers the rest.</p>
+<pre class="coq"><code>  Theorem qsort_frame : forall lo hi m k,
+    k &lt; lo \/ hi &lt; k -&gt; read (qsort m lo hi) k = read m k.
+  Proof.
+    apply (measure_ind2 (fun lo hi =&gt; S hi - lo)
+             (fun lo hi =&gt; forall m k,
+                  k &lt; lo \/ hi &lt; k -&gt; read (qsort m lo hi) k = read m k)).
+    intros lo hi IH m k Hk.
+    destruct (dec (S hi - lo &lt; 2)) as [L|L]; [now rewrite qsort_small|].
+    destruct (part m lo lo hi) as [m&#39; piv] eqn:Ep.
+    destruct (part_correct m lo hi m&#39; piv ltac:(lia) Ep) as ((Hp1 &amp; Hp2) &amp; Hfr &amp; _).
+    rewrite (qsort_step_part m lo hi m&#39; piv L Ep ltac:(lia)).
+    rewrite (IH (S piv) hi ltac:(lia) _ k ltac:(lia)).
+    rewrite (IH lo (piv - 1) ltac:(lia) _ k ltac:(lia)).
+    apply Hfr; lia.
+  Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>apply (measure_ind2 (fun lo hi =&gt; S hi - lo) ...)</code>
+starts the strong induction on the pair, giving an induction hypothesis
+<code>IH</code> for every pair whose measure is strictly smaller.</li>
+<li><code>destruct (dec (S hi - lo &lt; 2)) ...; [now rewrite qsort_small|]</code>
+handles the base case: a range of fewer than two elements is returned
+unchanged, so the cell is trivially untouched.</li>
+<li><code>destruct (part ...) as [m' piv] eqn:Ep</code> names the
+partitioned memory <code>m'</code> and the pivot index
+<code>piv</code>.</li>
+<li><code>destruct (part_correct ...) as ((Hp1 &amp; Hp2) &amp; Hfr &amp; _)</code>
+reads off the partition postcondition — the pivot bounds
+<code>Hp1</code>, <code>Hp2</code> and the frame <code>Hfr</code>; the
+permutation and ordering facts are not needed here.</li>
+<li><code>rewrite (qsort_step_part ... ltac:(lia))</code> unfolds one
+step of the recursion into “partition, then sort the left sub-range,
+then the right”, the side condition (the pivot lands in bounds) closed
+inline.</li>
+<li>The two <code>rewrite (IH ...)</code> lines apply the induction
+hypothesis to the pairs <code>(S piv, hi)</code> and
+<code>(lo, piv - 1)</code>: cell <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> lies
+outside both sub-ranges (the pivot bounds make that an arithmetic fact),
+so neither recursive sort moves it.</li>
+<li><code>apply Hfr; lia</code> finishes with the partition’s own frame:
+partition did not touch <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
+either.</li>
+</ul>
+<p>The proof itself is barely a dozen lines, and no step is arithmetic
+dressed up as reasoning — the <code>lia</code> calls only discharge
+index bookkeeping. The two harder theorems, the permutation and the
+sortedness, follow the same skeleton but do more gluing work, so they
+run longer; each of their steps is again a single named lemma (<a
+href="coqdoc/Riktig.Theory.Quicksort.html#slice_split_pivot"><code>slice_split_pivot</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#perm_transpose"><code>perm_transpose</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#sorted_glue"><code>sorted_glue</code></a>),
+which is what keeps them readable rather than short.</p>
+<h2 id="the-two-halves-and-the-whole">The two halves, and the whole</h2>
+<p>The two facts that make “sorted” mean something are stated directly
+for <code>qsort m lo hi</code>, about the <em>observable content</em> of
+the range — the list
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mi>.</mi><mi>.</mi><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">m[lo..hi]</annotation></semantics></math>
+of values it holds. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>m</mi><mo>′</mo></msup><mo>=</mo><mrow><mi mathvariant="normal">q</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.222em"></mspace><mi>m</mi><mspace width="0.222em"></mspace><mi>l</mi><mi>o</mi><mspace width="0.222em"></mspace><mi>h</mi><mi>i</mi></mrow><annotation encoding="application/x-tex">m&#39; = \mathrm{qsort}\ m\ lo\ hi</annotation></semantics></math>
+for the sorted memory, they say</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mi>.</mi><mi>.</mi><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>∼</mo><mspace width="0.278em"></mspace><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mi>.</mi><mi>.</mi><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mo stretchy="false" form="postfix">]</mo><mo>≤</mo><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>l</mi><mi>o</mi><mo>+</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo><mo>≤</mo><mi>⋯</mi><mo>≤</mo><msup><mi>m</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">[</mo><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">m[lo..hi] \;\sim\; m&#39;[lo..hi] \qquad\text{and}\qquad m&#39;[lo] \le m&#39;[lo+1] \le \cdots \le m&#39;[hi].</annotation></semantics></math></p>
+<p>The range ends up a permutation of what it started as:</p>
+<pre class="coq"><code>  Theorem qsort_perm : forall lo hi m,
+    Permutation (slice m lo (S hi - lo)) (slice (qsort m lo hi) lo (S hi - lo)).</code></pre>
+<p>and it ends up sorted, in the adjacent-pair sense of Coq’s standard
+<code>Sorted</code>:</p>
+<pre class="coq"><code>  Theorem qsort_sorted : forall lo hi m,
+    Sorted leP (slice (qsort m lo hi) lo (S hi - lo)).</code></pre>
+<p>where <code>leP x y := leb x y = true</code>. With transitivity of
+<code>leb</code> in hand, adjacent-pair sortedness strengthens for free
+to the every-pair form <code>StronglySorted</code>, by the
+standard-library bridge:</p>
+<pre class="coq"><code>  Corollary qsort_strongly_sorted : forall lo hi m,
+    StronglySorted leP (slice (qsort m lo hi) lo (S hi - lo)).
+  Proof.
+    intros. apply Sorted_StronglySorted;
+      [exact leb_trans | apply qsort_sorted].
+  Qed.</code></pre>
+<p>The two halves are then bundled into a single correctness statement —
+a permutation that is sorted:</p>
+<pre class="coq"><code>  Corollary qsort_correct : forall m lo hi,
+    Permutation (slice m lo (S hi - lo)) (slice (qsort m lo hi) lo (S hi - lo))
+    /\ Sorted leP (slice (qsort m lo hi) lo (S hi - lo)).
+  Proof. intros. split; [apply qsort_perm | apply qsort_sorted]. Qed.</code></pre>
+<h2 id="running-it-and-instantiating-the-memory">Running it, and
+instantiating the memory</h2>
+<p>All of the above is generic in the memory, and the program file
+checks that the algorithm actually computes on a concrete one — a list,
+with <code>nth_default</code> for reading and a list swap for
+writing:</p>
+<pre class="coq"><code>Check Logic.eq_refl : qsort nat Nat.leb (list nat) (nth_default 0) (list_swap 0) [3;4;2;0] 0 3 = [0;2;3;4].</code></pre>
+<p><code>[3;4;2;0]</code> sorted over indices <code>0</code> through
+<code>3</code> is <code>[0;2;3;4]</code>, and Coq accepts the
+reflexivity proof, so the two sides really are equal by computation. The
+correctness theorem needs a memory whose
+<code>read</code>/<code>swap</code> laws hold at <em>every</em> index; a
+list only satisfies them when both indices are in range, so the
+correctness file instantiates the abstract section at a total function
+memory <code>nat -&gt; nat</code> instead, where the laws hold
+unconditionally:</p>
+<pre class="coq"><code>  Example fun_qsort_correct (m : nat -&gt; nat) (lo hi : nat) :
+    let m&#39; := qsort nat Nat.leb (nat -&gt; nat) fread fswap m lo hi in
+    Permutation (slice nat (nat -&gt; nat) fread m lo (S hi - lo))
+                (slice nat (nat -&gt; nat) fread m&#39; lo (S hi - lo))
+    /\ Sorted (fun x y =&gt; Nat.leb x y = true)
+              (slice nat (nat -&gt; nat) fread m&#39; lo (S hi - lo)).
+  Proof.
+    apply qsort_correct;
+      auto using fswap_l, fswap_r, fswap_other, nat_leb_total.
+  Qed.</code></pre>
+<p>The proof is one line: supply the four memory-and-comparison laws,
+and <a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>
+does the rest. Every guarantee proved in the abstract becomes a fact
+about this particular sorting routine for free.</p>
+<p><em>Next: what a monad is, and the bind/return laws that let a parser
+sequence computations that might fail.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>
+(<a
+href="coqdoc/Riktig.Programs.Quicksort.html#part"><code>part</code></a>,
+<a
+href="coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a>,
+<a
+href="coqdoc/Riktig.Programs.Quicksort.html#qsort"><code>qsort</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Quicksort.html#scan_inv"><code>scan_inv</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#part_out"><code>part_out</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_frame"><code>qsort_frame</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_perm"><code>qsort_perm</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_sorted"><code>qsort_sorted</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>).</p>
+</main>
+</body>
+</html>

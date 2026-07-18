@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memprog roadmap — refinement as rewriting, from a sorting spec to
+a running ELF</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="memprog-roadmap--refinement-as-rewriting-from-a-sorting-spec-to-a-running-elf">Memprog
+roadmap — refinement as rewriting, from a sorting spec to a running
+ELF</h1>
+<p><em>Written 2026-07-18 after an interview with Lars, porting the
+ideas of <code>~/coq-memprog</code> into this tree. This is the
+reference document for the whole track: read it before touching any
+Memprog file. Decisions recorded here were made explicitly; do not
+silently revisit them.</em></p>
+<h2 id="1-what-coq-memprog-is-and-what-it-lacks">1. What coq-memprog is,
+and what it lacks</h2>
+<p><code>~/coq-memprog</code> demonstrates a refinement chain for
+quicksort: seven executable levels from a C-like program in a free-monad
+memory DSL down to a Linux ELF binary that really sorts. The levels
+<strong>run</strong> and agree on test inputs, but the steps between
+them were done <em>manually</em> — no proof links any level to the next.
+Its own VISION.md diagnoses why the one attempted proof stalled:
+<code>unfold interp; simpl</code> blew up, because the repo lacks an
+equivalence-relation layer with <code>Proper</code> instances — exactly
+the setoid machinery this tree uses everywhere.</p>
+<p>The port, in one sentence: <strong>redo the memprog chain so that
+every transformation step — between levels and within a level — is a
+rewrite with respect to a program equivalence, in the same style as the
+algebra tower’s calc-chain proofs.</strong></p>
+<p>What carries over from coq-memprog (as <em>material</em>, always
+rewritten in this tree’s style, never pasted): the level datatypes, the
+interpreters, the quicksort/swap/sum programs, the x86-64 instruction
+encodings and the minimal-ELF layout from
+<code>MemProgX86.hs</code>.</p>
+<h2 id="2-decisions-from-the-interview-2026-07-18">2. Decisions from the
+interview (2026-07-18)</h2>
+<ol type="1">
+<li><strong>Programs</strong>: quicksort is the driving example through
+every level; swap and sum are micro-programs kept alive at every level
+where they make sense (swap especially — it is the smallest program that
+touches memory, and the blog walkthrough). Bubblesort is dropped.</li>
+<li><strong>Everything in Coq</strong>: the x86-64 encoder and the ELF
+builder are Coq functions; the final ELF image is a <code>list Z</code>
+(byte values) computed by <code>vm_compute</code>. Only the last
+centimeter is external: a python script dumps the computed bytes to a
+binary file and executes it. No Haskell, no extraction.</li>
+<li><strong>Layout</strong>: strict Programs/Theory split (the house
+file-layout rule). Syntax, interpreters, encoders, concrete programs →
+<code>theories/Programs/Memprog/</code>. Views, equivalences, laws,
+proofs → <code>theories/Theory/Memprog/</code>.</li>
+<li><strong>Blog</strong>: one post (syllabus entry, Part 12 or a new
+Part 13) after the executable chain and its tests are green — honest
+about which links are proved and which are Admitted obligations.</li>
+<li><strong>Termination</strong>: no fuel in program syntax. Loops are a
+<a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+constructor of the syntax; recursion is meta-level <code>Fix</code> over
+an explicit bound with a sufficiency lemma. Fuel exists only inside
+interpreters (unavoidable for arbitrary machine code), and equivalence
+statements handle it existentially (§5).</li>
+<li><strong>Frame property</strong>: a separate predicate
+(<code>touches_only</code>), stated and proved (or Admitted with
+roadmap) per program, NOT baked into the equivalence relation. The wider
+OS/allocator story stays a header-comment sketch (§7).</li>
+<li><strong>x86 semantics</strong>: the port includes a Coq emulator for
+the x86-64 subset the encoder emits, so that <em>every</em> adjacent
+pair of levels has a statable equivalence from day one. (In memprog the
+bytes had no semantics at all — the last link was covered only by
+running the ELF.)</li>
+</ol>
+<h2 id="3-the-levels">3. The levels</h2>
+<p>Each level is a <strong>separate datatype</strong> (a parse tree)
+with its own <strong>emulator</strong>, and each is testable by
+<code>vm_compute</code> on the shared test inputs. L1–L3 share the <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#Mem"><code>Mem</code></a>
+syntax; they differ in which sublanguage the program uses, and the
+downward step is a compilation function.</p>
+<table>
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 11%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Level</th>
+<th>Datatype</th>
+<th>Emulator</th>
+<th>New design decision captured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0</td>
+<td>Specification</td>
+<td><code>list Z → list Z</code> (a Coq function) + the spec
+predicates</td>
+<td>— (it <em>is</em> math)</td>
+<td>what “sorted permutation, rest untouched” means</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>Memory DSL</td>
+<td><code>Mem addr val a</code> free monad, with <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+as syntax</td>
+<td><a
+href="../coqdoc/Riktig.Programs.Memprog.Machine.html#interp"><code>interp</code></a>
+over <a
+href="../coqdoc/Riktig.Programs.Memprog.Machine.html#Machine"><code>Machine</code></a>
+(assoc-list store, sp, hp)</td>
+<td>data lives at addresses; reads can fail</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>Expression level</td>
+<td>L1 whose arithmetic is <a
+href="../coqdoc/Riktig.Programs.Memprog.Expr.html#Expr"><code>Expr</code></a>
+trees, first with <a
+href="../coqdoc/Riktig.Programs.Memprog.Expr.html#eval_expr"><code>eval_expr</code></a>
+then compiled by <a
+href="../coqdoc/Riktig.Programs.Memprog.Expr.html#compile_expr"><code>compile_expr</code></a></td>
+<td>same <a
+href="../coqdoc/Riktig.Programs.Memprog.Machine.html#interp"><code>interp</code></a></td>
+<td>arithmetic becomes data (the first “program as data” step)</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>Stack frames</td>
+<td>L1 restricted to a calling convention: <code>withFrame</code>,
+fp-relative slots, push-args</td>
+<td>same <a
+href="../coqdoc/Riktig.Programs.Memprog.Machine.html#interp"><code>interp</code></a></td>
+<td>locals and arguments become memory at negative offsets</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>Machine code</td>
+<td><code>list (Instr Z)</code> — the RISC instruction set</td>
+<td><a
+href="../coqdoc/Riktig.Programs.Memprog.MC.html#mc_step"><code>mc_step</code></a>/<a
+href="../coqdoc/Riktig.Programs.Memprog.MC.html#mc_run"><code>mc_run</code></a>
+over <a
+href="../coqdoc/Riktig.Programs.Memprog.MC.html#MachState"><code>MachState</code></a>
+(registers, pc, sp, flags) + the same memory</td>
+<td>control flow becomes numbers (branch offsets)</td>
+</tr>
+<tr>
+<td>L5</td>
+<td>x86-64 bytes</td>
+<td><code>list Z</code> (byte values 0..255)</td>
+<td><a
+href="../coqdoc/Riktig.Programs.Memprog.X86.html#x86_step"><code>x86_step</code></a>/<a
+href="../coqdoc/Riktig.Programs.Memprog.X86.html#x86_run"><code>x86_run</code></a>
+over a byte-addressed machine (the emitted subset only)</td>
+<td>instruction lengths vary; branches become byte displacements</td>
+</tr>
+<tr>
+<td>L6</td>
+<td>ELF image</td>
+<td><code>list Z</code> — header ∥ stub ∥ code ∥ data</td>
+<td>the host CPU (via the dump script); the x86 emulator covers the code
+segment</td>
+<td>the OS contract: entry point, one RWX PT_LOAD segment, exit code
+ABI</td>
+</tr>
+</tbody>
+</table>
+<p>The compilation functions between levels (all total Coq functions):
+<a
+href="../coqdoc/Riktig.Programs.Memprog.Expr.html#compile_expr"><code>compile_expr</code></a>
+(L2), the calling-convention transform is written by hand per program in
+memprog — here L3 programs are still hand-written against the frame
+combinators, and the <em>obligation</em> is their equivalence to the L2
+versions; <code>codegen : L3 → list (Instr Z)</code> (L4, hand-written
+per program in memprog — same treatment, plus a real compiler is a
+stretch goal); <code>assemble : list (Instr Z) → list Z</code> (L5, the
+two-pass branch-displacement resolution from MemProgX86.hs);
+<code>elf_image : list Z → list Z → list (Reg*Z) → list Z</code>
+(L6).</p>
+<h2 id="4-file-layout">4. File layout</h2>
+<pre><code>theories/Programs/Memprog/
+  Syntax.v      Reg, Instr, the Mem free monad with While, bind,
+                smart constructors, MemT (option layer)
+  Machine.v     Cell, AStore, Machine, interp (fuel only here)
+  Expr.v        Expr, eval_expr, compile_expr
+  Frame.v       withFrame, push/pop combinators, fp-relative access
+  MC.v          MachState, mc_step, mc_run, load_program
+  X86.v         x86 encodings of every Instr (pure byte lists),
+                assemble (two-pass), the x86-subset machine and
+                x86_step/x86_run
+  Elf.v         the minimal static ELF-64 image as list Z
+  Swap.v        swap at L1, L3, L4 (+ its x86/ELF images)
+  Sum.v         sum at L1, L4 (+ images)
+  Quicksort.v   partition + quicksort at L1, L2(eval), L2(compile),
+                L3, L4 (+ images)
+  Tests.v       the shared test inputs; vm_compute Examples asserting
+                every level&#39;s result on them (the per-level tests)
+
+theories/Theory/Memprog/
+  View.v        mem_view : Machine → addr → nat → option (list val)
+                (the &quot;an address corresponds to list contents&quot; view);
+                view lemmas
+  Equiv.v       the per-level observational equivalences (===) as
+                setoids; Proper instances for bind/seq so rewrite
+                works under binds  ← the keystone file
+  MemLaws.v     the within-level rewrite algebra: read-after-write,
+                write-write at distinct addresses commutes, bind
+                associativity, dead-read elimination, ...
+  Refines.v     the cross-level relations (one per adjacent pair,
+                each with its state correspondence), transitivity
+                of composed refinement
+  Frame.v       touches_only and its per-program statements
+  Obligations.v the chain-link obligations for the ported programs,
+                Admitted with roadmap comments (§8) — quarantined
+                here so Print Assumptions stays clean elsewhere
+
+scripts/
+  elf-run.py    reads `coqc`-printed bytes (or a generated .txt),
+                writes the binary, chmod +x, executes, checks the
+                exit code against the expected value</code></pre>
+<p>Makefile: a <code>memprog-elf</code> target that computes the ELF
+byte lists (one <code>Eval vm_compute</code> driver file), pipes them
+through <code>scripts/elf-run.py</code>, and asserts the exit codes;
+wired into the existing <code>test</code> flow. Host is x86-64 Linux, so
+the binary runs natively.</p>
+<h2 id="5-the-equivalence-design-the-actual-point">5. The equivalence
+design (the actual point)</h2>
+<p><strong>Within a level.</strong> For programs
+<code>p q : MemT addr val a</code> at the same level, observational
+equivalence relative to fuel and machine:</p>
+<pre><code>p === q  :=  for every machine m there exists F such that for all
+             fuel ≥ F,  obs (interp fuel p m) = obs (interp fuel q m)</code></pre>
+<p>where <code>obs</code> projects the result and the store (not sp/hp
+bookkeeping, which intermediate levels are allowed to use differently —
+the exact projection is Equiv.v’s first design task; start with result +
+whole store and weaken only if a law needs it). This is an
+<code>Equivalence</code>, registered with the tree’s <a
+href="../coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a>/<code>Setoid</code>
+conventions so <code>calc</code> chains work; the essential instances
+are</p>
+<pre><code>Proper (equ ==&gt; pointwise equ ==&gt; equ) bindT
+Proper (equ ==&gt; equ ==&gt; equ) seqT</code></pre>
+<p>— rewriting under binds is what makes “optimization = rewrite” true,
+and its absence is precisely why coq-memprog’s SwapProof died. <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+needs its own congruence (equal conditions and equal bodies give equal
+loops).</p>
+<p><strong>MemLaws.v</strong> then proves the equational algebra every
+later proof runs on, e.g.</p>
+<pre><code>read_after_write   : writeM a v &gt;&gt; readM a  ===  writeM a v &gt;&gt; retT v
+write_write_comm   : a ≠ b → writeM a v &gt;&gt; writeM b w === writeM b w &gt;&gt; writeM a v
+write_shadow       : writeM a v &gt;&gt; writeM a w === writeM a w
+bind_assoc, bind_ret_l, bind_ret_r
+while_unfold       : While c b === ifM c (b &gt;&gt; While c b) (retT tt)   (up to obs)</code></pre>
+<p>Each is one <code>Hint Rewrite</code>-able law; program
+transformations inside a level (instruction scheduling at L1, expression
+simplification at L2) are <code>calc</code> chains over these laws — the
+same working style as <a
+href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>,
+which is the whole thesis of the track.</p>
+<p><strong>Between levels.</strong> For adjacent levels with different
+state types, a refinement relation with an explicit state
+correspondence, e.g. for L4 vs L1:</p>
+<pre><code>refines_mc (code : list (Instr Z)) (p : MemT Z Z unit) (R : region) :=
+  for every machine m loaded with code and matching setup,
+  mc_run reaches HALT and the two final stores agree on the view
+  of R (and the frame predicate holds outside R)</code></pre>
+<p>The correspondences: L1≈L2 and L2≈L3 share the machine type (plain
+<code>===</code> on programs, no simulation needed — this is why the
+first links are provable early); L3→L4 relates assoc-store cells +
+explicit stack to <a
+href="../coqdoc/Riktig.Programs.Memprog.MC.html#MachState"><code>MachState</code></a>
+registers/pc/flags; L4→L5 relates instruction indices to byte offsets
+(the assembler’s <code>offsets</code> table IS the simulation map);
+L5→L6 is layout only (the code bytes appear at the entry point; stated
+against the x86 machine with the ELF’s memory image).
+<code>Refines</code> composes transitively (one lemma in Refines.v),
+which is the “proofs compose” requirement of the original README made
+formal.</p>
+<p><strong>The view.</strong> <code>mem_view m base n</code> reads
+<code>n</code> consecutive cells at <code>base</code> — the “an address
+corresponds to the contents of a list” idea. The end-to-end statement
+for each sort, at every level, is one shape:</p>
+<pre><code>view-in is xs  →  run  →  view-out is a sorted permutation of xs,
+and touches_only (stack region ∪ array region) held throughout.</code></pre>
+<p>L0’s <a
+href="../coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>
+in coq-memprog (sorted + permutation + outside-range-unchanged, proved,
+zero Admitted) is the model for the spec side; this tree already owns
+sortedness/permutation vocabulary (<a
+href="../coqdoc/Riktig.Theory.Sorted.html"><code>Theory/Sorted.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>)
+— reuse it, do not redefine.</p>
+<h2 id="6-termination-without-fuel-in-the-syntax">6. Termination without
+fuel in the syntax</h2>
+<p><strong>The fuel rule (Lars, 2026-07-18, binding for the whole
+tree):</strong> never use fuel for a computation we know terminates.
+Fuel is relevant only when running something that <em>might</em> loop
+forever — an arbitrary machine-code program, an untrusted input — where
+we want to run for a while and see whether we get an answer or an error.
+Terminating recursion (sorting lists, manipulating trees, structural
+compilation) never takes fuel: it takes <code>Fix</code> over a genuine
+measure, and the measure is part of understanding the algorithm.</p>
+<p>Applied to this track:</p>
+<ul>
+<li><strong>Loops</strong>:
+<code>While : MemT addr val bool → MemT addr val unit → Mem …</code> is
+a syntax constructor. (Precisely: condition and body are
+sub-<em>syntax</em>; the constructor keeps the tree finite — iteration
+happens in the interpreter.) This also makes loop bodies rewritable
+subterms, which fuel-unrolled loops are not — the rewriting story needs
+<a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+as data anyway.</li>
+<li><strong>Recursion</strong> (quicksort’s): the L1–L3 program
+<em>builders</em> take <code>lo hi : Z</code> as meta-level arguments,
+so the recursion is plain <code>Fix</code> over the measure
+<code>Z.to_nat (hi − lo + 1)</code> — exactly <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>’s
+pattern, no bound parameter, no sufficiency side-condition. The
+generated tree is finite because the algorithm terminates, and the
+termination argument is visible in the measure.</li>
+<li><strong>Interpreters</strong>: <a
+href="../coqdoc/Riktig.Programs.Memprog.Machine.html#interp"><code>interp</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.Memprog.MC.html#mc_run"><code>mc_run</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.Memprog.X86.html#x86_run"><code>x86_run</code></a>
+take fuel — this is the one legitimate use: they execute
+<em>arbitrary</em> programs of their language, including ones that loop
+(<code>While (retT true) …</code>, a <code>B 0</code> instruction), so
+they are genuinely partial. Equivalences handle fuel existentially (“∃F,
+∀fuel≥F”, §5), and per-program termination lemmas
+(<code>interp_enough : F(n) suffices for input size n</code>) discharge
+the existentials concretely — the lemma that says “this particular
+program terminates” is exactly what earns it the right to be run under
+fuel without caveats.</li>
+</ul>
+<h2 id="7-the-frame-property-and-the-allocator-sketch">7. The frame
+property and the allocator sketch</h2>
+<p><code>touches_only R p</code>: interpreting <code>p</code> from any
+machine changes the store only at addresses in <code>R</code> (sp/hp may
+move; cells outside <code>R</code> compare equal afterwards). Stated per
+program at L1–L4; at L5/L6 the region becomes “the PT_LOAD segment minus
+the code bytes” and is an obligation against the x86 machine.</p>
+<p>The surrounding-world story — <em>“the OS/allocator handed this
+program a chunk, and correctness is relative to that grant”</em> — is
+deliberately only a sketch in this port. Header comment in
+Theory/Memprog/Frame.v: the eventual shape is a hypothesis-style
+contract (the machine’s store outside the granted region is arbitrary
+and must be preserved; the granted region’s bounds come in as
+parameters, exactly how <code>exp_surj</code>/<code>ftc</code> enter as
+disclosed hypotheses elsewhere in this tree), and the ELF loader’s
+PT_LOAD grant is its concrete instance. Not formalized now; the
+predicate’s shape is chosen so it can grow into that without restating
+programs.</p>
+<h2 id="8-phases-deliverables-done-criteria">8. Phases, deliverables,
+done-criteria</h2>
+<p><strong>Phase 1 — the executable port</strong> (Programs/Memprog/*
+complete): all seven levels compile; <code>Tests.v</code>’s
+<code>vm_compute</code> Examples pin every level’s output on the shared
+inputs (swap, sum, quicksort on the 9-element list, plus one degenerate
+input each: empty, singleton, duplicates); <code>make memprog-elf</code>
+builds and <em>runs</em> the ELFs and checks exit codes. No Admitted
+anywhere in Phase 1 (it contains no theorems beyond computational
+Examples).</p>
+<p><strong>DONE 2026-07-18.</strong> Files:
+<code>Syntax.v Machine.v Expr.v Frame.v MC.v</code> (core),
+<code>X86.v Elf.v</code> (byte level with a real emulator + the ELF
+image as computed data), <code>Swap.v Sum.v Quicksort.v Tests.v</code>
+(programs + battery), <code>ElfGen.v</code> +
+<code>scripts/elf-run.py</code> + <code>make memprog-elf</code> (the
+live run). <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+is a syntax constructor; <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#Mem"><code>Mem</code></a>’s
+result type became an inductive index so <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+can hold subprograms at fixed types. Quicksort recurses by
+<code>Fix</code> over <code>Z.to_nat (hi-lo+1)</code>, no fuel, the
+pivot’s recursive calls guarded by an in-range decision (out-of-range
+faults instead of looping; Phase 2 proves it never fires). x86 bytes
+gained a decoder + subset emulator (memprog had none), so every level
+pair is emulator-testable; the same bytes that pass the emulator check
+are the bytes that run as native ELF. Exit codes verified: swap 40, sum
+15, quicksort min 1 / max 9. Zero Admitted, zero Axiom across the whole
+track so far.</p>
+<p><strong>Phase 2 — the obligations, stated honestly</strong>: View.v,
+Equiv.v (setoid + Proper — these must be <em>proved</em>, not admitted,
+or nothing else works), Frame.v and Obligations.v with the chain links
+as Admitted-with-roadmap:</p>
+<pre><code>swap_L1_L3, swap_L3_L4, swap_L4_L5          (smallest program first)
+qsort_L1_L2eval, qsort_L2eval_L2comp,
+qsort_L2comp_L3, qsort_L3_L4, qsort_L4_L5
+elf_layout_L5_L6
+touches_only_{swap,sum,qsort} at L1, L4</code></pre>
+<p>Rule for this tree: Obligations.v is the ONLY file allowed
+<code>Admitted</code>, each carries a proof-sketch comment, and
+docs/TODO.md lists them. Everything else keeps the tree’s zero-Admitted
+status.</p>
+<p><strong>Phase 3 — the rewriting rules</strong>: MemLaws.v proved (the
+within-level algebra, each law a Qed); Refines.v proved (composition);
+then convert obligations to Qed smallest-first: the L1≈L2 links are pure
+<code>===</code> rewriting (compile_expr correctness is a structural
+induction + MemLaws — the “smallest link that exercises all the
+machinery” from coq-memprog’s own roadmap), swap before sum before
+quicksort, simulation links (L3→L4, L4→L5) last and possibly spanning
+several sessions. Each converted link should be a calc chain readable as
+the transformation it justifies.</p>
+<p><strong>Phase 4 — the blog post</strong>: syllabus entry 57 (added
+when Phase 1 completes, marker [has code]); one post: the problem (why
+manual compilation steps are where correctness dies), the levels as
+datatypes with the swap program shown at every level including its
+actual ELF bytes, one real within-level rewrite as a calc chain, and a
+plain statement of which links are proved vs open obligations.</p>
+<h2 id="9-conventions-that-bind-this-track">9. Conventions that bind
+this track</h2>
+<p>Everything general in this tree applies: Hint Mode discipline
+(annotate binders; explicit fields; one Field per Context),
+<code>abstract lia</code> in transparent terms, <code>calc</code> chains
+for equational proofs, no
+<code>Program Fixpoint</code>/<code>Equations</code> (plain
+<code>Fix</code> over measures — <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+is the model), CLAUDE.md vocabulary in comments,
+Interface/Theory/Programs layout. Specific to this track: coq-memprog is
+<em>reference material</em>, never a source to copy text from — every
+ported definition is rewritten in this tree’s idiom; <code>Z</code> is
+the value/address type at every concrete level (as in memprog);
+registers stay the 8-register RISC file with the same x86-64 mapping
+(R0→RAX … R7→R9, R10 = data base) so MemProgX86.hs remains usable as an
+encoding oracle when writing X86.v.</p>
+</main>
+</body>
+</html>

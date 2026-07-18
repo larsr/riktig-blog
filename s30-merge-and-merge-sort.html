@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merge and merge sort: a sorted permutation of the input</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="merge-and-merge-sort-a-sorted-permutation-of-the-input">Merge
+and merge sort: a sorted permutation of the input</h1>
+<p>To sort is to do two things at once: rearrange a list so it comes out
+in order, and rearrange <em>only</em> — losing no element and inventing
+none. Miss the first and you have not sorted; miss the second and you
+have not even kept the data. A sorting proof therefore has two halves,
+and merge sort lets us prove each half where it belongs: the “in order”
+half lives in the merge step, which combines two already-sorted lists
+into one, and the “no element lost” half is a permutation fact that
+holds regardless of any order at all. This post builds the merge as a
+single lambda term, proves both halves for it, and then assembles merge
+sort on top.</p>
+<p>The order the elements are compared against is kept abstract. A
+<strong>decidable total order</strong> on a type <code>A</code> is a
+strict comparison <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+(written <code>&lt;</code>) together with its reflexive companion <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>
+(written <code>&lt;=</code>) such that any two elements are comparable —
+one way or the other always holds — and, crucially, the comparison is
+<em>decidable</em>: for any <code>x</code> and <code>y</code> you can
+compute whether <code>x &lt; y</code>. That last property is what lets a
+program branch on the order. The <code>merge</code> here is written
+once, over any type carrying this structure, and specialises to
+<code>nat</code> (with <code>&lt;</code> and <code>&lt;=</code>) or to
+anything else that provides it.</p>
+<h2 id="merge-as-one-term">Merge as one term</h2>
+<p><code>merge</code> walks two lists, at each step emitting whichever
+head is smaller and recursing on the rest:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>a</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>y</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mi>x</mi><mo>:</mo><mo>:</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>y</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>&lt;</mo><mi>y</mi><mo>,</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>y</mi><mo>:</mo><mo>:</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>a</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">otherwise,</mtext></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\mathrm{merge}(x{::}a,\ y{::}b) \;=\; \begin{cases} x :: \mathrm{merge}(a,\ y{::}b) &amp; \text{if } x &lt; y,\\ y :: \mathrm{merge}(x{::}a,\ b) &amp; \text{otherwise,} \end{cases}</annotation></semantics></math></p>
+<p>and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">\mathrm{merge}(a, [\,]) = a</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">\mathrm{merge}([\,], b) = b</annotation></semantics></math>.
+Neither list is a structural sub-term across the recursive call — when
+it keeps the left head it recurses on <code>(a', y :: b')</code>,
+rebuilding the right list — so, as with Euclid’s algorithm, the
+recursion is justified by a measure: the <em>sum</em> of the two
+lengths, which drops by one at every call. From <a
+href="coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>:</p>
+<pre class="coq"><code>Section Merge.
+  Context {A : Type} `{O : DecTotalOrder A}.
+  Local Open Scope order_scope.
+
+  Definition merge : list A -&gt; list A -&gt; list A.
+   apply (uncurry ∘ (Fix (well_founded_ltof (list A * list A)
+                (fun p =&gt; length (fst p) + length (snd p)))
+             (fun _ =&gt; list A))).
+    refine
+    (
+      fun p merge =&gt;
+        match p as x return p=x -&gt; list A with
+        | (a, []) =&gt; fun _ =&gt; a
+        | ([], b) =&gt; fun _ =&gt; b
+        | (a0::a&#39;, b0::b&#39;) =&gt;
+            fun e =&gt;
+            if dec (a0 &lt; b0)
+              then a0 :: merge (a&#39;, b0 :: b&#39;) _
+              else b0 :: merge (a0 :: a&#39;, b&#39;) _
+        end eq_refl
+    );
+    (subst p; unfold ltof; simpl; abstract lia).
+   Defined.</code></pre>
+<p>The opening <code>Context</code> line, with its
+<code>DecTotalOrder A</code> binder, is what makes the program generic:
+everything below is parameterised by an arbitrary carrier <code>A</code>
+with a decidable total order <code>O</code>, and
+<code>Local Open Scope order_scope</code> makes <code>&lt;</code> mean
+that order’s <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>.
+The <code>Fix</code> recurses on a tupled argument
+<code>p : list A * list A</code> under the measure
+<code>length (fst p) + length (snd p)</code>; <code>uncurry ∘</code>
+restores the two-argument shape. If either list is empty the answer is
+the other. Otherwise <code>if dec (a0 &lt; b0)</code> decides the
+comparison — this is the <em>only</em> place the order touches the
+program, and it uses just decidability, no order laws — and the smaller
+head is emitted. The two holes are the measure-decrease proofs, closed
+uniformly by <code>abstract lia</code>.</p>
+<p>The defining equations — the displayed case rule above, one lemma per
+clause — follow through <code>Fix_eq</code>:</p>
+<pre class="coq"><code>  Lemma merge_nil_l: forall l : list A, merge [] l = l.
+    now destruct l. Qed.
+  Lemma merge_nil_r: forall l : list A, merge l [] = l.
+    now destruct l. Qed.
+  Lemma merge_cons: forall (a : A) (b : list A) (c : A) (d : list A),
+      merge (a::b) (c::d) = if dec (a &lt; c) then a::merge b (c::d) else c::merge (a::b) d.
+    intros; unfold merge at 1, compose, uncurry.
+    rewrite Fix_eq.
+    - destruct dec; f_equal.
+    - intros [[ | x x&#39;] [ | y y&#39;]] f g H; auto.
+      destruct dec; rewrite !H; f_equal.
+   Qed.</code></pre>
+<p>Every later proof rewrites with <code>merge_nil_l</code>,
+<code>merge_nil_r</code>, and <a
+href="coqdoc/Riktig.Programs.Merge.html#merge_cons"><code>merge_cons</code></a>,
+never with the <code>Fix</code> itself. And the program computes, at
+<code>nat</code>:</p>
+<pre class="coq"><code>Check Logic.eq_refl : merge [1;3;5] [2;4;6] = [1;2;3;4;5;6].
+Check Logic.eq_refl : merge [1;2] [] = [1;2].
+Check Logic.eq_refl : merge [2;4;6;8] [1;3] = [1;2;3;4;6;8].
+Check Logic.eq_refl : merge [1;1;2] [1;3] = [1;1;1;2;3].</code></pre>
+<h2 id="half-one-merging-loses-nothing">Half one: merging loses
+nothing</h2>
+<p>The permutation fact says <code>a ++ b</code> — the two inputs simply
+concatenated — is a rearrangement of <code>merge a b</code>. It needs no
+order laws whatever: <code>merge</code> only ever moves an element from
+an input to the output, so whichever way each comparison falls, the
+multiset of elements is preserved. On the blackboard, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>∼</mo><annotation encoding="application/x-tex">\sim</annotation></semantics></math>
+for “is a permutation of”, the case where the left head wins is a short
+chain:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>x</mi><mo>:</mo><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">definition of </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>∼</mo><mi>x</mi><mo>:</mo><mo>:</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>y</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">induction hypothesis, under the shared head </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>a</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>y</mi><mrow><mo>:</mo><mo>:</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the clause equation, in the branch </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mo>&lt;</mo><mi>y</mi><mi>.</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+(x{::}a) \mathbin{+\!\!+} (y{::}b) &amp;= x :: (a \mathbin{+\!\!+} (y{::}b)) &amp;&amp; \{\text{definition of } \mathbin{+\!\!+}\}\\
+&amp;\sim x :: \mathrm{merge}(a,\ y{::}b) &amp;&amp; \{\text{induction hypothesis, under the shared head } x\}\\
+&amp;= \mathrm{merge}(x{::}a,\ y{::}b) &amp;&amp; \{\text{the clause equation, in the branch } x &lt; y.\}
+\end{aligned}
+</annotation></semantics></math></p>
+<p>Here is the proof from <a
+href="coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>:</p>
+<pre class="coq"><code>  Lemma merge_perm: forall a b : list A, Permutation (a ++ b) (merge a b).
+    apply (measure_ind2 (fun (a b : list A) =&gt; length a + length b)).
+    intros [|x a] [|y b] IH.
+    - reflexivity.
+    - reflexivity.
+    - now rewrite app_nil_r.
+    - destruct (dec (olt x y)) as [L|L].
+      + calc ((x::a) ++ (y::b))
+          == (x :: (a ++ (y::b)))
+          == (x :: merge a (y::b))
+          == (merge (x::a) (y::b)).
+        * reflexivity.
+        * apply perm_skip, IH; simpl; lia.
+        * rewrite merge_cons; destruct (dec (olt x y)); [reflexivity | contradiction].
+      + calc ((x::a) ++ (y::b))
+          == (y :: ((x::a) ++ b))
+          == (y :: merge (x::a) b)
+          == (merge (x::a) (y::b)).
+        * apply Permutation_sym, Permutation_middle.
+        * apply perm_skip, IH; simpl; lia.
+        * rewrite merge_cons; destruct (dec (olt x y)); [contradiction | reflexivity].
+   Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Lib.MeasureInd.html#measure_ind2"><code>measure_ind2</code></a>
+gives strong induction on the length sum, so <code>IH</code> applies at
+any pair of lists with strictly smaller total length. The
+<code>intros [|x a] [|y b]</code> splits both lists into
+empty/non-empty; the first three bullets are the cases where at least
+one list is empty, closed by <code>reflexivity</code> or
+<code>app_nil_r</code> since <code>merge</code> returns the other list
+untouched.</li>
+<li>The last bullet is the interesting one,
+<code>destruct (dec (olt x y))</code> splitting on the comparison
+exactly as the program does. Each branch is a <code>calc</code> chain —
+the machine-checked blackboard — of three permutation steps. In the
+<code>x &lt; y</code> branch: the first step is <code>app</code>’s
+definition (<code>reflexivity</code>); the second is
+<code>perm_skip</code> (prepend the same <code>x</code>) applied to
+<code>IH</code>, whose length side-condition falls to <code>lia</code>;
+the third rewrites <a
+href="coqdoc/Riktig.Programs.Merge.html#merge_cons"><code>merge_cons</code></a>
+and picks the matching branch, where the leftover <a
+href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+agrees with <code>L</code> so the wrong side is closed by
+<code>contradiction</code>.</li>
+<li>The <code>y &lt;= x</code> branch is the mirror image, opening
+instead with <code>Permutation_middle</code>, the fact that
+<code>y :: (l ++ b)</code> is a permutation of
+<code>l ++ (y :: b)</code>.</li>
+</ul>
+<h2 id="half-two-merging-sorted-inputs-stays-sorted">Half two: merging
+sorted inputs stays sorted</h2>
+<p>Now the order laws are needed. A list is <code>Sorted ole</code> when
+each element is <code>&lt;=</code> the next; the standard-library
+<code>Sorted</code> predicate is built from a head-relation
+<code>HdRel ole x l</code>, “<code>x</code> is <code>&lt;=</code> the
+head of <a
+href="coqdoc/Riktig.Programs.BinarySearch.html#l"><code>l</code></a>”
+(vacuously true for the empty list). The one fact <code>merge</code>
+needs is that a bound below both inputs bounds the merge, because the
+head of <code>merge a b</code> is a head of <code>a</code> or of
+<code>b</code>. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>⊑</mo><mi>l</mi></mrow><annotation encoding="application/x-tex">x \sqsubseteq l</annotation></semantics></math>
+for
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+is below the head of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>l</mi><annotation encoding="application/x-tex">l</annotation></semantics></math>,
+or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>l</mi><annotation encoding="application/x-tex">l</annotation></semantics></math>
+is empty”:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>⊑</mo><mi>a</mi><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>x</mi><mo>⊑</mo><mi>b</mi><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mi>x</mi><mo>⊑</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">x \sqsubseteq a \;\wedge\; x \sqsubseteq b \;\implies\; x \sqsubseteq \mathrm{merge}(a, b).</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma merge_hdrel: forall (x : A) a b,
+      HdRel ole x a -&gt; HdRel ole x b -&gt; HdRel ole x (merge a b).
+    intros x [|p a] [|q b] HA HB;
+      rewrite ?merge_nil_l, ?merge_nil_r, ?merge_cons; auto.
+    destruct (dec (olt p q)); constructor; [now inversion HA | now inversion HB].
+   Qed.</code></pre>
+<p>The empty cases rewrite <code>merge</code> away and finish by
+<code>auto</code>; when both lists are non-empty, whichever head <a
+href="coqdoc/Riktig.Programs.Merge.html#merge_cons"><code>merge_cons</code></a>
+selects, <code>x</code> bounds it by inverting the corresponding
+hypothesis. With that, sortedness —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{sorted}(a) \;\wedge\; \mathrm{sorted}(b) \;\implies\; \mathrm{sorted}(\mathrm{merge}(a, b))</annotation></semantics></math></p>
+<p>— is an induction on the length sum:</p>
+<pre class="coq"><code>  Lemma merge_sorted: forall a b : list A,
+      Sorted ole a -&gt; Sorted ole b -&gt; Sorted ole (merge a b).
+   Proof.
+    apply (measure_ind2 (fun (a b : list A) =&gt; length a + length b)
+             (fun a b =&gt; Sorted ole a -&gt; Sorted ole b -&gt; Sorted ole (merge a b))).
+    intros [|x a] [|y b] IH SA SB.
+    - constructor.
+    - now rewrite merge_nil_l.
+    - now rewrite merge_nil_r.
+    - rewrite merge_cons; inversion_clear SA; inversion_clear SB;
+        destruct (dec (olt x y)); constructor;
+        eauto using merge_hdrel, HdRel_cons, olt_ole, nolt_ole, Sorted_cons;
+        apply IH; simpl; eauto using Sorted_cons; lia.
+     Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li>Same <a
+href="coqdoc/Riktig.Lib.MeasureInd.html#measure_ind2"><code>measure_ind2</code></a>
+on the length sum, now carrying the two sortedness hypotheses
+<code>SA</code>, <code>SB</code>. The three degenerate cases are
+<code>constructor</code> (the empty list is sorted) or a rewrite of
+<code>merge</code> to the other list.</li>
+<li>The last case rewrites <a
+href="coqdoc/Riktig.Programs.Merge.html#merge_cons"><code>merge_cons</code></a>,
+then <code>inversion_clear</code> peels each input into “the tail is
+sorted” and “the head bounds the tail.” The
+<code>destruct (dec (olt x y))</code> follows the program’s branch, and
+<code>constructor</code> reduces “<code>merge</code> is sorted” to two
+obligations: the tail is sorted (closed by <code>apply IH</code> at the
+strictly shorter arguments, <code>lia</code> for the measure) and the
+emitted head bounds that tail (closed by <a
+href="coqdoc/Riktig.Theory.Merge.html#merge_hdrel"><code>merge_hdrel</code></a>).
+The lemmas <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html#olt_ole"><code>olt_ole</code></a>
+and <a
+href="coqdoc/Riktig.Theory.DecTotalOrder.html#nolt_ole"><code>nolt_ole</code></a>
+bridge the strict comparison the program tested and the
+<code>&lt;=</code> that <code>Sorted</code> wants: <code>x &lt; y</code>
+gives <code>x &lt;= y</code>, and <code>not (x &lt; y)</code> gives
+<code>y &lt;= x</code> by totality.</li>
+</ul>
+<h3 id="merge-does-not-commute-on-ties">Merge does not commute on
+ties</h3>
+<p>You might expect <code>merge a b = merge b a</code>. It is not true
+as a plain equation. On a <em>tie</em> — two equal elements, one from
+each list — both orderings take the head of their own second list first,
+and the two outputs differ. The file records the counterexample by
+computation:</p>
+<pre class="coq"><code>Check Logic.eq_refl : merge [1] [1;0] = [1;0;1].
+Check Logic.eq_refl : merge [1;0] [1] = [1;1;0].</code></pre>
+<p>Swapping the arguments genuinely changes the result. What <em>is</em>
+true is that on already-sorted inputs <code>merge</code> commutes —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{sorted}(a) \;\wedge\; \mathrm{sorted}(b) \;\implies\; \mathrm{merge}(a, b) = \mathrm{merge}(b, a)</annotation></semantics></math></p>
+<p>— and the reason is exactly the two halves proved above: both
+<code>merge a b</code> and <code>merge b a</code> are sorted (half two)
+and both are permutations of the same elements (half one), and a sorted
+list is determined by its multiset, so they must be equal. That is <a
+href="coqdoc/Riktig.Theory.Merge.html#merge_comm"><code>merge_comm</code></a>:</p>
+<pre class="coq"><code>  Lemma merge_comm: forall a b : list A,
+      Sorted ole a -&gt; Sorted ole b -&gt; merge a b = merge b a.
+    intros; apply sorted_perm_unique;
+      eauto using merge_sorted, merge_comm_perm.
+   Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.Sorted.html#sorted_perm_unique"><code>sorted_perm_unique</code></a>
+is the “sorted list determined by its multiset” fact; the two
+<code>eauto</code> hints supply the sortedness and the permutation. The
+tie is why the hypothesis <code>Sorted</code> cannot be dropped.</p>
+<h2 id="merge-sort">Merge sort</h2>
+<p>Merge sort splits a list into two halves, sorts each, and merges the
+results. In <a
+href="coqdoc/Riktig.Programs.MergeSort.html"><code>Programs/MergeSort.v</code></a>,
+which works over <code>list nat</code>, the <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+recurses structurally (it consumes two elements at a time), so it is a
+plain <code>Fixpoint</code>; the merge is not redefined at all but is
+the generic <code>merge</code> above instantiated at <code>nat</code>’s
+order, with its two arguments swapped so that ties keep the original
+left-biased convention
+(<code>Definition merge (l1 l2 : list nat) : list nat := Riktig.Programs.Merge.merge (O := Nat_DecTotalOrder) l2 l1.</code>).
+The recursion that needs a measure is <a
+href="coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>
+itself, because it recurses on the <em>outputs</em> of <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>,
+which Coq cannot see are shorter than the input. The measure is list
+length:</p>
+<pre class="coq"><code>Definition msort : list nat -&gt; list nat.
+apply (Fix (well_founded_ltof (list nat) (@length nat)) (fun _ =&gt; list nat)).
+intros l rec.
+(* Term-mode `match l with ...` (as used by `part`/`qsort_aux` in
+   Quicksort.v) does not propagate the pattern `x :: y :: rest` back
+   into `rec`&#39;s type, since the Fix body here doesn&#39;t depend on `l`
+   pointwise; `destruct` (tactic-mode) does perform that
+   substitution, so the two termination holes below see the goal in
+   exactly `split_length_lt`&#39;s shape. *)
+destruct l as [|x [|y rest]].
+- exact [].
+- exact [x].
+- refine (merge (rec (fst (split (x :: y :: rest))) _)
+                (rec (snd (split (x :: y :: rest))) _));
+  abstract (unfold ltof; apply (split_length_lt x y rest)).
+Defined.</code></pre>
+<p>Lists of length zero or one are already sorted and returned as-is.
+For two or more elements, <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+produces two halves, <code>rec</code> sorts each — the two holes being
+the proofs that each half is strictly shorter, closed by <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split_length_lt"><code>split_length_lt</code></a>
+— and <code>merge</code> combines them. As usual a <a
+href="coqdoc/Riktig.Programs.MergeSort.html#msort_step"><code>msort_step</code></a>
+lemma derives the defining equation through <code>Fix_eq</code>, and <a
+href="coqdoc/Riktig.Theory.MergeSort.html"><code>Theory/MergeSort.v</code></a>
+refines it into one match-free corollary per branch (<a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_nil"><code>msort_nil</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_single"><code>msort_single</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_cons2"><code>msort_cons2</code></a>)
+so the proofs never expose a residual <code>match</code>. And it
+computes:</p>
+<pre class="coq"><code>Check Logic.eq_refl : msort [5;3;8;1;9;2;7] = [1;2;3;5;7;8;9].
+Check Logic.eq_refl : msort [2;1] = [1;2].</code></pre>
+<p>Correctness is both halves together — for every list
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>l</mi><annotation encoding="application/x-tex">l</annotation></semantics></math>,
+the output is a rearrangement of the input and it is in order:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mspace width="0.278em"></mspace><mo>∼</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">l \;\sim\; \mathrm{msort}(l) \qquad\text{and}\qquad \mathrm{sorted}(\mathrm{msort}(l)).</annotation></semantics></math></p>
+<pre class="coq"><code>Corollary msort_correct : forall l : list nat,
+  Permutation l (msort l) /\ Sorted le (msort l).
+Proof. intros l. split; [apply msort_perm | apply msort_sorted]. Qed.</code></pre>
+<p>The corollary is a one-liner because the substance is in its two
+conjuncts. I will walk the sortedness half in full, <a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_sorted"><code>msort_sorted</code></a>,
+and state the permutation half; both are strong inductions on length
+with the same shape.</p>
+<pre class="coq"><code>Theorem msort_sorted : forall l : list nat, Sorted le (msort l).
+Proof.
+  induction l as [l IH]
+    using (well_founded_ind (well_founded_ltof (list nat) (@length nat))).
+  destruct l as [|x [|y rest]].
+  - rewrite msort_nil. constructor.
+  - rewrite msort_single. constructor; constructor.
+  - pose proof (split_length_lt x y rest) as [H1 H2].
+    rewrite msort_cons2.
+    apply merge_sorted; apply IH; [exact H1 | exact H2].
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>well_founded_ind</code> on <code>length</code> gives an
+induction hypothesis <code>IH</code> usable at any strictly shorter
+list. <code>destruct l</code> splits into the three shapes <a
+href="coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>
+itself distinguishes.</li>
+<li>Empty: <code>rewrite msort_nil</code> then <code>constructor</code>
+— the empty list is <code>Sorted</code>. Singleton:
+<code>rewrite msort_single</code>, and two <code>constructor</code>s
+build <code>Sorted le [x]</code> from “the tail is sorted” and “the head
+bounds the empty tail.”</li>
+<li>The main case rewrites <a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_cons2"><code>msort_cons2</code></a>,
+exposing <code>merge</code> of the two recursively sorted halves. <a
+href="coqdoc/Riktig.Programs.MergeSort.html#split_length_lt"><code>split_length_lt</code></a>
+gives the two “shorter” facts <code>H1</code>, <code>H2</code>;
+<code>apply merge_sorted</code> reduces the goal to “each half is
+sorted,” and <code>apply IH</code> closes both, using
+<code>H1</code>/<code>H2</code> for the measure. This is where the
+earlier <code>merge_sorted</code> is spent: merging two sorted halves is
+what keeps the whole result sorted.</li>
+</ul>
+<p>The permutation half is
+<code>msort_perm : forall l, Permutation l (msort l)</code>, proved on
+the same skeleton: in the two-or-more case it chains <a
+href="coqdoc/Riktig.Theory.MergeSort.html#split_perm"><code>split_perm</code></a>
+(the input is a permutation of its two halves concatenated) with the
+induction hypothesis on each half and finally <code>merge_perm</code>
+(merging is a permutation of the concatenation). Together they are <a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_correct"><code>msort_correct</code></a>:
+the output of <a
+href="coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>
+is a sorted rearrangement of its input, no element lost, none
+invented.</p>
+<p><em>Next: quicksort, where the same two halves are proved but the
+rearrangement happens in place, through a partition invariant.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+(<code>merge</code> over any <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder"><code>DecTotalOrder</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
+(<code>merge_perm</code>, <code>merge_sorted</code>, <a
+href="coqdoc/Riktig.Theory.Merge.html#merge_comm"><code>merge_comm</code></a>)
+· <a
+href="coqdoc/Riktig.Programs.MergeSort.html"><code>Programs/MergeSort.v</code></a>
+(<a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>,
+<code>merge</code>, <a
+href="coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.MergeSort.html"><code>Theory/MergeSort.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_perm"><code>msort_perm</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_sorted"><code>msort_sorted</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MergeSort.html#msort_correct"><code>msort_correct</code></a>).</p>
+</main>
+</body>
+</html>

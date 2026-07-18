@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The alternating-bit protocol: safety, unconditionally</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="the-alternating-bit-protocol-safety-unconditionally">The
+alternating-bit protocol: safety, unconditionally</h1>
+<p>A communication channel, in the model this post works over, is not a
+pipe that either works or doesn’t — it is a <em>relation</em> between
+the list of messages a sender handed in and the list a receiver got out.
+A perfect channel is the relation “received equals sent.” A lossy one is
+“received is what you get by dropping some of the sent items.” Others
+duplicate items, or permute them. Each fault class is just a set of
+sent/received pairs the channel is allowed to produce, and a worse
+channel is a bigger set — more behaviours it might inflict on you.</p>
+<p>This post is about one protocol running over one of the nastier
+relations, and one theorem: no matter how badly the channel misbehaves,
+the receiver never hands its application a message that is wrong. It
+proves that <em>unconditionally</em> — with no assumption whatever about
+how often the channel cooperates. Whether messages actually arrive is a
+genuinely separate question with a genuinely different answer, and it is
+deliberately not in this post.</p>
+<h2 id="the-problem-telling-a-retransmission-from-a-new-message">The
+problem: telling a retransmission from a new message</h2>
+<p>Suppose the channel can lose packets and can also duplicate them. A
+sender that wants a message to get through has an obvious move: send it
+several times, and hope at least one copy survives. But now the receiver
+has a new problem. It sees a copy of message <em>m</em>. Later it sees
+another copy of <em>m</em>. Is that second copy a
+<strong>retransmission</strong> of the same logical message — which it
+should ignore, having already delivered <em>m</em> — or is it a
+genuinely new message that just happens to equal <em>m</em>, which it
+should deliver again? Nothing in the message itself answers this.</p>
+<p>The alternating-bit protocol answers it with a single extra bit. The
+sender tags each logical message with one bit, and <em>flips that bit
+every time it moves on to the next message</em>. So the wire carries
+<code>(0, m₀)</code>, then <code>(1, m₁)</code>, then
+<code>(0, m₂)</code>, and so on, alternating. All the retransmissions of
+one message carry the same bit; the next message carries the opposite
+bit. The receiver keeps a single bit of its own — the bit it is
+currently <em>expecting</em>. When a packet arrives whose bit matches,
+the receiver delivers the message and flips its expected bit. When a
+packet arrives whose bit does <em>not</em> match, it is a stale
+retransmission of a message already delivered, and the receiver silently
+drops it. One bit is enough because at any moment only two logical
+messages are ever in play: the one just delivered and the one coming
+next, and they always carry opposite bits.</p>
+<h2 id="the-channel-loss-and-duplication-in-any-interleaving">The
+channel: loss and duplication, in any interleaving</h2>
+<p>Here is the exact relation the sender’s wire runs through, from <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>.
+It is an inductively defined relation between a sent list and a received
+list:</p>
+<pre class="coq"><code>Inductive lossy_dup : list M -&gt; list M -&gt; Prop :=
+  | lossy_dup_nil : lossy_dup [] []
+  | lossy_dup_keep : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) (x :: r)
+  | lossy_dup_drop : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) r
+  | lossy_dup_stutter : forall x s r,
+      lossy_dup s (x :: r) -&gt; lossy_dup s (x :: x :: r).</code></pre>
+<p>Read the four constructors as the four things the channel may do
+walking along the sent list: match empty with empty;
+<strong>keep</strong> a sent item, delivering it once;
+<strong>drop</strong> a sent item, delivering nothing for it; or
+<strong>stutter</strong>, re-emitting an item it has already delivered,
+which is how duplication enters. There is no constructor that reorders,
+and none that invents an item out of nothing — every delivered item
+traces back to a sent one. That last fact is what makes the protocol
+provable, and we will lean on it directly.</p>
+<h2 id="the-sender-a-burst-per-message-alternating-the-bit">The sender:
+a burst per message, alternating the bit</h2>
+<p>A wire packet is a message with its one-bit tag, from <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
+<pre class="coq"><code>Definition bit := bool.
+
+Record Packet := { pkt_bit : bit; pkt_msg : M }.</code></pre>
+<p>The sender emits, for each application message, a <em>burst</em> of
+<a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
+identical copies — its retransmission budget — and flips the bit once
+per logical message, not once per copy:</p>
+<pre class="coq"><code>Fixpoint sender_burst (b : bit) (m : M) (k : nat) : list Packet :=
+  match k with
+  | O =&gt; []
+  | S k&#39; =&gt; {| pkt_bit := b; pkt_msg := m |} :: sender_burst b m k&#39;
+  end.
+
+Fixpoint sender_stream (b : bit) (ms : list M) (k : nat) : list Packet :=
+  match ms with
+  | [] =&gt; []
+  | m :: ms&#39; =&gt; sender_burst b m k ++ sender_stream (negb b) ms&#39; k
+  end.</code></pre>
+<p><code>sender_burst b m k</code> is <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> copies of
+the same packet <code>{| pkt_bit := b; pkt_msg := m |}</code>. <a
+href="coqdoc/Riktig.Channel.ABP.html#sender_stream"><code>sender_stream</code></a>
+lays the bursts end to end, negating the bit (<code>negb</code>) at each
+step down the message list. So every packet belonging to one message is
+literally the same record, and the bit alternates exactly at burst
+boundaries — the two structural facts everything below rests on.</p>
+<h2 id="the-receiver-accept-on-a-match-flip-and-drop-the-rest">The
+receiver: accept on a match, flip, and drop the rest</h2>
+<p>The receiver folds over the packets that reach it, carrying its
+expected bit. On a match it delivers the message and flips; otherwise it
+discards and keeps waiting:</p>
+<pre class="coq"><code>Fixpoint deliver (expect : bit) (ps : list Packet) : list M :=
+  match ps with
+  | [] =&gt; []
+  | p :: ps&#39; =&gt;
+      if Bool.eqb (pkt_bit p) expect
+      then pkt_msg p :: deliver (negb expect) ps&#39;
+      else deliver expect ps&#39;
+  end.</code></pre>
+<p>A companion function records only the <em>final</em> expected bit
+after processing a list of packets, with no delivery — the state at the
+split point, which we will need to reason about a stream one burst at a
+time:</p>
+<pre class="coq"><code>Fixpoint next_bit (expect : bit) (ps : list Packet) : bit :=
+  match ps with
+  | [] =&gt; expect
+  | p :: ps&#39; =&gt;
+      if Bool.eqb (pkt_bit p) expect
+      then next_bit (negb expect) ps&#39;
+      else next_bit expect ps&#39;
+  end.</code></pre>
+<h2 id="what-safety-says-a-subsequence-nothing-more">What safety says: a
+subsequence, nothing more</h2>
+<p>“The receiver never delivers anything wrong” is made precise by the
+subsequence relation, from <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>.
+<code>subseq r s</code> means <code>r</code> is <code>s</code> with some
+elements dropped — same elements, same order, possibly fewer:</p>
+<pre class="coq"><code>Inductive subseq : list A -&gt; list A -&gt; Prop :=
+  | subseq_nil : subseq [] []
+  | subseq_keep : forall x r s, subseq r s -&gt; subseq (x :: r) (x :: s)
+  | subseq_drop : forall x r s, subseq r s -&gt; subseq r (x :: s).</code></pre>
+<p>If the delivered list is a subsequence of the sent list, then every
+message delivered was really sent, no message is delivered twice, and
+the order is preserved. That single relation rules out corruption,
+duplication, and reordering all at once. The safety theorem is exactly:
+delivered is a subsequence of sent.</p>
+<h2 id="the-crux-one-burst-delivers-at-most-one-message">The crux: one
+burst delivers at most one message</h2>
+<p>The whole proof turns on one lemma about a single burst. Whatever <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+does to a burst for message <em>m</em> tagged with bit <em>b</em> —
+losing copies, duplicating copies, in any interleaving — the receiver
+either delivers nothing from it, or delivers exactly <code>[m]</code>
+once, and the two cases are told apart by what happens to the expected
+bit.</p>
+<p>The blackboard reason is short. Every packet the channel produces
+from this burst is the same record
+<code>{| pkt_bit := b; pkt_msg := m |}</code>, because the burst was
+homogeneous and <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+never invents a packet (that is the
+<code>keep</code>/<code>drop</code>/<code>stutter</code> reading above).
+So the receiver is folding over a list in which every packet carries bit
+<em>b</em>. If its expected bit is not <em>b</em>, no packet matches and
+it delivers <code>[]</code>. If its expected bit <em>is</em> <em>b</em>,
+the first packet matches, delivers <em>m</em>, and flips the expectation
+to <code>negb b</code> — after which no remaining packet in the burst
+(all still bit <em>b</em>) can match, so nothing more is delivered.
+Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">D_e(w)</annotation></semantics></math>
+for what the receiver delivers from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+starting at expectation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N_e(w)</annotation></semantics></math>
+for its final expectation:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>∧</mo><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>e</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∨</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mi>m</mi><mo stretchy="false" form="postfix">]</mo><mo>∧</mo><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>¬</mo><mi>e</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy\_dup}\bigl(\mathrm{burst}_b(m,k),\, w\bigr) \;\Longrightarrow\; \bigl(D_e(w) = [\,] \wedge N_e(w) = e\bigr) \;\vee\; \bigl(D_e(w) = [m] \wedge N_e(w) = \neg e\bigr).</annotation></semantics></math></p>
+<p>Here is the lemma and its proof from <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
+<pre class="coq"><code>Lemma burst_delivery : forall (b : bit) (m : M) (k : nat) (w : list Packet) (expect : bit),
+  lossy_dup (sender_burst b m k) w -&gt;
+  (deliver expect w = [] /\ next_bit expect w = expect) \/
+  (deliver expect w = [m] /\ next_bit expect w = negb expect).
+Proof.
+  intros b m k w expect H.
+  assert (Hall : forall p, In p w -&gt; p = {| pkt_bit := b; pkt_msg := m |}).
+  { apply (lossy_dup_preserves_all_eq {| pkt_bit := b; pkt_msg := m |}
+             (sender_burst b m k) w H).
+    intros p Hp. apply (sender_burst_all_eq b m k p Hp). }
+  destruct (bit_dec (pkt_bit ({| pkt_bit := b; pkt_msg := m |})) expect) as [Heq | Hneq].
+  - destruct (deliver_homog_eq {| pkt_bit := b; pkt_msg := m |} w expect Hall Heq)
+      as [[Hd Hn] | [Hd Hn]].
+    + left. split.
+      * exact Hd.
+      * exact Hn.
+    + right. split.
+      * exact Hd.
+      * exact Hn.
+  - left. apply (deliver_homog_neq {| pkt_bit := b; pkt_msg := m |} w expect Hall Hneq).
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li>The <code>Hall</code> assertion is the homogeneity fact: every
+packet <code>p</code> in the received burst <code>w</code> equals the
+record <code>{| pkt_bit := b; pkt_msg := m |}</code>. It is discharged
+by <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_preserves_all_eq"><code>lossy_dup_preserves_all_eq</code></a>
+— the channel keeps every received item equal to something sent — fed
+the fact <a
+href="coqdoc/Riktig.Channel.ABP.html#sender_burst_all_eq"><code>sender_burst_all_eq</code></a>,
+that every <em>sent</em> packet in the burst is that record.</li>
+<li><code>destruct (bit_dec ...)</code> splits on whether the burst’s
+bit matches the receiver’s <code>expect</code>.</li>
+<li>In the matching case (<code>Heq</code>), <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_eq"><code>deliver_homog_eq</code></a>
+says a homogeneous list whose bit matches delivers either
+<code>[]</code> (if the channel left the burst empty) or exactly
+<code>[pkt_msg x0] = [m]</code> and flips the bit; both sub-cases are
+packaged into the left/right disjuncts.</li>
+<li>In the non-matching case (<code>Hneq</code>), <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_neq"><code>deliver_homog_neq</code></a>
+says nothing is delivered and the expectation is unmoved — the left
+disjunct.</li>
+</ul>
+<p>Notice the budget <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> never
+constrains anything here. It holds for <code>k = 0</code> (an empty
+burst, delivering nothing) just as for a large <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. The size
+of a burst affects <em>whether</em> a message survives, never
+<em>whether the wrong thing</em> is delivered.</p>
+<h2 id="the-safety-theorem-proved-and-walked">The safety theorem, proved
+and walked</h2>
+<p>Now the induction. It is stated for an arbitrary receiver expectation
+<code>expect</code>, not tied to the sender’s starting bit, because that
+generality is exactly what the induction step needs: a burst that is
+entirely lost leaves the receiver’s expectation out of phase with the
+next burst, and the proof must handle that. The identity that lets us
+split the receiver across a burst boundary is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>w</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>D</mi><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">D_e(w_1 \mathbin{+\!+} w_2) \;=\; D_e(w_1) \mathbin{+\!+} D_{N_e(w_1)}(w_2),</annotation></semantics></math></p>
+<p>in the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>/<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>
+notation above — deliver the first part, then deliver the second part
+starting from wherever the first part left the expectation —</p>
+<p>which is the <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver_app"><code>deliver_app</code></a>
+lemma, and it is why <a
+href="coqdoc/Riktig.Channel.ABP.html#next_bit"><code>next_bit</code></a>
+exists. The induction runs on the message list <code>ms</code>:</p>
+<pre class="coq"><code>Lemma abp_deliver_subseq : forall (k : nat) (ms : list M)
+    (b_stream expect : bit) (wire : list Packet),
+  lossy_dup (sender_stream b_stream ms k) wire -&gt; subseq (deliver expect wire) ms.
+Proof.
+  intros k ms.
+  induction ms as [| m ms&#39; IH]; intros b_stream expect wire H.
+  - simpl in H.
+    assert (Hnil : wire = []).
+    { apply (lossy_dup_nil_l [] wire H). reflexivity. }
+    rewrite Hnil. simpl. apply subseq_nil.
+  - simpl in H.
+    destruct (lossy_dup_app_split _ _ H
+                (sender_burst b_stream m k) (sender_stream (negb b_stream) ms&#39; k)
+                eq_refl) as [w1 [w2 [Hwire [H1 H2]]]].
+    rewrite Hwire.
+    rewrite (deliver_app w1 w2 expect).
+    destruct (burst_delivery b_stream m k w1 expect H1) as [[Hd1 Hn1] | [Hd1 Hn1]].
+    + rewrite Hd1. rewrite Hn1. simpl.
+      apply subseq_drop.
+      apply (IH (negb b_stream) expect w2 H2).
+    + rewrite Hd1. rewrite Hn1. simpl.
+      apply subseq_keep.
+      apply (IH (negb b_stream) (negb expect) w2 H2).
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><strong>Base case, <code>ms = []</code>.</strong> The sender emitted
+nothing, so the sent stream is <code>[]</code>. <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_nil_l"><code>lossy_dup_nil_l</code></a>
+says a channel with an empty input produces empty output, so
+<code>wire = []</code>. Then <code>deliver expect [] = []</code>, and <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_nil"><code>subseq_nil</code></a>
+closes <code>subseq [] []</code>.</li>
+<li><strong>Inductive case, <code>ms = m :: ms'</code>.</strong> The
+sent stream is the burst for <code>m</code> followed by the stream for
+<code>ms'</code>. <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>
+cuts the received <code>wire</code> at the matching point into
+<code>w1 ++ w2</code>, with <code>w1</code> the channel’s rendering of
+<code>m</code>’s burst (<code>H1</code>) and <a
+href="coqdoc/Riktig.Impl.Attention.html#w2"><code>w2</code></a> the
+rendering of the rest (<code>H2</code>).</li>
+<li><code>rewrite (deliver_app w1 w2 expect)</code> applies the split
+identity above: what the receiver delivers over the whole wire is what
+it delivers over <code>w1</code>, then what it delivers over <a
+href="coqdoc/Riktig.Impl.Attention.html#w2"><code>w2</code></a> starting
+from the bit <code>next_bit expect w1</code>.</li>
+<li><code>destruct (burst_delivery ...)</code> invokes the crux lemma on
+<code>w1</code>, giving the two cases.</li>
+<li><strong>Burst lost</strong>
+(<code>Hd1 : deliver expect w1 = []</code>,
+<code>Hn1 : next_bit expect w1 = expect</code>): the delivered list is
+just <code>deliver expect w2</code>. Rewriting leaves the goal
+<code>subseq (deliver expect w2) (m :: ms')</code>; <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_drop"><code>subseq_drop</code></a>
+reduces it to <code>subseq (deliver expect w2) ms'</code>, closed by the
+induction hypothesis on <code>ms'</code> — with the <em>same</em>
+<code>expect</code>, because a lost burst did not move the
+expectation.</li>
+<li><strong>Burst delivered</strong>
+(<code>Hd1 : deliver expect w1 = [m]</code>,
+<code>Hn1 : next_bit expect w1 = negb expect</code>): the delivered list
+is <code>m :: deliver (negb expect) w2</code>. Rewriting leaves
+<code>subseq (m :: deliver (negb expect) w2) (m :: ms')</code>; <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_keep"><code>subseq_keep</code></a>
+strips the shared head <code>m</code> and reduces it to
+<code>subseq (deliver (negb expect) w2) ms'</code>, closed by the
+induction hypothesis — this time with the flipped
+<code>negb expect</code>, because the delivery moved the
+expectation.</li>
+</ul>
+<p>The theorem actually wanted is the instance where the receiver starts
+by expecting the sender’s starting bit. It is a one-line corollary:</p>
+<pre class="coq"><code>Theorem abp_safety : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
+  lossy_dup (sender_stream b0 ms k) wire -&gt; subseq (deliver b0 wire) ms.
+Proof.
+  intros k b0 ms wire H.
+  apply (abp_deliver_subseq k ms b0 b0 wire H).
+Qed.</code></pre>
+<p>In words: for any budget <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, any
+starting bit <code>b0</code>, any list of application messages
+<code>ms</code>, and any wire trace the lossy-and-duplicating channel
+could produce from the sender’s output, whatever the receiver delivers
+is a subsequence of <code>ms</code> — writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>≼</mo><annotation encoding="application/x-tex">\preceq</annotation></semantics></math>
+for the subsequence relation,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mn>0</mn></msub><mo>,</mo><mi>m</mi><mi>s</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.278em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><msub><mi>b</mi><mn>0</mn></msub></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>≼</mo><mi>m</mi><mi>s</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy\_dup}\bigl(\mathrm{sent}(b_0, ms, k),\; w\bigr) \;\Longrightarrow\; D_{b_0}(w) \preceq ms.</annotation></semantics></math></p>
+<p>No corruption, no duplication, no reordering reaches the
+application.</p>
+<h2 id="what-was-and-was-not-assumed">What was, and was not,
+assumed</h2>
+<p>Look back at the hypotheses of <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>.
+There is exactly one: that <code>wire</code> is <em>some</em> trace the
+channel <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+allows. There is no assumption that the channel ever cooperates, no
+lower bound on the budget <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, no bound
+on how much it loses or duplicates. A channel that drops every single
+packet forever satisfies the hypothesis perfectly — it makes
+<code>wire = []</code>, the receiver delivers <code>[]</code>, and
+<code>[]</code> is a subsequence of any <code>ms</code>. Vacuously safe,
+and completely useless.</p>
+<p>That is not a flaw in the theorem; it is precisely the boundary of
+what safety means. Safety promises that nothing <em>wrong</em> comes
+out. It says nothing about whether anything comes out at all. Ruling out
+the drops-everything channel needs a separate hypothesis — a promise
+that the channel is, in some precise sense, fair — and a separate
+theorem about arrival. That is the subject of the next post, kept apart
+from this one on purpose, because mixing the two is exactly how the
+meaning of each gets blurred.</p>
+<p><em>Next: fairness stated as a precise hypothesis, and the liveness
+theorem it buys — everything sent is delivered.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
+(the fault-class relations, <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>
+(the <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
+relation) · <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
+(the sender, receiver, <a
+href="coqdoc/Riktig.Channel.ABP.html#burst_delivery"><code>burst_delivery</code></a>,
+<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>).</p>
+</main>
+</body>
+</html>

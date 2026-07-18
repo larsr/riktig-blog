@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exp, characterized by its laws</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="exp-characterized-by-its-laws">exp, characterized by its
+laws</h1>
+<p>A <strong>field</strong> is a set with the four ordinary arithmetic
+operations — <code>+</code>, <code>*</code>, negation, and inverses of
+everything except zero — obeying the usual laws; the rationals are the
+standard example. An <strong>ordered field</strong> adds a total order
+<code>&lt;=</code> compatible with that arithmetic: you may add the same
+thing to both sides of an inequality, and a product of two nonnegative
+elements stays nonnegative. Everything below lives over an arbitrary
+ordered field <code>F</code>.</p>
+<p>The previous post specified the real numbers by the properties they
+must satisfy, with no construction attached. The same move works one
+level down, for a single function: instead of writing a formula for the
+exponential — a power series, or a limit of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>x</mi><mi>/</mi><mi>n</mi><msup><mo stretchy="false" form="postfix">)</mo><mi>n</mi></msup></mrow><annotation encoding="application/x-tex">(1 + x/n)^n</annotation></semantics></math>
+— we can write down the handful of <em>laws</em> <code>exp</code> must
+obey and derive everything else from those. This post does exactly
+that.</p>
+<h2 id="the-four-laws">The four laws</h2>
+<p>Here is the specification, verbatim from <a
+href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>.
+It takes an ordered field <code>F</code> and asks for a function <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_fn"><code>exp_fn</code></a>
+on it, together with four laws (and the fact that <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_fn"><code>exp_fn</code></a>
+respects the equality <code>==</code>):</p>
+<pre class="coq"><code>Class Exp (F : Type) `{OrderedField F} := {
+  exp_fn        : F -&gt; F;
+  #[global] exp_fn_proper :: Proper (equ ==&gt; equ) exp_fn;
+
+  (* exp is a homomorphism from the additive group to the
+     multiplicative monoid. *)
+  exp_zero : exp_fn 0 == 1;
+  exp_add  : forall a b : F, exp_fn (a + b) == exp_fn a * exp_fn b;
+
+  (* exp lands in the nonnegative reals. Strict positivity (exp_fn a
+     =/= 0, hence 0 &lt; exp_fn a since exp_pos already gives 0 &lt;=
+     exp_fn a) is NOT stated as a further law: it is a cheap corollary
+     of exp_add/exp_zero (exp a * exp (-a) == exp 0 == 1 forces exp a
+     to be invertible, hence nonzero) proved once and for all at
+     Theory level — see Theory/Exp.v&#39;s exp_nonzero and
+     exp_strict_pos. Stating it as a law here would be redundant. *)
+  exp_pos  : forall a : F, 0 &lt;= exp_fn a;
+
+  (* Strict monotonicity: the property `log` (a later, separate
+     development) needs to invert exp onto the positive reals. *)
+  exp_mono : forall a b : F, a &lt; b -&gt; exp_fn a &lt; exp_fn b
+}.</code></pre>
+<p>The four laws read as plain statements about the function:</p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Interface.Exp.html#exp_zero"><code>exp_zero</code></a>:
+<code>exp_fn 0 == 1</code> — the exponential of zero is one.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Exp.html#exp_add"><code>exp_add</code></a>:
+<code>exp_fn (a + b) == exp_fn a * exp_fn b</code> — it turns sums into
+products. Together with <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_zero"><code>exp_zero</code></a>
+this is exactly what it means for <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_fn"><code>exp_fn</code></a>
+to be a homomorphism from <code>(F, +, 0)</code> to
+<code>(F, *, 1)</code>.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Exp.html#exp_pos"><code>exp_pos</code></a>:
+<code>0 &lt;= exp_fn a</code> — its values are never negative.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Exp.html#exp_mono"><code>exp_mono</code></a>:
+<code>a &lt; b -&gt; exp_fn a &lt; exp_fn b</code> — it is strictly
+increasing.</li>
+</ul>
+<p>No formula appears. <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_fn"><code>exp_fn</code></a>
+is an unknown function about which we assume only these four things. The
+claim of this post is that a surprising amount follows from just
+them.</p>
+<h2 id="from-nonnegative-to-strictly-positive">From nonnegative to
+strictly positive</h2>
+<p><a
+href="coqdoc/Riktig.Interface.Exp.html#exp_pos"><code>exp_pos</code></a>
+says <code>exp_fn a</code> is never negative, but it leaves the door
+open to <code>exp_fn a == 0</code>. The laws already rule that out. The
+reason is one line of algebra: <code>exp_fn a</code> has a
+multiplicative partner, namely <code>exp_fn (- a)</code>, whose product
+with it is <code>1</code>, and nothing whose product with something is
+<code>1</code> can be zero. In symbols, with each step justified by the
+law it uses:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">sums-to-products law, read backwards</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mtext mathvariant="normal">, the additive inverse law</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>1</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the value-at-zero law</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+\exp(a)\cdot\exp(-a) &amp;= \exp(a + (-a)) &amp;&amp; \{\text{sums-to-products law, read backwards}\}\\
+&amp;= \exp(0) &amp;&amp; \{a + (-a) = 0\text{, the additive inverse law}\}\\
+&amp;= 1 &amp;&amp; \{\text{the value-at-zero law}\}
+\end{aligned}</annotation></semantics></math></p>
+<p>That chain is the first lemma in <a
+href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>, <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>:</p>
+<pre class="coq"><code>Lemma exp_add_neg : forall a : F, exp_fn a * exp_fn (- a) == 1.
+Proof.
+  intros a.
+  rewrite &lt;- exp_add, invr, exp_zero.
+  reflexivity.
+Qed.</code></pre>
+<p>Read the rewrites right to left along the blackboard chain.
+<code>rewrite &lt;- exp_add</code> folds the product
+<code>exp_fn a * exp_fn (- a)</code> back into
+<code>exp_fn (a + - a)</code> — the <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_add"><code>exp_add</code></a>
+law used backwards. <a
+href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> is the field
+law <code>a + - a == 0</code>, rewriting the argument to
+<code>exp_fn 0</code>. <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_zero"><code>exp_zero</code></a>
+turns that into <code>1</code>, and <code>reflexivity</code> closes
+<code>1 == 1</code>.</p>
+<p>Nonvanishing follows immediately: if <code>exp_fn a</code> were
+<code>0</code>, then the product above would be <code>0</code>, but it
+equals <code>1</code>, and a field’s <code>0</code> and <code>1</code>
+are distinct. On the blackboard, supposing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\exp(a) = 0</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mn>1</mn></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the chain just proved</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>0</mn><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the supposition</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mn>0</mn><mo>⋅</mo><mi>x</mi><mo>=</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+1 &amp;= \exp(a)\cdot\exp(-a) &amp;&amp; \{\text{the chain just proved}\}\\
+&amp;= 0\cdot\exp(-a) &amp;&amp; \{\text{the supposition}\}\\
+&amp;= 0 &amp;&amp; \{0 \cdot x = 0\}
+\end{aligned}</annotation></semantics></math></p>
+<p>contradicting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1 \neq 0</annotation></semantics></math>.
+That is <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_nonzero"><code>exp_nonzero</code></a>:</p>
+<pre class="coq"><code>Lemma exp_nonzero : forall a : F, exp_fn a =/= 0.
+Proof.
+  intros a Heq.
+  apply field_nontrivial.
+  rewrite &lt;- (exp_add_neg a), Heq, mul_0_l.
+  reflexivity.
+Qed.</code></pre>
+<p>Here <code>=/=</code> is “not equal”, so the goal unfolds to an
+assumption <code>Heq : exp_fn a == 0</code> leading to a contradiction.
+<a
+href="coqdoc/Riktig.Interface.Field.html#field_nontrivial"><code>field_nontrivial</code></a>
+is the field’s law that <code>1 =/= 0</code>; to reach a contradiction
+it suffices to prove <code>1 == 0</code>. Rewriting by <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>
+turns the target <code>1</code> into
+<code>exp_fn a * exp_fn (- a)</code>, <code>Heq</code> replaces
+<code>exp_fn a</code> by <code>0</code>, and <a
+href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a>
+(<code>0 * x == 0</code>) collapses the product to <code>0</code>,
+giving <code>1 == 0</code>.</p>
+<p>Now strict positivity is just “nonnegative and nonzero”. In this
+development <code>&lt;</code> is defined as <code>&lt;=</code> together
+with <code>=/=</code>, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>&lt;</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">0 &lt; \exp(a)</annotation></semantics></math>
+means exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">0 \le \exp(a)</annotation></semantics></math>
+together with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≠</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">0 \neq \exp(a)</annotation></semantics></math>
+— the first is the nonnegativity law, the second is the lemma just
+proved. Proving <code>0 &lt; exp_fn a</code> therefore splits into
+precisely those two obligations, both already in hand. This is <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_strict_pos"><code>exp_strict_pos</code></a>:</p>
+<pre class="coq"><code>Lemma exp_strict_pos : forall a : F, 0 &lt; exp_fn a.
+Proof.
+  intros a.
+  split.
+  - apply exp_pos.
+  - intros Heq.
+    apply (exp_nonzero a).
+    symmetry.
+    exact Heq.
+Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
+breaks <code>0 &lt; exp_fn a</code> into its two parts. The first,
+<code>0 &lt;= exp_fn a</code>, is <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_pos"><code>exp_pos</code></a>
+verbatim. The second is the apartness <code>0 =/= exp_fn a</code>;
+assuming <code>Heq : 0 == exp_fn a</code>, we invoke
+<code>exp_nonzero a</code> (which wants <code>exp_fn a == 0</code>) and
+supply <code>Heq</code> turned around by <code>symmetry</code>. Strict
+positivity of <code>exp</code>, from four laws and no formula.</p>
+<h2 id="the-exact-inverse">The exact inverse</h2>
+<p>The same lemma file records the exact multiplicative inverse, not
+just nonzero-ness: the exponential of <code>-a</code> <em>is</em> the
+inverse of the exponential of <code>a</code>. On the blackboard this is
+a cancellation argument —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\exp(a)</annotation></semantics></math>
+times each of the two candidates gives
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>,
+and a nonzero factor can be cancelled:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>,</mo><mspace width="2.0em"></mspace><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>≠</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">\exp(a)\cdot\exp(-a) \;=\; 1 \;=\; \exp(a)\cdot\exp(a)^{-1},
+\qquad \exp(a) \neq 0 \;\Longrightarrow\; \exp(-a) = \exp(a)^{-1}.</annotation></semantics></math></p>
+<p>This is <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_neg"><code>exp_neg</code></a>:</p>
+<pre class="coq"><code>Lemma exp_neg : forall a : F, exp_fn (- a) == inv (exp_fn a).
+Proof.
+  intros a.
+  apply (mul_cancel_l (exp_fn a) (exp_fn (- a)) (inv (exp_fn a))
+    (exp_nonzero a)).
+  rewrite (exp_add_neg a), (field_invr (exp_fn a) (exp_nonzero a)).
+  reflexivity.
+Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.Field.html#mul_cancel_l"><code>mul_cancel_l</code></a>
+is the cancellation step: since <code>exp_fn a =/= 0</code> (by <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_nonzero"><code>exp_nonzero</code></a>),
+it reduces the goal to
+<code>exp_fn a * exp_fn (- a) == exp_fn a * inv (exp_fn a)</code>. The
+left side is <code>1</code> by <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>,
+and the right side is <code>1</code> by <a
+href="coqdoc/Riktig.Theory.Field.html#field_invr"><code>field_invr</code></a>,
+the field’s law that a nonzero element times its inverse is
+<code>1</code>.</p>
+<h2 id="injective-from-monotone">Injective, from monotone</h2>
+<p>The one law not yet used is <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_mono"><code>exp_mono</code></a>,
+strict monotonicity, and it buys injectivity: if two inputs have the
+same exponential, they were the same input. The idea is that a strictly
+increasing function cannot send two different points to one value — if
+<code>a</code> and <code>b</code> differed, the smaller would have the
+strictly smaller exponential, contradicting equality. On the blackboard:
+suppose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\exp(a) = \exp(b)</annotation></semantics></math>.
+If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>&lt;</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">b &lt; a</annotation></semantics></math>
+held, monotonicity would give
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>&lt;</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\exp(b) &lt; \exp(a)</annotation></semantics></math>,
+impossible when the two values are equal; so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≤</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a \le b</annotation></semantics></math>,
+and by the same argument with the roles swapped,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>≤</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">b \le a</annotation></semantics></math>.
+Antisymmetry of the order then closes it:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>≤</mo><mi>b</mi><mspace width="0.278em"></mspace><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> and </mtext><mspace width="0.333em"></mspace></mrow><mspace width="0.278em"></mspace><mi>b</mi><mo>≤</mo><mi>a</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>=</mo><mi>b</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\exp(a) = \exp(b)
+\;\Longrightarrow\; a \le b \;\text{ and }\; b \le a
+\;\Longrightarrow\; a = b.</annotation></semantics></math></p>
+<p>The file proves each direction of <code>&lt;=</code> and then closes
+by antisymmetry. Here is the finishing lemma, <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a>:</p>
+<pre class="coq"><code>Lemma exp_injective : forall a b : F, exp_fn a == exp_fn b -&gt; a == b.
+Proof.
+  intros a b Heq.
+  apply le_antisym.
+  - exact (exp_le_of_eq a b Heq).
+  - apply (exp_le_of_eq b a).
+    symmetry.
+    exact Heq.
+Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.Order.html#le_antisym"><code>le_antisym</code></a>
+is the order law <code>a &lt;= b -&gt; b &lt;= a -&gt; a == b</code>, so
+it splits <code>a == b</code> into the two inequalities
+<code>a &lt;= b</code> and <code>b &lt;= a</code>. Each is an instance
+of the helper
+<code>exp_le_of_eq : exp_fn a == exp_fn b -&gt; a &lt;= b</code>: the
+first direction feeds it <code>Heq</code> directly, the second feeds it
+<code>Heq</code> turned around by <code>symmetry</code> to get
+<code>b &lt;= a</code>. The helper itself is where <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_mono"><code>exp_mono</code></a>
+does its work — assuming <code>a</code> and <code>b</code> were ordered
+the wrong way would make their exponentials strictly ordered,
+contradicting <code>exp_fn a == exp_fn b</code>.</p>
+<h2 id="the-point">The point</h2>
+<p>Every lemma above — <a
+href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_nonzero"><code>exp_nonzero</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_neg"><code>exp_neg</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_strict_pos"><code>exp_strict_pos</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a>
+— was proved with a <code>Context {F : Type} `{Exp F}</code> at the top
+of the section and nothing else. Not one of them looked at a formula for
+<code>exp</code>, because there is no formula to look at: <a
+href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+supplies only the four laws. So each of these facts holds for
+<em>any</em> function on <em>any</em> ordered field that satisfies <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_zero"><code>exp_zero</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Exp.html#exp_add"><code>exp_add</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Exp.html#exp_pos"><code>exp_pos</code></a>,
+and <a
+href="coqdoc/Riktig.Interface.Exp.html#exp_mono"><code>exp_mono</code></a>
+— the power series over the reals, the limit of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>x</mi><mi>/</mi><mi>n</mi><msup><mo stretchy="false" form="postfix">)</mo><mi>n</mi></msup></mrow><annotation encoding="application/x-tex">(1 + x/n)^n</annotation></semantics></math>,
+or any other construction someone eventually writes down and proves
+obeys the four laws. Characterizing <code>exp</code> by its laws is what
+makes all of its theory independent of which construction you pick.</p>
+<p><em>Next: the same specification-first treatment of
+integration.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+(the four laws) · <a
+href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a> (<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_nonzero"><code>exp_nonzero</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_neg"><code>exp_neg</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_strict_pos"><code>exp_strict_pos</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a>).</p>
+</main>
+</body>
+</html>

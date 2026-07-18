@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safety isn't enough: prefix delivery needs an
+acknowledgement</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="safety-isnt-enough-prefix-delivery-needs-an-acknowledgement">Safety
+isn’t enough: prefix delivery needs an acknowledgement</h1>
+<p>Two programs exchange a stream of messages over a wire that can drop
+packets and duplicate them, in any amount and any mixture. The
+alternating-bit protocol (ABP, from here on) makes that survivable with
+one extra bit attached to every packet: the sender tags all copies of
+the same message with one bit and flips the bit only when it moves on to
+the next message, and the receiver accepts a packet only when its bit
+matches the one it is currently expecting, delivers the message, and
+flips its own expectation. One bit suffices because at any instant only
+two logical messages are ever in play — the one just delivered and the
+one coming next — and they always carry opposite bits.</p>
+<p>The property already established for that protocol is that whatever
+list of messages the receiver hands to the application uses only
+messages that were genuinely sent, in the order they were sent, possibly
+with some of them missing — nothing invented, corrupted, or reordered.
+That property holds no matter how much the wire loses or duplicates,
+with no assumption that it ever cooperates.</p>
+<p>Is that already the guarantee you actually want, though? Picture
+asking the receiver, at some arbitrary moment, for the list of
+everything it has handed the application so far. There are two very
+different things that list could be. It could be a <em>clean initial
+segment</em> — the first several messages, in order, with nothing after
+the point where it stops, exactly the picture you would want if you were
+resuming an interrupted file transfer or replaying a log from where it
+left off. Or it could have a hole: some message skipped in the middle,
+with later content still arriving afterward and quietly sliding into the
+earlier message’s place. Both pictures satisfy “nothing invented,
+corrupted, or reordered” equally well — the second one only reuses
+positions, it never breaks the relative order of what does survive. So
+the question this post answers is: does ruling out corruption and
+reordering already rule out the hole in the middle, or can the two come
+apart? They come apart, and a small, concrete example below shows
+exactly how — a case where a later message is delivered under an earlier
+message’s identity, in a way that fully satisfies the guarantee already
+established and would still mislead anyone relying on it. Fixing that
+turns out to be free for one design and to cost an acknowledgement
+channel for the other.</p>
+<h2 id="two-readings-of-nothing-wrong-survives-made-precise">Two
+readings of “nothing wrong survives,” made precise</h2>
+<p>Call the first picture above — everything delivered really was sent,
+in order, but perhaps with gaps — a list’s <em>subsequence</em>
+relationship to what was sent. Call the second, stronger picture — a
+clean initial segment, nothing after the point where it stops — its
+<em>prefix</em> relationship. Coq’s name for the first is <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>,
+defined in an earlier post and reused unchanged here; its name for the
+second, introduced for the question this post is about, is <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>.
+A list <code>p</code> is a prefix of a list <code>s</code> when
+<code>s</code> is literally <code>p</code> followed by some remaining
+tail:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is a prefix of </mtext><mspace width="0.333em"></mspace></mrow><mi>s</mi><mo>⇔</mo><mo>∃</mo><mspace width="0.167em"></mspace><msub><mi>s</mi><mn>2</mn></msub><mi>.</mi><mspace width="0.222em"></mspace><mi>s</mi><mo>=</mo><mi>p</mi><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>s</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">p \text{ is a prefix of } s \iff \exists\, s_2.\ s = p \mathbin{+\!+} s_2</annotation></semantics></math></p>
+<p>Here is that definition, from <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>:</p>
+<pre class="coq"><code>Definition prefix (p s : list A) : Prop := exists s2, s = p ++ s2.</code></pre>
+<p>And here is the fact that makes “prefix is stronger” a precise claim
+rather than an intuition — every prefix is in particular a subsequence.
+On the blackboard, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>⊑</mo><annotation encoding="application/x-tex">\sqsubseteq</annotation></semantics></math>
+for “is a subsequence of”, the claim reduces to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>⊑</mo><mi>p</mi><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>s</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">p \sqsubseteq p \mathbin{+\!+} s_2</annotation></semantics></math>,
+which is an induction on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>⊑</mo><msub><mi>s</mi><mn>2</mn></msub><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><msup><mi>p</mi><mo>′</mo></msup><mo>⊑</mo><msup><mi>p</mi><mo>′</mo></msup><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>s</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>x</mi><mo>:</mo><mo>:</mo><msup><mi>p</mi><mo>′</mo></msup><mspace width="0.167em"></mspace><mo>⊑</mo><mspace width="0.167em"></mspace><mi>x</mi><mo>:</mo><mo>:</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>p</mi><mo>′</mo></msup><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>s</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">[\,] \sqsubseteq s_2
+\qquad\text{and}\qquad
+p&#39; \sqsubseteq p&#39; \mathbin{+\!+} s_2
+\;\Longrightarrow\;
+x :: p&#39; \,\sqsubseteq\, x :: (p&#39; \mathbin{+\!+} s_2),</annotation></semantics></math></p>
+<p>the base case because the empty list is a subsequence of anything,
+the step by keeping the shared head
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+on both sides.</p>
+<pre class="coq"><code>Lemma prefix_subseq : forall p s, prefix p s -&gt; subseq p s.
+Proof.
+  intros p s [s2 Heq]. subst s.
+  induction p as [| x p&#39; IH]; simpl.
+  - apply subseq_nil_l.
+  - apply subseq_keep. exact IH.
+Qed.</code></pre>
+<p>Walking it: destructuring the hypothesis <code>prefix p s</code>
+immediately hands over the witness <code>s2</code> with
+<code>s = p ++ s2</code>, so <code>subst s</code> rewrites the goal to
+<code>subseq p (p ++ s2)</code>. Induction on <code>p</code> then does
+the rest: an empty <code>p</code> is a subsequence of anything, by <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_nil_l"><code>subseq_nil_l</code></a>;
+and if <code>p'</code> is (by the induction hypothesis) a subsequence of
+<code>p' ++ s2</code>, then <code>x :: p'</code> is a subsequence of
+<code>x :: (p' ++ s2)</code> by keeping the shared head, <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_keep"><code>subseq_keep</code></a>.
+So the relationship between the two guarantees proved so far is exactly
+this one lemma: prefix implies subsequence, never the other way around.
+Everything below is about that gap.</p>
+<h2 id="a-subsequence-that-is-not-a-prefix">A subsequence that is not a
+prefix</h2>
+<p>Here is a case where the alternating-bit protocol’s safety theorem
+holds and its conclusion is still, in plain terms, wrong. Send four
+messages, <code>[0; 1; 2; 3]</code>, starting with bit
+<code>false</code>, with a retransmission budget of <code>k = 1</code> —
+one copy per message, no redundancy. The sender’s packets, in order,
+are:</p>
+<table>
+<thead>
+<tr>
+<th>bit</th>
+<th>message</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>false</td>
+<td>0</td>
+</tr>
+<tr>
+<td>true</td>
+<td>1</td>
+</tr>
+<tr>
+<td>false</td>
+<td>2</td>
+</tr>
+<tr>
+<td>true</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>Now let the channel do the most ordinary thing a lossy channel can
+do: drop exactly one packet, the one carrying message 1, and deliver
+everything else untouched. The wire the receiver actually sees is</p>
+<table>
+<thead>
+<tr>
+<th>bit</th>
+<th>message</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>false</td>
+<td>0</td>
+</tr>
+<tr>
+<td>false</td>
+<td>2</td>
+</tr>
+<tr>
+<td>true</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>The receiver starts out expecting <code>false</code>. The first
+packet matches: it delivers <code>0</code> and now expects
+<code>true</code>. The second packet carries <code>false</code>, which
+does not match <code>true</code>, so it is silently discarded — exactly
+the behaviour designed to reject stale retransmissions. The receiver is
+still expecting <code>true</code>. The third packet carries
+<code>true</code>, which matches, so it is delivered — but it is message
+<code>3</code>, not the message-1 retransmission the bit
+<code>true</code> was originally reserved for. The receiver has no way
+to know that; a bit that happens to match is a bit that happens to
+match. The application ends up receiving <code>[0; 3]</code>.</p>
+<p>That is a genuine subsequence of <code>[0; 1; 2; 3]</code> —
+<code>0</code> and <code>3</code> really were sent, in that relative
+order, nothing was invented or duplicated, so <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>
+holds exactly as stated. But it is not a prefix: position 1 of a prefix
+of <code>[0;1;2;3]</code> starting with <code>0</code> would have to be
+<code>1</code>, and instead it is <code>3</code>. Message 3 has been
+delivered in message 1’s slot. This is the two-value alphabet’s specific
+failure mode: losing one whole burst leaves the receiver’s expected bit
+<em>stuck</em>, and the very next burst carries the opposite bit and is
+correctly skipped too — but the burst after that reuses the stuck bit,
+and the expectation “resynchronizes” purely by coincidence, not because
+anything was actually recovered.</p>
+<p>Here is the witness that this wire is a legitimate outcome of the
+lossy-and-duplicating channel — no duplication needed at all, just one
+ordinary drop — from <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
+<pre class="coq"><code>Example abp_gap_wire :
+  lossy_dup (sender_stream false [0; 1; 2; 3] 1)
+    [{| pkt_bit := false; pkt_msg := 0 |};
+     {| pkt_bit := false; pkt_msg := 2 |};
+     {| pkt_bit := true; pkt_msg := 3 |}].
+Proof.
+  simpl.
+  apply lossy_dup_keep.
+  apply lossy_dup_drop.
+  apply lossy_dup_keep.
+  apply lossy_dup_keep.
+  apply lossy_dup_nil.
+Qed.</code></pre>
+<p>Walking it: <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_keep"><code>lossy_dup_keep</code></a>
+keeps message 0’s packet, <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_drop"><code>lossy_dup_drop</code></a>
+drops message 1’s, and the two remaining <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_keep"><code>lossy_dup_keep</code></a>
+steps keep messages 2 and 3 untouched, ending with <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_nil"><code>lossy_dup_nil</code></a>
+once the sent list is exhausted — the derivation is literally “keep,
+drop, keep, keep,” matching the table above constructor for
+constructor.</p>
+<p>And here is the refutation that the resulting delivery is a prefix.
+On the blackboard it is one forced equation and one mismatch:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>;</mo><mn>1</mn><mo>;</mo><mn>2</mn><mo>;</mo><mn>3</mn><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>;</mo><mn>3</mn><mo stretchy="false" form="postfix">]</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>s</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mn>1</mn><mo>=</mo><mn>3</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">[0;1;2;3] = [0;3] \mathbin{+\!+} s_2
+\;\Longrightarrow\; 1 = 3,</annotation></semantics></math></p>
+<p>which is false. In Coq:</p>
+<pre class="coq"><code>Example abp_gap_not_prefix :
+  ~ prefix (deliver false
+    [{| pkt_bit := false; pkt_msg := 0 |};
+     {| pkt_bit := false; pkt_msg := 2 |};
+     {| pkt_bit := true; pkt_msg := 3 |}])
+    [0; 1; 2; 3].
+Proof.
+  intros [s2 Heq].
+  simpl in Heq.
+  discriminate Heq.
+Qed.</code></pre>
+<p>Walking it: assuming <code>prefix (deliver ...) [0;1;2;3]</code>
+hands over a witness <code>s2</code> with
+<code>[0;1;2;3] = deliver false wire ++ s2</code>. Simplifying the left
+side computes <code>deliver false wire</code> down to
+<code>[0; 3]</code>, so the equation being assumed is
+<code>[0;1;2;3] = [0; 3] ++ s2</code>, i.e. <code>1 = 3</code> at the
+second position — <code>discriminate</code> closes it immediately, since
+<code>1</code> and <code>3</code> are different constructors of
+<code>nat</code>.</p>
+<h3 id="a-sharper-boundary-reordering-breaks-even-subsequence">A sharper
+boundary: reordering breaks even subsequence</h3>
+<p>The gap example shows prefix failing while subsequence still holds.
+It is worth being precise about where the boundary actually sits,
+because it is not “prefix is fragile, subsequence is robust.” Restrict
+attention to only three messages, <code>[0; 1; 2]</code>, so the sent
+wire is <code>[(false,0); (true,1); (false,2)]</code> — note that
+messages 0 and 2 share a bit, since the bit cycles with period two while
+the messages do not repeat. Reverse that wire outright: a completely
+faithful <strong>reorder</strong> of the channel — nothing lost, nothing
+duplicated, purely shuffled. The receiver, still starting at
+<code>false</code>, now meets message 2’s packet first (bit
+<code>false</code>, matches), then message 1’s (bit <code>true</code>,
+matches), then message 0’s (bit <code>false</code>, matches): it
+delivers <code>[2; 1; 0]</code>. That is not merely lacking a prefix
+property — it is not even a subsequence of <code>[0;1;2]</code>, because
+a subsequence of a list can never be a distinct permutation of the same
+length:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>2</mn><mo>;</mo><mn>1</mn><mo>;</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mo>⊑</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>;</mo><mn>1</mn><mo>;</mo><mn>2</mn><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mn>2</mn><mo>;</mo><mn>1</mn><mo>;</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>;</mo><mn>1</mn><mo>;</mo><mn>2</mn><mo stretchy="false" form="postfix">]</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">equal lengths force equality</mtext><mo stretchy="false" form="postfix">}</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">[2;1;0] \sqsubseteq [0;1;2]
+\;\Longrightarrow\; [2;1;0] = [0;1;2]
+\quad \{\text{equal lengths force equality}\},</annotation></semantics></math></p>
+<p>which is false. From <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
+<pre class="coq"><code>Example abp_reorder_scrambles_wire :
+  reorder (sender_stream false [0; 1; 2] 1) (rev (sender_stream false [0; 1; 2] 1)).
+Proof.
+  apply Permutation_rev.
+Qed.
+
+Example abp_reorder_scrambles_not_subseq :
+  ~ subseq (deliver false (rev (sender_stream false [0; 1; 2] 1))) [0; 1; 2].
+Proof.
+  intros H.
+  assert (Heq : deliver false (rev (sender_stream false [0; 1; 2] 1)) = [0; 1; 2]).
+  { apply subseq_length_eq.
+    - exact H.
+    - reflexivity. }
+  simpl in Heq.
+  discriminate Heq.
+Qed.</code></pre>
+<p>Walking the second proof: assuming a <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
+witness <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>, and
+knowing the delivered list and <code>[0;1;2]</code> have equal length
+(both length 3), <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_length_eq"><code>subseq_length_eq</code></a>
+(a subsequence as long as its parent must equal its parent) forces the
+delivered list to equal <code>[0;1;2]</code> outright. But computing the
+left side gives <code>[2;1;0]</code>, and <code>discriminate</code>
+finds the contradiction at once. So <a
+href="coqdoc/Riktig.Channel.Trace.html#reorder"><code>reorder</code></a>
+is excluded from every theorem in this family for a stronger reason than
+“it would break prefix” — it breaks the weaker guarantee too. Everything
+from here on stays, as it always has, scoped to channels that only lose
+and duplicate, never reorder.</p>
+<h2 id="sliding-windows-get-prefix-for-free">Sliding windows get prefix
+for free</h2>
+<p>The obvious question after seeing the gap example is whether it is a
+fact about <em>packet loss in general</em>, or specifically about ABP’s
+two-value bit. It is the latter. A different protocol, Go-Back-N, uses
+the same “tag every packet, accept on a match, silently drop everything
+else” design as ABP, but tags each message with an ordinary natural
+number instead of a bit — <code>0, 1, 2, 3, ...</code>, incrementing
+once per message and never wrapping around. Nothing else changes: the
+sender still emits a burst of copies per message, the receiver still
+accepts only a packet whose tag equals what it currently expects,
+delivers it, and advances the expectation.</p>
+<p>That one change — an unbounded tag instead of a two-value one — is
+enough to get the stronger guarantee with no new mechanism at all. Here
+is why, informally, before the Coq: suppose a whole burst is lost, so
+the receiver’s expected tag, say <code>5</code>, never gets matched.
+Every later burst’s tag is <em>strictly greater</em> than <code>5</code>
+— sequence numbers only go up, one at a time, and never repeat — so no
+packet arriving afterward can ever equal <code>5</code> again. The
+receiver’s expectation is not merely behind; it is stuck forever, and
+nothing more is delivered, ever. Contrast this with the bit example
+above, where the stuck expectation <code>true</code> was bound to recur
+two messages later purely because the tag alphabet has only two values.
+With unbounded tags there is no “two messages later” — the stuck value
+never comes back.</p>
+<p>Here is the core fact this rests on, from <a
+href="coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>:
+once the receiver’s expectation falls behind the sender’s running tag,
+it can never catch up, because every remaining burst carries a tag at or
+above the sender’s current position — always beyond what is being waited
+for. In symbols,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑒</mi><mi>𝑥</mi><mi>𝑝</mi><mi>𝑒</mi><mi>𝑐</mi><mi>𝑡</mi></mrow><mo>&lt;</mo><mrow><mi>𝑠</mi><mi>𝑒</mi><mi>𝑞</mi><mi>𝑛</mi></mrow><mo>≤</mo><mtext mathvariant="normal">tag of every later packet</mtext><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mtext mathvariant="normal">no later packet matches </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi>𝑒</mi><mi>𝑥</mi><mi>𝑝</mi><mi>𝑒</mi><mi>𝑐</mi><mi>𝑡</mi></mrow><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">nothing more is delivered.</mtext></mrow><annotation encoding="application/x-tex">\mathit{expect} &lt; \mathit{seqn} \le \text{tag of every later packet}
+\;\Longrightarrow\; \text{no later packet matches } \mathit{expect}
+\;\Longrightarrow\; \text{nothing more is delivered.}</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma gbn_deliver_nomatch : forall (k : nat) (ms : list M) (seqn expect : nat) (wire : list Packet),
+  expect &lt; seqn -&gt; lossy_dup (gbn_stream_from seqn ms k) wire -&gt; gbn_deliver expect wire = [].</code></pre>
+<p>And here is the theorem that fact drives, and its proof,
+verbatim:</p>
+<pre class="coq"><code>Theorem gbn_prefix : forall (k : nat) (ms : list M) (wire : list Packet),
+  lossy_dup (gbn_stream ms k) wire -&gt; prefix (gbn_deliver 0 wire) ms.
+Proof.
+  intros k ms wire H.
+  apply (gbn_deliver_prefix_gen k ms 0 wire H).
+Qed.</code></pre>
+<p>The one-line proof is a corollary of the general lemma <a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_prefix_gen"><code>gbn_deliver_prefix_gen</code></a>,
+which runs the induction on <code>ms</code> with the sender’s tag and
+the receiver’s expectation kept equal to each other at every step — the
+invariant that makes the “stuck forever” argument apply the instant it
+is ever broken. Its two cases mirror the table above exactly: either the
+current burst is entirely lost, in which case <a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_nomatch"><code>gbn_deliver_nomatch</code></a>
+shows the rest of the run delivers nothing more at all (so the delivered
+list so far is trivially a prefix, with the untouched remainder of
+<code>ms</code> as the witness tail), or the burst’s message is
+delivered and the tag/expectation both advance together, and the
+induction hypothesis handles the rest. There is no case where a later
+message slips through under an earlier one’s identity, because there is
+no way for a later tag to ever equal an earlier, already-lost one. The
+stronger guarantee falls out of a design choice already made for an
+unrelated reason — sequence numbers big enough not to need wraparound
+within one run — not from any additional proof effort spent specifically
+on it.</p>
+<h2 id="recovering-prefix-for-two-tags-halting-on-silence">Recovering
+prefix for two tags: halting on silence</h2>
+<p>Go-Back-N gets prefix delivery as a side effect of having room for
+more than two tags. The alternating-bit protocol does not have that room
+— by design, it only ever needs one bit — so getting the same guarantee
+for it needs an actual change to the protocol, not just a sharper look
+at the existing one. The fix is a new file, <a
+href="coqdoc/Riktig.Channel.Ack.html"><code>Channel/Ack.v</code></a>,
+and a new discipline: <strong>stop-and-wait with an
+acknowledgement</strong>. The sender does not begin retransmitting
+message <code>i+1</code> until it has seen an acknowledgement for
+message <code>i</code> come back over a return channel. If no
+acknowledgement ever arrives — because the data packet was lost, or
+because the acknowledgement itself was lost — the sender simply never
+sends anything more, for any message, ever. The run halts on silence
+rather than guessing and moving on.</p>
+<p>That single rule is the whole mechanism. It costs an acknowledgement
+channel (modeled with the same fault-class machinery, <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
+as the forward data channel, just carrying bits instead of packets), and
+in exchange it closes exactly the gap the counterexample above
+exploited: nothing can ever be delivered under the wrong message’s
+identity, because the sender never moves past a message until it knows
+the message got through.</p>
+<p>Here is the run relation itself, from <a
+href="coqdoc/Riktig.Channel.Ack.html"><code>Channel/Ack.v</code></a>,
+one round of recursion per application message:</p>
+<pre class="coq"><code>Fixpoint abp_ack_run (b : bit) (ms : list M) (fwire : list Packet) (awire : list bit) : Prop :=
+  match ms with
+  | [] =&gt; fwire = [] /\ awire = []
+  | m :: ms&#39; =&gt;
+      exists (k : nat) (w1 : list Packet),
+        lossy_dup (sender_burst b m k) w1 /\
+        ( (deliver b w1 = [] /\ fwire = w1 /\ awire = [])
+        \/ (exists a1 : list bit,
+              deliver b w1 = [m] /\ lossy_dup [b] a1 /\
+              ( (a1 = [] /\ fwire = w1 /\ awire = a1)
+              \/ (a1 &lt;&gt; [] /\
+                  exists fwire2 awire2,
+                    fwire = w1 ++ fwire2 /\ awire = a1 ++ awire2 /\
+                    abp_ack_run (negb b) ms&#39; fwire2 awire2) ) ) )
+  end.</code></pre>
+<p>Read one round at a time. Each message gets its own retransmission
+budget <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>,
+related to a received fragment <code>w1</code> by the ordinary data
+channel. Three things can then happen: (1) nothing from <code>w1</code>
+was delivered — the data round itself failed — and the whole run stops,
+with <code>fwire</code>/<code>awire</code> ending right there; (2) the
+message <em>was</em> delivered, its bit is echoed back as an
+acknowledgement over the ack channel producing a fragment
+<code>a1</code>, but <code>a1</code> came back empty — the ack never
+made it — and the run stops there too, one round later than case (1); or
+(3) the acknowledgement genuinely came back
+(<code>a1 &lt;&gt; []</code>), and the run continues into the next round
+with the bit flipped. Every path where the run continues has confirmed,
+via a real acknowledgement, that the previous message actually
+arrived.</p>
+<p>The theorem: whatever <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
+computes over the whole forward wire of such a run — the exact same <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
+function the plain, unacknowledged protocol already uses — is a genuine
+prefix of the messages, not merely a subsequence. The blackboard
+argument is an induction on the message list with one case per branch of
+the relation, each case producing an explicit prefix witness:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">delivered</mtext><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mtd><mtd columnalign="left" style="text-align: left"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">data round lost; </mtext><mspace width="0.333em"></mspace></mrow><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is a prefix of anything</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mo stretchy="false" form="prefix">[</mo><mi>m</mi><mo stretchy="false" form="postfix">]</mo></mtd><mtd columnalign="left" style="text-align: left"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">ack lost; </mtext><mspace width="0.333em"></mspace></mrow><mi>m</mi><mo>:</mo><mo>:</mo><mi>m</mi><msup><mi>s</mi><mo>′</mo></msup><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mi>m</mi><mo stretchy="false" form="postfix">]</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mo>+</mo></mrow><mi>m</mi><msup><mi>s</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>m</mi><mo>:</mo><mo>:</mo><msup><mi>d</mi><mo>′</mo></msup></mtd><mtd columnalign="left" style="text-align: left"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">run continues; </mtext><mspace width="0.333em"></mspace></mrow><msup><mi>d</mi><mo>′</mo></msup><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> a prefix of </mtext><mspace width="0.333em"></mspace></mrow><mi>m</mi><msup><mi>s</mi><mo>′</mo></msup><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> by induction</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\text{delivered} \;=\;
+\begin{cases}
+[\,] &amp; \{\text{data round lost; } [\,] \text{ is a prefix of anything}\}\\
+[m] &amp; \{\text{ack lost; } m :: ms&#39; = [m] \mathbin{+\!+} ms&#39;\}\\
+m :: d&#39; &amp; \{\text{run continues; } d&#39; \text{ a prefix of } ms&#39; \text{ by induction}\}
+\end{cases}</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem abp_ack_prefix : forall (b : bit) (ms : list M) (fwire : list Packet) (awire : list bit),
+  abp_ack_run b ms fwire awire -&gt; prefix (deliver b fwire) ms.
+Proof.
+  intros b ms.
+  revert b.
+  induction ms as [| m ms&#39; IH]; intros b fwire awire H.
+  - simpl in H. destruct H as [Hf Ha]. rewrite Hf. simpl. apply prefix_refl.
+  - simpl in H.
+    destruct H as [k [w1 [Hburst Hcase]]].
+    destruct Hcase as [[Hd [Hf Ha]] | [a1 [Hd [Hack Hcase2]]]].
+    + (* halt: data round failed, nothing delivered, run stops *)
+      rewrite Hf. rewrite Hd. apply prefix_nil_l.
+    + destruct Hcase2 as [[Ha1 [Hf Ha]] | [Ha1 [fwire2 [awire2 [Hf [Ha Hrun]]]]]].
+      * (* halt: message m WAS delivered, but its ack never came back *)
+        rewrite Hf. rewrite Hd. unfold prefix. exists ms&#39;. reflexivity.
+      * (* continue: m delivered, ack came back, recurse *)
+        rewrite Hf.
+        rewrite (deliver_app w1 fwire2 b).
+        rewrite Hd.
+        assert (Hnext : next_bit b w1 = negb b).
+        { destruct (burst_delivery b m k w1 b Hburst) as [[Hd0 Hn0] | [Hd0 Hn0]].
+          - rewrite Hd0 in Hd. discriminate Hd.
+          - exact Hn0. }
+        rewrite Hnext. simpl.
+        unfold prefix.
+        destruct (IH (negb b) fwire2 awire2 Hrun) as [ms2 Heq2].
+        exists ms2. rewrite Heq2. reflexivity.
+Qed.</code></pre>
+<p>Walking it, case by case, in the same order the relation offers
+them:</p>
+<ul>
+<li><strong>Base case, <code>ms = []</code>.</strong> Nothing was ever
+sent, so <code>fwire = []</code>, <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
+of the empty wire is <code>[]</code>, and <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix_refl"><code>prefix_refl</code></a>
+closes <code>prefix [] []</code>.</li>
+<li><strong>Halt on a failed data round.</strong>
+<code>Hd : deliver b w1 = []</code> and <code>fwire = w1</code>, so the
+delivered list is <code>deliver b w1 = []</code>, and <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix_nil_l"><code>prefix_nil_l</code></a>
+— the empty list is a prefix of anything — finishes it. This is the same
+“vacuously safe, nothing delivered” case that already appeared for plain
+ABP; nothing new here.</li>
+<li><strong>Halt on a missing acknowledgement.</strong> This is the case
+that did not exist before this file. Here
+<code>Hd : deliver b w1 = [m]</code> — the message really was delivered
+— but <code>a1 = []</code> and <code>fwire = w1</code>, so the delivered
+list is exactly <code>[m]</code>. Choosing the witness <code>ms'</code>
+for the existential in <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>
+gives <code>m :: ms' = [m] ++ ms'</code>, closed by
+<code>reflexivity</code>. The message that got through stays at the end
+of what is delivered, with the rest of <code>ms</code> as the untouched
+witness tail; nothing after it is ever claimed to have arrived.</li>
+<li><strong>Continue.</strong> The acknowledgement came back, so the run
+recurses. <a
+href="coqdoc/Riktig.Channel.ABP.html#deliver_app"><code>deliver_app</code></a>
+splits delivery across the two wire fragments <code>w1</code> and
+<code>fwire2</code>; <a
+href="coqdoc/Riktig.Channel.ABP.html#burst_delivery"><code>burst_delivery</code></a>
+(the same crux fact the plain protocol’s safety proof used) pins down
+that <code>w1</code> really does flip the expected bit to
+<code>negb b</code>, since <code>Hd</code> already says <code>w1</code>
+delivered <code>[m]</code> and the other disjunct of <a
+href="coqdoc/Riktig.Channel.ABP.html#burst_delivery"><code>burst_delivery</code></a>
+would contradict that by <code>discriminate</code>. What remains is
+<code>m :: deliver (negb b) fwire2</code>, and the induction hypothesis
+on the recursive run gives a prefix witness <code>ms2</code> for the
+tail, which extends to a prefix witness for the whole thing.</li>
+</ul>
+<p>Every branch either finishes with the empty prefix, finishes with
+exactly the messages actually delivered and nothing claimed beyond them,
+or hands off cleanly to the next round. There is no branch, and no way
+to construct one, in which a later message is ever delivered under an
+earlier message’s slot — the failure mode the counterexample exhibited
+cannot arise here, because the sender that produced it (moving on
+regardless of whether the previous message survived) no longer exists in
+this model.</p>
+<h3 id="a-concrete-run-everything-gets-through">A concrete run:
+everything gets through</h3>
+<p>The relation <a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_run"><code>abp_ack_run</code></a>
+is not vacuous — it is worth checking that an ordinary, fully successful
+exchange is one of its members, and that on such a run delivery is not
+just a prefix but the entire message list. Here is the witness, using
+one copy per round (<code>k := 1</code>, no retransmission needed) and
+an acknowledgement stream that simply echoes back each accepted bit:</p>
+<pre class="coq"><code>Fixpoint ack_witness (b : bit) (ms : list M) : list bit :=
+  match ms with
+  | [] =&gt; []
+  | m :: ms&#39; =&gt; b :: ack_witness (negb b) ms&#39;
+  end.
+
+Lemma abp_ack_run_witness : forall (b : bit) (ms : list M),
+  abp_ack_run b ms (sender_stream b ms 1) (ack_witness b ms).</code></pre>
+<p>and the corollary that ties it back to full delivery:</p>
+<pre class="coq"><code>Corollary abp_ack_run_delivers_all : forall (b : bit) (ms : list M),
+  exists fwire awire, abp_ack_run b ms fwire awire /\ deliver b fwire = ms.
+Proof.
+  intros b ms.
+  exists (sender_stream b ms 1), (ack_witness b ms).
+  split.
+  - apply abp_ack_run_witness.
+  - apply (abp_collapse_perfect_gen 1 ms b). lia.
+Qed.</code></pre>
+<p>Walking the corollary: the two <code>exists</code> supply the
+untouched wires — the sender’s own stream and the echoed
+acknowledgements — as witnesses; <a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_run_witness"><code>abp_ack_run_witness</code></a>
+shows they really form a run of the relation; and <a
+href="coqdoc/Riktig.Channel.Fairness.html#abp_collapse_perfect_gen"><code>abp_collapse_perfect_gen</code></a>
+(the fact, proved earlier for the plain protocol, that delivery over an
+untouched stream returns the message list exactly, for any positive
+per-message budget) computes <code>deliver b fwire = ms</code>, with
+<code>lia</code> discharging its <code>k &gt; 0</code> side condition at
+<code>k = 1</code>.</p>
+<p>So the mechanism does not merely fail to break the good case — on a
+run where every packet and every acknowledgement gets through, the
+protocol still delivers the whole list, exactly as the un-acknowledged
+version did.</p>
+<h2 id="the-scope-this-result-does-and-does-not-cover">The scope this
+result does and does not cover</h2>
+<p><a
+href="coqdoc/Riktig.Channel.Ack.html"><code>Channel/Ack.v</code></a>
+applies the data channel and the acknowledgement channel <strong>per
+round, independently</strong>: each message gets its own fresh
+existential wire fragment and its own fresh existential acknowledgement
+fragment, related to what was sent for that round alone, rather than one
+single relation governing the whole concatenated run. This is a real
+simplification, not an oversight — it models “the sender is stopped and
+waiting for exactly one round trip,” during which no other round’s
+traffic can possibly be in flight, which is a faithful picture of what
+stop-and-wait actually does. It is also exactly the simplification the
+earlier fairness post’s channel model already made for the data side
+alone; this file extends the same choice to the acknowledgement
+side.</p>
+<p>One consequence worth stating plainly: because each round’s
+acknowledgement is a single bit or nothing, and each round’s data burst
+is a list of copies of one packet, there is no way, at per-round
+granularity, to even pose the question “what if the channel reorders
+traffic <em>across</em> rounds?” — there is nothing to reorder within
+one homogeneous list, and the per-round split by construction never
+gives the channel a chance to interleave one round’s packets with
+another’s. That is not evidence that reordering across rounds would be
+safe; it simply is not a question this model can currently ask.
+Extending <a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_run"><code>abp_ack_run</code></a>
+to a single global relation over an entire run — the way the fairness
+hypothesis’s own sanity check ties back to the plain, ungrouped
+loss-and-duplication relation — is left for later. What is proved here
+is exactly what the per-round model supports, no more: prefix delivery
+whenever both the data channel and the acknowledgement channel lose and
+duplicate packets, never reorder them.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix_subseq"><code>prefix_subseq</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> (<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_gap_wire"><code>abp_gap_wire</code></a>,
+<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_gap_not_prefix"><code>abp_gap_not_prefix</code></a>,
+<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_reorder_scrambles_wire"><code>abp_reorder_scrambles_wire</code></a>,
+<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_reorder_scrambles_not_subseq"><code>abp_reorder_scrambles_not_subseq</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>
+(<a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_nomatch"><code>gbn_deliver_nomatch</code></a>,
+<a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_prefix_gen"><code>gbn_deliver_prefix_gen</code></a>,
+<a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_prefix"><code>gbn_prefix</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.Ack.html"><code>Channel/Ack.v</code></a> (<a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_run"><code>abp_ack_run</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_prefix"><code>abp_ack_prefix</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_run_witness"><code>abp_ack_run_witness</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Ack.html#abp_ack_run_delivers_all"><code>abp_ack_run_delivers_all</code></a>).</p>
+</main>
+</body>
+</html>

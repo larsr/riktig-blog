@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why `autorewrite` works on an abstract group but `ring` and
+`field` need a concrete carrier</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="why-autorewrite-works-on-an-abstract-group-but-ring-and-field-need-a-concrete-carrier">Why
+<code>autorewrite</code> works on an abstract group but
+<code>ring</code> and <code>field</code> need a concrete carrier</h1>
+<p>A group is a set equipped with a way to combine two elements and, for
+every element, an undo: combining an element with its own undo, in
+either order, gets back to a single fixed neutral element. The one fact
+this buys that matters here is cancellation — if combining a fixed
+element with two different things gives the same result, those two
+things must already have been equal — and the reasoning behind it uses
+nothing but the combining rule and the undo rule, never anything about
+what the elements actually are.</p>
+<p>What this post is about is not that fact itself, but two more general
+questions about getting a machine to reproduce reasoning like it without
+a person picking each step by hand.</p>
+<p>The first question is about automation nobody has to supervise.
+Simplifying an expression by hand often means repeatedly applying a
+short list of moves — drop a “plus nothing,” collapse a term sitting
+next to its own undo, cancel a double negation — in whatever order they
+happen to apply. Handing that list of moves to a machine and letting it
+run unattended is only safe if the process is guaranteed to stop: every
+move has to make the expression strictly simpler, in some sense that no
+other move in the list can ever undo, or the machine could shuffle the
+expression back and forth forever.</p>
+<p>The second question is less obvious: why would a general-purpose
+“solve this algebra automatically” tool ever refuse to work on a
+structure known only by its own defining laws — combine, distribute, has
+a unit — when the very same tool handles ordinary whole numbers without
+complaint? Two separate reasons turn out to be involved. One is about
+what the laws actually promise: a tool that rearranges a calculation
+into one fixed normal form usually needs the order of combining two
+things not to matter — three eggs and four eggs is the same total as
+four eggs and three — and some structures that obey every other algebra
+law still do not have that property (composing “turn ninety degrees,
+then flip” is not the same operation as “flip, then turn ninety
+degrees”). A structure described only by its abstract laws, with no such
+promise built in, cannot be handed to a tool that depends on it. The
+other reason has nothing to do with mathematics and everything to do
+with bookkeeping: telling such a tool about a structure usually means
+registering, once, the exact operations it should look for — and if that
+registration is made against a placeholder standing in for “any
+structure of this shape,” and the placeholder later disappears, there is
+nothing left for the tool to match against when a genuinely different,
+concrete structure shows up afterward. Each real structure has to be
+registered again, by name.</p>
+<p>Coq answers the first question with a rewrite database, and the
+second with the <code>ring</code>/<code>field</code> tactics — and the
+two answers sit at opposite ends of a hierarchy of algebraic structures:
+one works on the fully abstract group, the other, for the two reasons
+above, only works once a concrete structure is in front of it.</p>
+<h2 id="automatic-rewriting-formalized">Automatic rewriting,
+formalized</h2>
+<p>A <strong>rewrite database</strong> is Coq’s answer to the first
+question: a named set of equations that a single tactic,
+<code>autorewrite</code>, applies on repeat — left-hand side found in
+the goal, replace it with the right-hand side, scan again — stopping
+only when no equation in the set matches anywhere. <a
+href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
+registers six equations under the name <code>grp</code>:</p>
+<pre class="coq"><code>#[global] Hint Rewrite @mon_idl @mon_idr @grp_invl @grp_invr
+                       @neg_involutive @neg_zero : grp.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.Monoid.html#mon_idl"><code>mon_idl</code></a>/<a
+href="coqdoc/Riktig.Interface.Monoid.html#mon_idr"><code>mon_idr</code></a>
+are the two identity laws (combining with the neutral element on the
+left or right does nothing), <a
+href="coqdoc/Riktig.Interface.Group.html#grp_invl"><code>grp_invl</code></a>/
+<a
+href="coqdoc/Riktig.Interface.Group.html#grp_invr"><code>grp_invr</code></a>
+are the two undo laws, and <a
+href="coqdoc/Riktig.Theory.Group.html#neg_involutive"><code>neg_involutive</code></a>/<a
+href="coqdoc/Riktig.Theory.Group.html#neg_zero"><code>neg_zero</code></a>
+say that undoing an undo returns the original element and that undoing
+the neutral element gives the neutral element back. This is exactly the
+kind of move list the first question above was about, and each of the
+six rules answers the termination requirement individually: read left to
+right, every one makes the right-hand side strictly smaller than the
+left — an identity element disappears entirely, an undo pair collapses
+to the single symbol for the neutral element, a double undo collapses to
+its argument. No rule’s right-hand side can ever be rewritten back by
+another rule in the set, so applying all six on repeat has nowhere to
+loop, and is bound to stop.</p>
+<h2 id="closing-goals-with-autorewrite">Closing goals with
+autorewrite</h2>
+<p>Here is the whole <code>GroupRewriteExamples</code> section,
+verbatim:</p>
+<pre class="coq"><code>Section GroupRewriteExamples.
+  Context {G : Type} `{Group G}.
+
+  (* The payoff case from the TODO: a double negation next to a right
+     unit, closed by the database alone instead of a two-step calc. *)
+  Example autorewrite_double_neg_idr : forall g : G, - (- g) + 0 == g.
+  Proof. intros g. autorewrite with grp. reflexivity. Qed.
+
+  (* A left unit, a double negation, and a right unit collapse in one
+     `autorewrite`; written out as a `calc` chain this is three
+     justified steps (idl, neg_involutive, idr already folded into
+     idl&#39;s rewrite of the outer sum) — here it is one line. *)
+  Example autorewrite_multi : forall g : G, (0 + - (- g)) + 0 == g.
+  Proof. intros g. autorewrite with grp. reflexivity. Qed.
+
+  (* Inverse pairs collapsing to 0, then 0 vanishing against 0 + 0. *)
+  Example autorewrite_invl_invr : forall g : G,
+    ((- g) + g) + (g + - g) == 0.
+  Proof. intros g. autorewrite with grp. reflexivity. Qed.
+
+End GroupRewriteExamples.</code></pre>
+<p>Take <a
+href="coqdoc/Riktig.Theory.Group.html#autorewrite_multi"><code>autorewrite_multi</code></a>
+as the one to walk in full. In English: for any group element
+<code>g</code>, combining the neutral element with the undo of the undo
+of <code>g</code>, and then combining that with the neutral element
+again, gives back <code>g</code>. As a blackboard chain, using the left
+identity law, the right identity law, and double-undo cancellation:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mn>0</mn></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">left identity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>g</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right identity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>g</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">double undo cancels</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+(0 + -(-g)) + 0 &amp;= -(-g) + 0 &amp;&amp; \{\text{left identity}\}\\
+&amp;= -(-g) &amp;&amp; \{\text{right identity}\}\\
+&amp;= g &amp;&amp; \{\text{double undo cancels}\}
+\end{aligned}</annotation></semantics></math></p>
+<p><code>autorewrite with grp</code> runs exactly this kind of pass: it
+scans <code>(0 + - (- g)) + 0</code> for a left-hand side from the
+<code>grp</code> database, rewrites, and scans again — three of the six
+rules fire, in whichever order their patterns happen to match — until
+what is left is the bare variable <code>g</code>. The goal becomes
+<code>g == g</code>, and <code>reflexivity</code> closes it. <a
+href="coqdoc/Riktig.Theory.Group.html#autorewrite_double_neg_idr"><code>autorewrite_double_neg_idr</code></a>
+and <a
+href="coqdoc/Riktig.Theory.Group.html#autorewrite_invl_invr"><code>autorewrite_invl_invr</code></a>
+run the same mechanism on two different inputs; <a
+href="coqdoc/Riktig.Theory.Group.html#autorewrite_invl_invr"><code>autorewrite_invl_invr</code></a>
+is worth a second look because two collapses fire independently in the
+same pass — <code>(-g) + g</code> and <code>g + (-g)</code> each become
+the neutral element on their own, and the resulting “neutral element
+plus neutral element” then collapses again.</p>
+<p>In practice, this is the tool to reach for whenever a goal is pure
+shrinking with no hypothesis that has to be placed at a particular point
+in the chain — exactly what none of the six rules above can do for you.
+Cancellation itself still needs a hand-written proof, several
+<code>calc</code> lines long, because it has to invoke a hypothesis at
+exactly the right spot in the middle of the reasoning; a goal like <a
+href="coqdoc/Riktig.Theory.Group.html#autorewrite_invl_invr"><code>autorewrite_invl_invr</code></a>,
+with nothing to invoke, needs no such attention and closes in one tactic
+call instead of a chain written out by hand.</p>
+<h2 id="ring-and-field-formalized">ring and field, formalized</h2>
+<p>A <strong>ring</strong> adds a second combining operation,
+multiplication, to a group’s addition: multiplication is associative,
+has its own neutral element, and distributes over addition on both
+sides. A <strong>field</strong> is a ring where every element except the
+additive neutral element has a multiplicative undo, letting division
+make sense. Coq ships two tactics for these — <code>ring</code> for
+rings, <code>field</code> for fields — that answer the second question
+from the opening: both normalize an algebraic expression into one fixed
+form and compare, so both need to know, for a given carrier, exactly
+which named operations play the role of <code>+</code>, <code>*</code>,
+<code>0</code>, <code>1</code>. Registering a carrier with either tactic
+means handing it a value of a stdlib bundle type —
+<code>ring_theory</code> for <code>ring</code>,
+<code>field_theory</code> for <code>field</code> — packaging proofs of
+the laws each tactic relies on.</p>
+<p>The tempting move is to build that bundle once, for the fully
+abstract ring and field structures, and have every concrete instance
+inherit it for free. What the bundle has to contain is the standard
+axiom list, on the blackboard:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>+</mo><mi>x</mi><mo>=</mo><mi>x</mi><mo>,</mo><mspace width="1.0em"></mspace><mi>x</mi><mo>+</mo><mi>y</mi><mo>=</mo><mi>y</mi><mo>+</mo><mi>x</mi><mo>,</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>z</mi><mo>=</mo><mi>x</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>+</mo><mi>z</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><mn>1</mn><mo>⋅</mo><mi>x</mi><mo>=</mo><mi>x</mi><mo>,</mo><mspace width="1.0em"></mspace><mi>x</mi><mi>y</mi><mo>=</mo><mi>y</mi><mi>x</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">0 + x = x, \quad x + y = y + x, \quad (x+y)+z = x+(y+z), \quad
+1 \cdot x = x, \quad xy = yx,</annotation></semantics></math>
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mi>z</mi><mo>=</mo><mi>x</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mi>z</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>z</mi><mo>=</mo><mi>x</mi><mi>z</mi><mo>+</mo><mi>y</mi><mi>z</mi><mo>,</mo><mspace width="1.0em"></mspace><mi>x</mi><mo>−</mo><mi>y</mi><mo>=</mo><mi>x</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><mi>x</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">(xy)z = x(yz), \quad (x+y)\,z = xz + yz, \quad
+x - y = x + (-y), \quad x + (-x) = 0.</annotation></semantics></math></p>
+<p><a
+href="coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>
+gets partway there — each <a
+href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a> line
+below discharges one axiom from that list with the corresponding law the
+abstract <a
+href="coqdoc/Riktig.Interface.Ring.html#Ring"><code>Ring</code></a>
+class already carries (the two <code>symmetry; apply assoc</code> lines
+only flip an associativity stated in the other direction):</p>
+<pre class="coq"><code>  Definition ring_theory_of_Ring (Hcomm : forall a b : R, a * b == b * a) :
+    ring_theory (0 : R) (1 : R) add mult (fun x y =&gt; x + - y) neg equ.
+  Proof.
+    constructor.
+    - exact idl.
+    - exact comm.
+    - intros x y z; symmetry; apply assoc.
+    - exact idl.
+    - exact Hcomm.
+    - intros x y z; symmetry; apply assoc.
+    - exact distr.
+    - reflexivity.
+    - exact invr.
+  Qed.</code></pre>
+<p>The argument <code>Hcomm : forall a b : R, a * b == b * a</code> is
+the first reason from the opening, made concrete: <code>ring</code>’s
+normal form is a sum of monomials with no fixed order to the factors
+inside a monomial, which is only meaningful if multiplication commutes.
+The codebase’s <a
+href="coqdoc/Riktig.Interface.Ring.html#Ring"><code>Ring</code></a>
+class deliberately does not assume that in general — the comment at the
+top of <a
+href="coqdoc/Riktig.Interface.Ring.html"><code>Interface/Ring.v</code></a>
+says, in its own words, that Ring’s</p>
+<blockquote>
+<p><a href="coqdoc/Riktig.Ops.html#mult"><code>mult</code></a> is not
+commutative in general (e.g. End V, Impl/HomVS.v), so there is
+deliberately no <code>Commutes R equ mult</code> instance here.</p>
+</blockquote>
+<p>and there is a genuine example already in the library that needs this
+left open: the endomorphisms <code>End V</code> of a vector space
+(<code>LinearMap F V V</code> in <a
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>),
+a ring whose multiplication is composition,
+<code>(f * g) u = f (g u)</code>. Composing linear maps does not commute
+in general — applying <code>f</code> then <code>g</code> is a different
+map from applying <code>g</code> then <code>f</code> — so <a
+href="coqdoc/Riktig.Theory.Ring.html#ring_theory_of_Ring"><code>ring_theory_of_Ring</code></a>
+genuinely cannot be discharged for <code>End V</code> without a
+hypothesis that is false there. This is exactly the “turn, then flip”
+case from the opening, occurring for real inside the library rather than
+as an illustration.</p>
+<p>A field avoids that particular obstruction — commutative
+multiplication is one of the field laws itself, <a
+href="coqdoc/Riktig.Interface.Field.html#field_mul_comm"><code>field_mul_comm</code></a>
+— so <a
+href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>
+builds its bundle with no extra hypothesis at all. On top of the ring
+axioms above, the field bundle adds three:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>≠</mo><mn>0</mn><mo>,</mo><mspace width="2.0em"></mspace><mi>x</mi><mi>/</mi><mi>y</mi><mo>=</mo><mi>x</mi><mo>⋅</mo><msup><mi>y</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>,</mo><mspace width="2.0em"></mspace><mi>y</mi><mo>≠</mo><mn>0</mn><mo>⇒</mo><msup><mi>y</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mi>y</mi><mo>=</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">1 \neq 0, \qquad x / y = x \cdot y^{-1}, \qquad
+y \neq 0 \Rightarrow y^{-1} \cdot y = 1,</annotation></semantics></math></p>
+<p>and the proof discharges the four obligations in that order — ring
+axioms first, then the three extras:</p>
+<pre class="coq"><code>  Definition field_theory_of_Field :
+    field_theory (0 : F) (1 : F) add mult (fun x y =&gt; x + - y) neg
+                 (fun x y =&gt; x * inv y) inv equ.
+  Proof.
+    constructor.
+    - exact (ring_theory_of_Ring field_mul_comm).
+    - exact field_nontrivial.
+    - reflexivity.
+    - exact field_invl.
+  Qed.</code></pre>
+<p>Yet even here, <code>Add Field</code> — the vernacular command that
+actually makes the <code>field</code> tactic usable — is not run at this
+point in the file. This is the second reason from the opening, the
+bookkeeping one, stated directly in the comment above <a
+href="coqdoc/Riktig.Theory.Ring.html#ring_theory_of_Ring"><code>ring_theory_of_Ring</code></a>
+in <a
+href="coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>:</p>
+<blockquote>
+<p>This is deliberately NOT registered with <code>Add Ring</code> here:
+that vernacular command keys its lookup table on the exact operation
+terms in scope at the point it runs, so a Section-local <code>R</code>
+would not survive <code>Section End</code> for use at a later, unrelated
+carrier — <code>Add Ring</code>/<code>Add Field</code> only work when
+run again at each concrete instance (Impl/Zr.v’s <code>Z</code>,
+Impl/Qf.v’s <code>Q</code>), reusing this record.</p>
+</blockquote>
+<p><code>Add Ring</code>/<code>Add Field</code> are not ordinary
+definitions exported from a section the way a lemma is. They register a
+lookup-table entry keyed on the literal operation symbols in scope at
+the moment the command runs — here, the abstract <a
+href="coqdoc/Riktig.Ops.html#add"><code>add</code></a>/<a
+href="coqdoc/Riktig.Ops.html#mult"><code>mult</code></a>/<a
+href="coqdoc/Riktig.Ops.html#neg"><code>neg</code></a>/<a
+href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> bound to a
+section-local placeholder <code>R : Type</code>. Once the section
+closes, that placeholder and its operations go out of scope, leaving
+nothing for the registration to key on even if the command were issued.
+There is no single command, run once inside the abstract theory file,
+that leaves <code>ring</code>/<code>field</code> usable afterward for
+whatever concrete carrier shows up later — the command has to be
+reissued at each one, against that carrier’s own concrete
+operations.</p>
+<h2 id="ring-and-field-at-z-and-q">ring and field, at Z and Q</h2>
+<p><a href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>
+reissues the registration for the integers:</p>
+<pre class="coq"><code>Definition Z_ring_theory :
+  ring_theory (0 : Z) (1 : Z) add mult (fun x y =&gt; x + - y) neg equ :=
+  ring_theory_of_Ring (R := Z) Z.mul_comm.
+
+Add Ring Z_ring : Z_ring_theory.
+
+(* Payoff: a square expansion `ring` closes in one line, stated with
+   the tower&#39;s own notation, where the manual route is a `distl`/`distr`
+   calc chain of several steps (`Theory/Ring.v`&#39;s `mul_add_expand`). *)
+Example z_ring_tac_square : forall a b : Z,
+  (a + b) * (a + b) == (a * a + a * b) + (b * a + b * b).
+Proof. intros a b. ring. Qed.</code></pre>
+<p>In English: for any two integers, <code>a + b</code> squared equals
+<code>(a·a + a·b) + (b·a + b·b)</code> — an ordinary expansion of a
+product of sums:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>a</mi><mo>+</mo><mi>a</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>⋅</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(a+b)(a+b) \;=\; (a{\cdot}a + a{\cdot}b) + (b{\cdot}a + b{\cdot}b).</annotation></semantics></math></p>
+<p><a
+href="coqdoc/Riktig.Impl.Zr.html#Z_ring_theory"><code>Z_ring_theory</code></a>
+reuses <a
+href="coqdoc/Riktig.Theory.Ring.html#ring_theory_of_Ring"><code>ring_theory_of_Ring</code></a>,
+supplying <code>Z.mul_comm</code> for the commutativity premise the
+abstract bundle demanded; <code>Add Ring Z_ring</code> runs the
+registration against <code>Z</code>’s own <a
+href="coqdoc/Riktig.Ops.html#add"><code>add</code></a>/ <a
+href="coqdoc/Riktig.Ops.html#mult"><code>mult</code></a>/<a
+href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a>, at the concrete
+carrier, where the command has something to key on that stays in scope
+afterward; and with that done, <code>ring</code> alone — no <a
+href="coqdoc/Riktig.Props.html#distl"><code>distl</code></a>, no <a
+href="coqdoc/Riktig.Props.html#distr"><code>distr</code></a>, no named
+lemma — proves the expansion.</p>
+<p><a href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a> does
+the same for the rationals, with <code>field</code>:</p>
+<pre class="coq"><code>Definition Q_field_theory :
+  field_theory (0 : Q) (1 : Q) add mult (fun x y =&gt; x + - y) neg
+               (fun x y =&gt; x * inv y) inv equ :=
+  field_theory_of_Field (F := Q).
+
+Add Field Q_field : Q_field_theory.
+
+(* Payoff: cancelling a division `field` closes in one line, stated
+   with the tower&#39;s own notation, where the manual route is the
+   `field_mul_div_cancel` calc chain (`Theory/Field.v`). *)
+Example q_field_tac_cancel : forall a b : Q,
+  b =/= 0 -&gt; b * (a * inv b) == a.
+Proof. intros a b Hb. field. exact Hb. Qed.</code></pre>
+<p>In English: for rationals <code>a</code> and <code>b</code> with
+<code>b</code> nonzero, multiplying by <code>b</code> and then dividing
+by <code>b</code> cancel:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>⋅</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><msup><mi>b</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="true" form="postfix">)</mo></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">b \cdot \left(a \cdot b^{-1}\right) \;=\; a.</annotation></semantics></math></p>
+<p><a
+href="coqdoc/Riktig.Impl.Qf.html#Q_field_theory"><code>Q_field_theory</code></a>
+needs no extra hypothesis, since <a
+href="coqdoc/Riktig.Theory.Field.html#field_theory_of_Field"><code>field_theory_of_Field</code></a>
+was already unconditional for any field; <code>Add Field Q_field</code>
+registers it against <code>Q</code>’s own operations; and
+<code>field</code> proves the cancellation in one line, discharging the
+side condition <code>b =/= 0</code> (which the hand-written route, <a
+href="coqdoc/Riktig.Theory.Field.html#field_mul_div_cancel"><code>field_mul_div_cancel</code></a>
+in <a
+href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>,
+also needs) with <code>exact Hb</code>.</p>
+<p>So the <code>grp</code> database and the
+<code>ring</code>/<code>field</code> tactics end up at opposite ends of
+the same hierarchy. <code>autorewrite with grp</code> is registered
+once, on the fully abstract group, and every group inherits it — the six
+rules need no commutativity, and <code>Hint Rewrite</code> is not scoped
+to a section’s local placeholders. <code>ring</code> and
+<code>field</code> need a bundle that can, in principle, be built
+abstractly (with a commutativity hypothesis for <code>ring</code>,
+unconditionally for <code>field</code>), but the vernacular commands
+that make the tactics fire are keyed to concrete operation symbols and
+have to be reissued, by hand, at every carrier that wants to use
+them.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
+(<code>grp</code> rewrite database, <code>GroupRewriteExamples</code>) ·
+<a href="coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Ring.html#ring_theory_of_Ring"><code>ring_theory_of_Ring</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Field.html#field_theory_of_Field"><code>field_theory_of_Field</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
+(<code>End V</code>, the noncommutative <a
+href="coqdoc/Riktig.Interface.Ring.html#Ring"><code>Ring</code></a>) ·
+<a href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>
+(<code>Add Ring Z_ring</code>, <a
+href="coqdoc/Riktig.Impl.Zr.html#z_ring_tac_square"><code>z_ring_tac_square</code></a>)
+· <a href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>
+(<code>Add Field Q_field</code>, <a
+href="coqdoc/Riktig.Impl.Qf.html#q_field_tac_cancel"><code>q_field_tac_cancel</code></a>).</p>
+</main>
+</body>
+</html>

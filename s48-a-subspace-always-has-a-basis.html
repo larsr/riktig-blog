@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A subspace always has a basis</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="a-subspace-always-has-a-basis">A subspace always has a
+basis</h1>
+<p>A linear map between two vector spaces comes with two natural
+subsets: its <em>kernel</em>, everything it sends to zero, and its
+<em>image</em>, everything it actually reaches. Both are
+<em>subspaces</em> — subsets of a vector space that are themselves
+closed under addition and scaling, and are therefore vector spaces in
+their own right, using the same two operations as the space they sit
+inside. A subspace can be any subset with that closure property, not
+just a kernel or an image — the whole space is a subspace of itself, the
+single point <code>0</code> is a subspace, and so is everything in
+between.</p>
+<p>That raises a basic question, one level below the vector space
+itself. A <em>basis</em> is a finite list of vectors from which every
+vector in a space — and no vector outside it — can be built as a
+combination, in exactly one way; it is what lets you replace “an
+abstract vector” with “a tuple of numbers” without losing or duplicating
+any information. Does a subspace always have one? And if the ambient
+space itself can be described by a basis of some finite size, does the
+subspace’s own basis need no more vectors than that? Nothing about the
+definition of “subspace” forces this to be true — a subspace could, in
+principle, be some subset that resists being pinned down by finitely
+many of its own vectors, the way a wiggly curve resists being described
+by finitely many points. This post proves it can’t happen: every
+subspace of a finite-dimensional vector space has a basis, no bigger
+than the ambient space’s, built by induction on the ambient space’s
+dimension.</p>
+<h2 id="making-it-precise">Making it precise</h2>
+<p>The codebase’s <code>Basis n F V</code> record is exactly “a finite
+list of vectors from which every vector can be built as a combination,
+in exactly one way,” made checkable: it bundles <code>n</code> chosen
+vectors, a coordinate map sending a vector to its tuple of
+<code>n</code> scalars, and proofs that reconstructing a vector from its
+coordinates and reading off the coordinates of a reconstruction both
+undo each other. Closure under addition and scaling — the property that
+makes a subset a subspace — is likewise a small record,
+<code>SubspacePred F V P</code>: a predicate <code>P</code> on vectors,
+together with proofs that <code>0</code> satisfies it and that it is
+closed under <code>+</code> and scaling. <code>Sub V P</code> is the
+actual subspace as a type — the vectors satisfying <code>P</code>,
+paired with their proof of membership — and it inherits a <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace"><code>VectorSpace</code></a>
+structure automatically, by nothing more than combining the pieces
+above.</p>
+<p>With those three pieces named, the question from the introduction
+becomes a precise statement: given <code>Bn : Basis n F V</code> and
+<code>SP : SubspacePred F V P</code>, does <code>Sub V P</code> have a
+<code>Basis k F (Sub V P)</code> for some <code>k &lt;= n</code>?</p>
+<h2 id="the-induction-sketched-on-a-blackboard">The induction, sketched
+on a blackboard</h2>
+<p>Stated as one theorem: if <code>V</code> has a basis of size
+<code>n</code> and <code>P</code> is a subspace of <code>V</code>, then
+<code>P</code> has a basis of some size <a
+href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> with
+<code>k &lt;= n</code>. The proof is induction on <code>n</code>, the
+dimension of the ambient space.</p>
+<p><strong>Base case,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">n=0</annotation></semantics></math>.</strong>
+A
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>-dimensional
+space has exactly one vector up to <code>==</code>, namely
+<code>0</code> (that falls straight out of the basis round trip:
+reconstructing from the empty tuple of coordinates always gives
+<code>0</code>). Every subspace of a one-element space is trivial, so it
+has the empty basis — dimension
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">0 \le 0</annotation></semantics></math>.</p>
+<p><strong>Step,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mi>m</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n = m+1</annotation></semantics></math>.</strong>
+Fix a basis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>0</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>b</mi><mi>m</mi></msub></mrow><annotation encoding="application/x-tex">b_0,\dots,b_m</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>.
+Reading off the coordinate of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>b</mi><mn>0</mn></msub><annotation encoding="application/x-tex">b_0</annotation></semantics></math>
+is a linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>:</mo><mi>V</mi><mo>→</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">c_1 : V \to F</annotation></semantics></math>,
+and its kernel
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>=</mo><mo stretchy="false" form="prefix">{</mo><mi>v</mi><mo>:</mo><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">H = \{v : c_1(v) = 0\}</annotation></semantics></math>
+is a <em>hyperplane</em> — a subspace with an explicit basis of
+dimension
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>,
+namely
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>b</mi><mi>m</mi></msub></mrow><annotation encoding="application/x-tex">b_1,\dots,b_m</annotation></semantics></math>
+with their first coordinate simply dropped. By the induction hypothesis,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>∩</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">P \cap
+H</annotation></semantics></math> — a subspace of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>H</mi><annotation encoding="application/x-tex">H</annotation></semantics></math>
+— already has a basis, of some size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>k</mi><mn>0</mn></msub><mo>≤</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">k_0 \le
+m</annotation></semantics></math>. Now split into two cases,
+classically:</p>
+<ul>
+<li><strong>Some
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mn>0</mn></msub><mo>∈</mo><mi>P</mi></mrow><annotation encoding="application/x-tex">v_0 \in P</annotation></semantics></math>
+has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>0</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">c_1(v_0) \neq 0</annotation></semantics></math>.</strong>
+Rescale it:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mn>1</mn></msub><mo>=</mo><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>0</mn></msub><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><msub><mi>v</mi><mn>0</mn></msub></mrow><annotation encoding="application/x-tex">v_1 = c_1(v_0)^{-1}\cdot v_0</annotation></semantics></math>,
+still in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>
+(subspaces are closed under scaling), now with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c_1(v_1) = 1</annotation></semantics></math>
+exactly. Prepending
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>v</mi><mn>1</mn></msub><annotation encoding="application/x-tex">v_1</annotation></semantics></math>
+to the basis of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>∩</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">P \cap H</annotation></semantics></math>
+gives a basis of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>
+itself, of size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>k</mi><mn>0</mn></msub><mo>+</mo><mn>1</mn><mo>≤</mo><mi>m</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k_0 + 1 \le m + 1</annotation></semantics></math>
+— the new vector supplies the one dimension the hyperplane basis was
+missing.</li>
+<li><strong>No such vector exists</strong>, i.e. every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>∈</mo><mi>P</mi></mrow><annotation encoding="application/x-tex">v \in P</annotation></semantics></math>
+has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">c_1(v) = 0</annotation></semantics></math>.
+Then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>
+already sits entirely inside
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>H</mi><annotation encoding="application/x-tex">H</annotation></semantics></math>,
+so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>∩</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">P \cap H</annotation></semantics></math>
+are the very same subset — pointwise equal, just phrased two different
+ways — and the basis already built for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>∩</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">P \cap H</annotation></semantics></math>
+<em>is</em> a basis of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>,
+unchanged, of size
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>k</mi><mn>0</mn></msub><mo>≤</mo><mi>m</mi><mo>≤</mo><mi>m</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k_0 \le m \le m+1</annotation></semantics></math>.</li>
+</ul>
+<p>Either way the dimension does not exceed
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mi>m</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n = m+1</annotation></semantics></math>,
+which closes the induction.</p>
+<h2 id="the-hyperplane-in-coq">The hyperplane, in Coq</h2>
+<p>The kernel-of-the-first-coordinate construction from the sketch is a
+few lines. <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#eval_lm"><code>eval_lm</code></a>
+evaluates a coordinate function at one fixed index and is linear (a
+short fact proved earlier in the file); composing it with
+<code>basis_coords Bn</code> gives the linear map that reads off a
+vector’s first coordinate, and its kernel is the hyperplane:</p>
+<pre class="coq"><code>Section Hyperplane.
+  Context {F V : Type} {FF : Field F} {VV : VectorSpace F V}.
+  Context {m : nat} (Bn : Basis (S m) F V).
+
+  Definition c1 : LinearMap F V F := lm_comp (eval_lm Fin.F1) (basis_coords Bn).
+
+  Definition H (v : V) : Prop := ker_pred c1 v.
+
+  #[global] Instance H_SubspacePred : SubspacePred F V H := Ker_SubspacePred c1.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>
+being a subspace needs no separate proof: it is literally a kernel, and
+every kernel is a subspace, the fact established for kernels and images
+in general. The file goes on to prove, by the same
+drop-the-first-coordinate idea as the blackboard sketch, that the tail
+basis vectors give an actual <code>Basis m</code> of <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>:</p>
+<pre class="coq"><code>Definition hyperplane_basis : Basis m F (Sub V H) :=
+  @Build_Basis m F (Sub V H) FF (Sub_VectorSpace H)
+    hp_basis_vec hp_coords hp_recon hp_coords_lincomb.</code></pre>
+<p>(<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_basis_vec"><code>hp_basis_vec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_coords"><code>hp_coords</code></a>,
+and their two round-trip proofs <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_recon"><code>hp_recon</code></a>/<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_coords_lincomb"><code>hp_coords_lincomb</code></a>
+follow the same delta-collapse argument as building the standard basis
+vector, applied to a dropped coordinate rather than a coordinate
+function on the nose. The part of the file worth walking in detail is
+the induction that uses them, below.)</p>
+<p>The mirror move — turning a basis of a kernel plus one vector with
+<code>phi w1 == 1</code> into a basis one dimension bigger — is built
+the same way, generically, for any linear functional
+<code>phi</code>:</p>
+<pre class="coq"><code>Definition eb_vec (i : Fin.t (S k)) : W :=
+  Fin.caseS&#39; i (fun _ =&gt; W) w1 (fun i&#39; =&gt; proj1_sig (basis_vec BHW i&#39;)).</code></pre>
+<p>and, after the round-trip proofs for the extended coordinate map (a
+few hundred lines of the same delta-collapse bookkeeping), the assembled
+basis:</p>
+<pre class="coq"><code>Definition extend_basis_by_vector : Basis (S k) F W :=
+  @Build_Basis (S k) F W FF VW eb_vec eb_coords eb_recon eb_coords_lincomb.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#eb_vec"><code>eb_vec</code></a>
+is exactly “prepend <code>w1</code>, keep the old basis vectors after
+it” — position <code>0</code> is <code>w1</code>, position
+<code>i+1</code> is the <code>i</code>-th old basis vector. This is the
+general form of the “rescale and prepend” step from the sketch’s first
+case.</p>
+<h2 id="the-main-theorem">The main theorem</h2>
+<p>Here is the whole induction, exactly as it appears in the file, proof
+included, nothing elided:</p>
+<pre class="coq"><code>Theorem subspace_basis_exists : forall (n : nat) (F V : Type) (FF : Field F)
+    (VV : VectorSpace F V) (Bn : Basis n F V) (P : V -&gt; Prop)
+    (SP : SubspacePred F V P),
+  exists k : nat, Nat.le k n /\ exists Bk : Basis k F (Sub V P), True.
+Proof.
+  induction n as [| m IH]; intros F V FF VV Bn P SP.
+  - exists (0 : nat). split.
+    + exact (le_n 0).
+    + exists (trivial_basis Bn P). exact I.
+  - destruct (IH F (Sub V (H Bn)) FF _ (hyperplane_basis Bn) (Pinner (H Bn) P)
+                 (SubspacePred_pullback (H Bn) P))
+      as [k0 [Hk0 [Bk0 _]]].
+    pose (BPw := basis_and_collapse (H Bn) P k0 Bk0).
+    destruct (classic (exists v0 : V, P v0 /\ c1 Bn v0 =/= 0)) as [Hex | Hnex].
+    + destruct (constructive_indefinite_description _ Hex) as [v0 [Hv0P Hv0ne]].
+      pose (v1 := inv (c1 Bn v0) *: v0).
+      pose proof (sp_scale (inv (c1 Bn v0)) v0 Hv0P) as Hv1P.
+      assert (Hv1_1 : c1 Bn v1 == 1).
+      { unfold v1.
+        transitivity (inv (c1 Bn v0) * c1 Bn v0).
+        - exact (lm_scale (c1 Bn) (inv (c1 Bn v0)) v0).
+        - exact (field_invl (c1 Bn v0) Hv0ne). }
+      pose (w1 := exist P v1 Hv1P : Sub V P).
+      pose (phi := lm_comp (c1 Bn) (sub_inject P)).
+      pose proof Hv1_1 as Hphiw1.
+      pose (BPw&#39; := basis_and_comm (H Bn) P k0 BPw).
+      pose (BkPH := basis_and_expand P (H Bn) k0 BPw&#39;).
+      assert (Hchar : forall w : Sub V P, Pinner P (H Bn) w &lt;-&gt; phi w == 0)
+        by (intros w; unfold Pinner, H, ker_pred, phi, lm_comp; simpl; reflexivity).
+      exists (S k0). split.
+      * exact (le_n_S k0 m Hk0).
+      * exists (extend_basis_by_vector phi w1 Hphiw1 (Pinner P (H Bn)) Hchar BkPH). exact I.
+    + assert (Hiff : forall v : V, Pand (H Bn) P v &lt;-&gt; P v).
+      { intros v. unfold Pand, H, ker_pred. split.
+        - intros [_ HPv]. exact HPv.
+        - intros HPv.
+          split.
+          + destruct (classic (c1 Bn v == 0)) as [Hz | Hnz].
+            * exact Hz.
+            * exfalso. apply Hnex. exists v. exact (conj HPv Hnz).
+          + exact HPv.
+      }
+      exists k0. split.
+      * exact (le_S k0 m Hk0).
+      * exists (basis_pred_iff (Pand (H Bn) P) P Hiff k0 BPw). exact I.
+Qed.</code></pre>
+<p>Walking it against the sketch:</p>
+<ul>
+<li><code>induction n as [| m IH]</code> is the induction on the ambient
+dimension; <code>IH</code> is the theorem one dimension down.</li>
+<li>The base case supplies <code>0</code> and
+<code>trivial_basis Bn P</code> — the empty basis of a subspace of a
+one-element space — with <code>le_n 0</code> for
+<code>0 &lt;= 0</code>.</li>
+<li>In the step, <code>destruct (IH ...)</code> is the induction
+hypothesis applied not to <code>V</code> but to <code>H Bn</code> (the
+hyperplane), using <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hyperplane_basis"><code>hyperplane_basis</code></a>
+as its size-<code>m</code> basis, and to <code>Pinner (H Bn) P</code> —
+“<code>P</code>, viewed as a predicate on <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>” —
+as the subspace. This is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>∩</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">P \cap H</annotation></semantics></math>
+from the sketch, packaged as a subspace <em>of</em> <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>
+rather than of <code>V</code>, and it hands back <code>Bk0</code>, a
+basis of size <code>k0 &lt;= m</code>.</li>
+<li><a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#basis_and_collapse"><code>basis_and_collapse</code></a>
+repackages <code>Bk0</code> from “a basis of a subspace of a subspace”
+into <code>BPw</code>, a basis of <code>Pand (H Bn) P</code> — literally
+<code>H /\ P</code> — read directly as a subspace of <code>V</code>.
+This is the bookkeeping needed to compare vectors of <code>P ∩ H</code>
+against vectors of <code>V</code> on equal footing; it changes no
+dimension, only the packaging.</li>
+<li><code>destruct (classic (exists v0, ...))</code> is the classical
+case split from the sketch, <code>Hex</code>/<code>Hnex</code>.</li>
+<li><strong><code>Hex</code> branch.</strong>
+<code>constructive_indefinite_description</code> extracts an actual
+<code>v0</code> (not just the knowledge that one exists).
+<code>v1</code> is the rescaled vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>0</mn></msub><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><msub><mi>v</mi><mn>0</mn></msub></mrow><annotation encoding="application/x-tex">c_1(v_0)^{-1}\cdot v_0</annotation></semantics></math>;
+<code>Hv1_1</code> proves
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c_1(v_1) = 1</annotation></semantics></math>,
+by <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_scale"><code>lm_scale</code></a>
+(pulling the scalar through the linear map <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#c1"><code>c1</code></a>)
+followed by <a
+href="coqdoc/Riktig.Interface.Field.html#field_invl"><code>field_invl</code></a>
+(the field law
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mi>a</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">a^{-1}\cdot a = 1</annotation></semantics></math>
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a \neq 0</annotation></semantics></math>).
+<code>w1</code> packages <code>v1</code> together with its proof of
+membership in <code>P</code>, and <code>phi</code> is <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#c1"><code>c1</code></a>
+restricted to <code>Sub V P</code>. <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#basis_and_comm"><code>basis_and_comm</code></a>
+and <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#basis_and_expand"><code>basis_and_expand</code></a>
+are more repackaging — turning <code>BPw</code> (a basis of
+<code>P ∩ H</code> inside <code>V</code>) into <code>BkPH</code>, a
+basis of “the subset of <code>P</code> where <code>phi</code> vanishes”,
+which <code>Hchar</code> confirms is the same predicate as
+<code>Pinner (H Bn) P</code>, just seen from inside
+<code>Sub V P</code>. <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#extend_basis_by_vector"><code>extend_basis_by_vector</code></a>
+then prepends <code>w1</code> to <code>BkPH</code>, exactly the “rescale
+and prepend” move, giving a basis of size <code>S k0</code>, bounded by
+<code>le_n_S : k0 &lt;= m -&gt; S k0 &lt;= S m</code>.</li>
+<li><strong><code>Hnex</code> branch.</strong> <code>Hiff</code> proves
+<code>P</code> and <code>Pand (H Bn) P</code> agree pointwise: any
+<code>v</code> in <code>P</code> either already has
+<code>c1 v == 0</code> (so it is in <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>
+too), or — since <code>Hnex</code> rules out any counterexample — it
+<em>must</em> have <code>c1 v == 0</code>, again by the classical case
+split, this time on a single equation rather than an existential. <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#basis_pred_iff"><code>basis_pred_iff</code></a>
+transports <code>BPw</code> across that pointwise agreement, unchanged
+in size, giving a basis of <code>P</code> directly of size
+<code>k0</code>, bounded by
+<code>le_S : k0 &lt;= m -&gt; k0 &lt;= S m</code>.</li>
+</ul>
+<h2 id="why-two-axioms-and-why-they-are-unavoidable-here">Why two
+axioms, and why they are unavoidable here</h2>
+<p><a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_basis_exists"><code>subspace_basis_exists</code></a>
+compiles against two axioms beyond Coq’s core logic — checking
+<code>Print Assumptions</code> on it shows exactly these two and nothing
+else:</p>
+<pre><code>Axioms:
+IndefiniteDescription.constructive_indefinite_description :
+  forall (A : Type) (P : A -&gt; Prop), (exists x : A, P x) -&gt; {x : A | P x}
+Classical_Prop.classic : forall P : Prop, P \/ ~ P</code></pre>
+<p>Both are needed at the same spot in the proof — the case split on
+<code>exists v0 : V, P v0 /\ c1 Bn v0 =/= 0</code> — for two different
+reasons.</p>
+<p><code>Classical_Prop.classic</code> decides the split itself: is
+there such a <code>v0</code>, or isn’t there? Coq’s logic is
+constructive by default, so <code>P \/ ~P</code> is not available for an
+arbitrary proposition without a procedure that actually determines which
+side holds. Here the proposition is about an abstract field
+<code>F</code> — the codebase’s <a
+href="coqdoc/Riktig.Interface.Field.html#Field"><code>Field</code></a>
+class assumes none of the algebraic laws come with a decision procedure
+for equality — so there is no way to compute, for an arbitrary vector
+<code>v0</code>, whether <code>c1 v0</code> equals zero or not. Excluded
+middle sidesteps that: it simply asserts every proposition is true or
+false, letting the proof branch without ever needing to compute which
+branch it is in.</p>
+<p><code>IndefiniteDescription.constructive_indefinite_description</code>
+is needed for a different reason, once <code>Hex</code> — the
+<em>existence</em> of such a <code>v0</code> — is in hand. Knowing a
+<code>v0</code> exists is not the same as having one: <code>Hex</code>
+lives in <code>Prop</code>, and Coq will not let a bare
+<code>destruct</code> of a <code>Prop</code>-sorted existential produce
+data used to build something outside <code>Prop</code> — which is
+exactly what happens next, since <code>v0</code> becomes
+<code>v1</code>, which becomes <code>w1</code>, which becomes an actual
+entry in the basis-vector list of the <a
+href="coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+record being constructed. The witness has to be extracted as real data,
+not just used to derive a further fact, and that extraction is what this
+axiom supplies.</p>
+<p>Both are standard and consistent with Coq’s logic — neither is full
+unrestricted choice, and nothing here relies on proof irrelevance.</p>
+<h2 id="using-it-what-it-closes-and-what-it-doesnt">Using it: what it
+closes, and what it doesn’t</h2>
+<p><a
+href="coqdoc/Riktig.Theory.KerIm.html"><code>Theory/KerIm.v</code></a> —
+the file that defines kernel and image as subspaces — names the theorem
+this post proves before proving it, under the name <a
+href="coqdoc/Riktig.Theory.KerIm.html#subspace_has_basis_statement"><code>subspace_has_basis_statement</code></a>:</p>
+<pre class="coq"><code>Definition subspace_has_basis_statement : Prop :=
+  forall (F V : Type) (FF : Field F) (VV : VectorSpace F V) (n : nat)
+    (Bn : Basis n F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
+    exists k : nat, k &lt;= n /\ exists Bk : Basis k F (Sub V P), True.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_basis_exists"><code>subspace_basis_exists</code></a>
+discharges it in one line, by direct application:</p>
+<pre class="coq"><code>Theorem subspace_has_basis : subspace_has_basis_statement.
+Proof.
+  unfold subspace_has_basis_statement.
+  intros F V FF VV n Bn P SP.
+  exact (subspace_basis_exists n F V FF VV Bn P SP).
+Qed.</code></pre>
+<p>That name is chosen to match the gap <a
+href="coqdoc/Riktig.Theory.KerIm.html"><code>Theory/KerIm.v</code></a>
+left open: a linear map’s domain dimension splits between what it
+forgets and what it reaches,
+<code>dim U == dim (ker f) + dim (im f)</code>, but that statement
+cannot even be written down against a chosen basis of <code>Ker f</code>
+and <code>Im f</code> until you know those subspaces have bases at all.
+<code>Theory/ KerIm.v</code> states the target one existential level up,
+so it type-checks and names the goal precisely:</p>
+<pre class="coq"><code>Definition rank_nullity_statement : Prop :=
+  forall (F U V : Type) (FF : Field F)
+    (VU : VectorSpace F U) (VV : VectorSpace F V)
+    (f : LinearMap F U V) (n : nat) (Bn : Basis n F U)
+    (k : nat) (Bk : Basis k F (Ker f)) (r : nat) (Br : Basis r F (Im f)),
+    n = Nat.add k r.</code></pre>
+<p>This is still not proved, and <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_has_basis"><code>subspace_has_basis</code></a>
+does not close the gap by itself. It only says <em>some</em> basis of
+<code>Ker f</code> exists, of <em>some</em> size <code>k &lt;= n</code>,
+and likewise for <code>Im f</code>; it says nothing about <em>every</em>
+basis having the same size. <a
+href="coqdoc/Riktig.Theory.KerIm.html#rank_nullity_statement"><code>rank_nullity_statement</code></a>
+is stated for arbitrary given bases <code>Bk</code> and <code>Br</code>,
+so proving it needs one more fact this codebase does not yet have: that
+any two bases of the same vector space have equal size. That is a
+different half of the exchange argument — showing two bases match in
+size, rather than extending a smaller basis to a bigger space — and it
+remains unproved.</p>
+<p>One more thing worth being precise about: the proof of <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_basis_exists"><code>subspace_basis_exists</code></a>
+runs through two classical axioms, so it is not computational the way
+earlier posts’ proofs were. There is no numeric example to run and watch
+reduce to a value — a <code>Compute</code> on a basis produced by <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_basis_exists"><code>subspace_basis_exists</code></a>
+would simply get stuck at <code>classic</code> and
+<code>constructive_indefinite_description</code>, which carry no
+computational content, only the guarantee that assuming them stays
+consistent with Coq’s logic. What the theorem supplies is existence,
+checked by the type checker, not a program that computes a witness. What
+it does buy directly is exactly the one-line proof above: <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_has_basis"><code>subspace_has_basis</code></a>,
+applicable to any field, any finite-dimensional vector space, and any
+subspace of it, with no further work at each use site.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html"><code>Theory/SubspaceBasis.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_basis_exists"><code>subspace_basis_exists</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_has_basis"><code>subspace_has_basis</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hyperplane_basis"><code>hyperplane_basis</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#extend_basis_by_vector"><code>extend_basis_by_vector</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.KerIm.html"><code>Theory/KerIm.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.KerIm.html#subspace_has_basis_statement"><code>subspace_has_basis_statement</code></a>,
+<a
+href="coqdoc/Riktig.Theory.KerIm.html#rank_nullity_statement"><code>rank_nullity_statement</code></a>).</p>
+</main>
+</body>
+</html>

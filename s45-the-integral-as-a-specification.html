@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The integral as a specification</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="the-integral-as-a-specification">The integral as a
+specification</h1>
+<p>There are two ways to pin down a mathematical operation. One is to
+give a formula that computes it. The other is to list the laws it must
+obey and refuse to say anything more — no formula, no construction, just
+the properties any implementation must have. A function that raises <a
+href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> to a power,
+for instance, can be pinned down entirely by four laws (it sends
+<code>0</code> to <code>1</code>, turns sums into products, and so on);
+everything you can prove about it then follows from those laws alone,
+and holds for <em>every</em> function that satisfies them, whether you
+built it from a power series or some other way. This post applies
+exactly that move to integration: an interface that says what an
+integral <em>is</em>, by its laws, with no Riemann sums and no Lebesgue
+measure anywhere in sight.</p>
+<h2 id="the-laws-an-integral-obeys">The laws an integral obeys</h2>
+<p>Write <code>int f a b</code> for the integral of <code>f</code> from
+<code>a</code> to <code>b</code> — on the blackboard,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">\int_a^b f</annotation></semantics></math>.
+The scalars <code>a</code>, <code>b</code> come from an ordered field
+<code>F</code> (think of the rationals <code>Q</code>), and the values
+<code>f t</code> live in a normed vector space <code>V</code> over
+<code>F</code>: a space where vectors can be added, scaled by a scalar
+(written <code>c *: v</code>), and measured by a norm (written
+<code>‖ v ‖</code>). Here is the whole specification, from <a
+href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>:</p>
+<pre class="coq"><code>Class Integral (F V : Type) `{OrderedField F}
+    {VS : VectorSpace F V} {NS : NormedSpace F V} := {
+  (* integrand, lower endpoint, upper endpoint *)
+  int : (F -&gt; V) -&gt; F -&gt; F -&gt; V;
+  #[global] int_proper ::
+    Proper (pointwise_relation F equ ==&gt; equ ==&gt; equ ==&gt; equ) int;
+  int_linear_add : forall (f g : F -&gt; V) (a b : F),
+    int (fun t : F =&gt; f t + g t) a b == int f a b + int g a b;
+  int_linear_scale : forall (c : F) (f : F -&gt; V) (a b : F),
+    int (fun t : F =&gt; c *: f t) a b == c *: int f a b;
+  int_additivity : forall (f : F -&gt; V) (a b c : F),
+    int f a b + int f b c == int f a c;
+  int_const : forall (v : V) (a b : F),
+    int (fun _ : F =&gt; v) a b == (b + - a) *: v;
+  int_bound : forall (f : F -&gt; V) (a b M : F),
+    (forall t : F, a &lt;= t -&gt; t &lt;= b -&gt; ‖ f t ‖ &lt;= M) -&gt;
+    a &lt;= b -&gt;
+    ‖ int f a b ‖ &lt;= M * (b + - a)
+}.</code></pre>
+<p>Read the fields one at a time. The first, <a
+href="coqdoc/Riktig.Interface.Integral.html#int"><code>int</code></a>,
+is just the operation: a function of an integrand and two endpoints. The
+rest are the laws.</p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Interface.Integral.html#int_proper"><code>int_proper</code></a>
+says the integral respects equality: replacing the integrand by a
+pointwise-equal one, or an endpoint by an equal one, gives an equal
+result. (<code>==</code> is the structure’s own equality, and <a
+href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is its
+name.)</li>
+<li><a
+href="coqdoc/Riktig.Interface.Integral.html#int_linear_add"><code>int_linear_add</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Integral.html#int_linear_scale"><code>int_linear_scale</code></a>
+are linearity: the integral of a sum is the sum of the integrals, and a
+scalar pulls straight out through the integral sign.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Integral.html#int_additivity"><code>int_additivity</code></a>
+is the gluing law,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mo>+</mo><msubsup><mo>∫</mo><mi>b</mi><mi>c</mi></msubsup><mo>=</mo><msubsup><mo>∫</mo><mi>a</mi><mi>c</mi></msubsup></mrow><annotation encoding="application/x-tex">\int_a^b + \int_b^c = \int_a^c</annotation></semantics></math>.
+Note it is stated with no condition on the order of <code>a</code>,
+<code>b</code>, <code>c</code> — it holds unconditionally, and that
+single choice is what forces the integral to reverse sign when its
+endpoints are swapped, as we will see below.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Integral.html#int_const"><code>int_const</code></a>
+fixes the integral of a constant function:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>v</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">\int_a^b v =
+(b - a)\,v</annotation></semantics></math>. Here <code>b + - a</code> is
+<code>b</code> minus <code>a</code>.</li>
+<li><a
+href="coqdoc/Riktig.Interface.Integral.html#int_bound"><code>int_bound</code></a>
+is the estimate everything downstream leans on: if <code>‖f‖</code>
+stays below <code>M</code> across <code>[a, b]</code> and
+<code>a &lt;= b</code>, then the integral is no larger than
+<code>M</code> times the width of the interval.</li>
+</ul>
+<p>That is the entire contract. Nothing here says how to
+<em>compute</em> an integral, and nothing here mentions completeness —
+the property that distinguishes the real numbers from the rationals. So
+anything we prove from these laws is true of every model at once: a
+Riemann-sum integral over <code>Q</code>, an interval-arithmetic
+integral, whatever comes later. The laws are the meaning; the
+construction is a separate concern.</p>
+<h2 id="the-empty-integral-is-zero">The empty integral is zero</h2>
+<p>The first consequence: integrating from a point back to the same
+point gives nothing. On the blackboard, let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mo>=</mo><msubsup><mo>∫</mo><mi>a</mi><mi>a</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">I = \int_a^a f</annotation></semantics></math>;
+the chain is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mi>I</mi><mo>+</mo><mi>I</mi></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>I</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">additivity at the endpoints </mtext><mspace width="0.333em"></mspace></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>I</mi><mo>+</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">adding </mtext><mspace width="0.333em"></mspace></mrow><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> changes nothing</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mi>I</mi></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">cancel the shared </mtext><mspace width="0.333em"></mspace></mrow><mi>I</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> on the left</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+I + I &amp;= I &amp;&amp; \{\text{additivity at the endpoints } (a, a, a)\}\\
+&amp;= I + 0 &amp;&amp; \{\text{adding } 0 \text{ changes nothing}\}\\
+I &amp;= 0 &amp;&amp; \{\text{cancel the shared } I \text{ on the left}\}
+\end{aligned}</annotation></semantics></math></p>
+<p>The cancellation in the last step is the group law: adding the same
+element on the left is reversible, so equal sums force equal summands.
+Here is the proof exactly as it stands in <a
+href="coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>:</p>
+<pre class="coq"><code>Theorem int_empty : forall (f : F -&gt; V) (a : F), int f a a == 0.
+Proof.
+  intros f a.
+  apply (cancel_l (int f a a)).
+  rewrite int_additivity, idr.
+  reflexivity.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros f a</code> names the integrand and the point.</li>
+<li><code>apply (cancel_l (int f a a))</code> is the cancellation step.
+To prove <code>I == 0</code> it is enough to prove
+<code>I + I == I + 0</code>: adding the same <code>I</code> on the left
+of both sides is reversible (that is the group cancellation law), so the
+two smaller sides being equal forces the original ones equal.</li>
+<li><code>rewrite int_additivity</code> collapses the left side.
+<code>int f a a + int f a a</code> matches additivity at endpoints
+<code>(a, a, a)</code>, which rewrites it to a single
+<code>int f a a</code>.</li>
+<li><code>rewrite idr</code> handles the right side:
+<code>int f a a + 0</code> is just <code>int f a a</code> by the
+right-identity law <a
+href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a>.</li>
+<li><code>reflexivity</code> closes it — both sides are now
+<code>int f a a</code>.</li>
+</ul>
+<h2 id="swapping-the-endpoints-negates-the-integral">Swapping the
+endpoints negates the integral</h2>
+<p>The second consequence is the sign rule
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>f</mi><mo>=</mo><mi>−</mi><msubsup><mo>∫</mo><mi>b</mi><mi>a</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">\int_a^b f = -\int_b^a f</annotation></semantics></math>,
+which we promised would fall out of unconditional additivity. On the
+blackboard: glue
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msubsup><mo>∫</mo><mi>b</mi><mi>a</mi></msubsup><annotation encoding="application/x-tex">\int_b^a</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><annotation encoding="application/x-tex">\int_a^b</annotation></semantics></math>
+end to end,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><msubsup><mo>∫</mo><mi>b</mi><mi>a</mi></msubsup><mi>f</mi><mo>+</mo><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>f</mi></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><msubsup><mo>∫</mo><mi>b</mi><mi>b</mi></msubsup><mi>f</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">additivity at </mtext><mspace width="0.333em"></mspace></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the empty integral, just proved</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+\int_b^a f + \int_a^b f &amp;= \int_b^b f &amp;&amp; \{\text{additivity at } (b, a, b)\}\\
+&amp;= 0 &amp;&amp; \{\text{the empty integral, just proved}\}
+\end{aligned}</annotation></semantics></math></p>
+<p>So
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">\int_a^b f</annotation></semantics></math>
+is the thing you add to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>b</mi><mi>a</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">\int_b^a f</annotation></semantics></math>
+to get zero — that is precisely what “the additive inverse of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>b</mi><mi>a</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">\int_b^a f</annotation></semantics></math>”
+means, and additive inverses are unique. The Coq, from the same
+file:</p>
+<pre class="coq"><code>Theorem int_rev : forall (f : F -&gt; V) (a b : F),
+  int f a b == - int f b a.
+Proof.
+  intros f a b.
+  apply neg_unique_l.
+  rewrite int_additivity.
+  apply int_empty.
+Qed.</code></pre>
+<p>Walking it:</p>
+<ul>
+<li><code>intros f a b</code> names the integrand and both
+endpoints.</li>
+<li><code>apply neg_unique_l</code> uses the fact that an additive
+inverse is unique: to show <code>int f a b</code> is the negative of
+<code>int f b a</code>, it suffices to show the two of them sum to zero.
+The goal becomes <code>int f b a + int f a b == 0</code>.</li>
+<li><code>rewrite int_additivity</code> collapses that sum.
+<code>int f b a + int f a b</code> matches additivity at
+<code>(b, a, b)</code>, rewriting to <code>int f b b</code>.</li>
+<li><code>apply int_empty</code> finishes: <code>int f b b == 0</code>,
+which is the previous theorem at the point <code>b</code>.</li>
+</ul>
+<h2 id="the-integral-of-nothing-is-nothing">The integral of nothing is
+nothing</h2>
+<p>One more, the shortest of the three. Integrating the constantly-zero
+function over any range gives the zero vector. On the blackboard it is a
+two-step chain:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mn>0</mn></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the constant law, at the value </mtext><mspace width="0.333em"></mspace></mrow><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">scaling the zero vector gives the zero vector</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+\int_a^b 0 &amp;= (b - a) \cdot 0 &amp;&amp; \{\text{the constant law, at the value } 0\}\\
+&amp;= 0 &amp;&amp; \{\text{scaling the zero vector gives the zero vector}\}
+\end{aligned}</annotation></semantics></math></p>
+<p>The Coq, again verbatim:</p>
+<pre class="coq"><code>Theorem int_zero_fn : forall a b : F,
+  int (fun _ : F =&gt; (0 : V)) a b == 0.
+Proof.
+  intros a b.
+  rewrite (int_const 0 a b).
+  apply scale_zero.
+Qed.</code></pre>
+<p><code>rewrite (int_const 0 a b)</code> is the first blackboard step,
+turning the integral into <code>(b + - a) *: 0</code>;
+<code>apply scale_zero</code> is the second, the vector-space fact that
+scaling the zero vector yields <code>0</code>. It is the last of the
+three plain consequences the theory file records.</p>
+<h2 id="what-is-deliberately-missing">What is deliberately missing</h2>
+<p>The law you might expect at the top — the fundamental theorem, that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>g</mi><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\int_a^b g = G(b) - G(a)</annotation></semantics></math>
+when <code>G</code> is an antiderivative of <code>g</code> — is
+<em>not</em> in the class, and the interface file says so in as many
+words. It is not provable from the laws above (those pin the integral
+down on constant and piecewise data, but connecting it to derivatives
+needs either completeness or a concrete construction), and it is not yet
+a field of the class either, because it would drag in the derivative’s
+exact formulation before that has settled. So it waits — either as a
+theorem in a file that has both a derivative and a model, or as a law of
+a stronger class that extends this one. Leaving it out is not a gap; it
+is the same discipline — state only what the laws can support — that
+lets the three theorems above hold for every integral there will ever
+be, without any of them having been built yet.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>
+(the specification: the class and its laws) · <a
+href="coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Integral.html#int_empty"><code>int_empty</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Integral.html#int_rev"><code>int_rev</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Integral.html#int_zero_fn"><code>int_zero_fn</code></a>).</p>
+</main>
+</body>
+</html>
