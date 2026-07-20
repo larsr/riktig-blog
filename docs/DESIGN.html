@@ -88,29 +88,30 @@ function inside subset proofs, making the derived equations need a
 shorter and cleaner.)</p>
 <p>Two further rules, made explicit 2026-07-16. <strong>No auxiliary
 function that is the function</strong>: defining <code>f_aux</code> that
-differs from <code>f</code> only in argument order (to put the
-decreasing argument where <code>Fix</code> wants it) and then wrapping
-<code>f a b := f_aux b a</code> states the program twice and doubles the
-derived equations; the tupled <code>uncurry ∘ Fix</code> form with the
-right measure (<code>snd</code> for gcd) writes the program once in its
-conventional argument order. A worker with a genuinely different
-signature (a reparameterization the recursion needs, not a shuffle) is
-not covered by this rule, but prefer recursing on the caller’s own
-arguments with a measure when possible. <strong>No fuel</strong>:
-termination is always by a well-founded measure, never by a
-<code>fuel : nat</code> argument threaded through the recursion — fuel
-changes the function’s type, pollutes every equation with “enough fuel”
-side conditions, and proves nothing about the algorithm. Never use fuel
-for a computation we know terminates — sorting a list, manipulating a
-tree, structural compilation. Fuel has exactly one legitimate home: an
-interpreter or evaluator running <em>arbitrary</em> code that might
-genuinely loop forever, where the point is to run for a while and see
-whether an answer or an error comes back (<code>Lambda/</code>’s
-step-bounded runners, the Memprog machine interpreters). There the
-partiality is a fact about the language being interpreted, not about our
-algorithm — and a per-program “this much fuel suffices” lemma is what
-restores the honest statement for programs that do terminate. The older
-<code>refine (Fix ...)</code> files (<a
+differs from <a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> only
+in argument order (to put the decreasing argument where <code>Fix</code>
+wants it) and then wrapping <code>f a b := f_aux b a</code> states the
+program twice and doubles the derived equations; the tupled
+<code>uncurry ∘ Fix</code> form with the right measure (<code>snd</code>
+for gcd) writes the program once in its conventional argument order. A
+worker with a genuinely different signature (a reparameterization the
+recursion needs, not a shuffle) is not covered by this rule, but prefer
+recursing on the caller’s own arguments with a measure when possible.
+<strong>No fuel</strong>: termination is always by a well-founded
+measure, never by a <code>fuel : nat</code> argument threaded through
+the recursion — fuel changes the function’s type, pollutes every
+equation with “enough fuel” side conditions, and proves nothing about
+the algorithm. Never use fuel for a computation we know terminates —
+sorting a list, manipulating a tree, structural compilation. Fuel has
+exactly one legitimate home: an interpreter or evaluator running
+<em>arbitrary</em> code that might genuinely loop forever, where the
+point is to run for a while and see whether an answer or an error comes
+back (<code>Lambda/</code>’s step-bounded runners, the Memprog machine
+interpreters). There the partiality is a fact about the language being
+interpreted, not about our algorithm — and a per-program “this much fuel
+suffices” lemma is what restores the honest statement for programs that
+do terminate. The older <code>refine (Fix ...)</code> files (<a
 href="../coqdoc/Riktig.Programs.BinarySearch.html"><code>Programs/BinarySearch.v</code></a>,
 <a
 href="../coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>,
@@ -300,14 +301,112 @@ must not import a concrete instance’s lemmas.</p></li>
 <li><p><strong>Interface record fields: <code>#[global]</code> locality,
 explicit carriers</strong> (decided 2026-07-03). Substructure and
 operational fields of a structure class are declared
-<code>#[global]</code> (<code>#[global] grp_monoid :: Monoid G</code>),
-not with the default export locality — precisely so that rule 6’s
-fine-grained <code>Require Import</code> works: importing
-<code>Interface.Ring</code> alone brings the whole instance chain, no
-<code>Require Export</code> towers. And law fields annotate their
-carriers explicitly (<code>forall a b : G</code>, not bare
-<code>forall a b</code>), because record elaboration does not infer
-them.</p></li>
+<code>#[global]</code>
+(<code>#[global] group_monoid :: Monoid G</code>), not with the default
+export locality — precisely so that rule 6’s fine-grained
+<code>Require Import</code> works: importing <code>Interface.Ring</code>
+alone brings the whole instance chain, no <code>Require Export</code>
+towers. And law fields annotate their carriers explicitly
+(<code>forall a b : G</code>, not bare <code>forall a b</code>), because
+record elaboration does not infer them.</p>
+<p><strong>Why <code>#[global]</code> has to be written, every
+time</strong> (asked 2026-07-20): Coq’s <code>::</code> field syntax
+deliberately does not default to global. The older <code>:&gt;</code>
+syntax (now deprecated) <em>did</em> auto-register every such field as a
+global instance, and the Coq team removed that default specifically
+because it let instances leak into every importing file silently;
+<code>::</code> requires <code>#[global]</code>, <code>#[export]</code>,
+or <code>#[local]</code> per field so the author decides each one’s
+visibility on purpose. There is no project or Coq setting that restores
+the old auto-global behavior — this is intentional, not a gap. (Outside
+a <code>Section</code>, a plain top-level <code>Instance</code> is
+already global with no annotation needed; the annotation only does
+nothing when there is no enclosing <code>Section</code> to matter.
+Interface files here have no enclosing <code>Section</code>, so strictly
+the attribute is for clarity there — but on the record fields
+themselves, using <code>::</code> at all, the attribute is load-bearing
+regardless of section nesting, which is the case worth
+remembering.)</p></li>
+<li><p><strong>Naming: full descriptive words, no abbreviations</strong>
+(decided 2026-07-20, superseding the abbreviated style every structure
+file used before this date — <code>mon_idl</code>,
+<code>grp_invl</code>, <a
+href="../coqdoc/Riktig.Interface.InnerProduct.html#ip_add_l"><code>ip_add_l</code></a>,
+and similar are being retired file by file, tracked in
+<code>docs/TODO.md</code>). A structure’s field and lemma names read as
+English, prefixed by the structure’s own name in
+<code>snake_case</code>: <a
+href="../coqdoc/Riktig.Interface.Group.html#group_left_inverse"><code>group_left_inverse</code></a>,
+not <code>grp_invl</code>; <a
+href="../coqdoc/Riktig.Interface.Monoid.html#monoid_left_identity"><code>monoid_left_identity</code></a>,
+not <code>mon_idl</code>; <code>ring_left_distributive</code>, not <a
+href="../coqdoc/Riktig.Props.html#distl"><code>distl</code></a>. The
+bridging <code>Instance</code> that projects a field into its generic
+property class (<a
+href="../coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>, <a
+href="../coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>, <a
+href="../coqdoc/Riktig.Props.html#Invl"><code>Invl</code></a>, …) is
+named the same way in <code>CamelCase</code>: <a
+href="../coqdoc/Riktig.Interface.Group.html#Group_LeftInverse"><code>Group_LeftInverse</code></a>,
+not <code>Group_Invl</code>. This does not touch the generic
+property-class field names themselves (<a
+href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>’s <a
+href="../coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>, <a
+href="../coqdoc/Riktig.Props.html#idl"><code>idl</code></a>, <a
+href="../coqdoc/Riktig.Props.html#idr"><code>idr</code></a>, <a
+href="../coqdoc/Riktig.Props.html#invl"><code>invl</code></a>, <a
+href="../coqdoc/Riktig.Props.html#invr"><code>invr</code></a>,
+<code>commutes</code>, … stay as they are — those are the short, uniform
+vocabulary every structure’s laws resolve through inside a
+<code>calc</code> step’s brace, by design, and renaming them would touch
+every structure at once for no benefit at the call site). What changes
+is only the structure-specific field that <em>proves</em> the generic
+law.</p></li>
+<li><p><strong>A structure’s own documentation: show every law it
+carries, not just its own</strong> (decided 2026-07-20). A class that
+embeds another structure (<a
+href="../coqdoc/Riktig.Interface.Group.html#Group"><code>Group</code></a>
+embeds <a
+href="../coqdoc/Riktig.Interface.Monoid.html#Monoid"><code>Monoid</code></a>
+via <code>group_monoid :: Monoid G</code>) is documented with a comment,
+immediately above the <code>Class</code>, that quotes ALL of the laws a
+value of the class must satisfy — the embedded structure’s laws
+verbatim, then the class’s own — so a reader sees the complete law set
+without opening another file. The embedding itself
+(<code>group_monoid :: Monoid G</code>) stays a single field reference,
+never copy-pasted-out into duplicate record fields (that would be
+redundant and wrong: <a
+href="../coqdoc/Riktig.Interface.Group.html#Group"><code>Group</code></a>
+does not reprove Monoid’s laws, it reuses them) — only the
+<em>documentation</em> is duplicated, in a comment, for the reader’s
+sake. <a
+href="../coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>
+is the model.</p>
+<p>Record field lists are column-aligned (the <code>:</code> or
+<code>::</code> and the type lined up down the block) so the field names
+read as a table, not a ladder of different-length lines — matched to
+whatever the longest name in that particular class requires, not a fixed
+column across the whole tree.</p></li>
+<li><p><strong>Equational proofs are <code>calc</code> chains, not raw
+<code>rewrite</code> scripts</strong> (standing rule, restated
+2026-07-20 after an audit found real gaps — <a
+href="../coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_mono"><code>log_mono</code></a>
+among them). A proof whose content is “a chain of equal or related
+terms, each justified by one law” is written with <a
+href="../coqdoc/Riktig.Lib.Calc.html"><code>Lib/Calc.v</code></a>’s
+<code>calc</code> notation (or one of its
+named/mixed/<code>calcrw</code> forms, per that file’s header), never as
+a bare sequence of three or more <code>rewrite</code>s that leave the
+intermediate terms invisible. A 1–2 step rewrite, a case split, or a
+decision procedure is not required to become a <code>calc</code> chain —
+the rule targets exactly the shape Rule 2 above already describes
+(<code>rewrite &lt;- assoc; rewrite invr; rewrite idr; reflexivity</code>,
+which itself should now be read as the <em>desugared</em> form a
+<code>calc</code> chain compiles to, not the form to write by hand).
+<code>docs/TODO.md</code> tracks any file found still using the raw
+form.</p></li>
 </ol>
 </main>
 </body>

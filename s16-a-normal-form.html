@@ -14,14 +14,15 @@ naming every intermediate result</h1>
 <p>Look at the expression <code>f (g x) (h y)</code>. A compiler that
 wants to generate code for it has to answer questions the surface syntax
 leaves implicit: in what order do <code>g x</code> and <code>h y</code>
-run? Where does each intermediate result live while the outer call to
-<code>f</code> waits for both? Almost every later stage — assigning
-registers, spilling to the stack, converting to continuation-passing
-style — needs those answers, and reconstructs them from the nesting.
-<strong>A-normal form</strong> (ANF), introduced by Cormac Flanagan, Amr
-Sabry, Bruce Duba and Matthias Felleisen (<em>The Essence of Compiling
-with Continuations</em>, 1993), computes the answers once and writes
-them into the syntax. It rewrites every program so that each non-trivial
+run? Where does each intermediate result live while the outer call to <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> waits
+for both? Almost every later stage — assigning registers, spilling to
+the stack, converting to continuation-passing style — needs those
+answers, and reconstructs them from the nesting. <strong>A-normal
+form</strong> (ANF), introduced by Cormac Flanagan, Amr Sabry, Bruce
+Duba and Matthias Felleisen (<em>The Essence of Compiling with
+Continuations</em>, 1993), computes the answers once and writes them
+into the syntax. It rewrites every program so that each non-trivial
 subexpression is given a name by a <code>let</code> before it is
 used:</p>
 <pre><code>let a = g x in let b = h y in f a b</code></pre>
@@ -72,8 +73,9 @@ with Anf : tm -&gt; Prop :=
 href="coqdoc/Riktig.Lambda.ANF.html#anf_let"><code>anf_let</code></a>:
 <code>App (Abs body) (App a1 a2)</code> is the encoding of
 <code>let x := (a1 a2) in body</code>, and it is in ANF when the bound
-computation <code>a1 a2</code> is two atoms and the <code>body</code> is
-in ANF. The defining property of ANF is that <em>no application has a
+computation <code>a1 a2</code> is two atoms and the <a
+href="coqdoc/Riktig.Lambda.FirstOrder.html#body"><code>body</code></a>
+is in ANF. The defining property of ANF is that <em>no application has a
 nested computation as operator or operand</em> — every argument is
 already a name.</p>
 <h2 id="the-transform">The transform</h2>
@@ -86,9 +88,10 @@ into nested immediate-application lets:</p>
 <code>let x0 := c0 in let x1 := c1 in atom</code>. The worker
 <code>flat t</code> returns the pair <code>(binds, atom)</code> — the
 computations to let-bind, and the atom that names <code>t</code>’s
-value. The delicate case is <code>App f a</code>: flatten <code>f</code>
-and <code>a</code> separately, then concatenate their telescopes, with
-de Bruijn indices adjusted so each part still points at the right binder
+value. The delicate case is <code>App f a</code>: flatten <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and
+<code>a</code> separately, then concatenate their telescopes, with de
+Bruijn indices adjusted so each part still points at the right binder
 once the parts sit in sequence.</p>
 <pre class="coq"><code>Fixpoint flat (t : tm) : list tm * tm :=
   match t with
@@ -105,13 +108,17 @@ once the parts sit in sequence.</p>
   end.
 
 Definition anf (t : tm) : tm := let (b, a) := flat t in assemble b a.</code></pre>
-<p>On <code>App f a</code> the bindings are <code>f</code>’s telescope
-<code>bf</code>, then <code>a</code>’s telescope <code>ba</code> shifted
-past <code>f</code>’s <code>m</code> binders (<code>ba'</code>), then
-one final binding <code>c</code> that applies <code>f</code>’s atom to
-<code>a</code>’s atom — each lifted past the other’s binders. The atom
-returned is <code>Var 0</code>, the name of that last binding. Under a
-lambda, the body is flattened and assembled in place
+<p>On <code>App f a</code> the bindings are <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s
+telescope <code>bf</code>, then <code>a</code>’s telescope
+<code>ba</code> shifted past <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s
+<code>m</code> binders (<code>ba'</code>), then one final binding
+<code>c</code> that applies <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s atom
+to <code>a</code>’s atom — each lifted past the other’s binders. The
+atom returned is <code>Var 0</code>, the name of that last binding.
+Under a lambda, the body is flattened and assembled in place
 (<code>Abs (assemble bb ab)</code>), so no binding escapes the
 binder.</p>
 <h2 id="the-output-really-is-in-anf">The output really is in ANF</h2>
@@ -149,10 +156,9 @@ supplies the two hypotheses <a
 href="coqdoc/Riktig.Lambda.ANF.html#assemble_Anf"><code>assemble_Anf</code></a>
 needs, and <code>anf t</code> <em>is</em> <code>assemble</code> of
 <code>flat t</code>. The one subtlety the proofs handle is that the de
-Bruijn <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>s in
-<a href="coqdoc/Riktig.Lambda.ANF.html#flat"><code>flat</code></a> must
-not spoil ANF-ness — but <a
+Bruijn <code>lift</code>s in <a
+href="coqdoc/Riktig.Lambda.ANF.html#flat"><code>flat</code></a> must not
+spoil ANF-ness — but <a
 href="coqdoc/Riktig.Lambda.ANF.html#Atom"><code>Atom</code></a> and <a
 href="coqdoc/Riktig.Lambda.ANF.html#Anf"><code>Anf</code></a> look only
 at a term’s <em>shape</em>, never at index values, so lifting preserves

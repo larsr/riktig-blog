@@ -3,40 +3,203 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lambda/category roadmap — open items</title>
+<title>Lambda roadmap — the calculus, its transforms, and two new
+tracks</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
-<h1 id="lambdacategory-roadmap--open-items">Lambda/category roadmap —
-open items</h1>
-<p>The lambda calculus, SKI/BCKW, CPS, and category-theory tower
-(theories/Lambda/, theories/Impl/CoqCat.v, theories/Impl/StlcCat.v) were
-the project’s earliest wave and never got a dedicated roadmap doc. This
-file exists to hold the one item a 2026-07-08 sweep for
-deferred/incomplete work found with no other home — not a backlog for
-new work on this track.</p>
-<h2 id="open">Open</h2>
-<ul class="task-list">
-<li><label><input type="checkbox" /><strong>General SKI simulation
-theorem</strong> (<a
-href="../coqdoc/Riktig.Lambda.SKI.html"><code>theories/Lambda/SKI.v</code></a>,
-around line 302). What’s proved: the per-case stepping lemmas (<a
-href="../coqdoc/Riktig.Lambda.SKI.html#babs_correct"><code>babs_correct</code></a>,
+<h1
+id="lambda-roadmap--the-calculus-its-transforms-and-two-new-tracks">Lambda
+roadmap — the calculus, its transforms, and two new tracks</h1>
+<p><em>Rewritten 2026-07-19. The old version of this file listed one
+open item — the general SKI simulation theorem — which has since been
+RESOLVED: <a
+href="../coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>
+proves <a
+href="../coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>
+/ <a
+href="../coqdoc/Riktig.Lambda.SKI.html#translate2_star_sim"><code>translate2_star_sim</code></a>
+(the full step/star simulation) for the occurs-check translation <a
+href="../coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a>/<a
+href="../coqdoc/Riktig.Lambda.SKI.html#translate2"><code>translate2</code></a>,
+resting on the substitution-commutation lemma <a
+href="../coqdoc/Riktig.Lambda.SKI.html#translate2_subst_gen"><code>translate2_subst_gen</code></a>.
+The naive <a
+href="../coqdoc/Riktig.Lambda.SKI.html#translate"><code>translate</code></a>’s
+simulation is proved IMPOSSIBLE by a machine-checked counterexample (<a
+href="../coqdoc/Riktig.Lambda.SKI.html#translate_not_step_simulation"><code>translate_not_step_simulation</code></a>);
+weak combinatory reduction is not extensional, so that direction is
+closed, not open.</em></p>
+<p>This file now holds the plans for Lars’s two new tasks (2026-07-18,
+docs/TODO.md tasks 1 and 2). Both build on the survey finding that <a
+href="../coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>’s
 <a
-href="../coqdoc/Riktig.Lambda.SKI.html#translate_beta_step"><code>translate_beta_step</code></a>)
-— bracket abstraction is correct, and a single beta step translates
-correctly. What’s NOT proved, stated but left open rather than
-<code>Admitted</code>:
-<code>step t t' -&gt; cstar (translate t) (translate t')</code> in
-general. The missing link is a substitution/lift commutation lemma —
-<code>csub (translate v) (translate b) = translate (subst 0 v b)</code>
-— over de Bruijn indices, complicated by the fact that weak combinatory
-reduction does not mirror beta reduction <em>under a binder</em> the way
-the untyped lambda calculus does. This is the file’s own headline
-correctness claim, in its general form, still open.</label></li>
+href="../coqdoc/Riktig.Lambda.SKI.html#translate2"><code>translate2</code></a>
+development is the house template for “total translation into a
+first-order datatype, all lambdas gone, correctness by simulation on a
+substitution-commutation core.”</p>
+<h2 id="track-fo--the-first-order-form-task-1">Track FO — the
+first-order form (task 1)</h2>
+<p>The request, condensed: convert a lambda term into a form where every
+function call is <code>variable(variables)</code> — function position
+and every argument are let-bound variables introduced higher up — via a
+pipeline of node-wise rewrites (closure conversion: no free variables
+inside any function, an explicit context/environment argument instead;
+every function takes all its arguments), landing 1-to-1 in a datatype
+that makes any other call shape unrepresentable, ready for machine-code
+generation. A small set of primitives survives as opaque operators
+(read/write a word at an address, word arithmetic); every source lambda
+disappears.</p>
+<p>Survey facts that shape the plan (2026-07-19): -
+<code>Syntax.v</code>’s <code>tm</code> is pure de Bruijn (Var/Abs/App),
+no primitive or constant constructor; primitives therefore enter only in
+the new target datatype (SKI’s inert <a
+href="../coqdoc/Riktig.Lambda.SKI.html#CVar"><code>CVar</code></a> is
+the precedent for “opaque, no reduction rule”). - <code>ANF.v</code>
+names every intermediate (let-telescopes, atoms in call positions) but
+its atoms include <a
+href="../coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>, and
+its grammar is Prop predicates over loose <code>tm</code>, not an
+enforcing datatype. Its header proves why an unconditional
+<code>anf t == t</code> is false under CBV — the general correctness
+statement must be a simulation, not a <code>conv</code> fact. -
+<code>Defunc.v</code> is the closure-representation archetype
+(constructor per function shape + <code>apply</code> dispatcher) but
+hardcoded to one program; no free-variable analysis exists anywhere in
+the track. - Pipeline order: closure-convert / lambda-lift FIRST,
+ANF-normalize LAST (closure conversion introduces new applications — env
+packing and projections — that the final ANF pass then flattens). -
+Namespaces: do not overload one de Bruijn index space. The target
+separates top-level function names (a stable table, de Bruijn LEVELS),
+environment slots, and let-locals. This is where the survey flags the
+main indexing hazard; expect the correctness proof’s difficulty to
+concentrate in one substitution/shift commutation lemma, as in SKI.v and
+CPS.v.</p>
+<p>Phases:</p>
+<ul class="task-list">
+<li><label><input type="checkbox" /><strong>FO-1a <a
+href="../coqdoc/Riktig.Lambda.FreeVars.html"><code>Lambda/FreeVars.v</code></a></strong>
+— free-variable analysis over de Bruijn <code>tm</code>:
+<code>free_in : nat -&gt; tm -&gt; Prop</code> with a boolean mirror,
+the finite support fact, and the lemmas
+<code>lift</code>/<code>subst</code> need against it. Small,
+self-contained, reusable.</label></li>
+<li><label><input type="checkbox" /><strong>FO-1b <a
+href="../coqdoc/Riktig.Lambda.FirstOrder.html"><code>Lambda/FirstOrder.v</code></a></strong>
+— the enforcing target datatype. Sketch (to be refined by the
+implementing agent against the codegen consumer): a program is a table
+of CLOSED top-level functions <code>fun_body : list FO</code> plus a
+main body; an <code>FO</code> body is a telescope of lets over strictly
+variable-formed right-hand sides: <code>FLet (rhs) k</code> with
+<code>rhs ::= FCall (f : fname) (args : list var)              | FClose (f : fname) (env : list var)   (* build closure *)              | FPrim (p : prim) (args : list var)              | FVarRhs (x : var)</code>
+<code>FRet (x : var)</code> and
+<code>prim ::= PReadW | PWriteW | PAddW | ...</code> (the Memprog join
+point — keep the prim set minimal and note L2/L4 of
+docs/MEMPROG-ROADMAP.md as the consumer). Calls take variables ONLY, by
+type. Plus: an environment-based evaluator (fuel per the DESIGN.md rule:
+the language has general calls, so its interpreter is honestly partial)
+and <code>vm_compute</code> smoke tests.</label></li>
+<li><label><input type="checkbox" /><strong>FO-2 the transform</strong>
+— closure conversion (each <a
+href="../coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>
+becomes a table entry taking <code>(env, arg)</code>, free indices
+become env projections), lambda lifting (hoist to the table), then the
+let-normalization pass; each a total recursive function, composed as
+<code>first_order : tm -&gt; FOProgram</code>. Worked examples including
+at least one with genuine capture (a curried two-argument
+function).</label></li>
+<li><label><input type="checkbox" /><strong>FO-3 correctness</strong> —
+the SKI-style simulation:
+<code>step t t' -&gt; fo_star (encode t) (encode t')</code> (or a
+big-step variant against the FO evaluator), resting on the
+substitution-commutation lemma; plus injectivity of the final mapping
+(the “1-to-1” requirement) as a decode/encode round-trip. Obligations
+may be staged Admitted-with-roadmap in ONE file if needed, per the
+Memprog Obligations.v convention — nowhere else.</label></li>
+<li><label><input type="checkbox" /><strong>FO-4</strong> blog post
+(syllabus entry once FO-2 runs) and the eventual codegen bridge to
+Memprog’s L3/L4.</label></li>
 </ul>
+<h2
+id="track-ds--delayed-substitution-as-a-composable-algebra-task-2">Track
+DS — delayed substitution as a composable algebra (task 2)</h2>
+<p>The paper is identified: <strong>“Rebound: Efficient, Expressive, and
+Well-Scoped Binding”, Noé De Santo &amp; Stephanie Weirich, Haskell
+Symposium 2025</strong> (arXiv:2509.13261; github.com/sweirich/rebound;
+the lambda-n-ways benchmark line). The mechanism: binders carry a
+suspended parallel substitution
+(<code>Bind : Env m n -&gt; Exp (S m) -&gt; Bind n</code>); substitution
+pushed through a term STOPS at each binder and COMPOSES into the
+suspension instead of traversing; the environment is a defunctionalized
+inductive (<code>Inc k | Cons t r | r :&lt;&gt; s</code>) whose
+smart-constructor composition implements the λσ equations as oriented
+rewrites — including the literal cancellation
+<code>comp (Inc (S k)) (Cons t p) = comp (Inc k) p</code>, where a
+pending substitution entry is discarded dead, exactly the “two
+substitutions cancel” recollection. Variable resolution against the
+piled-up composite is ONE <code>applyEnv</code> lookup. The fusion law
+<code>applyE s ∘ applyE r = applyE (r ∘ s)</code> is the map-fusion
+shape (<code>map f ∘ map g = map (f ∘ g)</code>) for a monoid/category
+of pending work acting on a syntax — Lars’s Traversable intuition, made
+exact: scopes are objects, environments are morphisms, terms are a
+module over that category.</p>
+<p>The paper is a library paper — nothing is mechanized. Our
+formalization certifies the algebra (not the performance claim, beyond
+counting traversals if we care later):</p>
+<ul class="task-list">
+<li><label><input type="checkbox" /><strong>DS-1 <a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html"><code>Theory/DelayedFusion.v</code></a></strong>
+— the simple example FIRST (Lars asked for this explicitly): a
+leaf-labelled binary tree, a monoid M acting on labels,
+<code>add_delay</code> annotations, and the three theorems that ARE the
+pattern: force∘delay = direct action; delay w1 ∘ delay w2 = delay
+(w2·w1) (one traversal instead of two); and the fusion reading
+<code>map_act f ∘ map_act g     = map_act (f∘g)</code>. Stated with the
+tree’s setoid/calc discipline so the laws are rewrite rules. The header
+explains the general pattern in plain language: push the pending work
+down as data, combine pending work by its own algebra, force only at the
+leaves you actually visit.</label></li>
+<li><label><input type="checkbox" /><strong>DS-2 <a
+href="../coqdoc/Riktig.Lambda.Scoped.html"><code>Lambda/Scoped.v</code></a></strong>
+— well-scoped terms <code>Exp : nat -&gt;     Type</code> over
+<code>Fin</code>, eager parallel substitution
+<code>subst : (Fin m     -&gt; Exp n) -&gt; Exp m -&gt; Exp n</code>, <a
+href="../coqdoc/Riktig.Lambda.Scoped.html#up"><code>up</code></a>, and
+the standard commutation lemmas, with POINTWISE equality on environments
+(no functional extensionality). Independent of <code>Syntax.v</code>’s
+raw-nat terms; a bridge is optional later.</label></li>
+<li><label><input type="checkbox" /><strong>DS-3 <a
+href="../coqdoc/Riktig.Lambda.EnvAlgebra.html"><code>Lambda/EnvAlgebra.v</code></a></strong>
+— the defunctionalized environment inductive
+(<code>Idsh/Inc k | Cons t r | Comp r s</code> — drop the Weak/Inc
+distinction, one suffices in Coq), the denotation
+<code>⟦_⟧ : Env m n -&gt; (Fin m -&gt; Exp n)</code>, the smart <a
+href="../coqdoc/Riktig.Interface.Category.html#comp"><code>comp</code></a>
+Fixpoint with ALL the λσ-oriented equations, and the soundness theorems:
+pointwise <code>⟦comp r s⟧ x = subst ⟦s⟧ (⟦r⟧     x)</code> and the
+fusion law
+<code>subst ⟦s⟧ (subst ⟦r⟧ e) = subst     ⟦comp r s⟧ e</code>. The
+cancellation rule’s proof (the discarded entry is genuinely dead) is the
+interesting lemma.</label></li>
+<li><label><input type="checkbox" /><strong>DS-4
+<code>Lambda/LazySubst.v</code></strong> — the thunked syntax
+<code>LExp</code> whose binder carries an <code>Env</code>,
+<code>force : LExp n -&gt; Exp n</code>, lazy <code>instantiate</code>,
+and the equivalence-to-eager theorem
+<code>force (lazy_subst r e) = subst ⟦r⟧ (force e)</code>; one step of
+lazy beta simulates eager beta. The α-representation caveat from the
+paper (thunked terms compare only after forcing) recorded in the
+header.</label></li>
+<li><label><input type="checkbox" /><strong>DS-5</strong> blog post
+(syllabus entry once DS-1..3 are green): the simple example first, then
+substitution as the real use case, per Lars’s framing — “delaying the
+work down the tree with an algebra for combining the pending
+tasks.”</label></li>
+</ul>
+<p>DS-1 and DS-2 are independent and can run in parallel; DS-3 needs
+DS-2; DS-4 needs DS-3.</p>
 </main>
 </body>
 </html>

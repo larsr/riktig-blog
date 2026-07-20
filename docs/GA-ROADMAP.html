@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geometric algebra roadmap — wedge, dot, blades, rotors, and a
+robot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="geometric-algebra-roadmap--wedge-dot-blades-rotors-and-a-robot">Geometric
+algebra roadmap — wedge, dot, blades, rotors, and a robot</h1>
+<p><em>Written 2026-07-19 from Lars’s request (docs/TODO.md task 3,
+quoted below) and a full survey of the existing GA files. This is the
+reference document for the track; read it before touching any GA
+file.</em></p>
+<h2 id="the-request-lars-verbatim-2026-07-18">The request (Lars,
+verbatim, 2026-07-18)</h2>
+<blockquote>
+<p>I looked at the formalization of Geometric Algebra and it didn’t
+quite look like i expected. When i have read about geometric algebra it
+has shown properties about the wedge and dot product and how they can
+define the geometric product. Perhaps one can define it in more ways,
+but at least we should be able to show that they are equivalent. And
+then there has been proofs that multiplying the wedge product of
+different base vectors become multi-vectors or blades or what’s it
+called. and how the geometric algebra vectors are a 2^d dimensional
+vector field constructed on an underlying d dimensional vector space.
+And how the geometric 2d space is isomorphic to the complex numbers. And
+then the inner product was tied into the norm and the rules about how to
+rotate vectors by rotors. Please create a blog post of these things,
+first in regular notation, and then a corresponding coq implementation
+of the same calculations. And then we can write a program that takes a
+rigid body of straight beams and connections that can either rotate or
+fold the joint 360 deg (without gimble lock problems), and with
+geometric algebra it becomes easy to chain them together to model a
+robot so we can compute the position of its limbs as a function of the
+steering angles.</p>
+</blockquote>
+<h2 id="what-exists-today-survey-2026-07-19">What exists today (survey
+2026-07-19)</h2>
+<ul>
+<li><a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>:
+the axiomatic presentation — an associative unital F-algebra
+<code>A</code>, a linear embedding <code>ga_vec : V → A</code>, and the
+single contraction axiom
+<code>ga_vec u * ga_vec u == norm2 u *: 1</code>. Deliberately
+order-free (works in any characteristic).</li>
+<li><a
+href="../coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>:
+<a
+href="../coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>
+(the symmetric part of <code>uv</code> is the doubled inner product), <a
+href="../coqdoc/Riktig.Theory.GeometricAlgebra.html#contract_add"><code>contract_add</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.GeometricAlgebra.html#vec_zero"><code>vec_zero</code></a>.</li>
+<li><a
+href="../coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>:
+<code>wedge u v := uv − vu</code> (the antisymmetric part), <a
+href="../coqdoc/Riktig.Theory.Exterior.html#wedge_self_zero"><code>wedge_self_zero</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Exterior.html#wedge_anti"><code>wedge_anti</code></a>,
+and the DOUBLED decomposition <code>2·uv == 2(u·v)·1 + u∧v</code> (a
+bare field cannot halve); plus the separate <a
+href="../coqdoc/Riktig.Theory.Determinant.html#omega_B"><code>omega_B</code></a>
+top-form/determinant section.</li>
+<li><a
+href="../coqdoc/Riktig.Impl.CliffordFin.html"><code>Impl/CliffordFin.v</code></a>:
+two fully-applied instances — <a
+href="../coqdoc/Riktig.Impl.CliffordFin.html#GA_trivial"><code>GA_trivial</code></a>
+(V=A=F) and <a
+href="../coqdoc/Riktig.Impl.CliffordFin.html#GA_Cliff1"><code>GA_Cliff1</code></a>
+= Cl(0,1) with carrier <code>C F</code> (i² = −1). No
+<code>Fin.t d</code>-indexed 2^d construction.</li>
+<li><a
+href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>:
+the full <code>C F</code> stack (<a
+href="../coqdoc/Riktig.Impl.Complex.html#C_Ring"><code>C_Ring</code></a>
+for any field, <a
+href="../coqdoc/Riktig.Impl.Complex.html#C_Field"><code>C_Field</code></a>
+under <a
+href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal"><code>FormallyReal</code></a>);
+no GA≅C isomorphism stated.</li>
+<li>Inner product ↔︎ norm: fully formalized
+(<code>norm2 u := ⟨u,u⟩</code>, <a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#ga_contract"><code>ga_contract</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>).</li>
+<li>Rotors, reflections, blades, grades, even subalgebras: absent.</li>
+</ul>
+<h2 id="design-positions">Design positions</h2>
+<ol type="1">
+<li><strong>Two presentations, one equivalence.</strong> The tree keeps
+the order-free contraction axiom as the primitive Interface (its
+generality is deliberate). The wedge/dot-first presentation is a
+Theory-level structure, with the equivalence proved in both directions
+and its asymmetry stated plainly: wedge/dot-first implies contraction
+over ANY field (take u = v; the alternating law kills the wedge term),
+while contraction implies wedge/dot only when 2 is invertible (the
+halving lives in <a
+href="../coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>).
+Alternating (<code>w u u == 0</code>), not antisymmetry, is the
+primitive on the wedge side — antisymmetry follows, and the converse
+fails in characteristic 2.</li>
+<li><strong>Rotors without trigonometry.</strong> A rotor in Cl(2,0) is
+a unit even element — parameterize by <code>(c, s)</code> with
+<code>c² + s² == 1</code> instead of cos/sin. Everything stays algebraic
+over a <a
+href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal"><code>FormallyReal</code></a>
+field; no analysis is needed for any theorem on the wish list. Angles
+enter only as (c,s) pairs; composition of rotors is the angle-addition
+formula, for free, as complex multiplication in the even
+subalgebra.</li>
+<li><strong>The 2^d construction is its own project.</strong> A general
+<code>Cl(d)</code> over <code>Fin.t d -&gt; F</code> (carrier: blade
+coefficients indexed by subsets of basis indices; product with sign
+bookkeeping; associativity is the hard combinatorial proof) is scheduled
+as a separate designed wave, NOT folded into the concrete-instance work.
+The concrete Cl(2) unblocks rotors and ≅ℂ without it.</li>
+</ol>
+<h2 id="waves">Waves</h2>
+<p><strong>Wave 1 (dispatched 2026-07-19):</strong> - [ ] <a
+href="../coqdoc/Riktig.Theory.GAWedgeDot.html"><code>Theory/GAWedgeDot.v</code></a>
+— the clean decomposition over an <a
+href="../coqdoc/Riktig.Interface.Order.html#OrderedField"><code>OrderedField</code></a>
+(<code>uv == ⟨u,v⟩·1 + ½·(u∧v)</code>), the <a
+href="../coqdoc/Riktig.Theory.GAWedgeDot.html#WedgeDotPresentation"><code>WedgeDotPresentation</code></a>
+structure (alternating bilinear wedge + decomposition law), and the
+two-directional equivalence with the contraction axiom, with the
+characteristic-2 asymmetry documented. - [ ] <a
+href="../coqdoc/Riktig.Impl.Cliff2.html"><code>Impl/Cliff2.v</code></a>
+— concrete Cl(2,0): 4-dimensional carrier {1, e1, e2, e12} over any
+field, full Ring instance,
+<code>GA_Cliff2 : GeometricAlgebra F (Fin.t 2 -&gt; F) (C2 F)</code>,
+anticommutation and <code>e12² = −1</code> as lemmas, even-closure
+lemma.</p>
+<p><strong>Wave 2 (after Wave 1) — 2D rotors and U(1):</strong> - [ ]
+<code>Theory/EvenSubalgebra.v</code> or extension of <a
+href="../coqdoc/Riktig.Impl.Cliff2.html"><code>Impl/Cliff2.v</code></a>:
+the even part {1, e12} of Cl(2,0) is a subring isomorphic to
+<code>C F</code> (<a
+href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>)
+— a real ring isomorphism, not a carrier coincidence like <a
+href="../coqdoc/Riktig.Impl.CliffordFin.html#GA_Cliff1"><code>GA_Cliff1</code></a>.
+- [ ] Rotors in Cl(2,0): <code>rotor c s := c·1 + s·e12</code> with
+<code>c² + s² == 1</code>; unit property, inverse = reverse, the
+sandwich map <code>x ↦ R x R̃</code>; THE rotation theorem: the sandwich
+preserves the vector subspace, preserves <code>norm2</code>, and acts on
+(v1,v2) as the rotation matrix [[c²−s², −2cs],[2cs, c²−s²]] (the
+double-angle form — state exactly what is true); rotor composition =
+complex multiplication of (c,s) pairs — this <em>is</em> the statement
+“the unit even subalgebra of Cl(2,0) is a group isomorphic to U(1).” - [
+] Reflections: <code>x ↦ − v x v</code> for a unit vector v; reflection
+composition gives a rotor (Cartan–Dieudonné at n = 2).</p>
+<h2 id="physics-extension-2026-07-20-larss-request">Physics extension
+(2026-07-20, Lars’s request)</h2>
+<p>Lars watched a video explaining spin/Pauli via geometric algebra,
+found the standard treatment “ad hoc” by comparison, and asked for (1) a
+post on how symmetry groups embed in GA, (2) a follow-up post using that
+to explain quarks/gluons/electrons, (3) a post on Maxwell’s four
+equations as one GA equation. <strong>Web research was done
+first</strong> — see the four-topic survey this session ran (Maxwell/GA,
+spin-Pauli/GA, SU(3)/Standard-Model-in-GA, and the pedagogical-complaint
+genre the video likely belongs to). The findings split sharply by how
+settled each piece is, and that split governs everything below —
+<strong>never present the SU(3)/full-Standard-Model material as if it
+had the same status as U(1)/SU(2)/Maxwell.</strong></p>
+<h3
+id="whats-settled-textbook-math-safe-to-formalize-and-blog-as-fact">What’s
+settled (textbook math, safe to formalize and blog as fact)</h3>
+<ul>
+<li><strong>U(1)</strong>: the unit even subalgebra of Cl(2,0) — Wave 2
+above.</li>
+<li><strong>SU(2) / Spin(3)</strong>: the even subalgebra of Cl(3,0) is
+isomorphic to the quaternions; its unit elements form Spin(3) ≅ SU(2);
+the map <code>R ↦ (a ↦ R a R̃)</code> is the 2-to-1 covering homomorphism
+onto SO(3) (<code>R</code> and <code>−R</code> act identically on
+vectors but oppositely on spinors — the 720°/double-cover fact, the
+“plate trick”). Textbook: Hestenes; Doran &amp; Lasenby, <em>Geometric
+Algebra for Physicists</em> (CUP
+<ol start="2003" type="1">
+<li>ch. 2, 8; Lounesto, <em>Clifford Algebras and Spinors</em>
+(2001).</li>
+</ol></li>
+<li><strong>The Pauli-matrix correspondence</strong>: Cl(3,0) ≅
+Mat(2,ℂ); under <code>e_k ↦ σ_k</code>, the pseudoscalar
+<code>I = e1e2e3</code> is central (odd dimension ⇒ commutes with
+everything) and <code>I² = −1</code> — <code>I</code> plays
+<code>i</code>’s algebraic role as a genuine geometric object (an
+oriented volume), not a postulated symbol. A nonrelativistic spinor is a
+real even multivector <code>ψ = √ρ · R</code> (Hestenes 1967/1984),
+reproducing the Pauli equation without complex numbers.</li>
+<li><strong>Maxwell’s equations</strong>: spacetime algebra Cl(1,3) (or
+Cl(3,1) — a labeling choice, not a disagreement), the field bivector
+<code>F = E + IcB</code>, the vector derivative
+<code>∇ = γ^μ ∂_μ</code>, the four-current <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#J"><code>J</code></a>, and
+the single equation <code>∇F = J</code>. Since <code>∇</code> has grade
+1 and <code>F</code> grade 2, <code>∇F = ∇·F + ∇∧F</code> splits into a
+grade-1 part (packaging Gauss’s law + Ampère–Maxwell) and a grade-3 part
+(packaging no-monopoles + Faraday) — this is uncontested algebraic
+bookkeeping, not a new physical claim, and the standard textbook
+treatment (Hestenes 1966/2003; Doran &amp; Lasenby ch. 5–7; Dressel,
+Bliokh &amp; Nori, <em>Phys. Rep.</em> 589 (2015) 1–72 for a modern
+rederivation).</li>
+</ul>
+<h3 id="what-ga-does-not-explain--must-not-be-claimed">What GA does NOT
+explain — must not be claimed</h3>
+<ul>
+<li><strong>Pauli exclusion</strong> (antisymmetry of the fermion
+wavefunction under exchange) is <em>not</em> derived from Cl(3,0)/rotor
+structure. Its accepted derivation is the relativistic spin-statistics
+theorem (Fierz 1939, Pauli 1940 — a QFT result from locality + Lorentz
+invariance + positive energy, unrelated to 3D geometric algebra). A
+narrower thread (Doran–Lasenby–Gull’s multiparticle spacetime algebra)
+encodes the antisymmetry <em>postulate</em> compactly — that is a
+representational convenience, not a first-principles derivation of
+<em>why</em> fermions antisymmetrize. The blog post may say GA makes
+spin’s geometry transparent and removes the need for an unmotivated
+<code>i</code>; it must <strong>not</strong> say GA explains
+exclusion.</li>
+</ul>
+<h3
+id="whats-an-open-non-consensus-research-program-survey-honestly-endorse-nothing">What’s
+an open, non-consensus research program (survey honestly, endorse
+nothing)</h3>
+<p>Getting <strong>SU(3)</strong>, or the <strong>full</strong>
+<code>SU(3)×SU(2)×U(1)</code>, out of a single Clifford/geometric
+algebra is not settled physics — it is a small cluster of competing,
+mutually-citing single-paper proposals, none mainstream, none uniquely
+reproducing the correct three-generation structure without extra
+hand-added ingredients: - Trayling &amp; Baylis, <em>J. Phys. A</em> 34
+(2001) 3309 (Cl(7,0), one generation, predicts bare
+<code>sin²θ_W = 0.25</code>). - Furey, <em>Eur. Phys. J. C</em> 78
+(2018) 375 (division-algebra ladder operators on <code>ℂ⊗ℍ⊗𝕆</code>, one
+generation, same <code>sin²θ_W</code> prediction). - Stoica, <em>Adv.
+Appl. Clifford Algebras</em> 28 (2018) 52 (complex Cl6). - Daviau,
+<em>Adv. Appl. Clifford Algebras</em> 27 (2017) 279 (Cl(1,5)). - Gillard
+&amp; Gresnigt and later Gourlay &amp; Gresnigt (2019–2024): sedenion /
+Cl(8) extensions reaching for three generations, adding an S3 family
+symmetry by hand to fix earlier versions. - A published critique exists
+(Rowlands &amp; Rowlands, <em>J. Phys. Conf. Ser.</em> 1251 (2019)
+012044) questioning whether non-associative octonions do any work beyond
+their associative “shadow” operators.</p>
+<p>The <strong>one piece of genuinely uncontested pure math</strong>
+beyond U(1)/SU(2) is: <code>Aut(𝕆) = G2</code> (octonion automorphisms),
+and the subgroup fixing one unit imaginary octonion is exactly
+<code>SU(3)</code> (Günaydin &amp; Gürsey, <em>J. Math. Phys.</em> 14
+(1973) 1651; canonical write-up: Baez, <em>Bull. Amer. Math. Soc.</em>
+39 (2002) 145, arXiv:math/0105155). This is real, checkable, and —
+critically — Baez himself, presenting it, explicitly declines to claim
+physical significance (“Maybe this is all just a coincidence. Maybe
+not!”). Octonions are non-associative and <em>not</em> a Clifford
+algebra (only closely related); formalizing this fact well is its own
+undertaking (non-associativity breaks most of Coq’s ring/field
+automation) and is scoped as a possible future wave, not blocking the
+physics posts below.</p>
+<p><strong>Decision</strong>: do not formalize or blog any
+full-unification claim as settled. <a
+href="../coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a>
+(Wave 3, dispatched) covers only the solid SU(2)/spin content. A
+separate, small <a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>
+(Wave 5) formalizes the <strong>abstract</strong> su(3) Lie algebra
+(Gell-Mann-style generators and structure constants) on its own terms —
+real, uncontested finite algebra, no GA embedding claimed — so the
+quarks/gluons post can explain color charge honestly via standard
+representation theory, with the GA-embedding question surveyed in prose
+(attributed, not endorsed) rather than claimed as a theorem.</p>
+<h3 id="waves-physics-extension">Waves (physics extension)</h3>
+<p><strong>Wave 3 — DONE 2026-07-20:</strong> <a
+href="../coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a>
+— Cl(3,0), full Ring instance, <a
+href="../coqdoc/Riktig.Impl.Cliff3.html#GA_Cliff3"><code>GA_Cliff3</code></a>,
+the Pauli-matrix correspondence (pseudoscalar <code>I3</code> commutes
+with every vector — odd dimension), the quaternion identification
+<code>(i,j,k)=(e12,e23,e13)</code> with <code>e12·e23·e13==−1</code>, <a
+href="../coqdoc/Riktig.Impl.Cliff3.html#c3_reverse"><code>c3_reverse</code></a>
+a proved anti-automorphism, the rotor sandwich proved to preserve the
+vector subspace for <strong>any</strong> even <code>r</code> (stronger
+than required — no unit-norm hypothesis needed), and the double cover
+<code>c3_rotate(−r) x == c3_rotate r x</code> (Spin(3)→SO(3) is 2-to-1).
+Associativity via a reusable argument (basis blades ↔︎
+<code>bool*bool*bool</code>, Fubini + reindexing from <a
+href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>)
+rather than a hand-verified swap sequence — the sign cocycle it needs is
+checked by exhaustive <code>destruct</code> over 512 cases,
+kernel-verified.</p>
+<p><strong>Wave 4 (Maxwell) — DONE 2026-07-20:</strong> <a
+href="../coqdoc/Riktig.Impl.Cliff13.html"><code>Impl/Cliff13.v</code></a>
+— the 16-dimensional Cl(1,3) carrier (signature +,−,−,−),
+distributivity, and a general sign formula (permutation × metric
+contraction) for the full multiplication table, hand-verified on three
+representative cases. <a
+href="../coqdoc/Riktig.Theory.Maxwell.html"><code>Theory/Maxwell.v</code></a>
+— the field bivector <code>F = E + IB</code>, the vector derivative
+<code>∇</code> disclosed as ten scalar values at a point (the house
+pattern of <a
+href="../coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>’s
+<code>exp_surj</code>/<a
+href="../coqdoc/Riktig.Theory.Action.html"><code>Theory/Action.v</code></a>’s
+<code>ftc</code>), and <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#nabla_F_grade_decomposition"><code>nabla_F_grade_decomposition</code></a>:
+the scalar, all six bivector, and pseudoscalar coefficients of
+<code>∇F</code> vanish identically — only the vector part (Gauss +
+Ampère–Maxwell, correct classical signs, independently re-verified) and
+the trivector part (Faraday + no-monopoles) survive, the latter entering
+<a
+href="../coqdoc/Riktig.Theory.Maxwell.html#nabla_F_eq_J"><code>nabla_F_eq_J</code></a>
+as explicit hypotheses (they hold only once <code>F</code> comes from a
+four-potential, not as free algebraic consequences — stated honestly,
+not oversold). General ring associativity at this dimension was
+deliberately not attempted (unnecessary — the theorem needs only
+bilinear expansion); <code>Add Ring</code> on the abstract Field was
+found to make it easy anyway, but was not exploited, per the scope
+decision.</p>
+<p><strong>Wave 5 — DONE 2026-07-20:</strong> <a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>
+— the abstract 8-generator su(3) Lie algebra on
+<code>Fin.t 8 -&gt; F</code>, the Gell-Mann structure constants matched
+exactly, bilinearity and antisymmetry for arbitrary elements, the Jacobi
+identity proved on all 56 strictly-increasing basis triples (the
+trilinear extension to arbitrary elements left as a documented remark,
+not mechanized), and <a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html#su3_cartan_38"><code>su3_cartan_38</code></a>
+(T3, T8 commute — the rank-2 fact behind two independent color quantum
+numbers). No Clifford/GA embedding attempted or claimed, per the honesty
+decision above.</p>
+<p><strong>All five waves of the physics extension are now done</strong>
+(Waves 2–5 plus the concurrent Wave 1 groundwork). The three blog posts
+(below) can now be written.</p>
+<p><strong>Wave 6 (general <code>Cl(d)</code>, independent, lower
+priority now):</strong> - [ ] General <code>Cl(d)</code>: 2^d blade
+carrier over <code>Fin.t d -&gt; F</code> (diagonal quadratic form),
+product with sign cocycle, associativity, <a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra"><code>GeometricAlgebra</code></a>
+instance; grade projection; the basis-blade statement “products of
+distinct basis vectors are the 2^d basis”. Design note before code: pick
+the blade representation (characteristic function
+<code>Fin.t d -&gt; bool</code> vs sorted index lists) with the
+associativity proof in mind.</p>
+<p><strong>Wave 7 (the robot payoff):</strong> - [ ] The robot: a
+kinematic chain of beams and joints, each joint a rotor parameterized by
+its steering (c,s); limb positions as the chained sandwich products; no
+gimbal lock by construction (rotors compose associatively, no
+Euler-angle charts). Lives in <code>Programs/</code> or
+<code>Examples/</code> with computable <code>vm_compute</code> positions
+for a concrete 2-or-3-joint arm over Q. 3D needs Wave 3’s Cl(3,0); a
+planar arm needs only Cl(2,0) and can land right after Wave 2.</p>
+<h3
+id="blog-posts-write-only-after-their-theory-files-exist-and-compile--rule-7">Blog
+posts (write only after their theory files exist and compile — Rule
+7)</h3>
+<ol type="1">
+<li><strong>Symmetry groups inside geometric algebras</strong> (Waves
+1–3) — U(1) as Cl(2,0)’s unit even subalgebra, SU(2)/Spin(3) as
+Cl(3,0)’s, the double-cover made visible as rotor sign; one paragraph
+honestly noting SU(3) has no equally settled GA embedding, with the
+Günaydin–Gürsey/Baez octonion fact named as the one clean adjacent
+result and the competing full-unification papers named as an open
+research cluster, not fact.</li>
+<li><strong>Maxwell’s four equations, one equation</strong> (Wave 4) —
+the problem (why does one algebraic identity package four
+vector-calculus laws?), <code>∇F = J</code>, the grade split, the Coq
+statement and proof.</li>
+<li><strong>Electrons, quarks, and gluons in this framework</strong>
+(Waves 3, 5) — electrons via the real Cl(3,0) Hestenes spinor (solid);
+color charge via the abstract su(3) Lie algebra (Wave 5), with the
+GA-embedding question surveyed honestly per the section above; an
+explicit paragraph stating plainly that Pauli exclusion is <em>not</em>
+explained by any of this — it is a separate, unrelated QFT result.</li>
+<li>The original Wave-1/2 payoff post (wedge/dot/blade/rotor mechanics)
+and the Wave 7 robot post remain queued, lower priority than the three
+physics posts above.</li>
+</ol>
+</main>
+</body>
+</html>

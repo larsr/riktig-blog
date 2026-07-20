@@ -34,9 +34,10 @@ part, so we remove them</h2>
 <code>f a</code>. That is the whole language. The awkward part is not
 the functions — it is the variables. Consider substitution, the
 operation at the heart of evaluation: to apply
-<code>(\x. body) a</code>, you replace every free <code>x</code> in
-<code>body</code> by <code>a</code>. If you do this naively with names,
-you can capture a variable by accident. Substituting <code>y</code> into
+<code>(\x. body) a</code>, you replace every free <code>x</code> in <a
+href="coqdoc/Riktig.Lambda.FirstOrder.html#body"><code>body</code></a>
+by <code>a</code>. If you do this naively with names, you can capture a
+variable by accident. Substituting <code>y</code> into
 <code>\y. x</code> for <code>x</code> would give <code>\y. y</code>,
 silently turning a function that ignores its argument into the identity
 — the inner <code>y</code> was a <em>different</em> <code>y</code>, and
@@ -74,8 +75,8 @@ identity function <code>\x. x</code> is <code>Abs (Var 0)</code>.</p>
 <h2 id="substitution-is-arithmetic">Substitution is arithmetic</h2>
 <p>Because variables are numbers counting binders, moving a term
 underneath a binder means shifting its free indices up by one, so they
-keep pointing at the same outer lambdas. That shift is <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>:</p>
+keep pointing at the same outer lambdas. That shift is
+<code>lift</code>:</p>
 <pre class="coq"><code>Fixpoint lift (d k : nat) (t : tm) : tm :=
   match t with
   | Var n =&gt; Var (if Nat.leb k n then d + n else n)
@@ -242,17 +243,22 @@ href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
 return <code>None</code>, so the hypothesis
 <code>step_fn t = Some t'</code> is contradictory and
 <code>discriminate</code> closes both. For <code>App f a</code>, split
-on whether <code>f</code> is a value: if it is and <code>a</code> is
-too, <code>f</code> must be an <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> for a
-step to exist, and the result is a <a
+on whether <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is a
+value: if it is and <code>a</code> is too, <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> must be
+an <a href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>
+for a step to exist, and the result is a <a
 href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>
-by <code>constructor</code>. If <code>f</code> is a value but
-<code>a</code> is not, the function recursed into <code>a</code>, and
-the induction hypothesis <code>IHa</code> turns that recursive step into
-a <a
+by <code>constructor</code>. If <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is a
+value but <code>a</code> is not, the function recursed into
+<code>a</code>, and the induction hypothesis <code>IHa</code> turns that
+recursive step into a <a
 href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>.
-If <code>f</code> is not a value, it recursed into <code>f</code>, and
+If <a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
+is not a value, it recursed into <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>, and
 <code>IHf</code> gives a <a
 href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>.
 Every branch that could return <code>Some</code> is matched to the

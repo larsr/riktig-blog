@@ -33,19 +33,12 @@ href="coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>:</p
   grp_invr       : forall a : G, a + (- a) == 0;
   #[global] grp_neg_proper :: Proper (equ ==&gt; equ) (@neg G _)
 }.</code></pre>
-<p>A group <em>is</em> a monoid (<a
-href="coqdoc/Riktig.Interface.Group.html#grp_monoid"><code>grp_monoid</code></a>)
-with an added negation operation (<a
-href="coqdoc/Riktig.Interface.Group.html#grp_neg"><code>grp_neg</code></a>,
-from the <a href="coqdoc/Riktig.Ops.html#HasNeg"><code>HasNeg</code></a>
-vocabulary class), plus the two undo laws <a
-href="coqdoc/Riktig.Interface.Group.html#grp_invl"><code>grp_invl</code></a>
-and <a
-href="coqdoc/Riktig.Interface.Group.html#grp_invr"><code>grp_invr</code></a>,
-and a proof that <code>-</code> respects the equality (<a
-href="coqdoc/Riktig.Interface.Group.html#grp_neg_proper"><code>grp_neg_proper</code></a>).
-Because <a
-href="coqdoc/Riktig.Interface.Group.html#grp_monoid"><code>grp_monoid</code></a>
+<p>A group <em>is</em> a monoid (<code>grp_monoid</code>) with an added
+negation operation (<code>grp_neg</code>, from the <a
+href="coqdoc/Riktig.Ops.html#HasNeg"><code>HasNeg</code></a> vocabulary
+class), plus the two undo laws <code>grp_invl</code> and
+<code>grp_invr</code>, and a proof that <code>-</code> respects the
+equality (<code>grp_neg_proper</code>). Because <code>grp_monoid</code>
 is marked with <code>::</code>, everything proved about monoids —
 associativity, the identity laws, <a
 href="coqdoc/Riktig.Theory.Monoid.html#id_unique"><code>id_unique</code></a>
@@ -183,25 +176,31 @@ additive map preserves zero and negation, for free</h2>
 <p>The last section of <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
 proves something once that would otherwise be re-proved for every
-operation in the library. Take any map <code>f</code> between two groups
-that preserves addition — <code>f (a + b) == f a + f b</code>. Such a
-map automatically preserves <code>0</code> and negation as well, with no
-extra hypotheses. The setup fixes <code>f</code> and its two
-properties:</p>
+operation in the library. Take any map <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> between
+two groups that preserves addition —
+<code>f (a + b) == f a + f b</code>. Such a map automatically preserves
+<code>0</code> and negation as well, with no extra hypotheses. The setup
+fixes <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and its
+two properties:</p>
 <pre class="coq"><code>  Context (f : G -&gt; K).
   Context `{fp : Proper _ (equ ==&gt; equ) f}.
   Context (fadd : forall a b : G, f (a + b) == f a + f b).</code></pre>
-<p><code>fp</code> says <code>f</code> respects equality;
-<code>fadd</code> is the addition-preserving law. The backtick before
-<code>{fp : ...}</code> marks it as a typeclass-style argument rather
-than a plain one: whoever calls <a
+<p><code>fp</code> says <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
+respects equality; <code>fadd</code> is the addition-preserving law. The
+backtick before <code>{fp : ...}</code> marks it as a typeclass-style
+argument rather than a plain one: whoever calls <a
 href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
 doesn’t have to supply <code>fp</code> by hand, as long as a matching
 <code>Proper</code> fact is registered as an instance for their
-particular <code>f</code>. That <code>f 0 == 0</code> then follows. The
-argument: <code>f 0</code> added to itself equals <code>f 0</code>, and
-the only element that is unchanged by adding <code>f 0</code> is
-<code>0</code>, so cancel one copy of <code>f 0</code>:</p>
+particular <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>. That
+<code>f 0 == 0</code> then follows. The argument: <code>f 0</code> added
+to itself equals <code>f 0</code>, and the only element that is
+unchanged by adding <code>f 0</code> is <code>0</code>, so cancel one
+copy of <code>f 0</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mo>+</mo><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>f</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> preserves </mtext><mspace width="0.333em"></mspace></mrow><mi>+</mi><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">left identity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mo>+</mo><mn>0</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right identity</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">f\,0 + f\,0 \;=\; f(0 + 0) \quad\{f \text{ preserves } +\}\quad =\; f\,0 \quad\{\text{left identity}\}\quad =\; f\,0 + 0 \quad\{\text{right identity}\}</annotation></semantics></math></p>
 <pre class="coq"><code>  Theorem hom_zero : f 0 == 0.
   Proof.
@@ -218,11 +217,12 @@ goal <code>f 0 == 0</code> to <code>f 0 + f 0 == f 0 + 0</code>. Then
 the chain: <code>f 0 + f 0 == f (0 + 0)</code> by <code>fadd</code>
 (backwards); <code>f (0 + 0) == f 0</code> because
 <code>0 + 0 == 0</code> by the left-identity law <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> inside
-<code>f</code>; and <code>f 0 == f 0 + 0</code> by the right-identity
-law <a href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a>.
-Cancelling the shared <code>f 0</code> leaves <code>f 0 == 0</code>. The
-companion lemma <a
+href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> inside <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>; and
+<code>f 0 == f 0 + 0</code> by the right-identity law <a
+href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a>. Cancelling the
+shared <code>f 0</code> leaves <code>f 0 == 0</code>. The companion
+lemma <a
 href="coqdoc/Riktig.Theory.Group.html#hom_neg"><code>hom_neg</code></a>,
 with statement <code>forall a : G, f (- a) == - f a</code>, preserves
 negation, and it in turn uses <a

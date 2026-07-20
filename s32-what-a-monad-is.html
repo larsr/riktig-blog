@@ -19,8 +19,10 @@ such computations one after another, feeding each result into the next.
 Every step has to first check whether the previous one failed, and if it
 did, stop and fail too. Written out by hand, a sequence of three lookups
 becomes three nested case analyses, most of the code being the same
-failure-check copied over and over. A <em>monad</em> is the small
-structure that writes that check exactly once.</p>
+failure-check copied over and over. A <em>monad</em> is a pair of
+operations — sequence and inject — with the failure-check for sequencing
+written once, inside the operation itself, instead of copied at every
+call site.</p>
 <h2 id="two-operations-sequence-and-inject">Two operations: sequence,
 and inject</h2>
 <p>In Coq a computation that may fail is a value of the
@@ -45,7 +47,8 @@ href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>
 injects an <code>A</code> into <code>M A</code>. The infix notation
 <code>&gt;&gt;=</code> is attached to bind, so
 <code>p &gt;&gt;= f</code> reads “run <code>p</code>, then feed its
-result to <code>f</code>”.</p>
+result to <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>”.</p>
 <p>For <code>option</code>, both operations are a few lines, from <a
 href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>:</p>
 <pre class="coq"><code>#[global] Instance Option_HasBind : HasBind option :=
@@ -102,7 +105,8 @@ m \mathbin{&gt;\!\!&gt;\!\!=} \eta \;=\; m, \qquad
 <ul>
 <li><a
 href="coqdoc/Riktig.Interface.Monad.html#bind_ret_l"><code>bind_ret_l</code></a>:
-injecting <code>x</code> and then binding into <code>f</code> is just
+injecting <code>x</code> and then binding into <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is just
 <code>f x</code> — <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
 the left of a bind does nothing.</li>
@@ -214,26 +218,31 @@ href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
 distributes over <code>+</code> and <a
 href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
 looks like an addition, so it is tempting to expect a distributivity law
-connecting them: binding a choice into <code>f</code> ought to equal
-choosing between the two binds. In symbols,</p>
+connecting them: binding a choice into <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> ought
+to equal choosing between the two binds. In symbols,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mover><mo>=</mo><mo accent="false">?</mo></mover><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;\stackrel{?}{=}\; (p \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&lt;|&gt;} (q \mathbin{&gt;\!\!&gt;\!\!=} f).</annotation></semantics></math></p>
 <p>This is false, and the reason is exactly the ordered, committed
 nature of <a
 href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>.
 On the left, <code>p &lt;|&gt; q</code> decides <em>first</em>, before
-<code>f</code> is ever consulted. If <code>p</code> succeeds, the choice
-commits to <code>p</code>’s branch — and if <code>f</code> then fails on
-<code>p</code>’s result, the whole left side has failed, with no way
-back to <code>q</code>. On the right, <code>p &gt;&gt;= f</code> and
-<code>q &gt;&gt;= f</code> are each computed in full before the choice
-is made, so if <code>p &gt;&gt;= f</code> fails, the choice quietly
-falls back to <code>q &gt;&gt;= f</code>. The two sides disagree
-precisely when <code>f</code> turns a success of <code>p</code> into a
-failure.</p>
+<a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is
+ever consulted. If <code>p</code> succeeds, the choice commits to
+<code>p</code>’s branch — and if <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> then
+fails on <code>p</code>’s result, the whole left side has failed, with
+no way back to <code>q</code>. On the right, <code>p &gt;&gt;= f</code>
+and <code>q &gt;&gt;= f</code> are each computed in full before the
+choice is made, so if <code>p &gt;&gt;= f</code> fails, the choice
+quietly falls back to <code>q &gt;&gt;= f</code>. The two sides disagree
+precisely when <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> turns a
+success of <code>p</code> into a failure.</p>
 <p>The counterexample makes this concrete: let <code>p</code> always
 succeed with <code>O</code>, let <code>q</code> always succeed with
-<code>S O</code>, and let <code>f</code> fail exactly on <code>O</code>
-and succeed otherwise. From <a
+<code>S O</code>, and let <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> fail
+exactly on <code>O</code> and succeed otherwise. From <a
 href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>:</p>
 <pre class="coq"><code>Definition counter_p : Parser nat nat := ret O.
 Definition counter_q : Parser nat nat := ret (S O).
@@ -243,7 +252,8 @@ Definition counter_f (n : nat) : Parser nat nat :=
   | S _ =&gt; ret n
   end.</code></pre>
 <p>Trace both sides on any input. The left side commits to
-<code>p</code>, whose result <code>O</code> sends <code>f</code>
+<code>p</code>, whose result <code>O</code> sends <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
 straight to <a
 href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>O</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; p \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; f\,O \;=\; \mathsf{fail}.</annotation></semantics></math></p>
@@ -289,16 +299,19 @@ actually do, and here the committed choice of <a
 href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
 is exactly what breaks it.</p>
 <p>There <em>is</em> a restricted form that holds — the two sides agree
-whenever <code>f</code> cannot turn a success of <code>p</code> into a
-failure, which is the one thing the counterexample violates:</p>
+whenever <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> cannot
+turn a success of <code>p</code> into a failure, which is the one thing
+the counterexample violates:</p>
 <pre class="coq"><code>Lemma bind_alt_distr_when_no_backtrack :
   forall S T U (p q : Parser S T) (f : T -&gt; Parser S U),
     (forall input : S, bind p f input = None -&gt; p input = None) -&gt;
     bind (alt p q) f == alt (bind p f) (bind q f).</code></pre>
 <p>The hypothesis says: whenever <code>p &gt;&gt;= f</code> fails, it
-was already <code>p</code> that failed, never <code>f</code>. Under that
-condition there is nothing for the right side to fall back to that the
-left side missed, and the distributivity goes through.</p>
+was already <code>p</code> that failed, never <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>. Under
+that condition there is nothing for the right side to fall back to that
+the left side missed, and the distributivity goes through.</p>
 <h2 id="sequencing-and-choice-together">Sequencing and choice,
 together</h2>
 <p>With both structures in place, a parser is written by combining

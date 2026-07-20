@@ -26,30 +26,33 @@ composition</h2>
 some other effect). It comes with two operations: <code>ret x</code>
 produces the value <code>x</code> with no effect, and
 <code>bind m f</code> — written <code>m &gt;&gt;= f</code> — runs
-<code>m</code>, and if it produced a value, hands that value to
-<code>f</code> to get the next computation. Throughout, <code>==</code>
-is a setoid equality: a chosen equivalence relation, one per result
-type, that every operation must respect. For the <code>option</code>
-monad it is simple — <code>Some a == Some b</code> holds exactly when
-<code>a = b</code>.</p>
+<code>m</code>, and if it produced a value, hands that value to <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> to get
+the next computation. Throughout, <code>==</code> is a setoid equality:
+a chosen equivalence relation, one per result type, that every operation
+must respect. For the <code>option</code> monad it is simple —
+<code>Some a == Some b</code> holds exactly when <code>a = b</code>.</p>
 <p>An ordinary function composes with <code>∘</code>: given
 <code>f : A -&gt; B</code> and <code>g : B -&gt; C</code>, the composite
-<code>g ∘ f</code> feeds <code>f</code>’s output into <code>g</code>.
-When the functions are effectful — of the shape <code>A -&gt; M B</code>
-and <code>B -&gt; M C</code>, each returning a value <em>inside</em> the
-monad <code>M</code> — plain <code>∘</code> no longer type-checks:
-<code>f</code>’s output is an <code>M B</code>, but <code>g</code> wants
-a <a
+<code>g ∘ f</code> feeds <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s
+output into <code>g</code>. When the functions are effectful — of the
+shape <code>A -&gt; M B</code> and <code>B -&gt; M C</code>, each
+returning a value <em>inside</em> the monad <code>M</code> — plain
+<code>∘</code> no longer type-checks: <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s
+output is an <code>M B</code>, but <code>g</code> wants a <a
 href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>.
-Kleisli composition is the fix. It runs <code>f</code>, then <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s
+Kleisli composition is the fix. It runs <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>, then
+<a href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s
 its value into <code>g</code>, threading the monad through:</p>
 <pre class="coq"><code>Notation &quot;f &gt;=&gt; g&quot; := (fun x =&gt; bind (f x) g) (at level 55, right associativity).</code></pre>
 <p>So <code>(f &gt;=&gt; g) x</code> is <code>f x &gt;&gt;= g</code>:
-run <code>f</code> on <code>x</code>, and pipe the result into
-<code>g</code>. This is <code>∘</code> for functions that live in a
-monad, and it is what lets us write a pipeline of effectful steps as one
-arrow.</p>
+run <a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
+on <code>x</code>, and pipe the result into <code>g</code>. This is
+<code>∘</code> for functions that live in a monad, and it is what lets
+us write a pipeline of effectful steps as one arrow.</p>
 <h2 id="a-kleisli-isomorphism-a-round-trip-that-lands-on-ret">A Kleisli
 isomorphism: a round trip that lands on <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a></h2>
@@ -273,17 +276,9 @@ up:</p>
 href="coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion_nat_pair_check"><code>channel_insertion_nat_pair_check</code></a>
 is a proof that <code>split_n &gt;=&gt; sum_pair</code> and
 <code>split_n &gt;=&gt; ki_to nat_pair_codec &gt;=&gt; ki_from nat_pair_codec &gt;=&gt; sum_pair</code>
-agree on every input: running <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#split_n"><code>split_n</code></a>
-and then <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#sum_pair"><code>sum_pair</code></a>
-directly gives the same result as running <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#split_n"><code>split_n</code></a>,
-encoding the pair through Cantor’s bijection to a single
-<code>nat</code>, decoding it back, and only then running <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#sum_pair"><code>sum_pair</code></a>.
-The serialization channel is invisible to the answer — which is the
-whole point, and now a checked fact rather than a hope.</p>
+agree on every input. The serialization channel is invisible to the
+answer — which is the whole point, and now a checked fact rather than a
+hope.</p>
 <p><em>Next: connecting this exact equality to a lattice of channel
 fault classes, so that a channel that is allowed to lose or duplicate
 messages gives a refinement statement in place of an exact

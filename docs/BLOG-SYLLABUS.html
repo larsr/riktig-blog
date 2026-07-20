@@ -388,12 +388,11 @@ to get a working parser with no hand-written parsing code.</li>
 <li><strong>exp’s derivative, log, and an honest kink in ReLU</strong>
 [has code: Theory/Log.v, Theory/MLDerivatives.v] — sequel to entry 44.
 Why <code>log</code> and <code>exp</code>’s own derivative both need a
-hypothesis this codebase’s four <a
-href="../coqdoc/Riktig.Interface.Exp.html#Exp"><code>Exp</code></a> laws
-don’t supply (surjectivity, i.e. completeness) and say so explicitly
-instead of hiding it; ReLU’s one-sided derivatives, proved for real away
-from zero, with no claim at the kink where the classical function
-genuinely isn’t differentiable.</li>
+hypothesis this codebase’s four <code>Exp</code> laws don’t supply
+(surjectivity, i.e. completeness) and say so explicitly instead of
+hiding it; ReLU’s one-sided derivatives, proved for real away from zero,
+with no claim at the kink where the classical function genuinely isn’t
+differentiable.</li>
 <li><strong>Curry, uncurry, and what “isomorphism” buys you over “round
 trip”</strong> [has code: Theory/BilinearVS.v, Theory/VSIso.v] — sequel
 to entry 5. Bilinear maps form a vector space the same way linear maps
@@ -474,6 +473,92 @@ problem movement: hand-compilation is a sequence of unchecked design
 decisions, and every one is a place where correctness silently dies; the
 post’s claim is that each step can instead be a rewrite with respect to
 an equivalence on what memory means.</li>
+</ol>
+<h2 id="part-14--symmetry-groups-and-physics-in-geometric-algebra">Part
+14 — Symmetry groups and physics in geometric algebra</h2>
+<p>Read docs/GA-ROADMAP.md’s “Physics extension” section IN FULL before
+writing any of the three posts below — it records the web research
+behind every honesty judgment call these posts make, and quoting from it
+directly (never re-deriving the judgment from scratch) is the point. All
+three build on entries 6 (polarization/geometric algebra) and 22
+(geometric algebra’s payoff) — recap the geometric product and the
+contraction axiom in your own words, never by bare number.</p>
+<ol start="58" type="1">
+<li><strong>Symmetry groups live inside geometric algebras</strong> [has
+code: Theory/Cliff2Rotor.v, Impl/Cliff3.v] — the even subalgebra of
+Cl(2,0) is a proved ring isomorphism to the complex numbers, its unit
+elements form a group isomorphic to U(1)
+(<code>rotor_composition_ is_u1</code>); the even subalgebra of Cl(3,0)
+is the quaternions, its unit elements form Spin(3) ≅ SU(2), and the
+sandwich map <a
+href="../coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>
+double-covers SO(3) (<a
+href="../coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_neg"><code>c3_rotate_neg</code></a>:
+a rotor and its negation act identically on vectors — the 720°/“plate
+trick” fact, made an explicit Coq theorem, not asserted). ONE paragraph,
+no more, on SU(3): name the one uncontested adjacent fact
+(Aut(octonions)=G2, the SU(3)-fixing-one-imaginary-unit subgroup —
+Günaydin &amp; Gürsey 1973, Baez 2002) and name that getting the FULL
+Standard Model group from one Clifford algebra is an open, non-consensus
+research cluster (Trayling-Baylis, Furey, Stoica — cite by
+author/venue/year, exactly as GA-ROADMAP.md records them), never
+presented as equally settled. Movement order: the problem (what does it
+mean for a rotation group to “live inside” an algebra of directed
+volumes, with zero mention of U(1)/SU(2)/Cl until movement 2), then the
+two proved isomorphisms with real Coq, then usage (composing
+rotors).</li>
+<li><strong>Maxwell’s four equations, one equation</strong> [has code:
+Impl/Cliff13.v, Theory/Maxwell.v] — the problem: why does
+electromagnetism need four separate vector-calculus laws, and is that
+four-ness fundamental or an artifact of how the fields were split apart?
+The spacetime algebra Cl(1,3), the field bivector F = E + IB, the vector
+derivative ∇ disclosed as an explicit hypothesis (say plainly why: this
+post proves the ALGEBRAIC identity, not real analysis — the same
+disclosed-hypothesis move as s45’s <a
+href="../coqdoc/Riktig.Interface.Integral.html#Integral"><code>Integral</code></a>
+class or s52’s <code>log</code>). Walk <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#nabla_F_grade_decomposition"><code>nabla_F_grade_decomposition</code></a>
+per Rule 5: the blackboard grade argument first (∇ has grade 1, F has
+grade 2, so ∇F has only a grade-1 and a grade-3 part), then the Coq
+theorem and its proof (a <code>ring</code>-closed computation — say so,
+and say why that’s honest here: it’s genuine bilinear expansion, not
+hidden hand-waving). Identify all four classical equations by name
+against the surviving coefficients (<a
+href="../coqdoc/Riktig.Theory.Maxwell.html#nabla_F_0"><code>nabla_F_0</code></a>..<a
+href="../coqdoc/Riktig.Theory.Maxwell.html#nabla_F_3"><code>nabla_F_3</code></a>
+are Gauss + Ampère-Maxwell; the vanishing trivector coefficients in <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#nabla_F_eq_J"><code>nabla_F_eq_J</code></a>’s
+hypotheses are no-monopoles + Faraday) — and say honestly that the
+trivector vanishing is a hypothesis here, not a free theorem (it holds
+automatically once F comes from a four-potential, which this development
+does not build).</li>
+<li><strong>Electrons, quarks, and gluons in this framework</strong>
+[has code: Impl/Cliff3.v, Theory/SU3Algebra.v] — sequel to entry 58. The
+problem: standard quantum mechanics introduces spin as a bare postulate,
+the factor of 1/2, and the imaginary unit <code>i</code> in the
+Pauli/Schrödinger equations with no geometric picture — genuinely ad
+hoc, not a strawman (this is why spin gets memorized, not derived, in
+most courses). The GA answer for the electron: a spinor is a real even
+multivector <code>ψ = √ρ·R</code> (Hestenes 1967/1984), the pseudoscalar
+<code>I3</code> plays <code>i</code>’s role as a literal oriented volume
+(proved central via <a
+href="../coqdoc/Riktig.Impl.Cliff3.html#c3_e1_I3_comm"><code>c3_e1_I3_comm</code></a>
+etc., not asserted), and the double cover is <a
+href="../coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_neg"><code>c3_rotate_neg</code></a>,
+already proved. For quarks and gluons: color charge is the su(3) Lie
+algebra (<a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>),
+rank 2 (<a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html#su3_cartan_38"><code>su3_cartan_38</code></a>
+— two independent color quantum numbers, why quarks need three colors
+not two), with the SAME honest SU(3) paragraph as entry 58 (do not
+repeat it at length — one sentence recapping, then move on).
+<strong>Mandatory, non-negotiable paragraph, stated plainly and not
+softened</strong>: GA does NOT explain Pauli exclusion. Antisymmetry of
+the fermion wavefunction is the spin-statistics theorem (Fierz 1939,
+Pauli 1940 — relativistic QFT, unrelated to Cl(3,0)’s rotor structure);
+say this explicitly, do not let the post’s enthusiasm about spin’s
+geometry imply otherwise by omission.</li>
 </ol>
 <h2 id="notes-for-whoever-writes-these">Notes for whoever writes
 these</h2>
