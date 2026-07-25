@@ -410,6 +410,52 @@ touches_only_{swap,sum,qsort} at L1, L4</code></pre>
 <code>Admitted</code>, each carries a proof-sketch comment, and
 docs/TODO.md lists them. Everything else keeps the tree’s zero-Admitted
 status.</p>
+<p><strong>Equiv.v — DONE 2026-07-21.</strong> <a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#pequiv"><code>pequiv</code></a>
+(<code>MemT Z Z a</code> programs agree, from every starting machine, on
+every <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#Eval"><code>Eval</code></a>-derivable
+result and FINAL MACHINE — sp/hp included, the conservative end of §5’s
+design space, not yet weakened to store-only since no law has needed it)
+is registered as the <a
+href="../coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a>/<code>Equivalence</code>
+on each <code>MemT Z Z a</code>. <a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#bind_t_proper"><code>bind_t_proper</code></a>/<a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#then_t_proper"><code>then_t_proper</code></a>
+(<code>Proper (equ ==&gt; pointwise_relation a equ ==&gt; equ) bind_t</code>
+/ <code>Proper (equ ==&gt; equ ==&gt; equ) then_t</code>, exactly §5’s
+<code>bindT</code>/<code>seqT</code> signatures) go through <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#bind_eval"><code>bind_eval</code></a>
+directly: a run of a bind splits into a run of the prefix and a run of
+the continuation, each replaced by its equivalent independently. <a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#while_cong"><code>while_cong</code></a>
+(equal condition, body and continuation give an equal loop — §5’s “While
+needs its own congruence”) does not decompose through <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#bind_eval"><code>bind_eval</code></a>,
+since the interpreter’s <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#While"><code>While</code></a>
+clause recurses on the SAME syntax node rather than a smaller one; it is
+proved instead by induction on fuel, mirroring <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#interp_mono"><code>interp_mono</code></a>/<a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#interp_adequate"><code>interp_adequate</code></a>’s
+own three-way <code>Nat.max</code> combination of the
+condition/body/re-entry sub-runs. No proof inverts an <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#Eval"><code>Eval</code></a>
+derivation directly — everything factors through <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#interp_sound"><code>interp_sound</code></a>/<a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#interp_adequate"><code>interp_adequate</code></a>/<a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#eval_interp"><code>eval_interp</code></a>,
+per Semantics.v’s own discipline. A smoke-test Example (<a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#bind_t_proper_rewrites"><code>bind_t_proper_rewrites</code></a>)
+invokes the ordinary <code>rewrite</code> tactic through <a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#bind_t_proper"><code>bind_t_proper</code></a>
+— literally the capability coq-memprog’s own SwapProof attempt lacked.
+Zero Admitted, zero Axiom. What Equiv.v deliberately leaves for
+MemLaws.v (Phase 3): <a
+href="../coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>’s
+own monad laws (left/right identity, associativity) — those are
+within-level rewrite <em>algebra</em>, not setoid plumbing, and the file
+layout (§4) assigns them to MemLaws.v.</p>
 <p><strong>Phase 3 — the rewriting rules</strong>: MemLaws.v proved (the
 within-level algebra, each law a Qed); Refines.v proved (composition);
 then convert obligations to Qed smallest-first: the L1≈L2 links are pure

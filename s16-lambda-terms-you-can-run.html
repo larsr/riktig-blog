@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lambda terms you can run: de Bruijn, combinators, CPS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="lambda-terms-you-can-run-de-bruijn-combinators-cps">Lambda terms
+you can run: de Bruijn, combinators, CPS</h1>
+<p><em>Fourth post in the series documenting the <strong>riktig</strong>
+project.</em></p>
+<blockquote>
+<p><strong>What we are doing, and why.</strong> We are building software
+whose correctness is proved, layer by layer, in the Coq proof assistant.
+The goal is <em>modifiability</em>: code where a change only obliges you
+to re-establish a few local facts. Every post starts from zero. <a
+href="s11-structures-grow-arrows.html">The post on structures growing
+arrows</a> ended on a cliffhanger: cartesian closed categories are
+exactly the worlds where lambda calculus makes sense. Today we build the
+lambda calculus itself — as a datatype you can compute with, not just
+admire.</p>
+</blockquote>
+<p>The lambda calculus is the smallest programming language that is
+still a programming language: variables, functions, application — three
+constructions, nothing else, Turing-complete. Formalizing it forces one
+famous question first.</p>
+<h2 id="variables-are-not-names-they-are-distances">Variables are not
+names — they are distances</h2>
+<p>Textbook lambda terms use names: <code>λx. λy. x y</code>. Names are
+treacherous. Is <code>λx.x</code> the same program as <code>λy.y</code>?
+(Yes — but now “same” needs a definition, α-equivalence.) Worse,
+substituting under a binder can <em>capture</em> a variable that just
+happened to share a name — the oldest bug in the book, and one that
+still bites real macro systems and compilers.</p>
+<p><strong>De Bruijn’s move: delete the names.</strong> A variable is a
+number — <em>how many binders up is my λ?</em></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mspace width="1.0em"></mspace><mo>⇝</mo><mspace width="1.0em"></mspace><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mn>1</mn><mspace width="0.278em"></mspace><mn>0</mn></mrow><annotation encoding="application/x-tex">\lambda x.\, \lambda y.\, x\, y \quad\rightsquigarrow\quad \lambda.\, \lambda.\, 1\; 0</annotation></semantics></math></p>
+<p><code>0</code> means “the nearest binder”, <code>1</code> the one
+above it. In <a
+href="coqdoc/Riktig.Lambda.Syntax.html"><code>theories/Lambda/Syntax.v</code></a>
+the whole language is three lines:</p>
+<pre class="coq"><code>Inductive tm : Type :=
+  | Var (n : nat)
+  | Abs (b : tm)
+  | App (f a : tm).</code></pre>
+<p>What did the numbers buy us?</p>
+<ul>
+<li><strong>α-equivalence becomes <code>=</code>.</strong>
+<code>λx.x</code> and <code>λy.y</code> are both
+<code>Abs (Var 0)</code> — <em>the same term</em>, structurally. A whole
+equivalence relation evaporates.</li>
+<li><strong>Capture becomes arithmetic.</strong> Substitution must
+adjust indices when it walks under a binder (<a
+href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> —
+shift free variables up) — a bookkeeping function with a two-line
+invariant, instead of a side-condition (“provided x is not free in N…”)
+that every proof must drag along. The file’s <a
+href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>/<a
+href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> are
+the textbook twenty lines, and a capture-avoidance <code>Example</code>
+checks the classic trap by <code>reflexivity</code>.</li>
+</ul>
+<p>The price is honesty about arithmetic; the prize is that every proof
+about terms is structural induction with no naming side-conditions.
+Machines love it. (Humans get used to it.)</p>
+<h2 id="terms-you-can-run">Terms you can run</h2>
+<p>A calculus is not a programming language until it <em>runs</em>.
+<code>Syntax.v</code> gives evaluation twice, and proves the two
+agree:</p>
+<ul>
+<li>a <strong>relation</strong>
+<code>step : tm -&gt; tm -&gt; Prop</code> — call-by-value β-reduction
+with its congruence rules; good for proofs;</li>
+<li>a <strong>function</strong>
+<code>step_fn : tm -&gt; option tm</code> — executable; good for
+running; with <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn_sound"><code>step_fn_sound</code></a>
+and <a
+href="coqdoc/Riktig.Lambda.Syntax.html#step_fn_complete"><code>step_fn_complete</code></a>
+tying them together, and a fuelled driver
+<code>eval : nat -&gt; tm -&gt; tm</code> on top
+(<code>eval_sound : star t (eval fuel t)</code>).</li>
+</ul>
+<p>So inside Coq, <code>Compute (eval 100 some_term)</code> evaluates
+lambda code — and the examples in the file are discharged by
+<code>reflexivity</code>, which means the <em>kernel itself</em> runs
+the programs when it checks the file:</p>
+<pre class="coq"><code>Example eval_id_id : eval 10 (App idt idt) = idt.
+Proof. reflexivity. Qed.</code></pre>
+<p>(<a href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a>
+is the identity, <code>Abs (Var 0)</code>.) <code>reflexivity</code>
+succeeds only because both sides compute to the same term. Evaluation is
+not something we argue about; it is something the kernel performs. (A
+standalone extracted evaluator — lambda code running as a native binary
+— is the queued next step, the same extraction pipeline the memory-DSL
+uses.)</p>
+<h2 id="two-side-quests-briefly-combinators-and-cps">Two side quests,
+briefly: combinators and CPS</h2>
+<p>Two more classic transformations live in the repository as runnable,
+verified artifacts. This post’s one idea is the runnable term datatype
+above, so each gets a paragraph here and a file you can open.</p>
+<p><strong>Combinators</strong> (<a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>theories/Lambda/SKI.v</code></a>):
+three closed combinators —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">S\,f\,g\,x = f\,x\,(g\,x)</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">K\,x\,y = x</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">I\,x = x</annotation></semantics></math>
+— suffice to express every lambda term, so even <em>variables</em> can
+be deleted. The file defines the combinator language (<a
+href="coqdoc/Riktig.Lambda.SKI.html#CS"><code>CS</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CK"><code>CK</code></a>, <a
+href="coqdoc/Riktig.Lambda.SKI.html#CI"><code>CI</code></a>, application
+<code>@@</code>) with an executable normalizer, and implements
+<strong>bracket abstraction</strong> — the algorithm that eliminates a
+variable — with the theorem
+<code>babs_correct : forall t u, cstar (babs t @@ u) (csub u t)</code>:
+the abstracted term, applied, reduces to the substitution — β-reduction
+rebuilt without binders. The classic <strong>B, C, K, W</strong> basis
+is derived from <code>S</code> and <code>K</code>, its specifications
+are <code>Example</code>s discharged by running the normalizer, and
+<code>S</code> is recovered from <a
+href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>,
+<a href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>,
+<code>W</code> alone. We will meet combinators again when the lambda
+track meets the machine-code track.</p>
+<p><strong>Continuation-passing style</strong> (<a
+href="coqdoc/Riktig.Lambda.CPS.html"><code>theories/Lambda/CPS.v</code></a>):
+the Fischer/Plotkin call-by-value CPS transform — control flow made into
+an explicit argument, the continuation — as one
+<code>Fixpoint cps</code>, plus the de Bruijn index accounting the
+textbook rules omit (the file’s header comment does that bookkeeping in
+public). One subtle point the proofs caught: a CPS program does not hand
+your continuation the original value but its <strong>CPS-converted
+twin</strong> (<a
+href="coqdoc/Riktig.Lambda.CPS.html#psi"><code>psi</code></a> in the
+file), and the verification examples check exactly that by running both
+sides through the evaluator. The twin becomes observable at the shell in
+the post about the evaluator running as an extracted binary, where <a
+href="coqdoc/Riktig.Lambda.CPS.html#cps"><code>cps</code></a> is
+extracted into a binary alongside <a
+href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>.</p>
+<h2 id="where-the-two-posts-meet">Where the two posts meet</h2>
+<p>The post on structures growing arrows built categories; this post
+built programs. The junction is <a
+href="coqdoc/Riktig.Impl.StlcCat.html"><code>theories/Impl/StlcCat.v</code></a>:
+simply-typed lambda terms, <em>quotiented by a fragment of βη-conversion
+— exactly the instances the category laws need</em>, form a <a
+href="coqdoc/Riktig.Interface.Category.html#Category.Category"><code>Category</code></a>
+— objects are types, an arrow is a program, composition is
+<code>λx. g (f x)</code>, and the category laws are conversion facts.
+This is what the hom-setoid design was built for: “equality” of arrows
+is <em>programs behave alike</em>, and the whole categorical toolkit
+from the post on structures growing arrows now applies to syntax.</p>
+<p>Next: conversion becomes a first-class rewriting relation — so that
+<code>IF b THEN g ELSE h</code> with <code>b == TRUE</code> rewrites to
+<code>g</code> in one step, partial evaluation as algebra. The lambda
+calculus stops being an object of study and becomes a tool.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
+(terms, evaluation) · <a
+href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>
+(combinators, bracket abstraction) · <a
+href="coqdoc/Riktig.Lambda.CPS.html"><code>Lambda/CPS.v</code></a> (the
+CPS transform) · <a
+href="coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>
+(programs form a category).</p>
+</main>
+</body>
+</html>

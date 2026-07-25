@@ -44,13 +44,13 @@ models all need <code>exp</code> at minimum.</p>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
 — done: <a
-href="../coqdoc/Riktig.Interface.Exp.html#exp_zero"><code>exp_zero</code></a>,
+href="../coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Exp.html#exp_add"><code>exp_add</code></a>,
+href="../coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Exp.html#exp_pos"><code>exp_pos</code></a>,
+href="../coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Exp.html#exp_mono"><code>exp_mono</code></a>
+href="../coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
 as laws, <a
 href="../coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>
 deriving <a
@@ -75,8 +75,30 @@ href="../coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>),
 the other half, surjectivity, needs completeness and is
 <code>log</code>’s own work. Ties to Stage C’s diffeomorphism work
 below, since <code>exp : R -&gt; R+</code> is the flagship example of an
-invertible differentiable map with a computable
-derivative).</label></li>
+invertible differentiable map with a computable derivative).
+<strong>partial, checked 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>
+exists and defines <a
+href="../coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a>
+with <a
+href="../coqdoc/Riktig.Theory.Log.html#exp_log"><code>exp_log</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_exp"><code>log_exp</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_injective"><code>log_injective</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_one"><code>log_one</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_mul"><code>log_mul</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_inv"><code>log_inv</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Log.html#log_mono"><code>log_mono</code></a>
+all proved. What is missing is the surjectivity itself: the file takes
+<code>exp_surj : forall y, 0 &lt; y -&gt; {x | exp_fn x == y}</code> as
+a section hypothesis (its header explains why the four <code>Exp</code>
+laws cannot give it), and no file in the tree discharges that
+hypothesis.</label></li>
 </ul>
 <h2
 id="stage-b--concrete-differentiable-layers-already-queued-analysis-stage-6½">Stage
@@ -195,8 +217,18 @@ the one remaining gap is the elimination/triangular-decomposition
 composition argument (write any matrix as a product of elementary
 matrices and a triangular matrix; det of a triangular matrix = product
 of its diagonal). Normalizing flows are a second, independent, concrete
-reason to finish that proof — worth knowing when prioritizing
-L5.</label></li>
+reason to finish that proof — worth knowing when prioritizing L5.
+<strong>still open, but the stated blocker is gone (checked
+2026-07-26)</strong>: <a
+href="../coqdoc/Riktig.Impl.DetMulGeneral.html"><code>Impl/DetMulGeneral.v</code></a>
+proves
+<code>detM_mul : forall N (A B : Matrix N N F), detM (mat_mul A B) == detM A * detM B</code>
+over any <a
+href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+with no decidability hypothesis. The determinant half of this item is
+therefore available; the diffeomorphism half is not (no
+<code>Theory/Diffeomorphism.v</code> and no diffeomorphism definition
+anywhere in <code>theories/</code>).</label></li>
 <li><label><input type="checkbox" />Change-of-variables for densities
 specifically (the <code>p_X = p_Z · |det|</code> formula) — a light
 corollary of stage 6’s integral change-of-variables theorem once both it

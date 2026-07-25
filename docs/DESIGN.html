@@ -135,8 +135,9 @@ href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> — single-law
 property classes (<a
 href="../coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>, <a
 href="../coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>, …).
-<code>Interface/</code> — structure classes bundling ops and laws,
-axioms only, stated as readable <code>forall</code>s, with
+<code>Interface/</code> — structure classes stating laws over the Ops
+vocabulary (the ops are implicit class parameters, not fields), axioms
+only, stated as readable <code>forall</code>s, with
 <code>Instance</code> bindings connecting their axioms to the property
 classes. <code>Theory/</code> — lemmas derived generically via
 <code>Section</code>/<code>Context</code>, including the abstract
@@ -178,9 +179,9 @@ href="../coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code
 — when the algorithm has no separate abstract spec worth writing (there
 is no “Summation” or “Orthogonalization” Interface for it to satisfy)
 and is itself generic over an existing Interface (<a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid"><code>Monoid</code></a>,
+href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner"><code>PosInner</code></a>),
+href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>),
 not tied to one concrete carrier. The algorithm <em>is</em> the theory
 being studied. New operational vocabulary still belongs in
 <code>Interface/</code>; concrete data-structure representations still
@@ -298,88 +299,175 @@ to pairwise <code>Ordered</code>).</p></li>
 direction: implementations import theories, theories import structures,
 never the reverse; an algorithm written against an abstract interface
 must not import a concrete instance’s lemmas.</p></li>
-<li><p><strong>Interface record fields: <code>#[global]</code> locality,
-explicit carriers</strong> (decided 2026-07-03). Substructure and
-operational fields of a structure class are declared
-<code>#[global]</code>
-(<code>#[global] group_monoid :: Monoid G</code>), not with the default
-export locality — precisely so that rule 6’s fine-grained
-<code>Require Import</code> works: importing <code>Interface.Ring</code>
-alone brings the whole instance chain, no <code>Require Export</code>
-towers. And law fields annotate their carriers explicitly
+<li><p><strong>Structure classes: ops as implicit parameters, laws flat,
+module-wrapped</strong> (decided 2026-07-25, superseding the 2026-07-03
+substructure-field design). A structure class takes its operations as
+implicit class parameters from <a
+href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> and states its
+complete law set as flat fields — no substructure field, no operational
+field:</p>
+<pre class="coq"><code>Module Group.
+  Class Group (G : Type) {Ge : EqRel G} {Gz : Zero G}
+              {Ga : HasAdd G} {Gn : HasNeg G} := {
+    equivalence    : Equivalence (@equ G _);
+    associative    : forall x y w : G, (x + y) + w == x + (y + w);
+    ...
+  }.
+End Group.
+Notation Group := Group.Group.</code></pre>
+<p>The module wrapper is what lets the law fields keep unprefixed
+English names (<code>associative</code>, <code>left_inverse</code>)
+without colliding across structures; call sites qualify (<a
+href="../coqdoc/Riktig.Interface.Group.html#Group.associative"><code>Group.associative</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Field.html#Field.mul_left_inverse"><code>Field.mul_left_inverse</code></a>).
+Membership in the weaker structure is a derived instance below the
+module, outside it — <a
+href="../coqdoc/Riktig.Interface.Group.html#Group_is_Monoid"><code>Group_is_Monoid</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup_is_Group"><code>AbGroup_is_Group</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring_is_AbGroup"><code>Ring_is_AbGroup</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Field.html#Field_is_Ring"><code>Field_is_Ring</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace_is_AbGroup"><code>VectorSpace_is_AbGroup</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GA_is_Ring"><code>GA_is_Ring</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GA_is_ScaleLaws"><code>GA_is_ScaleLaws</code></a>
+— built by repackaging the fields, so deriving the weaker structure
+costs no new proofs. Where a carrier has already proved the weaker
+structure and would otherwise restate its laws to build the stronger
+one, the Interface file offers a smart constructor that copies them
+across (<a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace_from_parts"><code>VectorSpace_from_parts</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra_from_parts"><code>GeometricAlgebra_from_parts</code></a>).
+Each Interface file also binds its laws to the generic property classes
+with top-level <code>#[global] Instance</code>s
+(<code>Monoid_Associative : Assoc T add</code>,
+<code>Group_LeftInverse : Invl G add neg zero</code>,
+<code>Ring_LeftDistributive : DistL R add mult</code>), so proofs write
+<code>rewrite assoc</code> / <a
+href="../coqdoc/Riktig.Props.html#idl"><code>idl</code></a> / <a
+href="../coqdoc/Riktig.Props.html#invl"><code>invl</code></a> at any
+level of the tower. Because every level quantifies over the same op
+variables, a lemma proved over <a
+href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>
+applies first-order in a <a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
+or <a
+href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+context — no unfolding through an embedded record.</p>
+<p>Law fields still annotate their carriers explicitly
 (<code>forall a b : G</code>, not bare <code>forall a b</code>), because
-record elaboration does not infer them.</p>
-<p><strong>Why <code>#[global]</code> has to be written, every
-time</strong> (asked 2026-07-20): Coq’s <code>::</code> field syntax
-deliberately does not default to global. The older <code>:&gt;</code>
-syntax (now deprecated) <em>did</em> auto-register every such field as a
-global instance, and the Coq team removed that default specifically
-because it let instances leak into every importing file silently;
-<code>::</code> requires <code>#[global]</code>, <code>#[export]</code>,
-or <code>#[local]</code> per field so the author decides each one’s
-visibility on purpose. There is no project or Coq setting that restores
-the old auto-global behavior — this is intentional, not a gap. (Outside
-a <code>Section</code>, a plain top-level <code>Instance</code> is
-already global with no annotation needed; the annotation only does
-nothing when there is no enclosing <code>Section</code> to matter.
-Interface files here have no enclosing <code>Section</code>, so strictly
-the attribute is for clarity there — but on the record fields
-themselves, using <code>::</code> at all, the attribute is load-bearing
-regardless of section nesting, which is the case worth
-remembering.)</p></li>
+record elaboration does not infer them. In <code>Section</code>s,
+structure hypotheses use the qualified class name
+(<code>Context {G : Type}</code>{Group.Group
+G}<code>); when a section needs several structures over the same scalars, each further carrier declares its op binders explicitly, named by initial —</code>{eX
+: EqRel X} {zX : Zero X} {aX : HasAdd X} {nX : HasNeg X} {sX : HasScale
+F X}<code>— followed by the structure hypothesis (</code>{VX :
+VectorSpace F X}<code>);</code>Theory/Bilinear.v` is the model.</p>
+<p><strong>Why <code>#[global]</code> has to be written on any remaining
+<code>::</code> field</strong> (asked 2026-07-20; the tower’s classes
+now have plain fields, but e.g. <a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws"><code>ScaleLaws</code></a>’
+<code>scale_proper</code> still uses <code>::</code>): Coq’s
+<code>::</code> field syntax deliberately does not default to global.
+The older <code>:&gt;</code> syntax (now deprecated) <em>did</em>
+auto-register every such field as a global instance, and the Coq team
+removed that default specifically because it let instances leak into
+every importing file silently; <code>::</code> requires
+<code>#[global]</code>, <code>#[export]</code>, or <code>#[local]</code>
+per field so the author decides each one’s visibility on purpose. There
+is no project or Coq setting that restores the old auto-global behavior
+— this is intentional, not a gap. (Outside a <code>Section</code>, a
+plain top-level <code>Instance</code> is already global with no
+annotation needed; on a <code>::</code> record field the attribute is
+load-bearing regardless of section nesting.)</p></li>
 <li><p><strong>Naming: full descriptive words, no abbreviations</strong>
-(decided 2026-07-20, superseding the abbreviated style every structure
-file used before this date — <code>mon_idl</code>,
-<code>grp_invl</code>, <a
-href="../coqdoc/Riktig.Interface.InnerProduct.html#ip_add_l"><code>ip_add_l</code></a>,
-and similar are being retired file by file, tracked in
-<code>docs/TODO.md</code>). A structure’s field and lemma names read as
-English, prefixed by the structure’s own name in
-<code>snake_case</code>: <a
-href="../coqdoc/Riktig.Interface.Group.html#group_left_inverse"><code>group_left_inverse</code></a>,
-not <code>grp_invl</code>; <a
-href="../coqdoc/Riktig.Interface.Monoid.html#monoid_left_identity"><code>monoid_left_identity</code></a>,
-not <code>mon_idl</code>; <code>ring_left_distributive</code>, not <a
-href="../coqdoc/Riktig.Props.html#distl"><code>distl</code></a>. The
-bridging <code>Instance</code> that projects a field into its generic
-property class (<a
+(decided 2026-07-20, superseding the abbreviated style —
+<code>mon_idl</code>, <code>grp_invl</code>, <code>ip_add_l</code> —
+used before that date; since 2026-07-25 the structure-name prefix lives
+in the module path, not the identifier). A structure’s law fields read
+as English inside the module — <code>left_inverse</code>, not <a
+href="../coqdoc/Riktig.Props.html#invl"><code>invl</code></a>;
+<code>mul_associative</code>, not <code>mulA</code> — and the
+structure’s name arrives by qualification (<a
+href="../coqdoc/Riktig.Interface.Group.html#Group.left_inverse"><code>Group.left_inverse</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring.mul_associative"><code>Ring.mul_associative</code></a>),
+never as a <code>group_</code>/<code>ring_</code> prefix baked into the
+field name. The bridging <code>Instance</code> that projects a field
+into its generic property class (<a
 href="../coqdoc/Riktig.Props.html#Assoc"><code>Assoc</code></a>, <a
 href="../coqdoc/Riktig.Props.html#Idl"><code>Idl</code></a>, <a
 href="../coqdoc/Riktig.Props.html#Invl"><code>Invl</code></a>, …) is
-named the same way in <code>CamelCase</code>: <a
+named <code>Structure_LawName</code> in <code>CamelCase</code>: <a
 href="../coqdoc/Riktig.Interface.Group.html#Group_LeftInverse"><code>Group_LeftInverse</code></a>,
-not <code>Group_Invl</code>. This does not touch the generic
-property-class field names themselves (<a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>’s <a
+<a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring_MulAssociative"><code>Ring_MulAssociative</code></a>.
+Membership instances are <code>Stronger_is_Weaker</code>: <a
+href="../coqdoc/Riktig.Interface.Group.html#Group_is_Monoid"><code>Group_is_Monoid</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Field.html#Field_is_Ring"><code>Field_is_Ring</code></a>.
+This does not touch the generic property-class field names themselves
+(<a href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>’s <a
 href="../coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>, <a
 href="../coqdoc/Riktig.Props.html#idl"><code>idl</code></a>, <a
 href="../coqdoc/Riktig.Props.html#idr"><code>idr</code></a>, <a
 href="../coqdoc/Riktig.Props.html#invl"><code>invl</code></a>, <a
-href="../coqdoc/Riktig.Props.html#invr"><code>invr</code></a>,
-<code>commutes</code>, … stay as they are — those are the short, uniform
-vocabulary every structure’s laws resolve through inside a
-<code>calc</code> step’s brace, by design, and renaming them would touch
-every structure at once for no benefit at the call site). What changes
-is only the structure-specific field that <em>proves</em> the generic
-law.</p></li>
-<li><p><strong>A structure’s own documentation: show every law it
-carries, not just its own</strong> (decided 2026-07-20). A class that
-embeds another structure (<a
-href="../coqdoc/Riktig.Interface.Group.html#Group"><code>Group</code></a>
-embeds <a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid"><code>Monoid</code></a>
-via <code>group_monoid :: Monoid G</code>) is documented with a comment,
-immediately above the <code>Class</code>, that quotes ALL of the laws a
-value of the class must satisfy — the embedded structure’s laws
-verbatim, then the class’s own — so a reader sees the complete law set
-without opening another file. The embedding itself
-(<code>group_monoid :: Monoid G</code>) stays a single field reference,
-never copy-pasted-out into duplicate record fields (that would be
-redundant and wrong: <a
-href="../coqdoc/Riktig.Interface.Group.html#Group"><code>Group</code></a>
-does not reprove Monoid’s laws, it reuses them) — only the
-<em>documentation</em> is duplicated, in a comment, for the reader’s
-sake. <a
+href="../coqdoc/Riktig.Props.html#invr"><code>invr</code></a>, <a
+href="../coqdoc/Riktig.Props.html#comm"><code>comm</code></a>, <a
+href="../coqdoc/Riktig.Props.html#distl"><code>distl</code></a>, <a
+href="../coqdoc/Riktig.Props.html#distr"><code>distr</code></a>, … stay
+as they are — those are the short, uniform vocabulary every structure’s
+laws resolve through inside a <code>calc</code> step’s brace, by
+design). Since 2026-07-25 every structure class in
+<code>Interface/</code> is wrapped and carries no prefix — the last of
+them lost theirs the way <a
+href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+did, <code>ordered_field_le_total</code> becoming <a
+href="../coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>.
+What remains unwrapped is what should be: the operational and
+definitional classes (<a
+href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>,
+and the <code>Has…</code> classes), whose method name IS the vocabulary,
+and the data <code>Record</code>s (<a
+href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>),
+which carry a value rather than laws about a carrier.</p></li>
+<li><p><strong>A structure’s class body shows every law it carries, not
+just the ones it adds</strong> (decided 2026-07-20 as a documentation
+rule; since 2026-07-25 the class shape itself enforces it). Each class
+states its complete law set as real fields — <a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
+restates the <a
+href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
+laws before adding its multiplicative ones — so a reader sees everything
+a value of the class must satisfy without opening another file, and no
+comment has to duplicate what the code says. The cost is accepted
+openly: a concrete instance supplies each level’s fields in full (<a
+href="../coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a> gives <a
+href="../coqdoc/Riktig.Impl.Zr.html#Z_Group"><code>Z_Group</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Zr.html#Z_AbGroup"><code>Z_AbGroup</code></a>,
+<a href="../coqdoc/Riktig.Impl.Zr.html#Z_Ring"><code>Z_Ring</code></a>
+separately, reusing the same stdlib lemmas field by field). Deriving the
+weaker structure from the stronger one never reproves anything — the
+membership instances (<a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring_is_AbGroup"><code>Ring_is_AbGroup</code></a>,
+…) repackage the existing fields. <a
 href="../coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>
 is the model.</p>
 <p>Record field lists are column-aligned (the <code>:</code> or

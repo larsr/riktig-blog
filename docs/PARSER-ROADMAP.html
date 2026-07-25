@@ -50,7 +50,7 @@ pattern (post #6/#9) transported from <code>Vect</code> to
 <h2 id="wave-p1--the-categorical-substrate-monad-alternative">Wave P1 —
 the categorical substrate (Monad, Alternative)</h2>
 <ul class="task-list">
-<li><label><input type="checkbox" /><a
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
 — operational classes <a
 href="../coqdoc/Riktig.Interface.Monad.html#HasBind"><code>HasBind</code></a>/<a
@@ -67,23 +67,47 @@ A monad needs its OWN per-type <code>EqRel (M T)</code> — for
 <code>Parser S T</code> this will be extensional equality on the
 underlying function, matching <a
 href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>’s
-pattern for function spaces.</label></li>
-<li><label><input type="checkbox" /><a
+pattern for function spaces. <strong>done 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Interface.Monad.html"><code>theories/Interface/Monad.v</code></a>
+— <a
+href="../coqdoc/Riktig.Interface.Monad.html#HasBind"><code>HasBind</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Monad.html#HasReturn"><code>HasReturn</code></a>,
+the <code>&gt;&gt;=</code>/<code>&gt;=&gt;</code> notations, and <a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad.Monad</code></a>
+with the three laws under the names
+<code>left_identity</code>/<code>right_identity</code>/
+<code>associative</code>, plus <code>equivalence</code>/<a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>
+and the EqRel family <code>forall A, EqRel (M A)</code>.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>
 — <a
 href="../coqdoc/Riktig.Interface.Alternative.html#HasFail"><code>HasFail</code></a>/<a
 href="../coqdoc/Riktig.Interface.Alternative.html#HasAlt"><code>HasAlt</code></a>
-(<code>&lt;|&gt;</code>), laws: <a
-href="../coqdoc/Riktig.Interface.Alternative.html#alt_assoc"><code>alt_assoc</code></a>,
-and the two <a
+(<code>&lt;|&gt;</code>), laws: <code>alt_assoc</code>, and the two <a
 href="../coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
 identity laws (<code>fail_alt_l : fail &lt;|&gt; q == q</code>,
 <code>alt_fail_r : p &lt;|&gt; fail == p</code>) —
 <code>(M T, &lt;|&gt;, fail)</code> is a MONOID, not a group (no
 inverse), and NOT commutative in general (PEG ordered choice: order
-matters when both sides would succeed).</label></li>
-<li><label><input type="checkbox" /><strong>Investigate, don’t
-assume</strong>: does
+matters when both sides would succeed). <strong>done
+2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Interface.Alternative.html"><code>theories/Interface/Alternative.v</code></a>
+— <a
+href="../coqdoc/Riktig.Interface.Alternative.html#HasFail"><code>HasFail</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Alternative.html#HasAlt"><code>HasAlt</code></a>,
+the <code>&lt;|&gt;</code> notation, and <a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative.Alternative</code></a>
+with <code>associative</code>, <a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_left_identity"><code>fail_left_identity</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_right_identity"><code>fail_right_identity</code></a>,
+plus <code>equivalence</code>/<a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.alt_proper"><code>alt_proper</code></a>.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>Investigate,
+don’t assume</strong>: does
 <code>bind (alt p q) f == alt (bind p f) (bind q f)</code> hold for the
 Parser instance? Hand-analysis during planning says NO in general — once
 <code>p</code> succeeds, PEG has committed to that branch; if the
@@ -96,33 +120,84 @@ provable directly from <a
 href="../coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>’s
 definition). Find and state the correct restricted law (if one exists)
 rather than asserting the naive one; a proof search that fails to close
-is itself the finding, document it.</label></li>
-<li><label><input type="checkbox" /><a
+is itself the finding, document it. <strong>done 2026-07-26</strong>:
+the naive law is refuted, not assumed — <a
+href="../coqdoc/Riktig.Impl.Parser.html"><code>theories/Impl/Parser.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Impl.Parser.html#bind_alt_not_distributive"><code>bind_alt_not_distributive</code></a>
+gives the concrete counterexample (<code>p</code> always succeeds, <a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
+fails on its value), and <a
+href="../coqdoc/Riktig.Impl.Parser.html#bind_alt_distr_when_no_backtrack"><code>bind_alt_distr_when_no_backtrack</code></a>
+states the restricted law that does hold (<a
+href="../coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
+never turns a success of <code>p</code> into a failure). <a
+href="../coqdoc/Riktig.Impl.Parser.html#parser_bind_fail_l"><code>parser_bind_fail_l</code></a>
+proves <code>bind fail f == fail</code> for Parser; <a
+href="../coqdoc/Riktig.Theory.Monad.html"><code>theories/Theory/Monad.v</code></a>’s
+header records the second finding, that this is NOT derivable from the
+abstract Monad + Alternative laws, since nothing there connects <a
+href="../coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
+to <a
+href="../coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Theory.Monad.html"><code>Theory/Monad.v</code></a>
 — whatever is general and instance-independent: <a
-href="../coqdoc/Riktig.Interface.Monad.html#bind_proper"><code>bind_proper</code></a>,
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>,
 functor laws derived from <code>map f m := m &gt;&gt;= (ret ∘ f)</code>
 (<a
 href="../coqdoc/Riktig.Theory.Monad.html#map_id"><code>map_id</code></a>,
 <a
 href="../coqdoc/Riktig.Theory.Monad.html#map_compose"><code>map_compose</code></a>),
-and the corrected distributivity law above.</label></li>
-<li><label><input type="checkbox" /><a
+and the corrected distributivity law above. <strong>done
+2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Theory.Monad.html"><code>theories/Theory/Monad.v</code></a>
+— <a href="../coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Monad.html#map_id"><code>map_id</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Monad.html#map_compose"><code>map_compose</code></a>.
+<a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
+is a field of <a
+href="../coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>’s
+class, re-exposed to instance search as <a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad_bind_Proper"><code>Monad_bind_Proper</code></a>.
+The corrected distributivity law is NOT here but in <a
+href="../coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>,
+because it is Parser-specific; the header of <a
+href="../coqdoc/Riktig.Theory.Monad.html"><code>Theory/Monad.v</code></a>
+states why nothing general can be said.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
 — <code>option</code> as the simplest sanity-check instance
 (<code>Monad option</code>, no <a
-href="../coqdoc/Riktig.Interface.Alternative.html#Alternative"><code>Alternative</code></a>
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
 — <code>option</code> has no meaningful <a
 href="../coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
-without an extra choice, skip it there).</label></li>
-<li><label><input type="checkbox" /><a
+without an extra choice, skip it there). <strong>done
+2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Impl.OptionMonad.html"><code>theories/Impl/OptionMonad.v</code></a>
+— <a
+href="../coqdoc/Riktig.Impl.OptionMonad.html#Option_HasBind"><code>Option_HasBind</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.OptionMonad.html#Option_HasReturn"><code>Option_HasReturn</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.OptionMonad.html#Option_Monad"><code>Option_Monad</code></a>
+(three laws plus <a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>),
+<a
+href="../coqdoc/Riktig.Impl.OptionMonad.html#option_monad_check"><code>option_monad_check</code></a>;
+no <code>Alternative option</code> instance, with the reason given in
+the file header.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>
 — port <code>ParserCombinators.v</code>’s
 <code>Parser S T := S -&gt; option (T * S)</code> (plus the
 <code>Seq C S</code> sequence abstraction so it isn’t string-specific),
 give it <a
-href="../coqdoc/Riktig.Interface.Monad.html#Monad"><code>Monad</code></a>/<a
-href="../coqdoc/Riktig.Interface.Alternative.html#Alternative"><code>Alternative</code></a>
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>/<a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
 instances, prove the laws (including the corrected distributivity
 finding above), port <a
 href="../coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>/<a
@@ -134,31 +209,75 @@ href="../coqdoc/Riktig.Impl.Parser.html#between"><code>between</code></a>
 as derived combinators with the SAME input-length-as-structural- bound
 termination trick (cite <code>IMPLEMENTATION_NOTES.md</code>’s section
 on this verbatim in a comment — it is a real, non-obvious Coq technique
-worth preserving, not rediscovering).</label></li>
+worth preserving, not rediscovering). <strong>done 2026-07-26</strong>:
+<a
+href="../coqdoc/Riktig.Impl.Parser.html"><code>theories/Impl/Parser.v</code></a>
+— <code>Parser S T</code>, <code>Seq C S</code>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#stringSeq"><code>stringSeq</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Parser.html#Parser_Monad"><code>Parser_Monad</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Parser.html#Parser_Alternative"><code>Parser_Alternative</code></a>
+with all laws proved, the distributivity counterexample and its
+restricted law, and <a
+href="../coqdoc/Riktig.Impl.Parser.html#satisfy"><code>satisfy</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#any"><code>any</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#eos"><code>eos</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#char"><code>char</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#optional"><code>optional</code></a>/
+<a
+href="../coqdoc/Riktig.Impl.Parser.html#between"><code>between</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#seqL"><code>seqL</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#seqR"><code>seqR</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#many"><code>many</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#many1"><code>many1</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#sepBy1"><code>sepBy1</code></a>/<a
+href="../coqdoc/Riktig.Impl.Parser.html#skipMany"><code>skipMany</code></a>/<code>run</code>/
+<a
+href="../coqdoc/Riktig.Impl.Parser.html#runExact"><code>runExact</code></a>.
+The input-as-structural-bound passage from
+<code>IMPLEMENTATION_NOTES.md</code> is quoted in the file header, and
+no fuel parameter is introduced.</label></li>
 </ul>
 <h2 id="wave-p2--the-channel-insertion-theorem">Wave P2 — the
 channel-insertion theorem</h2>
 <ul class="task-list">
-<li><label><input type="checkbox" /><a
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
-— <code>Record KleisliIso (M : Type -&gt; Type)</code>{Monad M} (A B :
-Type) := { ki_to : A -&gt; M B; ki_from : B -&gt; M A; ki_fromto : ki_to
-&gt;=&gt; ki_from == (<span class="citation"
+— <code>Record KleisliIso (M : Type -&gt; Type)</code>{Monad.Monad M} (A
+B : Type) := { ki_to : A -&gt; M B; ki_from : B -&gt; M A; ki_fromto :
+ki_to &gt;=&gt; ki_from == (<span class="citation"
 data-cites="ret">@ret</span> M A); ki_tofrom : ki_from &gt;=&gt; ki_to
 == (<span class="citation" data-cites="ret">@ret</span> M B)
-}<code>— literally</code>VSIso<code>with</code>∘<code>replaced by</code>&gt;=&gt;<code>and the round-trip target replaced by</code>ret<code>instead of</code>id`.</label></li>
-<li><label><input type="checkbox" /><strong>The theorem, one line once
-framed right</strong>: given <code>prog1 : A -&gt; M B</code>,
+}<code>— literally</code>VSIso<code>with</code>∘<code>replaced by</code>&gt;=&gt;<code>and the round-trip target replaced by</code>ret<code>instead of</code>id<code>. **done 2026-07-26**:</code>theories/Theory/KleisliIso.v<code>— the record with</code>ki_to<code>/</code>ki_from<code>/</code>ki_fromto<code>/</code>ki_tofrom<code>. The two round-trip laws are stated pointwise (</code>forall
+a, bind (ki_to a) ki_from == ret
+a<code>) rather than pointfree, because</code>Hint Mode EqRel
+!<code>forbids instance search for an</code>EqRel (A -&gt; M A)`; the
+file header explains this.</label></li>
+<li><label><input type="checkbox" checked="" /><strong>The theorem, one
+line once framed right</strong>: given <code>prog1 : A -&gt; M B</code>,
 <code>prog2 : B -&gt; M C</code>, and a <code>KleisliIso M B B'</code>
 (<code>enc</code>/<a
 href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>),
 <code>prog1 &gt;=&gt; prog2 == prog1 &gt;=&gt; enc &gt;=&gt; dec &gt;=&gt; prog2</code>
-— proof: <code>enc &gt;=&gt; dec == ret</code> (ki_fromto) then <a
-href="../coqdoc/Riktig.Interface.Monad.html#bind_ret_r"><code>bind_ret_r</code></a>/
-associativity, done. This is Lars’s
+— proof: <code>enc &gt;=&gt; dec == ret</code> (ki_fromto) then
+<code>bind_ret_r</code>/ associativity, done. This is Lars’s
 <code>prog1&gt;&gt;=prog2 == prog1 &gt;&gt;= toJson &gt;== fromJson &gt;&gt;= prog2</code>
 law, made precise: it holds exactly when the codec is a genuine Kleisli
-iso (lossless serialization).</label></li>
+iso (lossless serialization). <strong>done 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>theories/Theory/KleisliIso.v</code></a>
+— <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion"><code>channel_insertion</code></a>,
+with the calc-chain helper <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>
+(associativity backwards, <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#ki_fromto"><code>ki_fromto</code></a>
+under <a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>,
+then <code>left_identity</code>). Stated pointwise at an arbitrary
+<code>a</code>, for the same EqRel reason as the record’s
+laws.</label></li>
 <li><label><input type="checkbox" />Concrete instance: JSON
 encode/decode for some small type as a <code>KleisliIso option</code>,
 demonstrating the theorem on a real codec pair (mirrors
@@ -167,7 +286,20 @@ demonstrating the theorem on a real codec pair (mirrors
 stated as a <a
 href="../coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
 and consumed by the generic theorem rather than proved ad hoc per
-program).</label></li>
+program). <strong>partial 2026-07-26</strong>: a concrete
+<code>KleisliIso option</code> exists and the theorem is demonstrated on
+it — <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>theories/Theory/KleisliIso.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#nat_pair_codec"><code>nat_pair_codec</code></a>
+(Cantor pairing <code>nat * nat &lt;-&gt; nat</code>, round trips from
+<code>Coq.Arith.Cantor</code>’s
+<code>cancel_of_to</code>/<code>cancel_to_of</code>) and <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion_nat_pair_check"><code>channel_insertion_nat_pair_check</code></a>.
+The JSON part does not exist: <code>grep -i json theories/</code> finds
+only comments, so <code>~/enter-docker/parser/JSON.v</code>’s
+<code>tree_to_json</code>/<code>json_to_tree</code> has not been
+ported.</label></li>
 <li><label><input type="checkbox" /><strong>Deferred, not this
 wave</strong>: the LOSSY-channel generalization — connecting this
 equality to <a
@@ -182,17 +314,55 @@ corollary — roadmap it here, build it later.</label></li>
 id="wave-p3--the-abnf-parser-program-rfc-validated-the-same-way">Wave P3
 — the ABNF parser Program, RFC-validated the same way</h2>
 <ul class="task-list">
-<li><label><input type="checkbox" /><a
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Programs.ABNF.Ast.html"><code>Programs/ABNF/Ast.v</code></a>
 — port <code>ABNFAst.v</code> (rule/alternation/
-concatenation/repetition/element AST).</label></li>
-<li><label><input type="checkbox" /><a
+concatenation/repetition/element AST). <strong>done 2026-07-26</strong>:
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html"><code>theories/Programs/ABNF/Ast.v</code></a>
+— <a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#NumBase"><code>NumBase</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#NumSpec"><code>NumSpec</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#RepeatSpec"><code>RepeatSpec</code></a>,
+the mutually inductive <a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFElement"><code>ABNFElement</code></a>/
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFAlternation"><code>ABNFAlternation</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFConcatenation"><code>ABNFConcatenation</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRepetition"><code>ABNFRepetition</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#DefinedAs"><code>DefinedAs</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRule"><code>ABNFRule</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRulelist"><code>ABNFRulelist</code></a>.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>
 — port <code>ABNFParser.v</code> (ABNF grammar text -&gt; AST), built on
 Wave P1’s <a
 href="../coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>
-instance.</label></li>
-<li><label><input type="checkbox" /><a
+instance. <strong>done 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html"><code>theories/Programs/ABNF/Parser.v</code></a>
+— terminals through <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_rulename"><code>p_rulename</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_repeat"><code>p_repeat</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_num_val"><code>p_num_val</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_char_val"><code>p_char_val</code></a>/
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_prose_val"><code>p_prose_val</code></a>
+up to <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_rule"><code>p_rule</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_rulelist"><code>p_rulelist</code></a>
+and the entry point
+<code>parse_abnf : string -&gt; option ABNFRulelist</code>, with nine
+<code>Example</code> tests. It imports <code>Impl.Parser</code> and
+reuses its combinators; only the <code>x &lt;- p ;; q</code> notation
+and <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#list_to_string"><code>list_to_string</code></a>
+are added locally.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Programs.ABNF.Interp.html"><code>Programs/ABNF/Interp.v</code></a>
 — port <code>ABNFInterp.v</code> (AST -&gt; generic <a
 href="../coqdoc/Riktig.Programs.ABNF.Interp.html#ParseTree"><code>ParseTree</code></a>
@@ -203,13 +373,49 @@ href="../coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print
 href="../coqdoc/Riktig.Programs.ABNF.Interp.html#find_child"><code>find_child</code></a>/<a
 href="../coqdoc/Riktig.Programs.ABNF.Interp.html#filter_children"><code>filter_children</code></a>;
 the <code>Node</code>/<code>Leaf</code> ParseTree shape and its
-nested-inductive nonuniform-recursion pattern from the
-notes).</label></li>
-<li><label><input type="checkbox" /><a
+nested-inductive nonuniform-recursion pattern from the notes).
+<strong>done 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html"><code>theories/Programs/ABNF/Interp.v</code></a>
+— <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#ParseTree"><code>ParseTree</code></a>
+(<code>Leaf</code>/<code>Node</code>), <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#pretty_print"><code>pretty_print</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#find_child"><code>find_child</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#filter_children"><code>filter_children</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#interp_core_rule"><code>interp_core_rule</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#interp_alternation"><code>interp_alternation</code></a>
+and friends, <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#resolve_rule"><code>resolve_rule</code></a>/<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>,
+and <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#parse_with_grammar"><code>parse_with_grammar</code></a>/
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print_with_grammar</code></a>,
+with the outer-Fixpoint/inner-flat-<code>fix</code> pattern from
+<code>IMPLEMENTATION_NOTES.md</code> quoted in the header.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Programs.ABNF.Pretty.html"><code>Programs/ABNF/Pretty.v</code></a>
 — port <code>ABNFPretty.v</code> (whitespace- preserving
-pretty-printer).</label></li>
-<li><label><input type="checkbox" /><a
+pretty-printer). <strong>done 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html"><code>theories/Programs/ABNF/Pretty.v</code></a>
+— the second, leaf-capturing static parser <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#pt_ALPHA"><code>pt_ALPHA</code></a>
+… <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#pt_rulelist"><code>pt_rulelist</code></a>
+and <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#parse_abnf_tree"><code>parse_abnf_tree</code></a>,
+the tree-walking extractors <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#extract_rulename"><code>extract_rulename</code></a>
+… <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#extract_rulelist"><code>extract_rulelist</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#parse_abnf_full"><code>parse_abnf_full</code></a>,
+and nine <code>roundtrip_*</code> examples plus <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#extract_matches_direct"><code>extract_matches_direct</code></a>.</label></li>
+<li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Programs.ABNF.Grammar.html"><code>Programs/ABNF/Grammar.v</code></a>
 — the RFC 5234 grammar-of-ABNF text as a Coq string, and the
 self-hosting validation exactly like the source: grammar parses,
@@ -217,15 +423,54 @@ self-hosting validation exactly like the source: grammar parses,
 self-hosting test (parse Section 4 with the static parser, build a
 dynamic parser from THAT AST via the generator, run it on the same text,
 check the print matches) — the same bootstrapping argument, now over the
-categorical Parser instance.</label></li>
-<li><label><input type="checkbox" />Where it reads better, calc-style
-proofs for the round-trip lemmas (most will stay
+categorical Parser instance. <strong>done 2026-07-26</strong>: <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html"><code>theories/Programs/ABNF/Grammar.v</code></a>
+— <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_grammar"><code>abnf_grammar</code></a>
+(Section 4 + Appendix B) and <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>
+as Coq strings, with <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#grammar_length"><code>grammar_length</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#parse_abnf_grammar_succeeds"><code>parse_abnf_grammar_succeeds</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#roundtrip_abnf_grammar"><code>roundtrip_abnf_grammar</code></a>,
+and the self-hosting <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#selfhost_abnf_section4"><code>selfhost_abnf_section4</code></a>:
+<code>parse_abnf abnf_section4</code> feeds <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print_with_grammar</code></a>,
+which reproduces <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>
+exactly. The two PEG-driven reorderings (<code>repeat</code>,
+<code>defined-as</code>) are documented in the header.</label></li>
+<li><label><input type="checkbox" checked="" />Where it reads better,
+calc-style proofs for the round-trip lemmas (most will stay
 <code>vm_compute; reflexivity</code> — computational proofs, per the
 source’s own testing strategy — calc doesn’t help a
-<code>vm_compute</code> fact, don’t force it).</label></li>
-<li><label><input type="checkbox" />Blog post: the categorical framing
-(Monad, KleisliIso, the channel-insertion theorem) plus the concrete
-ABNF payoff, in the established recap-first teaching style.</label></li>
+<code>vm_compute</code> fact, don’t force it). <strong>done
+2026-07-26</strong>: decided against, as anticipated — no calc proof was
+added for any round-trip lemma. <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html"><code>Programs/ABNF/Pretty.v</code></a>’s
+<code>roundtrip_*</code> examples are <code>reflexivity</code> and <a
+href="../coqdoc/Riktig.Programs.ABNF.Grammar.html"><code>Programs/ABNF/Grammar.v</code></a>’s
+are <code>compute</code>/<code>vm_compute; reflexivity</code>; the
+header of <code>Grammar.v</code> records the reason. <code>calc</code>
+is used where it does help, in <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>.</label></li>
+<li><label><input type="checkbox" checked="" />Blog post: the
+categorical framing (Monad, KleisliIso, the channel-insertion theorem)
+plus the concrete ABNF payoff, in the established recap-first teaching
+style. <strong>done 2026-07-26</strong>: four posts rather than one —
+<code>blog/s54-what-a-monad-is.md</code>,
+<code>blog/s55-parser-combinators.md</code>,
+<code>blog/s56-inserting-a-channel.md</code> (the <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+record and <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion"><code>channel_insertion</code></a>,
+with the Cantor-pairing codec), and
+<code>blog/s57-abnf-parses-itself.md</code>.</label></li>
 </ul>
 <h2 id="wave-p4--future-not-started-needs-its-own-design-pass">Wave P4 —
 future (not started, needs its own design pass)</h2>
