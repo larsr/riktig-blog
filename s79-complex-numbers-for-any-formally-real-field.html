@@ -56,10 +56,11 @@ one-line hypothesis</h2>
 entire definition, from <a
 href="coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>:</p>
 <pre class="coq"><code>Module FormallyReal.
-  Class FormallyReal (F : Type) `{Field.Field F} :=
+  Class FormallyReal (F : Type) `{Field F} :=
     sum_of_squares : forall a b : F, a * a + b * b == 0 -&gt; a == 0.
+  Hint Mode FormallyReal ! - - - - - - - - : typeclass_instances.
 End FormallyReal.
-Notation FormallyReal := FormallyReal.FormallyReal.</code></pre>
+Export FormallyReal.</code></pre>
 <p>One axiom, <a
 href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>:
 if <code>a*a + b*b == 0</code>, then <code>a == 0</code>. By the
@@ -112,7 +113,7 @@ imaginary part
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>b</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-b \cdot (a^2+b^2)^{-1}</annotation></semantics></math>:</p>
 <pre class="coq"><code>Definition norm2 (z : C F) : F := re z * re z + im z * im z.
 
-(* inv 0 is garbage (inv of 0 in F); the field law only speaks for
+(* inv 0 is inv 0 in F, i.e. garbage; the field law speaks only for
    z =/= 0, where norm2 z is invertible by formal reality. *)
 #[global] Instance C_Inv : HasInv (C F) :=
   fun z =&gt; mkC (re z * inv (norm2 z)) (- im z * inv (norm2 z)).</code></pre>
@@ -144,8 +145,7 @@ construction that touches <a
 href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>.</p>
 <pre class="coq"><code>Lemma norm2_nonzero : forall z : C F, z =/= 0 -&gt; norm2 z =/= 0.
 Proof.
-  intros z Hz Hn.
-  apply Hz. split.
+  intros z Hz Hn. apply Hz. split.
   - exact (FormallyReal.sum_of_squares (re z) (im z) Hn).
   - exact (fr_sum_of_squares_r (re z) (im z) Hn).
 Qed.</code></pre>
@@ -180,81 +180,101 @@ a^2 N^{-1} + b^2 N^{-1} &amp;= (a^2+b^2)\,N^{-1} &amp;&amp; \{\text{distributivi
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">N \neq 0</annotation></semantics></math>
 is spent — it is the step
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N\,N^{-1} = 1</annotation></semantics></math>.
-The <a href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>-level
-law splits into exactly those two components:</p>
-<pre class="coq"><code>Lemma c_invl : forall z : C F, z =/= 0 -&gt; inv z * z == 1.
+Everything before that step is polynomial rearrangement: reassociating,
+cancelling a double negation, factoring out the shared
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">N^{-1}</annotation></semantics></math>.
+The Coq proof separates the two exactly along that line:</p>
+<pre class="coq"><code>#[global] Instance C_mul_left_inverse
+  : LeftInverseOn (C F) (nonzero (C F)) mult inv 1.
 Proof.
-  intros z Hz. split.
-  - apply (cinv_re (re z) (im z) (norm2 z)).
-    + exact (norm2_nonzero z Hz).
-    + reflexivity.
-  - exact (cinv_im (re z) (im z) (norm2 z)).
+  intros z Hz.
+  assert (Hn : norm2 z =/= 0) by exact (norm2_nonzero z Hz).
+  split; simpl.
+  - calc ((re z * inv (norm2 z)) * re z + - ((- im z * inv (norm2 z)) * im z))
+      == [expand] (inv (norm2 z) * norm2 z)
+      == (1 : F)  { (left_inverse_on (defined_on := nonzero F) (norm2 z) Hn) }.
+    [expand]: unfold norm2; ring.
+  - ring.
 Qed.</code></pre>
-<p>The <a
-href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
-produces the real-part goal and the imaginary-part goal. The real part
-is discharged by a helper <a
-href="coqdoc/Riktig.Impl.Complex.html#cinv_re"><code>cinv_re</code></a>
-applied at <code>n := norm2 z</code>, which asks for two things: that
-<code>n =/= 0</code> (supplied by <code>norm2_nonzero z Hz</code> — the
-hypothesis, cashed in) and that <code>a*a + b*b == n</code> (true by
-<code>reflexivity</code>, since <code>norm2 z</code> is <em>defined</em>
-as <code>a*a + b*b</code>). The imaginary part is the helper <a
-href="coqdoc/Riktig.Impl.Complex.html#cinv_im"><code>cinv_im</code></a>,
-which needs no hypothesis at all — the imaginary component cancels for
-algebraic reasons alone.</p>
-<p>The helper <a
-href="coqdoc/Riktig.Impl.Complex.html#cinv_re"><code>cinv_re</code></a>
-is where the blackboard real-part chain actually runs:</p>
-<pre class="coq"><code>Lemma cinv_re : forall a b n : F,
-  n =/= 0 -&gt; a * a + b * b == n -&gt;
-  (a * inv n) * a + - ((- b * inv n) * b) == 1.
-Proof.
-  intros a b n Hn Heq.
-  rewrite (mul_neg_l b (inv n)), (mul_neg_l (b * inv n) b), neg_involutive.
-  rewrite (mul_inv_shuffle a n), (mul_inv_shuffle b n), &lt;- distl, Heq.
-  exact (Field.mul_left_inverse n Hn).
-Qed.</code></pre>
-<p>Walking it against the blackboard chain:</p>
+<p><code>LeftInverseOn T P op inv unit</code> is the <em>guarded</em>
+inverse law: <code>inv a</code> undoes <code>a</code> for every
+<code>a</code> satisfying the predicate <code>P</code>. Here
+<code>P</code> is <code>nonzero (C F)</code>, so
+<code>intros z Hz</code> gives a complex number together with the proof
+that it is not <code>0</code>, and the first thing the proof does is
+convert that into <code>Hn : norm2 z =/= 0</code> — the one appeal to
+formal reality in the whole construction.</p>
+<p><code>split; simpl</code> produces the real-part goal and the
+imaginary-part goal, and they are discharged very differently.</p>
+<p>The imaginary part is <code class="nolink">ring</code>, in one word.
+Coq’s ring solver normalizes both sides of a polynomial equation and
+compares them, and the section enables it over the abstract field
+with</p>
+<pre class="coq"><code>  Add Ring F_ring : (ring_theory_of_Ring (R := F) commutative).</code></pre>
+<p>which builds the <code>ring_theory</code> record the solver wants out
+of the field’s own laws. The imaginary component is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>b</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>−</mo><mi>b</mi><mi>a</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">ab\,N^{-1} - ba\,N^{-1}</annotation></semantics></math>
+against
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+a polynomial identity in the three atoms
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">N^{-1}</annotation></semantics></math>,
+so the solver closes it and there is nothing to walk.</p>
+<p>The real part is not a polynomial identity — it ends with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mspace width="0.167em"></mspace><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N\,N^{-1} =
+1</annotation></semantics></math>, which is true only because
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">N \neq 0</annotation></semantics></math>,
+and no amount of normalizing will produce it. So the <code>calc</code>
+chain routes around exactly that one step. It has two links:</p>
 <ul>
-<li>The first <code>rewrite</code> line clears the double negation.
-<code>- b * inv n</code> is <code>-(b * inv n)</code>, so
-<code>(- b * inv n) * b</code> is <code>-((b * inv n) * b)</code>, and
-the outer negation in front of it cancels by <a
-href="coqdoc/Riktig.Theory.Group.html#neg_involutive"><code>neg_involutive</code></a>.
-The expression is now
-<code>(a * inv n) * a + (b * inv n) * b</code>.</li>
-<li><a
-href="coqdoc/Riktig.Impl.Complex.html#mul_inv_shuffle"><code>mul_inv_shuffle</code></a>
-at <code>a</code> and at <code>b</code> reassociates each term
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>⋅</mo><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">(x \cdot n^{-1}) \cdot x</annotation></semantics></math>
-into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>⋅</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n^{-1} \cdot (x \cdot x)</annotation></semantics></math>,
-giving
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n^{-1}(a \cdot a) + n^{-1}(b \cdot b)</annotation></semantics></math>.</li>
-<li><code>&lt;- distl</code> factors the shared
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">n^{-1}</annotation></semantics></math>
-back out (distributivity, used right-to-left):
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n^{-1}(a \cdot a + b \cdot b)</annotation></semantics></math>.</li>
-<li><code>Heq</code> replaces
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>⋅</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a \cdot a + b \cdot b</annotation></semantics></math>
-with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>,
-leaving
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n^{-1} \cdot n</annotation></semantics></math>.</li>
-<li><code>Field.mul_left_inverse n Hn</code> is the field law that
-<code>inv n * n == 1</code> — and this is the one step that consumes
-<code>Hn</code>, the proof that <code>n</code> is nonzero.</li>
+<li>The first link is named <code>[expand]</code> rather than justified
+inline. The chain’s <code>== [expand] (inv (norm2 z) * norm2 z)</code>
+leaves that step as a goal labelled <code>expand</code>, selected
+afterwards by <code>[expand]:</code> and proved by
+<code>unfold norm2; ring</code> — the <code>unfold</code> because
+<code>norm2 z</code> must be visible as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mspace width="0.167em"></mspace><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>b</mi></mrow><annotation encoding="application/x-tex">a\,a + b\,b</annotation></semantics></math>
+for the solver to see the polynomial, and then <code
+class="nolink">ring</code> for the whole rearrangement the blackboard
+chain spelled out in three steps.</li>
+<li>The second link carries its justification in braces:
+<code>left_inverse_on (norm2 z) Hn</code>, the guarded field law
+<code>inv n * n == 1</code> applied at <code>n := norm2 z</code>. This
+is the one step that consumes <code>Hn</code>.</li>
 </ul>
 <p>That single use of <a
-href="coqdoc/Riktig.Interface.Field.html#Field.mul_left_inverse"><code>Field.mul_left_inverse</code></a>,
+href="coqdoc/Riktig.Props.html#left_inverse_on"><code>left_inverse_on</code></a>,
 reachable only because <a
 href="coqdoc/Riktig.Impl.Complex.html#norm2_nonzero"><code>norm2_nonzero</code></a>
 supplied <code>Hn</code>, is the entire dependence of the complex field
-on formal reality. Every other field law for <code>C F</code> —
-associativity, distributivity, commutativity, the additive group
-structure — is proved over <code>Field F</code> alone, with no mention
-of order or formal reality.</p>
+on formal reality. Every other law for <code>C F</code> — associativity,
+distributivity, commutativity, the additive group structure — is a
+polynomial identity in the components, so each is one <code
+class="nolink">ring</code> over <code>Field F</code> alone, with no
+mention of order or formal reality:</p>
+<pre class="coq"><code>  #[global] Instance C_add_associative : Associative (C F) (C F) add add.
+  Proof. intros z w v. split; simpl; ring. Qed.</code></pre>
+<p>and eleven more of the same shape. Those instances then assemble the
+tower without further proof, each structure asking search for the laws
+it needs:</p>
+<pre class="coq"><code>  #[global] Instance C_Magma : Magma (C F) add := {}.
+  #[global] Instance C_Semigroup : Semigroup (C F) add := {}.
+  #[global] Instance C_Monoid : Monoid (C F) := {}.
+  #[global] Instance C_Group : Group (C F) := {}.
+  #[global] Instance C_AbGroup : AbGroup (C F) := {}.
+  #[global] Instance C_MulMagma : Magma (C F) mult := {}.
+  #[global] Instance C_MulSemigroup : Semigroup (C F) mult := {}.
+  #[global] Instance C_MulMonoid : @Monoid (C F) _ C_One C_Mult := {}.
+  #[global] Instance C_Ring : Ring (C F) := {}.</code></pre>
+<p>The <code>{}</code> is an empty record literal: every field of the
+structure is left for instance search, which finds the law instances
+proved just above. A <a
+href="coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
+is an abelian group plus a multiplicative monoid plus two distributivity
+laws, and all four are already in the database, so the ring costs one
+line.</p>
 <h2 id="the-complex-rationals-for-free">The complex rationals, for
 free</h2>
 <p>Assemble all the laws and you get an instance

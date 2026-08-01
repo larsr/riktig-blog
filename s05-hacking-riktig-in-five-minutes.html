@@ -11,19 +11,6 @@
 <main>
 <h1 id="hacking-on-riktig-in-five-minutes">Hacking on riktig in five
 minutes</h1>
-<p><em>Second post in the series documenting the <strong>riktig</strong>
-project.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved, layer by layer, in the Coq proof assistant
-— algebra and category theory at the bottom, sorting algorithms,
-protocol parsers, and eventually a small OS kernel on top. The goal is
-<em>modifiability</em>: code where a change only obliges you to
-re-establish a few local facts, and the structure of the system
-guarantees the rest. Every post starts from zero. Today’s post is the
-most from-zero of all: how to get a working development environment
-without installing anything but Docker and VS Code.</p>
-</blockquote>
 <p>A proof project has a bootstrapping problem: Coq, the right Coq
 <em>version</em>, coq-lsp matched to that version, GHC for the Haskell
 side, and an editor that speaks to all of them. Ask a colleague to “just
@@ -41,12 +28,12 @@ is seconds. That is the whole tutorial. You now have:</p>
 <ul>
 <li><strong>Coq 8.20 with coq-lsp</strong>, so opening any
 <code>theories/*.v</code> file gives you live proof goals — put the
-cursor after a <code>rewrite</code> and see the goal change (the
-<code>ejgallego.coq-lsp</code> extension is preinstalled; it is the Coq
-plugin we prefer of the two that exist, because it checks the file
-continuously instead of stepping a fragile focus point).</li>
-<li><strong>The Haskell extension</strong>, ready for the Haskell
-programs as they move into <code>programs/</code>.</li>
+cursor after a tactic and see the goal change (the
+<code>ejgallego.coq-lsp</code> extension is preinstalled; of the two Coq
+plugins that exist it is the one that checks the file continuously
+instead of stepping a fragile focus point).</li>
+<li><strong>The Haskell extension</strong>, for the hand-written Haskell
+under <code>programs/</code> that drives the code Coq extracts.</li>
 <li><strong>direnv + nix pre-wired</strong>: any terminal you open
 inside the container is already in the project’s Nix shell —
 <code>make</code> builds all the theories, <code>coqc</code> is the
@@ -54,7 +41,7 @@ right version, no activation commands.</li>
 </ul>
 <h2 id="whats-in-the-box-and-why-it-just-works">What’s in the box, and
 why it “just works”</h2>
-<p>Three small files in <a
+<p>Three pieces of <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/.devcontainer"><code>.devcontainer/</code></a>
 do all the work, and each one solves one specific failure mode of shared
 dev environments:</p>
@@ -93,32 +80,52 @@ development shell (<code>onCreateCommand</code>) so that by the time you
 see a terminal, <code>coqc</code> answers. direnv is pre-trusted for
 <code>/workspaces</code>, so there is no <code>direnv allow</code>
 ritual either.</p>
+<p>Without VS Code the same environment is one script away: <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/dev.sh"><code>dev.sh</code></a>
+builds the image, creates the container against the same named volume,
+and runs the build inside the flake shell over plain Docker —
+<code>.devcontainer/dev.sh build</code> to compile the theories,
+<code>.devcontainer/dev.sh shell</code> for an interactive one.</p>
 <h2 id="try-it-your-first-proof-interaction">Try it: your first proof
 interaction</h2>
 <p>Open <a
 href="coqdoc/Riktig.Theory.Group.html"><code>theories/Theory/Group.v</code></a>.
 Find <a
-href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>:</p>
-<pre class="coq"><code>Theorem cancel_l : forall a b c : G, a + b == a + c -&gt; b == c.
-Proof.
-  intros a b c Heq.
-  rewrite &lt;- (idl b), &lt;- (invl a), assoc, Heq, &lt;- assoc, invl, idl.
-  reflexivity.
-Qed.</code></pre>
-<p>Click anywhere inside the <code>rewrite</code> chain. The coq-lsp
-panel shows the goal <em>at that point</em> — delete the last two
-rewrites and watch the goal become <code>0 + b == 0 + c</code>… wait,
-no: try it and see what it actually becomes. That one-click what-if loop
-is the entire reason we insist on proofs being rewrite chains: every
-comma is a checkpoint you can inspect, and the proof state between any
-two steps is a legible algebra goal, not a tactic soup.</p>
+href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+— in a group, <code>a + b == a + c</code> forces
+<code>b == c</code>:</p>
+<pre class="coq"><code>  Theorem cancel_l : forall a b c : G, a + b == a + c -&gt; b == c.
+  Proof.
+    intros a b c Heq.
+    calc b
+      == (0 + b)          { left_identity  }
+      == ((- a + a) + b)  { left_inverse }
+      == (- a + (a + b))  { associative }
+      == (- a + (a + c))  { Heq  }
+      == ((- a + a) + c)  { associative }
+      == (0 + c)          { left_inverse }
+      == c                { left_identity  }.
+  Qed.</code></pre>
+<p>Put the cursor just after <code>intros a b c Heq.</code>: the coq-lsp
+panel shows the goal <code>b == c</code> with
+<code>Heq : a + b == a + c</code> in the context, and the chain below is
+the derivation of exactly that goal. Each line names the next term and,
+in braces, the single law that gets you there — the identity law
+<code>idl</code>, the left-inverse law <code>invl</code>, associativity
+<code>assoc</code>, and the hypothesis itself at the one step that uses
+it. The chain is checked rather than decorative: change one
+justification — <code>invl</code> to <code>invr</code> in the second
+step, say — and Coq rejects the <code>calc</code>. What makes it
+pleasant to read back is that every intermediate term is spelled out, so
+the algebraic state between two steps is on the page instead of in a
+goal display you have to summon.</p>
 <p>If it builds in the container, it builds for everyone. That property
 — the environment as a checked, versioned artifact — is the same
 philosophy as the proofs themselves, applied to the toolchain: make the
 implicit explicit, and let a machine verify it.</p>
-<p><em>Next in the series: mathematical structures grow arrows —
-categories, functors, and why the humble function type makes a category
-“cartesian closed”.</em></p>
+<p><em>Next: what happens when addition is required to commute — abelian
+groups, and the rings you get by adding a second operation on
+top.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/.devcontainer"><code>.devcontainer/</code></a>

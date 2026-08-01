@@ -42,33 +42,83 @@ that eats as many vectors as the space has dimensions is
 every other position held fixed, scales or adds the output the same way
 — “linear in each direction separately,” stated by replacing one
 argument at a time:</p>
-<pre class="coq"><code>Record MultilinearForm (n : nat) (F V : Type) `{FF : Field.Field F}
+<p>Multilinearity is stated of a plain function on families of vectors,
+as a typeclass indexed by that function:</p>
+<pre class="coq"><code>Module Multilinear.
+  Class Multilinear (n : nat) (F V : Type)
+      {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+      {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+      {VV : VectorSpace F V}
+      (form : (Fin.t n -&gt; V) -&gt; F) := {
+    proper :: Proper (@famEq V eV n ==&gt; equ) form;
+
+    is_additive :: forall (vs : Fin.t n -&gt; V) (i : Fin.t n),
+      Additive V F add add (fun x =&gt; form (upd vs i x));
+    is_homogeneous :: forall (vs : Fin.t n -&gt; V) (i : Fin.t n),
+      Homogeneous F V F mult (fun a =&gt; a) (fun x =&gt; form (upd vs i x));
+  }.
+End Multilinear.</code></pre>
+<p>The braced binders are the ambient algebra — <code>F</code> a field,
+<code>V</code> a vector space over it — and the content is the last four
+lines. <code>upd vs i x</code> is the family <code>vs</code> with
+position <code>i</code> replaced by <code>x</code>, so
+<code>fun x =&gt; form (upd vs i x)</code> is the one-argument function
+you get by freezing every position except <code>i</code>. The two laws
+then say that this one-argument function is additive and homogeneous —
+and they say it by <em>reusing</em> the general-purpose <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> and
+<a
+href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
+classes rather than by writing the equations out again.
+<code>Additive V F add add f</code> means
+<code>f (x + y) == f x + f y</code>, with the two <a
+href="coqdoc/Riktig.Ops.html#add"><code>add</code></a>s naming the
+addition on the source and on the target;
+<code>Homogeneous F V F mult (fun a =&gt; a) f</code> means
+<code>f (a *: x) == a * f x</code>, with <code>fun a =&gt; a</code>
+saying the scalar passes through unchanged rather than being twisted by
+a conjugation on the way. Multilinearity is thus not a new pair of
+axioms but a family of instances of two laws the tree already had.</p>
+<p>A <em>chosen</em> such function, carrying its proof, is a <a
+href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>:</p>
+<pre class="coq"><code>Record MultilinearForm (n : nat) (F V : Type)
+    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
     {VV : VectorSpace F V} := {
   mf_fun :&gt; (Fin.t n -&gt; V) -&gt; F;
-  #[global] multilinear_form_proper :: Proper (@famEq V _ n ==&gt; equ) mf_fun;
-  multilinear_form_additive : forall (vs : Fin.t n -&gt; V) (i : Fin.t n) (x y : V),
-    mf_fun (upd vs i (x + y)) == mf_fun (upd vs i x) + mf_fun (upd vs i y);
-  multilinear_form_scale    : forall (vs : Fin.t n -&gt; V) (i : Fin.t n) (a : F) (x : V),
-    mf_fun (upd vs i (a *: x)) == a * mf_fun (upd vs i x)
+  mf_multilinear :: Multilinear n F V mf_fun;
 }.</code></pre>
-<p><code>upd vs i x</code> is the family <code>vs</code> with position
-<code>i</code> replaced by <code>x</code>; <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>
+<p>Two fields: the function, and one proof it is multilinear. Read back
+off such a record, the laws carry the names a caller uses — <a
+href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_scale"><code>multilinear_form_scale</code></a>,
 and <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_scale"><code>multilinear_form_scale</code></a>
-are exactly the additivity and homogeneity statements above, one
-position at a time. A form is <em>alternating</em> if feeding it two
-equal arguments in two different positions always produces
+href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_proper"><code>multilinear_form_proper</code></a>.</p>
+<p>A form is <em>alternating</em> if feeding it two equal arguments in
+two different positions always produces
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 — “the measurement degenerates the moment two of the directions being
-compared coincide”:</p>
-<pre class="coq"><code>Record Alternating {n : nat} {F V : Type} `{FF : Field.Field F}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} (m : MultilinearForm n F V) := {
-  alternating_repeat_zero : forall (vs : Fin.t n -&gt; V) (i j : Fin.t n),
-    i &lt;&gt; j -&gt; vs i == vs j -&gt; m vs == 0
-}.</code></pre>
+compared coincide”. That is a single law, so the class <em>is</em> that
+law, with no fields around it:</p>
+<pre class="coq"><code>Module Alternating.
+  Class Alternating {n : nat} {F V : Type}
+      {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+      {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+      {VV : VectorSpace F V}
+      (form : (Fin.t n -&gt; V) -&gt; F) :=
+    repeat_zero : forall (vs : Fin.t n -&gt; V) (i j : Fin.t n),
+      i &lt;&gt; j -&gt; vs i == vs j -&gt; form vs == 0.
+End Alternating.</code></pre>
+<p>Because the carriers are implicit and <a
+href="coqdoc/Riktig.Interface.Bilinear.html#mf_fun"><code>mf_fun</code></a>
+is a coercion, <code>Alternating m</code> reads directly for a <a
+href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>
+named <code>m</code>, and the law read off it is <a
+href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>.</p>
 <p>A determinant is one further requirement stacked on top of both:
 alternating, multilinear, and equal to exactly
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
@@ -79,23 +129,29 @@ factor a particular map applies,” the way fixing what
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 metre” means turns “a length” into a number you can compare across
 rulers.</p>
-<pre class="coq"><code>Record Determinant (n : nat) (F V : Type) `{FF : Field.Field F}
+<pre class="coq"><code>Record Determinant (n : nat) (F V : Type)
+    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
     {VV : VectorSpace F V} (B : Basis n F V) := {
-  determinant_multilinear_form    :&gt; MultilinearForm n F V;
-  determinant_alternating         : Alternating determinant_multilinear_form;
-  determinant_basis_normalization : determinant_multilinear_form (basis_vec B) == 1
+  determinant_form :&gt; MultilinearForm n F V;
+  determinant_is_alternating :: Alternating determinant_form;
+  determinant_normalization : determinant_form (basis_vec B) == 1;
 }.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_multilinear_form"><code>determinant_multilinear_form</code></a>
+href="coqdoc/Riktig.Interface.Determinant.html#determinant_form"><code>determinant_form</code></a>
+carries a multilinear form’s own laws whole, rather than restating them,
 and <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_alternating"><code>determinant_alternating</code></a>
-are the first two properties from above, packaged together; <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_basis_normalization"><code>determinant_basis_normalization</code></a>
+href="coqdoc/Riktig.Interface.Determinant.html#determinant_is_alternating"><code>determinant_is_alternating</code></a>
+is the second property from above; <a
+href="coqdoc/Riktig.Interface.Determinant.html#determinant_normalization"><code>determinant_normalization</code></a>
 is the third, <code>basis_vec B</code> being the family of vectors the
-chosen basis consists of. Nothing in this record mentions a matrix, an
-entry, a sign, or a recursive computation. It is data, not a search: a
-<a
+chosen basis consists of. Read back off a determinant <code>D</code>,
+those three come out as <code>determinant_multilinear_form D</code>,
+<code>determinant_alternating D</code> and
+<code>determinant_basis_normalization D</code>. Nothing in this record
+mentions a matrix, an entry, a sign, or a recursive computation. It is
+data, not a search: a <a
 href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
 is a <em>choice</em> of such a form, supplied by whoever builds one, the
 same way a basis is a chosen list of vectors rather than something
@@ -149,14 +205,17 @@ href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> becomes a
 value of the <a
 href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
 record:</p>
-<pre class="coq"><code>  (* THE INSTANCE: detM satisfies the abstract Determinant spec. *)
-  Definition detM_Determinant (n : nat) :
+<pre class="coq"><code>  Definition detM_Determinant (n : nat) :
       Determinant n F (Fin.t n -&gt; F) (FinVec_Basis n) :=
-    Build_Determinant _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (FinVec_Basis n)
-      (detM_mf n) (detM_alt n) (detM_basis_1 n).</code></pre>
+    determinant_from_laws (detM_mf n) (detM_alt n) (detM_basis_1 n).</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.Determinant.html#determinant_from_laws"><code>determinant_from_laws</code></a>
+is the builder: hand it the multilinear form, the alternating proof and
+the normalization proof, and the carriers and the basis are filled in by
+unification.</p>
 <p>and Coq accepts a small resolution check confirming the pieces fit
 together unaided:</p>
-<pre class="coq"><code>Example detM_determinant_check (F : Type) `{FF : Field.Field F} (n : nat) :
+<pre class="coq"><code>Example detM_determinant_check (F : Type) `{FF : Field F} (n : nat) :
   Determinant n F (Fin.t n -&gt; F) (FinVec_Basis n) := detM_Determinant n.</code></pre>
 <p>The list of properties is satisfiable, and satisfiable by exactly the
 computation anyone would expect it to be.</p>
@@ -223,8 +282,6 @@ Proof.
   pose (a := vs i). pose (b := vs j).
   pose (VS&#39; := upd vs i (a + b)).
   assert (Hji : j &lt;&gt; i) by (intro Heq; apply Hij; symmetry; exact Heq).
-  (* m (upd VS&#39; j a) + m (upd VS&#39; j b) == 0, from
-     alternating_repeat_zero at W. *)
   assert (HW0 : m (upd VS&#39; j a) + m (upd VS&#39; j b) == 0).
   { assert (HWi : upd VS&#39; j (a + b) i == a + b)
       by (rewrite (u_off VS&#39; j i (a + b) Hji); unfold VS&#39;; exact (u_at vs i (a+b))).
@@ -234,7 +291,6 @@ Proof.
     rewrite &lt;- HW0&#39;.
     symmetry.
     exact (multilinear_form_additive m VS&#39; j a b). }
-  (* Second summand m (upd VS&#39; j b) == m vs. *)
   assert (HP2val : m (upd VS&#39; j b) == m vs).
   { assert (HVS&#39;j : b == VS&#39; j) by (unfold VS&#39;; symmetry; exact (u_off vs i j (a+b) Hij)).
     assert (HP2 : forall k, upd VS&#39; j b k == VS&#39; k) by (intros k; exact (u_idem VS&#39; j b HVS&#39;j k)).
@@ -252,8 +308,7 @@ Proof.
       == (m (upd vs i a) + m (upd vs i b)) { Hexp2 }
       == (m vs + m (upd vs i b)) { Hm1 }
       == (m vs + 0) { Hm2 }
-      == (m vs) { (Monoid.right_identity (m vs)) }. }
-  (* First summand m (upd VS&#39; j a) == m (fswap vs i j). *)
+      == (m vs) { (right_identity (m vs)) }. }
   assert (HP1val : m (upd VS&#39; j a) == m (fswap vs i j)).
   { assert (Hreorder : forall k, upd VS&#39; j a k == upd (upd vs j a) i (a + b) k).
     { intros k. unfold VS&#39;. exact (u_comm vs i j (a+b) a Hij k). }
@@ -287,9 +342,7 @@ Proof.
       == (m (upd (upd vs j a) i a) + m (upd (upd vs j a) i b)) { Hexp3 }
       == (0 + m (upd (upd vs j a) i b)) { HT1 }
       == (0 + m (fswap vs i j)) { HT2m }
-      == (m (fswap vs i j)) { (Monoid.left_identity (m (fswap vs i j))) }. }
-  (* Assemble: m (upd VS&#39; j a) == - m (upd VS&#39; j b) (from HW0), then
-     substitute both known values. *)
+      == (m (fswap vs i j)) { (left_identity (m (fswap vs i j))) }. }
   assert (Hneg : m (upd VS&#39; j a) == - m (upd VS&#39; j b))
     by exact (neg_unique_l (m (upd VS&#39; j b)) (m (upd VS&#39; j a)) HW0).
   rewrite HP1val, HP2val in Hneg.
@@ -316,7 +369,7 @@ the two known values back into <code>HW0</code>’s equation to conclude
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">swap</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(\text{swap}) = -m(v)</annotation></semantics></math>.
 Read as a fact about a determinant specifically, this is immediate —
 plug in its own multilinear form and its own alternating witness:</p>
-<pre class="coq"><code>Theorem det_swap_neg : forall (n : nat) (F V : Type) `{FF : Field.Field F}
+<pre class="coq"><code>Theorem det_swap_neg : forall (n : nat) (F V : Type) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V)
     (B : Basis n F V) (D : Determinant n F V B)
@@ -397,7 +450,6 @@ Proof.
   set (u := A i). set (v := A j).
   set (N1 := upd_row A j (fun k=&gt;u k+v k)).
   set (M1 := upd_row N1 i (fun k=&gt;u k+v k)).
-  (* rows i, j of M1 both equal u + v, so g M1 == 0 by alternating. *)
   assert (HM1i : forall c, M1 i c == u c + v c).
   { intros c. exact (upd_row_at n N1 i (fun k=&gt;u k+v k) c). }
   assert (HM1j : forall c, M1 j c == u c + v c).
@@ -407,12 +459,8 @@ Proof.
     - exact (upd_row_at n A j (fun k=&gt;u k+v k) c). }
   assert (HM1zero : g M1 == 0).
   { apply (Halt M1 i j Hij). intros c. rewrite (HM1i c), (HM1j c). reflexivity. }
-  (* M1 expands, in row i, into g (upd_row N1 i u) + g (upd_row N1 i v). *)
   assert (HM1exp : g M1 == g (upd_row N1 i u) + g (upd_row N1 i v)).
   { exact (Hadd i N1 u v). }
-  (* g (upd_row N1 i u) == g A: N1&#39;s row i is already u, so this is
-     g N1 itself, and N1 expands (row j) into g A plus a zero term
-     (rows i, j both u). *)
   assert (Hleft : g (upd_row N1 i u) == g A).
   { assert (HN1i : forall c, N1 i c == u c).
     { intros c. exact (upd_row_ne n A j i (fun k=&gt;u k+v k) c Hij). }
@@ -438,10 +486,7 @@ Proof.
           - exact (upd_row_self n A j). }
         apply Hproper. exact HAjv. }
       rewrite H1, H2.
-      exact (Monoid.left_identity (g A)). }
-  (* g (upd_row N1 i v) == g (row_swap A i j): reorder the two updates
-     (they commute, i &lt;&gt; j), then expand row j; one term IS the swap,
-     the other has rows i, j both v (killed by alternating). *)
+      exact (left_identity (g A)). }
   assert (Hright : g (upd_row N1 i v) == g (row_swap A i j)).
   { assert (Hcomm : upd_row N1 i v == upd_row (upd_row A i v) j (fun k=&gt;u k+v k)).
     { unfold N1. exact (upd_row_comm n A j i (fun k=&gt;u k+v k) v Hji). }
@@ -461,7 +506,7 @@ Proof.
           + exact (upd_row_at n A i v c).
         - symmetry. exact (upd_row_at n A2 j v c). }
       rewrite H1, H2.
-      exact (Monoid.right_identity (g (row_swap A i j))). }
+      exact (right_identity (g (row_swap A i j))). }
   assert (HM1full : g M1 == g A + g (row_swap A i j)).
   { rewrite HM1exp, Hleft, Hright. reflexivity. }
   assert (Hsum : g A + g (row_swap A i j) == 0).
@@ -555,12 +600,12 @@ Proof.
       == (prodF (fun i =&gt; A i (f i)) * (g mat_id * detM (basis_rowsP f)))
            { (basis_rows_g_eq_detM N g Hproper Hadd Halt f) }
       == ((prodF (fun i =&gt; A i (f i)) * g mat_id) * detM (basis_rowsP f))
-           { (Ring.mul_associative (prodF (fun i =&gt; A i (f i))) (g mat_id)
+           { (associative (prodF (fun i =&gt; A i (f i))) (g mat_id)
                 (detM (basis_rowsP f))) }
       == ((g mat_id * prodF (fun i =&gt; A i (f i))) * detM (basis_rowsP f))
            { (mul_comm (prodF (fun i =&gt; A i (f i))) (g mat_id)) }
       == (g mat_id * (prodF (fun i =&gt; A i (f i)) * detM (basis_rowsP f)))
-           { (Ring.mul_associative (g mat_id) (prodF (fun i =&gt; A i (f i)))
+           { (associative (g mat_id) (prodF (fun i =&gt; A i (f i)))
                 (detM (basis_rowsP f))) }. }
   calc (g A)
     == (fsum N N (fun f =&gt; prodF (fun i =&gt; A i (f i)) * g (basis_rowsP f)))
@@ -576,7 +621,7 @@ Proof.
       Hpoint).
   - exact (fsum_scale N N (g mat_id)
       (fun f =&gt; prodF (fun i =&gt; A i (f i)) * detM (basis_rowsP f))).
-  - apply Ring.mul_proper; [reflexivity |]. symmetry. exact Hd_exp.
+  - apply Magma.op_proper; [reflexivity |]. symmetry. exact Hd_exp.
 Qed.</code></pre>
 <p><code>Hg_exp</code> and <code>Hd_exp</code> are <a
 href="coqdoc/Riktig.Impl.DetMulGeneral.html#row_expand"><code>row_expand</code></a>
@@ -665,7 +710,7 @@ Proof.
   intros N B A i j Hij Heq. unfold g_mulB.
   apply (detM_alternating N (mat_mul A B) i j Hij).
   intros c. unfold mat_mul. apply bigopF_ext. intros l.
-  apply Ring.mul_proper; [exact (Heq l) | reflexivity].
+  apply Magma.op_proper; [exact (Heq l) | reflexivity].
 Qed.</code></pre>
 <p>Uniqueness then finishes it in three steps:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">piece two, at </mtext><mspace width="0.333em"></mspace></mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>:=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.222em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">commutativity of the field multiplication</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo>=</mo><mi>B</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
@@ -680,13 +725,8 @@ Qed.</code></pre>
 Proof.
   intros N A B.
   destruct N as [| p0].
-  - calc (detM (mat_mul A B))
-      == (1:F)
-      == ((1:F)*1)
-      == (detM A * detM B).
-    + exact (detM_0 (mat_mul A B)).
-    + symmetry. exact (Ring.mul_left_identity 1).
-    + apply Ring.mul_proper; symmetry; [exact (detM_0 A) | exact (detM_0 B)].
+  - rewrite (detM_0 (mat_mul A B)), (detM_0 A), (detM_0 B).
+    ring.
   - assert (Hg := g_row_expand_eq (S p0) (g_mulB B) (g_mulB_proper (S p0) B)
                (fun i A&#39; r1 r2 =&gt; g_mulB_add (S p0) p0 eq_refl B i A&#39; r1 r2)
                (fun i A&#39; c r0 =&gt; g_mulB_scale (S p0) p0 eq_refl B i A&#39; c r0)
@@ -698,19 +738,22 @@ Proof.
       == (detM A * detM B).
     + exact Hg.
     + exact (mul_comm (detM (mat_mul mat_id B)) (detM A)).
-    + apply Ring.mul_proper; [reflexivity |].
-      apply detM_proper. exact (mat_mul_1l (S p0) (S p0) B).
+    + apply Magma.op_proper; [reflexivity |].
+      apply detM_proper. exact (mat_mul_left_identity (S p0) (S p0) B).
 Qed.</code></pre>
 <p>Dimension
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-is a one-line special case (the determinant of any empty matrix is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>).
-Otherwise, <code>Hg</code> is <a
+is a special case in two lines: <a
+href="coqdoc/Riktig.Impl.Det.html#detM_0"><code>detM_0</code></a> says
+the determinant of any empty matrix is <code>1</code>, so rewriting it
+at all three occurrences turns the goal into <code>1 == 1 * 1</code>,
+which <code class="nolink">ring</code> closes. Otherwise,
+<code>Hg</code> is <a
 href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_row_expand_eq"><code>g_row_expand_eq</code></a>
 read at <code>g_mulB B</code>: it says
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(I\cdot B)\cdot\det(A)</annotation></semantics></math>
 directly. <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_1l"><code>mat_mul_1l</code></a>
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
 erases the leftover identity, and <a
 href="coqdoc/Riktig.Theory.Field.html#mul_comm"><code>mul_comm</code></a>
 puts the two factors in the expected order. No decidable equality
@@ -758,7 +801,7 @@ href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></
 (<a
 href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Alternating"><code>Alternating</code></a>)
+href="coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.DetInterface.html"><code>Impl/DetInterface.v</code></a>
 (<a

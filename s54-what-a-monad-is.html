@@ -47,8 +47,7 @@ href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>
 injects an <code>A</code> into <code>M A</code>. The infix notation
 <code>&gt;&gt;=</code> is attached to bind, so
 <code>p &gt;&gt;= f</code> reads “run <code>p</code>, then feed its
-result to <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>”.</p>
+result to <code>f</code>”.</p>
 <p>For <code>option</code>, both operations are a few lines, from <a
 href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>:</p>
 <pre class="coq"><code>#[global] Instance Option_HasBind : HasBind option :=
@@ -76,29 +75,36 @@ href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:</p
 <pre class="coq"><code>Module Monad.
   Class Monad (M : Type -&gt; Type) {Me : forall A, EqRel (M A)}
               {Mb : HasBind M} {Mr : HasReturn M} := {
-    (* Bundled here for the same reason Interface/Monoid.v&#39;s `Monoid.equivalence`
-       and Interface/Category.v&#39;s `hom_equiv` bundle theirs: `Monad.bind_proper`
-       applied at reflexivity (both sides literally the same `m`, as in
-       Theory/Monad.v&#39;s `map_compose`) needs `equ` reflexive, and generic
-       rewriting under `==` needs it an Equivalence, one per index A. *)
-    equivalence    : forall A, Equivalence (@equ (M A) _);
-    (* The continuation argument of bind is compared pointwise on its
-       domain A directly (`forall x, f x == g x`), not via `EqRel (A -&gt;
-       M B)`: A itself carries no EqRel in general, and quantifying over
-       literally every x needs none. *)
-    bind_proper    : forall A B,
+    equivalence :: forall A, Equivalence (@equ (M A) _);
+    bind_proper :: forall A B,
       Proper (equ ==&gt; (fun f g =&gt; forall x, f x == g x) ==&gt; equ) (@bind M _ A B);
+
     left_identity  : forall A B (x : A) (f : A -&gt; M B), bind (ret x) f == f x;
     right_identity : forall A (m : M A), bind m ret == m;
     associative    : forall A B C (m : M A) (f : A -&gt; M B) (g : B -&gt; M C),
       bind (bind m f) g == bind m (fun x =&gt; bind (f x) g)
   }.
 End Monad.
-Notation Monad := Monad.Monad.</code></pre>
+Export Monad.</code></pre>
 <p>The equality <code>==</code> is a family of relations, one per index
 <code>A</code>, because <code>M A</code> and <code>M B</code> are
-different types and each needs its own notion of sameness. The three
-laws, on the blackboard — writing
+different types and each needs its own notion of sameness. The first two
+fields are written <code>name ::</code> rather than <code>name :</code>;
+that declares the field as a typeclass instance, so once a
+<code>Monad M</code> is in scope Coq’s instance search finds these two
+facts on its own and <code>rewrite</code> may replace one side of a
+<code>==</code> by the other underneath a <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>,
+with neither law named at the call site.</p>
+<p>Notice how <a
+href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>
+compares the two continuations: not by some equality on the function
+type <code>A -&gt; M B</code>, but pointwise,
+<code>fun f g =&gt; forall x, f x == g x</code>. The domain
+<code>A</code> is an arbitrary type with no notion of sameness attached
+to it, and quantifying over literally every <code>x : A</code> needs
+none.</p>
+<p>The three remaining fields are the laws. On the blackboard — writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><annotation encoding="application/x-tex">\mathbin{&gt;\!\!&gt;\!\!=}</annotation></semantics></math>
 for bind and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>η</mi><annotation encoding="application/x-tex">\eta</annotation></semantics></math>
@@ -109,8 +115,7 @@ m \mathbin{&gt;\!\!&gt;\!\!=} \eta \;=\; m, \qquad
 <ul>
 <li><a
 href="coqdoc/Riktig.Interface.Monad.html#Monad.left_identity"><code>Monad.left_identity</code></a>:
-injecting <code>x</code> and then binding into <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is just
+injecting <code>x</code> and then binding into <code>f</code> is just
 <code>f x</code> — <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
 the left of a bind does nothing.</li>
@@ -183,26 +188,46 @@ Class HasAlt (M : Type -&gt; Type) := alt : forall {A}, M A -&gt; M A -&gt; M A.
 <pre class="coq"><code>Module Alternative.
   Class Alternative (M : Type -&gt; Type) {Me : forall A, EqRel (M A)}
                     {Mf : HasFail M} {Ma : HasAlt M} := {
-    (* Bundled for the same reason Interface/Monad.v&#39;s `Monad.equivalence`
-       is: `Alternative.alt_proper` at reflexivity and generic rewriting under `==`
-       both need `equ` an Equivalence, one per index A. *)
-    equivalence         : forall A, Equivalence (@equ (M A) _);
-    alt_proper          : forall A, Proper (equ ==&gt; equ ==&gt; equ) (@alt M _ A);
-    associative         : forall A (p q r : M A), alt (alt p q) r == alt p (alt q r);
-    fail_left_identity  : forall A (q : M A), alt fail q == q;
-    fail_right_identity : forall A (p : M A), alt p fail == p
+    equivalence :: forall A, Equivalence (@equ (M A) _);
+    alt_proper  :: forall A, Proper (equ ==&gt; equ ==&gt; equ) (@alt M _ A);
+
+    associative         :: forall A, Associative (M A) (M A) alt alt;
+    fail_left_identity  :: forall A, LeftIdentity (M A) (M A) alt fail;
+    fail_right_identity :: forall A, RightIdentity (M A) (M A) alt fail
   }.
 End Alternative.
-Notation Alternative := Alternative.Alternative.</code></pre>
-<p>These three laws say <code>(M A, &lt;|&gt;, fail)</code> is a monoid:
-<code>&lt;|&gt;</code> is associative and <a
+Export Alternative.</code></pre>
+<p>The last three fields — again preceded by the two respect laws that
+let <code>==</code> be rewritten under <code>&lt;|&gt;</code> — say
+<code>(M A, &lt;|&gt;, fail)</code> is a monoid: <code>&lt;|&gt;</code>
+is associative and <a
 href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
 is a two-sided identity —</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>r</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>q</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&lt;|&gt;} r \;=\; p \mathbin{&lt;|&gt;} (q \mathbin{&lt;|&gt;} r), \qquad
 \mathsf{fail} \mathbin{&lt;|&gt;} q \;=\; q, \qquad
 p \mathbin{&lt;|&gt;} \mathsf{fail} \;=\; p</annotation></semantics></math></p>
 <p>— an always-failing alternative on either side of a choice may be
-dropped. Note what is <em>not</em> in the list: commutativity.
+dropped.</p>
+<p>Those three are not spelled out as equations here. <a
+href="coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
+<a
+href="coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#RightIdentity"><code>RightIdentity</code></a>
+are standalone classes, each stating one equation about an operation and
+an element handed to it as arguments;
+<code>Associative (M A) (M A) alt alt</code> unfolds to exactly
+<code>alt (alt p q) r == alt p (alt q r)</code>, and
+<code>LeftIdentity (M A) (M A) alt fail</code> to
+<code>alt fail x == x</code>. They are the same three classes a monoid
+on numbers or on lists is built from, so “choice is a monoid” is stated
+by reusing the monoid laws rather than by restating them. Writing them
+with <code>::</code> also means instance search can find, say,
+associativity of <code>&lt;|&gt;</code> without the proof having to name
+the <a
+href="coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
+field it came from.</p>
+<p>Note what is <em>not</em> in the list: commutativity.
 <code>p &lt;|&gt; q</code> is not <code>q &lt;|&gt; p</code> in general,
 because the choice is <em>ordered</em> — it commits to the left as soon
 as the left succeeds. For a parser, that is the definition of <a
@@ -226,31 +251,26 @@ href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
 distributes over <code>+</code> and <a
 href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
 looks like an addition, so it is tempting to expect a distributivity law
-connecting them: binding a choice into <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> ought
-to equal choosing between the two binds. In symbols,</p>
+connecting them: binding a choice into <code>f</code> ought to equal
+choosing between the two binds. In symbols,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mover><mo>=</mo><mo accent="false">?</mo></mover><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;\stackrel{?}{=}\; (p \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&lt;|&gt;} (q \mathbin{&gt;\!\!&gt;\!\!=} f).</annotation></semantics></math></p>
 <p>This is false, and the reason is exactly the ordered, committed
 nature of <a
 href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>.
 On the left, <code>p &lt;|&gt; q</code> decides <em>first</em>, before
-<a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is
-ever consulted. If <code>p</code> succeeds, the choice commits to
-<code>p</code>’s branch — and if <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> then
-fails on <code>p</code>’s result, the whole left side has failed, with
-no way back to <code>q</code>. On the right, <code>p &gt;&gt;= f</code>
-and <code>q &gt;&gt;= f</code> are each computed in full before the
-choice is made, so if <code>p &gt;&gt;= f</code> fails, the choice
-quietly falls back to <code>q &gt;&gt;= f</code>. The two sides disagree
-precisely when <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> turns a
-success of <code>p</code> into a failure.</p>
+<code>f</code> is ever consulted. If <code>p</code> succeeds, the choice
+commits to <code>p</code>’s branch — and if <code>f</code> then fails on
+<code>p</code>’s result, the whole left side has failed, with no way
+back to <code>q</code>. On the right, <code>p &gt;&gt;= f</code> and
+<code>q &gt;&gt;= f</code> are each computed in full before the choice
+is made, so if <code>p &gt;&gt;= f</code> fails, the choice quietly
+falls back to <code>q &gt;&gt;= f</code>. The two sides disagree
+precisely when <code>f</code> turns a success of <code>p</code> into a
+failure.</p>
 <p>The counterexample makes this concrete: let <code>p</code> always
 succeed with <code>O</code>, let <code>q</code> always succeed with
-<code>S O</code>, and let <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> fail
-exactly on <code>O</code> and succeed otherwise. From <a
+<code>S O</code>, and let <code>f</code> fail exactly on <code>O</code>
+and succeed otherwise. From <a
 href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>:</p>
 <pre class="coq"><code>Definition counter_p : Parser nat nat := ret O.
 Definition counter_q : Parser nat nat := ret (S O).
@@ -260,8 +280,7 @@ Definition counter_f (n : nat) : Parser nat nat :=
   | S _ =&gt; ret n
   end.</code></pre>
 <p>Trace both sides on any input. The left side commits to
-<code>p</code>, whose result <code>O</code> sends <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
+<code>p</code>, whose result <code>O</code> sends <code>f</code>
 straight to <a
 href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>O</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; p \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; f\,O \;=\; \mathsf{fail}.</annotation></semantics></math></p>
@@ -287,8 +306,7 @@ Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
 <li><code>intros H</code> assumes the law holds — the goal is its
-negation, so we derive a contradiction from <a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>.</li>
+negation, so we derive a contradiction from <code>H</code>.</li>
 <li><code>specialize (H O)</code> applies the assumed equality at one
 concrete input, the number <code>O</code>. (Parser equality is
 extensional: two parsers are equal when they agree on every input, so a
@@ -307,19 +325,16 @@ actually do, and here the committed choice of <a
 href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
 is exactly what breaks it.</p>
 <p>There <em>is</em> a restricted form that holds — the two sides agree
-whenever <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> cannot
-turn a success of <code>p</code> into a failure, which is the one thing
-the counterexample violates:</p>
+whenever <code>f</code> cannot turn a success of <code>p</code> into a
+failure, which is the one thing the counterexample violates:</p>
 <pre class="coq"><code>Lemma bind_alt_distr_when_no_backtrack :
   forall S T U (p q : Parser S T) (f : T -&gt; Parser S U),
     (forall input : S, bind p f input = None -&gt; p input = None) -&gt;
     bind (alt p q) f == alt (bind p f) (bind q f).</code></pre>
 <p>The hypothesis says: whenever <code>p &gt;&gt;= f</code> fails, it
-was already <code>p</code> that failed, never <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>. Under
-that condition there is nothing for the right side to fall back to that
-the left side missed, and the distributivity goes through.</p>
+was already <code>p</code> that failed, never <code>f</code>. Under that
+condition there is nothing for the right side to fall back to that the
+left side missed, and the distributivity goes through.</p>
 <h2 id="sequencing-and-choice-together">Sequencing and choice,
 together</h2>
 <p>With both structures in place, a parser is written by combining

@@ -58,13 +58,10 @@ given by two operations: <code>ret x</code> (read <em>return</em>
 <code>x</code>) is the trivial computation that just produces
 <code>x</code> and consumes nothing, and <code>bind p f</code> — written
 <code>p &gt;&gt;= f</code> — runs <code>p</code>, and <em>if</em> it
-produced a value, hands that value to <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> to
-choose the next computation; if <code>p</code> failed, the whole thing
-fails and <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> never
-runs. Sequencing, with automatic short-circuiting on failure, is the
-entire idea.</p>
+produced a value, hands that value to <code>f</code> to choose the next
+computation; if <code>p</code> failed, the whole thing fails and
+<code>f</code> never runs. Sequencing, with automatic short-circuiting
+on failure, is the entire idea.</p>
 <p>For parsers, “fail” is <code>None</code> and “produce a value” also
 threads the leftover input along. Here are the two operations spelled
 out for the <a
@@ -141,10 +138,20 @@ That is why the whole proof is one line after the split.</li>
 </ul>
 <p>The two identity laws (<a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> does
-nothing when spliced in on either side) hold the same way, and together
-the three make <code>Parser S</code> a genuine <a
+nothing when spliced in on either side) hold the same way. Those three,
+plus two respect laws — that <code>==</code> on parsers is an
+equivalence relation (<a
+href="coqdoc/Riktig.Impl.Parser.html#Parser_EqRel_Equivalence"><code>Parser_EqRel_Equivalence</code></a>),
+and that <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+sends <code>==</code>-equal arguments to <code>==</code>-equal results
+(<a
+href="coqdoc/Riktig.Impl.Parser.html#parser_bind_proper"><code>parser_bind_proper</code></a>)
+— are the five fields of the <a
 href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>
-instance — the combinators below are written against that abstract
+class, so <code>Parser S</code> is a <a
+href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>
+instance. The combinators below are written against that abstract
 interface, not against the raw <code>match</code>.</p>
 <h2 id="the-primitive-parsers">The primitive parsers</h2>
 <p>At the bottom are the parsers that actually inspect a character. <a

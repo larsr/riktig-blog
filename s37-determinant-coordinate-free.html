@@ -63,12 +63,17 @@ On the blackboard,</p>
 <pre class="coq"><code>Theorem fstar_alternating : Alternating omega -&gt; Alternating fstar.
 Proof.
   intros Halt.
-  apply Build_Alternating.
+  apply alternating_from_law.
   intros vs i j Hij Heq.
   exact (alternating_repeat_zero Halt (fun k =&gt; f (vs k)) i j Hij
            (linear_map_proper f (vs i) (vs j) Heq)).
 Qed.</code></pre>
-<p>If two input vectors
+<p><a
+href="coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
+is a class whose entire content is that single collapse law, so <a
+href="coqdoc/Riktig.Interface.Bilinear.html#alternating_from_law"><code>alternating_from_law</code></a>
+reduces the goal <code>Alternating fstar</code> to the law itself, and
+the rest of the proof proves it. If two input vectors
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>,</mo><msub><mi>v</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">v_i, v_j</annotation></semantics></math>
 coincide, then their images
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(v_i),
@@ -152,14 +157,14 @@ determinant one</h2>
 scales the unit of volume by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>.</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(\mathrm{id}) \;=\; \det(I) \;=\; 1.</annotation></semantics></math></p>
-<pre class="coq"><code>  Theorem det_id : forall B : Basis n F U, det B (@linear_map_id F U FF VU) == 1.
+<pre class="coq"><code>  Theorem det_id : forall B : Basis n F U, det B (linear_map_id (F:=F) (U:=U)) == 1.
   Proof.
     intros B.
     unfold det.
-    calc (detM (mat_of B B (@linear_map_id F U FF VU)))
-      == (detM (@mat_id F FF n))
+    calc (detM (mat_of B B (linear_map_id (F:=F) (U:=U))))
+      == (detM (@mat_id F _ _ n))
       == (1 : F).
-    - exact (detM_proper n (mat_of B B (@linear_map_id F U FF VU)) mat_id (mat_of_id B)).
+    - exact (detM_proper n (mat_of B B (linear_map_id (F:=F) (U:=U))) mat_id (mat_of_id B)).
     - exact (det_id n).
   Qed.</code></pre>
 <p>Two links in the <code>calc</code> chain. First, <a
@@ -238,11 +243,13 @@ href="coqdoc/Riktig.Theory.Determinant.html#det_comp"><code>det_comp</code></a>
 unconditional over
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ℚ</mi><annotation encoding="application/x-tex">\mathbb{Q}</annotation></semantics></math>
 too:</p>
-<pre class="coq"><code>Corollary det_comp_Q : forall (U : Type) (VU : VectorSpace Q U) (n : nat)
+<pre class="coq"><code>Corollary det_comp_Q : forall (U : Type)
+    (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
+    (sU : HasScale Q U) (VU : VectorSpace Q U) (n : nat)
     (B : Basis n Q U) (f g : LinearMap Q U U),
   det B (linear_map_comp f g) == det B f * det B g.
 Proof.
-  intros U VU n B f g.
+  intros U eU zU aU nU sU VU n B f g.
   exact (det_comp (fun m A A&#39; =&gt; detM_mul_Q m A A&#39;) B f g).
 Qed.</code></pre>
 <p>And it computes. Take the standard nonsingular matrix
@@ -265,30 +272,30 @@ matter</h2>
 <p>Multiplicativity is what makes the basis drop out. Two bases
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>,</mo><msup><mi>B</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">B, B&#39;</annotation></semantics></math>
 are related by a change-of-basis matrix and its inverse,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">b</mi></mrow><mspace width="0.167em"></mspace><msup><mi>B</mi><mo>′</mo></msup><mspace width="0.167em"></mspace><mi>B</mi></mrow><annotation encoding="application/x-tex">P = \mathrm{cob}\,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi></mrow><mspace width="0.167em"></mspace><msup><mi>B</mi><mo>′</mo></msup><mspace width="0.167em"></mspace><mi>B</mi></mrow><annotation encoding="application/x-tex">P = \mathrm{change\_of\_basis}\,
 B&#39;\, B</annotation></semantics></math> and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">b</mi></mrow><mspace width="0.167em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><msup><mi>B</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">P^{-1} = \mathrm{cob}\, B\, B&#39;</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi></mrow><mspace width="0.167em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><msup><mi>B</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">P^{-1} = \mathrm{change\_of\_basis}\, B\, B&#39;</annotation></semantics></math>,
 which multiply to the identity. Their determinants are therefore
 reciprocal:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo>⋅</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">multiplicativity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>P</mi><mo>⋅</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mi>I</mi><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(P)\cdot\det(P^{-1}) \;=\; \det(P\cdot P^{-1}) \quad\{\text{multiplicativity}\} \;=\; \det(I) \quad\{P\cdot P^{-1} = I\} \;=\; 1 \quad\{\det(I) = 1\}.</annotation></semantics></math></p>
-<pre class="coq"><code>Lemma cob_det_inv : forall B B&#39; : Basis n F U,
-  detM (cob B&#39; B) * detM (cob B B&#39;) == 1.
+<pre class="coq"><code>Lemma change_of_basis_det_inv : forall B B&#39; : Basis n F U,
+  detM (change_of_basis B&#39; B) * detM (change_of_basis B B&#39;) == 1.
 Proof.
   intros B B&#39;.
-  calc (detM (cob B&#39; B) * detM (cob B B&#39;))
-    == (detM (mat_mul (cob B&#39; B) (cob B B&#39;)))
+  calc (detM (change_of_basis B&#39; B) * detM (change_of_basis B B&#39;))
+    == (detM (mat_mul (change_of_basis B&#39; B) (change_of_basis B B&#39;)))
     == (detM (@mat_id F _ _ n))
     == (1 : F).
-  - symmetry. exact (detM_mul n (cob B&#39; B) (cob B B&#39;)).
-  - exact (detM_proper n (mat_mul (cob B&#39; B) (cob B B&#39;)) mat_id
-             (cob_inv B B&#39;)).
+  - symmetry. exact (detM_mul n (change_of_basis B&#39; B) (change_of_basis B B&#39;)).
+  - exact (detM_proper n (mat_mul (change_of_basis B&#39; B) (change_of_basis B B&#39;)) mat_id
+             (change_of_basis_inv B B&#39;)).
   - exact (det_id n).
 Qed.</code></pre>
 <p><a
 href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
 (right to left) fuses the two determinants into the determinant of the
 product; <a
-href="coqdoc/Riktig.Theory.Trace.html#cob_inv"><code>cob_inv</code></a>
+href="coqdoc/Riktig.Theory.Trace.html#change_of_basis_inv"><code>change_of_basis_inv</code></a>
 says that product is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>;
 <code class="nolink">det_id</code> evaluates
@@ -316,34 +323,34 @@ the blackboard chain is:</p>
 \;=\; \det(M).
 </annotation></semantics></math></p>
 <p>And the Coq proof is that chain, link for link:</p>
-<pre class="coq"><code>Theorem det_basis_indep : forall (B B&#39; : Basis n F U) (f : LinearMap F U U),
+<pre class="coq"><code>Theorem det_basis_independent : forall (B B&#39; : Basis n F U) (f : LinearMap F U U),
   det B&#39; f == det B f.
 Proof.
   intros B B&#39; f.
   unfold det.
   calc (detM (mat_of B&#39; B&#39; f))
-    == (detM (mat_mul (cob B&#39; B) (mat_mul (mat_of B B f) (cob B B&#39;))))
-    == (detM (cob B&#39; B) * detM (mat_mul (mat_of B B f) (cob B B&#39;)))
-    == (detM (cob B&#39; B) * (detM (mat_of B B f) * detM (cob B B&#39;)))
-    == (detM (mat_of B B f) * (detM (cob B&#39; B) * detM (cob B B&#39;)))
+    == (detM (mat_mul (change_of_basis B&#39; B) (mat_mul (mat_of B B f) (change_of_basis B B&#39;))))
+    == (detM (change_of_basis B&#39; B) * detM (mat_mul (mat_of B B f) (change_of_basis B B&#39;)))
+    == (detM (change_of_basis B&#39; B) * (detM (mat_of B B f) * detM (change_of_basis B B&#39;)))
+    == (detM (mat_of B B f) * (detM (change_of_basis B&#39; B) * detM (change_of_basis B B&#39;)))
     == (detM (mat_of B B f) * 1)
     == (detM (mat_of B B f)).
   - exact (detM_proper n (mat_of B&#39; B&#39; f)
-             (mat_mul (cob B&#39; B) (mat_mul (mat_of B B f) (cob B B&#39;)))
+             (mat_mul (change_of_basis B&#39; B) (mat_mul (mat_of B B f) (change_of_basis B B&#39;)))
              (mat_of_conj B B&#39; f)).
-  - exact (detM_mul n (cob B&#39; B) (mat_mul (mat_of B B f) (cob B B&#39;))).
-  - exact (Ring.mul_proper (detM (cob B&#39; B)) (detM (cob B&#39; B))
-             (reflexivity (detM (cob B&#39; B)))
-             (detM (mat_mul (mat_of B B f) (cob B B&#39;)))
-             (detM (mat_of B B f) * detM (cob B B&#39;))
-             (detM_mul n (mat_of B B f) (cob B B&#39;))).
-  - exact (mul_comm_swap (detM (cob B&#39; B)) (detM (mat_of B B f))
-             (detM (cob B B&#39;))).
-  - exact (Ring.mul_proper (detM (mat_of B B f)) (detM (mat_of B B f))
+  - exact (detM_mul n (change_of_basis B&#39; B) (mat_mul (mat_of B B f) (change_of_basis B B&#39;))).
+  - exact (Magma.op_proper (detM (change_of_basis B&#39; B)) (detM (change_of_basis B&#39; B))
+             (reflexivity (detM (change_of_basis B&#39; B)))
+             (detM (mat_mul (mat_of B B f) (change_of_basis B B&#39;)))
+             (detM (mat_of B B f) * detM (change_of_basis B B&#39;))
+             (detM_mul n (mat_of B B f) (change_of_basis B B&#39;))).
+  - exact (mul_comm_swap (detM (change_of_basis B&#39; B)) (detM (mat_of B B f))
+             (detM (change_of_basis B B&#39;))).
+  - exact (Magma.op_proper (detM (mat_of B B f)) (detM (mat_of B B f))
              (reflexivity (detM (mat_of B B f)))
-             (detM (cob B&#39; B) * detM (cob B B&#39;)) 1
-             (cob_det_inv B B&#39;)).
-  - exact (Ring.mul_right_identity (detM (mat_of B B f))).
+             (detM (change_of_basis B&#39; B) * detM (change_of_basis B B&#39;)) 1
+             (change_of_basis_det_inv B B&#39;)).
+  - exact (right_identity (detM (mat_of B B f))).
 Qed.</code></pre>
 <p>Walking the links: <a
 href="coqdoc/Riktig.Theory.Trace.html#mat_of_conj"><code>mat_of_conj</code></a>
@@ -360,19 +367,21 @@ href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
 splits off
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(P)</annotation></semantics></math>,
 then (under <a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.mul_proper"><code>Ring.mul_proper</code></a>,
-which rewrites inside the right factor) splits the remaining product. <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+— the law that a binary operation respects equality, here used to
+rewrite inside the right factor of a product) splits the remaining
+product. <a
 href="coqdoc/Riktig.Theory.Field.html#mul_comm_swap"><code>mul_comm_swap</code></a>
 regroups the three scalars so that
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(P)</annotation></semantics></math>
 meets
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(P^{-1})</annotation></semantics></math>;
 <a
-href="coqdoc/Riktig.Theory.Determinant.html#cob_det_inv"><code>cob_det_inv</code></a>
+href="coqdoc/Riktig.Theory.Determinant.html#change_of_basis_det_inv"><code>change_of_basis_det_inv</code></a>
 collapses that pair to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>;
 and <a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.mul_right_identity"><code>Ring.mul_right_identity</code></a>
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
 erases the unit. The scalar the identity-map check, the multiplicativity
 theorem, and the basis-independence theorem all name is one and the same
 number — the coordinate-free determinant, arrived at by a route that
@@ -392,9 +401,9 @@ href="coqdoc/Riktig.Theory.Determinant.html#det_id"><code>det_id</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Determinant.html#det_comp"><code>det_comp</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Determinant.html#cob_det_inv"><code>cob_det_inv</code></a>,
+href="coqdoc/Riktig.Theory.Determinant.html#change_of_basis_det_inv"><code>change_of_basis_det_inv</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Determinant.html#det_basis_indep"><code>det_basis_indep</code></a>)
+href="coqdoc/Riktig.Theory.Determinant.html#det_basis_independent"><code>det_basis_independent</code></a>)
 · <a href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a> (<a
 href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, the
 Laplace recursion, <a

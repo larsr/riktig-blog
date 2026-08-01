@@ -27,11 +27,12 @@ told about that quantity. This post shows the two programs written so
 that the shrinking quantity, and the proof that it shrinks, are part of
 the program text itself — and then proves both programs correct.</p>
 <p>There are two ways to arrange that in Coq. One is to reach for a
-special elaboration front-end — <code>Program Fixpoint</code>, or the
-<code>Equations</code> plugin — that rewrites your definition into
-something involving well-founded recursion, hides the rewriting, and
-hands you obligations to discharge afterwards. The other is to write the
-program <em>as an ordinary lambda term</em> yourself: apply the
+special elaboration front-end — <code
+class="nolink">Program Fixpoint</code>, or the <code
+class="nolink">Equations</code> plugin — that rewrites your definition
+into something involving well-founded recursion, hides the rewriting,
+and hands you obligations to discharge afterwards. The other is to write
+the program <em>as an ordinary lambda term</em> yourself: apply the
 well-founded recursion combinator <code>Fix</code> by hand, supply the
 measure that decreases, and prove each recursive call’s side-condition
 inline. The second way is more typing, but in return the definition you
@@ -105,9 +106,8 @@ once:</p>
 equals its body applied to itself, provided the body does not inspect
 <em>which</em> recursive function it was handed — the second bullet
 discharges exactly that, showing the two branches use the recursive
-argument the same way under any <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and
-<code>g</code>. From <a
+argument the same way under any <code>f</code> and <code>g</code>. From
+<a
 href="coqdoc/Riktig.Programs.Gcd.html#gcd_step"><code>gcd_step</code></a>
 on, every proof rewrites with this equation and never touches the
 <code>Fix</code> again. And the program computes; these are checked in
@@ -138,16 +138,25 @@ for the library’s <code>Nat.gcd</code>. On the blackboard, the base case
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">b = 0</annotation></semantics></math>
 is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\gcd(a,0) = a = G(a,0)</annotation></semantics></math>,
-and the nonzero case is a chain of three equalities:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the program’s step, since </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mo>≠</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">induction hypothesis at the smaller pair: </mtext><mspace width="0.333em"></mspace></mrow><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo>&lt;</mo><mi>b</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mtext mathvariant="normal">, the library’s own Euclid step.</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+and the nonzero case is a chain that starts at the program and walks
+across to the library:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>gcd</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the program’s step, since </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mo>≠</mo><mn>0</mn><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">induction hypothesis at the smaller pair: </mtext><mspace width="0.333em"></mspace></mrow><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo>&lt;</mo><mi>b</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo>,</mo><mspace width="0.222em"></mspace><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mrow><mspace width="0.222em"></mspace><mrow><mi>mod</mi><mo>&#8289;</mo></mrow><mspace width="0.222em"></mspace><mi>b</mi></mrow><mo>,</mo><mspace width="0.222em"></mspace><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>,</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mtext mathvariant="normal">, the library’s own Euclid step</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mtext mathvariant="normal">, again.</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{aligned}
 \gcd(a,b) &amp;= \gcd(b,\ a \bmod b) &amp;&amp; \{\text{the program&#39;s step, since } b \neq 0\}\\
           &amp;= G(b,\ a \bmod b)    &amp;&amp; \{\text{induction hypothesis at the smaller pair: } a \bmod b &lt; b\}\\
-          &amp;= G(a,b)              &amp;&amp; \{G(b,\ a \bmod b) = G(a,b)\text{, the library&#39;s own Euclid step.}\}
+          &amp;= G(a \bmod b,\ b)    &amp;&amp; \{G(x,y) = G(y,x)\}\\
+          &amp;= G(b,\ a)            &amp;&amp; \{G(a \bmod b,\ b) = G(b,a)\text{, the library&#39;s own Euclid step}\}\\
+          &amp;= G(a,b)              &amp;&amp; \{G(x,y) = G(y,x)\text{, again.}\}
 \end{aligned}
 </annotation></semantics></math></p>
 <p>Here is the proof from <a
-href="coqdoc/Riktig.Theory.Gcd.html"><code>Theory/Gcd.v</code></a>:</p>
+href="coqdoc/Riktig.Theory.Gcd.html"><code>Theory/Gcd.v</code></a>. The
+first equality is the program’s own step, applied by rewriting; the four
+after it are written down as a chain, in the order they appear above.
+<code>calc</code> takes a sequence of terms separated by
+<code>==</code>, each step carrying in braces the single law that
+justifies it, and composes the steps by transitivity — so the displayed
+calculation and the Coq are the same calculation.</p>
 <pre class="coq"><code>  Lemma gcd_eq_stdlib : forall a b, gcd a b = Nat.gcd a b.
   Proof.
     apply (measure_ind2 (fun (_ b : nat) =&gt; b)
@@ -155,9 +164,12 @@ href="coqdoc/Riktig.Theory.Gcd.html"><code>Theory/Gcd.v</code></a>:</p>
     intros a b IH.
     rewrite gcd_step. destruct (dec (b = 0)) as [-&gt;|Hb].
     - now rewrite Nat.gcd_0_r.
-    - rewrite (IH b (a mod b)) by (apply Nat.mod_upper_bound; exact Hb).
-      rewrite (Nat.gcd_comm b (a mod b)), Nat.Lcm0.gcd_mod.
-      apply Nat.gcd_comm.
+    - assert (Hlt : a mod b &lt; b) by (apply Nat.mod_upper_bound; exact Hb).
+      calc (gcd b (a mod b))
+        == (Nat.gcd b (a mod b)) { (IH b (a mod b) Hlt) }
+        == (Nat.gcd (a mod b) b) { Nat.gcd_comm }
+        == (Nat.gcd b a)         { (Nat.Lcm0.gcd_mod a b) }
+        == (Nat.gcd a b)         { Nat.gcd_comm }.
   Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
@@ -176,14 +188,17 @@ step.</li>
 <li>In the base case <code>now rewrite Nat.gcd_0_r</code> closes
 <code>a = Nat.gcd a 0</code>, since <code>Nat.gcd a 0</code> is
 <code>a</code>.</li>
-<li>In the step, <code>rewrite (IH b (a mod b))</code> is the induction
-hypothesis — its side-condition <code>a mod b &lt; b</code> is
-discharged right there by <code>Nat.mod_upper_bound</code> using
-<code>Hb</code>. That leaves
-<code>Nat.gcd b (a mod b) = Nat.gcd a b</code>, which the last two
-rewrites and <code>apply Nat.gcd_comm</code> settle through the standard
-<code>gcd_comm</code> and <code>gcd_mod</code> lemmas — this is the
-outer two equalities of the blackboard chain.</li>
+<li>In the step the goal is <code>gcd b (a mod b) = Nat.gcd a b</code>,
+and the first thing needed is the decrease itself:
+<code>Hlt : a mod b &lt; b</code>, from <code>Nat.mod_upper_bound</code>
+and <code>Hb</code>.</li>
+<li>The first step of the chain is the induction hypothesis applied at
+the smaller pair, <code>IH b (a mod b) Hlt</code>; that is where the
+program is traded for <code>Nat.gcd</code>. The three remaining steps
+stay inside the library: <code>Nat.gcd_comm</code> swaps the two
+arguments, <code>Nat.Lcm0.gcd_mod</code> — which states
+<code>Nat.gcd (a mod b) b = Nat.gcd b a</code> — is the library’s own
+Euclid step, and <code>Nat.gcd_comm</code> swaps back.</li>
 </ul>
 <p>With the bridge in hand the specification is three one-line
 corollaries, each a rewrite followed by the matching standard-library
@@ -346,9 +361,9 @@ href="coqdoc/Riktig.Programs.BinarySearch.html#bsearch_step"><code>bsearch_step<
     pose proof (half_le (hi - lo)) as Hq.
     destruct (dec (leb (read m (lo + (hi - lo) / 2)) target = true)) as [L1|L1].
     - destruct (dec (leb target (read m (lo + (hi - lo) / 2)) = true)) as [L2|L2].
-      + (* found at the midpoint.  (congruence, not injection: the
-           latter normalizes (hi - lo) / 2 into its divmod unfolding,
-           which lia then no longer matches with half_le.) *)
+      + (* congruence, not injection: the latter normalizes
+           (hi - lo) / 2 into its divmod unfolding, which lia then no
+           longer matches against half_le. *)
         intros E.
         assert (Ei : i = lo + (hi - lo) / 2) by congruence.
         subst i.

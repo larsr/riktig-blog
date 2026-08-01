@@ -40,12 +40,10 @@ three combinators called <code>S</code>, <code>K</code>, and
 <p>Their reduction rules are just three rewrites:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>x</mi><mspace width="2.0em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>y</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>x</mi><mspace width="2.0em"></mspace><mi>S</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">I\,x \;\to\; x \qquad K\,x\,y \;\to\; x \qquad S\,f\,g\,x \;\to\; f\,x\,(g\,x)</annotation></semantics></math></p>
 <p><code>I</code> is the identity; <code>K</code> throws its second
-argument away; <code>S</code> applies <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and
-<code>g</code> to a shared <code>x</code> and combines the results.
-Remarkably, that is enough to express every lambda term. As a first
-taste, <code>S K K</code> behaves exactly like the identity
-<code>I</code>:</p>
+argument away; <code>S</code> applies <code>f</code> and <code>g</code>
+to a shared <code>x</code> and combines the results. Remarkably, that is
+enough to express every lambda term. As a first taste,
+<code>S K K</code> behaves exactly like the identity <code>I</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mspace width="0.167em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.278em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>S</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> rule</mtext></mrow><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>→</mo><mspace width="0.278em"></mspace><mi>x</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>K</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> rule</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">S\,K\,K\,x \;\to\; K\,x\,(K\,x) \quad\{S\text{ rule}\}\quad \to\; x \quad\{K\text{ rule}\}</annotation></semantics></math></p>
 <p>The <code>S</code> rule shares <code>x</code> into both branches,
 then the outer <code>K</code> keeps the left branch and drops the right.
@@ -224,9 +222,8 @@ to the left and <code>babs (CVar 0) = CI</code> to the right. The Coq
 development confirms the computed result exactly:</p>
 <pre class="coq"><code>Example translate_k : translate k = CS @@ (CK @@ CK) @@ CI.
 Proof. reflexivity. Qed.</code></pre>
-<p>And the translated term genuinely behaves like <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>: handed two
-opaque arguments, it returns the first, checked by running the
+<p>And the translated term genuinely behaves like <code>k</code>: handed
+two opaque arguments, it returns the first, checked by running the
 normalizer.</p>
 <pre class="coq"><code>Example translate_k_fst :
   cstar (translate k @@ CVar 0 @@ CVar 1) (CVar 0).
@@ -237,24 +234,106 @@ href="coqdoc/Riktig.Lambda.SKI.html#CI"><code>CI</code></a>
 outright:</p>
 <pre class="coq"><code>Example translate_id : translate idt = CI.
 Proof. reflexivity. Qed.</code></pre>
+<h2 id="one-redex-is-not-every-redex">One redex is not every redex</h2>
 <p><a
 href="coqdoc/Riktig.Lambda.SKI.html#babs_correct"><code>babs_correct</code></a>
-is the local guarantee behind these runs: it says a single translated
-redex steps to the right combinator-level substitution. The source stops
-short of the full simulation theorem (that every lambda reduction is
-mirrored by a combinator reduction), and says so plainly rather than
-leaving an <code>Admitted</code> behind — the general statement needs
-substitution-commutation lemmas over de Bruijn indices, and weak
-combinatory reduction does not mirror beta reduction underneath a
-binder. What is proved is the per-redex law, and it is enough to compile
-and run closed terms.</p>
+is a local guarantee: one translated redex, handed one argument, steps
+to the right combinator-level substitution. The global statement one
+would like next — whenever a lambda term reduces to another, its
+translation reduces to the other’s translation — does not follow from
+it, and for this <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> it is
+not merely unproved but false.</p>
+<p>The obstruction is that combinatory reduction is not extensional.
+Hand <code>CS @@ (CK @@ f) @@ (CK @@ g)</code> and
+<code>CK @@ (f @@ g)</code> one further argument and both reach
+<code>f @@ g</code>; with no argument supplied, neither reduces to the
+other, since <code>S</code> needs three arguments to fire and has two,
+while <code>K</code> needs two and has one. They are two stuck terms
+that stand for the same function and that no rule relates. And <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> splits
+every application with <code>S</code> whether or not <code>CVar 0</code>
+occurs in it, so it can build the first shape where translating an
+already-substituted term builds the second. Normalizing the two
+translations of one concrete pair — the term <code>λ.λ. 1 0</code>
+applied to <code>λ. 0 1</code>, and that application’s beta reduct —
+exhibits the disagreement:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">f</mi></mrow><mn>200</mn></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.278em"></mspace><mi>t</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≠</mo><mspace width="0.278em"></mspace><msub><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">f</mi></mrow><mn>200</mn></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.278em"></mspace><msup><mi>t</mi><mo>′</mo></msup><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mi>t</mi><mo>→</mo><msup><mi>t</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">\mathrm{nf}_{200}\big(\mathrm{translate}\;t\big) \;\neq\;
+\mathrm{nf}_{200}\big(\mathrm{translate}\;t&#39;\big),
+\qquad t \longrightarrow t&#39;</annotation></semantics></math></p>
+<pre class="coq"><code>Example translate_not_step_simulation :
+  nf 200 (translate (App (Abs (Abs (App (Var 1) (Var 0))))
+                          (Abs (App (Var 0) (Var 1)))))
+  &lt;&gt; nf 200 (translate
+       (subst 0 (Abs (App (Var 0) (Var 1))) (Abs (App (Var 1) (Var 0))))).
+Proof. discriminate. Qed.</code></pre>
+<p>Two hundred steps of fuel run the normalizer far past the point where
+either side stops, so both arguments of <code>&lt;&gt;</code> are
+concrete combinator terms by the time <code>discriminate</code> compares
+their outermost constructors and finds them different.</p>
+<p>The repair is one occurrence test in the application rule:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>M</mi><mspace width="0.167em"></mspace><mi>N</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mi>S</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mi>M</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mi>N</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> occurs in </mtext><mspace width="0.333em"></mspace></mrow><mi>M</mi><mspace width="0.167em"></mspace><mi>N</mi><mo>,</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>K</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>M</mi><mspace width="0.167em"></mspace><mi>N</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">otherwise.</mtext></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">[x]\,(M\,N) \;=\;
+\begin{cases}
+S\,([x]M)\,([x]N) &amp; \text{if } x \text{ occurs in } M\,N,\\
+K\,(M\,N) &amp; \text{otherwise.}
+\end{cases}</annotation></semantics></math></p>
+<p>In de Bruijn form, “occurs” is the boolean test <a
+href="coqdoc/Riktig.Lambda.SKI.html#occurs0"><code>occurs0</code></a>
+for <code>CVar 0</code>, and the discarded-variable case has to shift
+the remaining indices down by one (<a
+href="coqdoc/Riktig.Lambda.SKI.html#cdown1"><code>cdown1</code></a>),
+since the binder they counted through is gone:</p>
+<pre class="coq"><code>Fixpoint babs2 (t : comb) : comb :=
+  match t with
+  | CVar O =&gt; CI
+  | CApp f a =&gt;
+      if occurs0 (CApp f a) then CS @@ babs2 f @@ babs2 a
+      else CK @@ cdown1 (CApp f a)
+  | c =&gt; CK @@ cdown1 c
+  end.</code></pre>
+<p><a href="coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a>
+obeys the same per-redex law as <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs"><code>babs</code></a> — that
+is <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs2_correct"><code>babs2_correct</code></a>,
+the same induction with one extra branch for the non-occurring case —
+and now the choice between <code>S</code> and <code>K</code> depends
+only on where the variable occurs, which is exactly the information
+substitution changes. So the translation <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2"><code>translate2</code></a>
+built on <a
+href="coqdoc/Riktig.Lambda.SKI.html#babs2"><code>babs2</code></a> does
+mirror reduction, over a whole sequence of beta steps — <a
+href="coqdoc/Riktig.Lambda.Syntax.html#star"><code>star</code></a> is
+zero or more of those on lambda terms, as <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar"><code>cstar</code></a> is on
+combinators:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><msup><mo>→</mo><mo>*</mo></msup><msup><mi>t</mi><mo>′</mo></msup><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><mi>t</mi><mspace width="0.278em"></mspace><msup><mo>→</mo><mo>*</mo></msup><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mn mathvariant="normal">2</mn></mrow><mspace width="0.278em"></mspace><msup><mi>t</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">t \longrightarrow^{*} t&#39; \quad\Longrightarrow\quad
+\mathrm{translate2}\;t \;\longrightarrow^{*}\; \mathrm{translate2}\;t&#39;</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem translate2_star_sim : forall t t&#39;,
+  star t t&#39; -&gt; cstar (translate2 t) (translate2 t&#39;).
+Proof.
+  intros t t&#39; H. induction H as [t0 | t0 u v Hstep _ IH].
+  - apply cstar_refl.
+  - eapply cstar_trans. { apply translate2_step_star. exact Hstep. } exact IH.
+Qed.</code></pre>
+<p>Induction on the reduction sequence. An empty sequence needs nothing
+— <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_refl"><code>cstar_refl</code></a>.
+A sequence that begins with one step and continues gets that step’s
+simulation from <a
+href="coqdoc/Riktig.Lambda.SKI.html#translate2_step_star"><code>translate2_step_star</code></a>,
+and the induction hypothesis covers the rest; <a
+href="coqdoc/Riktig.Lambda.SKI.html#cstar_trans"><code>cstar_trans</code></a>
+chains the two.</p>
 <p>Next post: continuation-passing style, another translation on the
 same lambda terms, this time turning control flow into ordinary
 data.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Lambda.SKI.html"><code>Lambda/SKI.v</code></a>
-(combinators, bracket abstraction, translation) · <a
+(combinators, bracket abstraction, translation, and the simulation
+theorem) · <a
 href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
 (the lambda terms translated from).</p>
 </main>

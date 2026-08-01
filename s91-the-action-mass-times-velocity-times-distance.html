@@ -72,10 +72,10 @@ integral is a specification, and FTC is not one of its laws</h2>
 on.</p>
 <p>First, the derivative. In this series a derivative is not a number
 but a <em>bounded linear map</em>: <code>is_deriv f a L</code> says that
-the linear map <code>L</code> approximates the increments of <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> near
-the point <code>a</code> to first order, with an error that vanishes
-faster than the increment. For a scalar function on a field
+the linear map <code>L</code> approximates the increments of
+<code>f</code> near the point <code>a</code> to first order, with an
+error that vanishes faster than the increment. For a scalar function on
+a field
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>,
 every linear map
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>→</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">F \to F</annotation></semantics></math>
@@ -112,9 +112,8 @@ quoting in full:</p>
 
    It is NOT a field of the class and NOT a theorem here, because it
    cannot be either yet:
-   - as a field it would need is_deriv, and Theory/Derivative.v is being
-     built in parallel — importing it here would couple the spec to the
-     derivative file&#39;s exact formulation before it has settled;
+   - as a field it would need is_deriv, which lives in
+     Theory/Derivative.v, and an Interface file does not import Theory;
    - as a theorem it does not follow from the laws above: the laws pin
      down the integral on step-function-like data (const, linearity,
      additivity, the bound), but connecting it to derivatives needs
@@ -283,10 +282,8 @@ href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_L_equ"><code>is_deriv_L_e
 transports the derivative fact across that pointwise equality of linear
 maps, landing on <code>lm_scale_map (f (u t) * du t)</code> — the form
 <code>ftc</code> wants. The second goal is equality (2):
-<code>ftc</code> applied to <code>W</code> and <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
-directly, with a <code>symmetry</code> because the chain reads left to
-right.</p>
+<code>ftc</code> applied to <code>W</code> and <code>f</code> directly,
+with a <code>symmetry</code> because the chain reads left to right.</p>
 <h2 id="the-abbreviated-action-from-position-to-time">The abbreviated
 action: from position to time</h2>
 <p><strong>Theorem.</strong> The integral of momentum over position from
@@ -331,7 +328,7 @@ Proof.
     == (int (fun t : F =&gt; m * (phi (q t) * v t)) a b)
     == (int (fun t : F =&gt; m * (v t * v t)) a b).
   - exact (Integral.linear_scale m phi (q a) (q b)).
-  - apply field_sc_proper.
+  - apply field_scale_proper.
     + reflexivity.
     + symmetry.
       exact (int_substitution phi Phi q v a b
@@ -342,8 +339,8 @@ Proof.
         (fun t : F =&gt; m * (phi (q t) * v t))
         (fun t : F =&gt; m * (v t * v t))).
     { intros t.
-      apply Ring.mul_proper; [ reflexivity | ].
-      apply Ring.mul_proper; [ symmetry; exact (speed_of_position t) | ].
+      apply Magma.op_proper; [ reflexivity | ].
+      apply Magma.op_proper; [ symmetry; exact (speed_of_position t) | ].
       reflexivity. }
     exact (Integral.proper (fun t : F =&gt; m * (phi (q t) * v t))
       (fun t : F =&gt; m * (v t * v t)) Hpt
@@ -358,7 +355,7 @@ with <code>f := phi</code>, <code>W := Phi</code>, <code>u := q</code>,
 <code>du := v</code>, handing it the three hypotheses it demands
 (<code>Phi_proper</code>, <code>Phi_antideriv</code>,
 <code>q_deriv</code>); <a
-href="coqdoc/Riktig.Theory.FieldVS.html#field_sc_proper"><code>field_sc_proper</code></a>
+href="coqdoc/Riktig.Interface.VectorSpace.html#field_scale_proper"><code>field_scale_proper</code></a>
 lets the rewrite happen under the <code>m *:</code>, and
 <code>symmetry</code> flips the substitution equation because the chain
 moves from the position integral toward the time integral. Step (3) is
@@ -389,7 +386,7 @@ Proof.
   - assert (Hpt : pointwise_relation F equ
         (fun t : F =&gt; (c * m) * (v t * v t))
         (fun t : F =&gt; c *: (m * (v t * v t)))).
-    { intros t. exact (Ring.mul_associative c m (v t * v t)). }
+    { intros t. exact (associative c m (v t * v t)). }
     exact (Integral.proper (fun t : F =&gt; (c * m) * (v t * v t))
       (fun t : F =&gt; c *: (m * (v t * v t))) Hpt
       a a (reflexivity a) b b (reflexivity b)).

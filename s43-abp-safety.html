@@ -82,9 +82,8 @@ href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
 
 Record Packet := { pkt_bit : bit; pkt_msg : M }.</code></pre>
 <p>The sender emits, for each application message, a <em>burst</em> of
-<a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
-identical copies — its retransmission budget — and flips the bit once
-per logical message, not once per copy:</p>
+<code>k</code> identical copies — its retransmission budget — and flips
+the bit once per logical message, not once per copy:</p>
 <pre class="coq"><code>Fixpoint sender_burst (b : bit) (m : M) (k : nat) : list Packet :=
   match k with
   | O =&gt; []
@@ -96,9 +95,8 @@ Fixpoint sender_stream (b : bit) (ms : list M) (k : nat) : list Packet :=
   | [] =&gt; []
   | m :: ms&#39; =&gt; sender_burst b m k ++ sender_stream (negb b) ms&#39; k
   end.</code></pre>
-<p><code>sender_burst b m k</code> is <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> copies of
-the same packet <code>{| pkt_bit := b; pkt_msg := m |}</code>. <a
+<p><code>sender_burst b m k</code> is <code>k</code> copies of the same
+packet <code>{| pkt_bit := b; pkt_msg := m |}</code>. <a
 href="coqdoc/Riktig.Channel.ABP.html#sender_stream"><code>sender_stream</code></a>
 lays the bursts end to end, negating the bit (<code>negb</code>) at each
 step down the message list. So every packet belonging to one message is
@@ -224,13 +222,11 @@ href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_neq"><code>deliver_homog_neq<
 says nothing is delivered and the expectation is unmoved — the left
 disjunct.</li>
 </ul>
-<p>Notice the budget <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> never
-constrains anything here. It holds for <code>k = 0</code> (an empty
-burst, delivering nothing) just as for a large <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. The size
-of a burst affects <em>whether</em> a message survives, never
-<em>whether the wrong thing</em> is delivered.</p>
+<p>Notice the budget <code>k</code> never constrains anything here. It
+holds for <code>k = 0</code> (an empty burst, delivering nothing) just
+as for a large <code>k</code>. The size of a burst affects
+<em>whether</em> a message survives, never <em>whether the wrong
+thing</em> is delivered.</p>
 <h2 id="the-safety-theorem-proved-and-walked">The safety theorem, proved
 and walked</h2>
 <p>Now the induction. It is stated for an arbitrary receiver expectation
@@ -328,12 +324,11 @@ Proof.
   intros k b0 ms wire H.
   apply (abp_deliver_subseq k ms b0 b0 wire H).
 Qed.</code></pre>
-<p>In words: for any budget <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, any
-starting bit <code>b0</code>, any list of application messages
-<code>ms</code>, and any wire trace the lossy-and-duplicating channel
-could produce from the sender’s output, whatever the receiver delivers
-is a subsequence of <code>ms</code> — writing
+<p>In words: for any budget <code>k</code>, any starting bit
+<code>b0</code>, any list of application messages <code>ms</code>, and
+any wire trace the lossy-and-duplicating channel could produce from the
+sender’s output, whatever the receiver delivers is a subsequence of
+<code>ms</code> — writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>≼</mo><annotation encoding="application/x-tex">\preceq</annotation></semantics></math>
 for the subsequence relation,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mn>0</mn></msub><mo>,</mo><mi>m</mi><mi>s</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.278em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><msub><mi>b</mi><mn>0</mn></msub></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>≼</mo><mi>m</mi><mi>s</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy\_dup}\bigl(\mathrm{sent}(b_0, ms, k),\; w\bigr) \;\Longrightarrow\; D_{b_0}(w) \preceq ms.</annotation></semantics></math></p>
@@ -347,13 +342,12 @@ There is exactly one: that <code>wire</code> is <em>some</em> trace the
 channel <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
 allows. There is no assumption that the channel ever cooperates, no
-lower bound on the budget <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, no bound
-on how much it loses or duplicates. A channel that drops every single
-packet forever satisfies the hypothesis perfectly — it makes
-<code>wire = []</code>, the receiver delivers <code>[]</code>, and
-<code>[]</code> is a subsequence of any <code>ms</code>. Vacuously safe,
-and completely useless.</p>
+lower bound on the budget <code>k</code>, no bound on how much it loses
+or duplicates. A channel that drops every single packet forever
+satisfies the hypothesis perfectly — it makes <code>wire = []</code>,
+the receiver delivers <code>[]</code>, and <code>[]</code> is a
+subsequence of any <code>ms</code>. Vacuously safe, and completely
+useless.</p>
 <p>That is not a flaw in the theorem; it is precisely the boundary of
 what safety means. Safety promises that nothing <em>wrong</em> comes
 out. It says nothing about whether anything comes out at all. Ruling out

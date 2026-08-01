@@ -89,8 +89,8 @@ for every
 <em>difference</em>. To show two vectors are equal it is enough to show
 their difference is zero, and to show a vector
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
-is zero it is enough — this is where positivity of the inner product
-earns its keep — to show
+is zero it is enough — this is the one step that uses positivity of the
+inner product — to show
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle w , x\rangle = 0</annotation></semantics></math>
 for <em>every</em>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
@@ -139,14 +139,14 @@ Proof.
       == (⟨ w , lm_fun g1 u ⟩ + - ⟨ w , lm_fun g2 u ⟩)
         { (inner_right_neg w (lm_fun g2 u)) }
       == (⟨ lm_fun g1 u , w ⟩ + - ⟨ w , lm_fun g2 u ⟩)
-        { (InnerProduct.symmetric w (lm_fun g1 u)) }
+        { (InnerProductSpace.symmetric w (lm_fun g1 u)) }
       == (⟨ lm_fun g1 u , w ⟩ + - ⟨ lm_fun g2 u , w ⟩)
-        { (InnerProduct.symmetric w (lm_fun g2 u)) }
+        { (InnerProductSpace.symmetric w (lm_fun g2 u)) }
       == (⟨ u , lm_fun f w ⟩ + - ⟨ lm_fun g2 u , w ⟩)
         { (Hg1 u w) }
       == (⟨ u , lm_fun f w ⟩ + - ⟨ u , lm_fun f w ⟩)
         { (Hg2 u w) }.
-  - apply invr.
+  - apply right_inverse.
 Qed.</code></pre>
 <p>Reading the proof:</p>
 <ul>
@@ -168,18 +168,17 @@ heading for:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>−</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>f</mi><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,fw\rangle - \langle u,fw\rangle</annotation></semantics></math>,
 which is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-by <a href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> — a
-scalar plus its negation.</li>
+by <code>invr</code> — a scalar plus its negation.</li>
 <li>The calc chain gets there step by step: <a
-href="coqdoc/Riktig.Theory.InnerProduct.html#inner_right_additive"><code>inner_right_additive</code></a>
+href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_right_additive"><code>inner_right_additive</code></a>
 splits the right slot into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>−</mi><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle w,g_1u\rangle + \langle w,{-}g_2u\rangle</annotation></semantics></math>;
 <a
-href="coqdoc/Riktig.Theory.InnerProduct.html#inner_right_neg"><code>inner_right_neg</code></a>
+href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_right_neg"><code>inner_right_neg</code></a>
 turns the second pairing into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><msub><mi>g</mi><mn>2</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">-\langle w,g_2u\rangle</annotation></semantics></math>;
 the two <a
-href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct.symmetric"><code>InnerProduct.symmetric</code></a>
+href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.symmetric"><code>InnerProductSpace.symmetric</code></a>
 steps flip each pairing to put
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>g</mi><mi>i</mi></msub><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">g_i\,u</annotation></semantics></math>
 on the left, so the adjoint hypotheses <code>Hg1</code>/<code>Hg2</code>
@@ -277,14 +276,16 @@ Given a list of vectors, we would like a new list spanning the same
 space but with every pair orthogonal. The standard recipe processes the
 input left to right, and for each new vector subtracts off its
 <em>projection</em> onto every vector already produced, leaving only the
-part pointing in a genuinely new direction. The projection of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
-onto the axis through
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
-is</p>
-<pre class="coq"><code>Definition proj {F V : Type} `{InnerProduct.InnerProduct F V} (v u : V) : V :=
+part pointing in a genuinely new direction. The projection of a vector
+onto the axis through another one is</p>
+<pre class="coq"><code>Definition proj {F V : Type} `{InnerProductSpace F V} (v u : V) : V :=
   (⟨ u , v ⟩ * inv (norm2 v)) *: v.</code></pre>
-<p>— the scalar
+<p>— note the argument order: <code>proj v u</code> returns a multiple
+of its <em>first</em> argument, so it is the projection of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+onto the axis through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>,
+namely the scalar
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mi>/</mi><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\langle u,v\rangle / \lVert v\rVert^2</annotation></semantics></math>
 times
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>,
@@ -292,27 +293,28 @@ where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\lVert v\rVert^2 = \langle v,v\rangle</annotation></semantics></math>.
 The inner loop subtracts one projection per already-processed
 vector:</p>
-<pre class="coq"><code>  Fixpoint gs_aux (done : list V) (v : V) : V :=
+<pre class="coq"><code>  Fixpoint gram_schmidt_aux (done : list V) (v : V) : V :=
     match done with
     | nil =&gt; v
-    | cons d done&#39; =&gt; gs_aux done&#39; (v + - proj d v)
+    | cons d done&#39; =&gt; gram_schmidt_aux done&#39; (v + - proj d v)
     end.</code></pre>
 <p>and the outer loop folds that over the input, growing an accumulator
-<code>acc</code> of finished vectors, <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_aux"><code>gs_aux</code></a>-ing
-each new input against everything produced so far:</p>
-<pre class="coq"><code>  Fixpoint gs_step (acc vs : list V) : list V :=
+<code>acc</code> of finished vectors and passing each new input through
+<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
+against everything produced so far:</p>
+<pre class="coq"><code>  Fixpoint gram_schmidt_step (acc vs : list V) : list V :=
     match vs with
     | nil =&gt; acc
-    | cons v vs&#39; =&gt; gs_step (acc ++ (gs_aux acc v :: nil)) vs&#39;
+    | cons v vs&#39; =&gt; gram_schmidt_step (acc ++ (gram_schmidt_aux acc v :: nil)) vs&#39;
     end.
 
-  Definition gs (vs : list V) : list V := gs_step nil vs.</code></pre>
+  Definition gram_schmidt (vs : list V) : list V := gram_schmidt_step nil vs.</code></pre>
 <h2 id="the-result-with-its-hypotheses-in-plain-sight">The result, with
 its hypotheses in plain sight</h2>
 <p><strong>The claim:</strong> any two distinct vectors in the output
-<code>gs vs</code> are orthogonal —</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><msub><mi>d</mi><mn>2</mn></msub><mo>∈</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">s</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>d</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>d</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">⟨</mo><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><msub><mi>d</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">d_1, d_2 \in \mathrm{gs}(vs),\quad d_1 \neq d_2 \;\implies\; \langle d_1 , d_2 \rangle = 0.</annotation></semantics></math></p>
+<code>gram_schmidt vs</code> are orthogonal —</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><msub><mi>d</mi><mn>2</mn></msub><mo>∈</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>d</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>d</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">⟨</mo><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><msub><mi>d</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">d_1, d_2 \in \mathrm{gram\_schmidt}(vs),\quad d_1 \neq d_2 \;\implies\; \langle d_1 , d_2 \rangle = 0.</annotation></semantics></math></p>
 <p>But there is a genuine hypothesis that cannot be swept aside. The
 projection of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
@@ -326,19 +328,19 @@ construction produces has nonzero squared norm — which is the
 constructive reading of “the input family was linearly independent.”
 That hypothesis is stated explicitly, on the final output, not
 hidden:</p>
-<pre class="coq"><code>Theorem gs_pairwise_orthogonal : forall vs : list V,
-  (forall d : V, In d (gs vs) -&gt; norm2 d =/= 0) -&gt;
+<pre class="coq"><code>Theorem gram_schmidt_pairwise_orthogonal : forall vs : list V,
+  (forall d : V, In d (gram_schmidt vs) -&gt; norm2 d =/= 0) -&gt;
   forall d1 d2 : V,
-    In d1 (gs vs) -&gt; In d2 (gs vs) -&gt; d1 &lt;&gt; d2 -&gt; orthogonal d1 d2.
+    In d1 (gram_schmidt vs) -&gt; In d2 (gram_schmidt vs) -&gt; d1 &lt;&gt; d2 -&gt; orthogonal d1 d2.
 Proof.
   intros vs Hnz d1 d2 Hd1 Hd2 Hneq.
-  destruct (gs_step_pairwise vs nil pairwise_orth_nil nonzero_nil Hnz
+  destruct (gram_schmidt_step_pairwise vs nil pairwise_orth_nil nonzero_nil Hnz
               d1 d2 Hd1 Hd2) as [Ho | Heq].
   - exact Ho.
   - destruct (Hneq Heq).
 Qed.</code></pre>
 <p>Reading it: the whole force is in <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_step_pairwise"><code>gs_step_pairwise</code></a>,
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_step_pairwise"><code>gram_schmidt_step_pairwise</code></a>,
 the loop invariant, run from the empty seed. That invariant is carried
 in a slightly different shape from the advertised one — it produces, for
 any two output vectors, <code>orthogonal d1 d2 \/ d1 = d2</code>
@@ -348,7 +350,7 @@ converting between them needs a decision on whether two vectors are
 equal, which the disjunctive form sidesteps; it is the form the
 induction naturally produces and consumes. So here, at the very end,
 that disjunction is unpacked: <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_step_pairwise"><code>gs_step_pairwise</code></a>
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_step_pairwise"><code>gram_schmidt_step_pairwise</code></a>
 hands back <code>Ho : orthogonal d1 d2</code> or
 <code>Heq : d1 = d2</code>. The first case <em>is</em> the goal. The
 second contradicts the hypothesis <code>Hneq : d1 &lt;&gt; d2</code>, so
@@ -360,7 +362,7 @@ the empty list has no nonzero-norm obligation to discharge (<a
 href="coqdoc/Riktig.Theory.GramSchmidt.html#nonzero_nil"><code>nonzero_nil</code></a>),
 and the output stays nonzero (<code>Hnz</code>, the reader’s hypothesis)
 — are exactly what <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_step_pairwise"><code>gs_step_pairwise</code></a>
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_step_pairwise"><code>gram_schmidt_step_pairwise</code></a>
 needs, and no more.</p>
 <p>The engine underneath is a single geometric fact, proved separately
 in the file: subtracting the projection of
@@ -388,7 +390,7 @@ relationship between two vectors is a fact about a pair, and fixing
 every one-vector fact does not, on its face, force every two-vector fact
 to come along with it.</p>
 <p>A transformation with the length-preserving property just described
-is called an <em>isometry</em>, and the codebase states it directly:</p>
+is called an <em>isometry</em>, and the file states it directly:</p>
 <pre class="coq"><code>  Definition is_isometry (f : LinearMap F V V) : Prop :=
     forall u : V, norm2 (f u) == norm2 u.</code></pre>
 <p>Whether the two-vector fact,
@@ -464,7 +466,7 @@ Proof.
   rewrite (norm2_add (f u) (f v)), (norm2_add u v),
     (Hiso u), (Hiso v) in Hfuv.
   apply (cancel_l (norm2 u + norm2 v)) in Hfuv.
-  rewrite (InnerProduct.symmetric (f v) (f u)), (InnerProduct.symmetric v u) in Hfuv.
+  rewrite (InnerProductSpace.symmetric (f v) (f u)), (InnerProductSpace.symmetric v u) in Hfuv.
   exact (double_inj (⟨ f u , f v ⟩) (⟨ u , v ⟩) Hfuv).
 Qed.</code></pre>
 <p>Reading it:</p>
@@ -479,7 +481,7 @@ u+v\rVert^2</annotation></semantics></math> by linearity, which
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>
 — proves directly.</li>
 <li>The two <a
-href="coqdoc/Riktig.Theory.InnerProduct.html#norm2_add"><code>norm2_add</code></a>
+href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a>
 rewrites expand both sides of <code>Hfuv</code> into the four-term sums
 from the blackboard chain; the two <code>Hiso</code> rewrites replace
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>f</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">\lVert fu\rVert^2</annotation></semantics></math>
@@ -495,7 +497,7 @@ exactly the cross-term equation
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>u</mi><mo>,</mo><mi>f</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>v</mi><mo>,</mo><mi>f</mi><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle fu,fv\rangle + \langle fv,fu\rangle == \langle
 u,v\rangle + \langle v,u\rangle</annotation></semantics></math>.</li>
 <li>The two <a
-href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct.symmetric"><code>InnerProduct.symmetric</code></a>
+href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.symmetric"><code>InnerProductSpace.symmetric</code></a>
 rewrites turn
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>f</mi><mi>v</mi><mo>,</mo><mi>f</mi><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle fv,fu\rangle</annotation></semantics></math>
 into
@@ -521,11 +523,11 @@ theorem exactly.</li>
 </ul>
 <p>No rotation or reflection is instantiated as a concrete <a
 href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
-in the codebase yet, so there is no ready-made <code>Example</code> to
-run this theorem on at a genuinely pair-scrambling candidate. The one
-witness on hand is the identity map: <code>linear_map_id u</code>
-unfolds to <code>u</code>, so <code>is_isometry linear_map_id</code>
-holds by <code>reflexivity</code>, and applying <a
+anywhere yet, so there is no ready-made <code>Example</code> to run this
+theorem on at a genuinely pair-scrambling candidate. The one witness on
+hand is the identity map: <code>linear_map_id u</code> unfolds to
+<code>u</code>, so <code>is_isometry linear_map_id</code> holds by
+<code>reflexivity</code>, and applying <a
 href="coqdoc/Riktig.Theory.Adjoint.html#isometry_preserves_inner"><code>isometry_preserves_inner</code></a>
 to it says that the identity preserves every inner product — true, if
 unsurprising, since the identity is the transformation that moves
@@ -559,13 +561,14 @@ href="coqdoc/Riktig.Theory.InnerGeometry.html#proj"><code>proj</code></a>,
 href="coqdoc/Riktig.Theory.InnerGeometry.html#inner_nondegenerate"><code>inner_nondegenerate</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
-(<a href="coqdoc/Riktig.Theory.GramSchmidt.html#gs"><code>gs</code></a>,
+(<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>,
 <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gs_pairwise_orthogonal"><code>gs_pairwise_orthogonal</code></a>)
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_pairwise_orthogonal"><code>gram_schmidt_pairwise_orthogonal</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.InnerProduct.html"><code>Interface/InnerProduct.v</code></a>
+href="coqdoc/Riktig.Interface.InnerProductSpace.html"><code>Interface/InnerProductSpace.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.InnerProduct.html#InnerProduct.InnerProduct"><code>InnerProduct</code></a>
+href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
 class).</p>
 </main>
 </body>

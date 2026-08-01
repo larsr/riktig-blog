@@ -23,64 +23,62 @@ sign <code>==</code> even means.</p>
 <p>As before, <code>==</code> is the structure’s own equivalence
 relation, and <code>a =/= b</code> abbreviates <code>~ (a == b)</code>.
 The calculational proofs read as chains:
-<code>calc x == y { law } == z { law }</code> means <em><code>x</code>
-equals <code>y</code> by <code>law</code>, which equals <code>z</code>
-by <code>law</code></em>, with each brace naming the one fact that
-justifies its step.</p>
+<code>calc x == y { … } == z { … }</code> means <em>x equals y by the
+fact in the first brace, which equals z by the fact in the second</em>,
+with each brace naming the one fact that justifies its step.</p>
 <h2 id="the-field-axioms">The field axioms</h2>
 <p>A <strong>field</strong> is a ring in which multiplication commutes
 and every nonzero element has a multiplicative inverse.</p>
 <pre class="coq"><code>Module Field.
-  Class Field (F : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F}
-              {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} := {
-    equivalence        : Equivalence (@equ F _);
-    associative        : forall x y w : F, (x + y) + w == x + (y + w);
-    left_identity      : forall x     : F, 0 + x == x;
-    right_identity     : forall x     : F, x + 0 == x;
-    left_inverse       : forall x     : F, (- x) + x == 0;
-    right_inverse      : forall x     : F, x + (- x) == 0;
-    commutative        : forall x y   : F, x + y == y + x;
-    mul_associative    : forall x y w : F, (x * y) * w == x * (y * w);
-    mul_left_identity  : forall x     : F, 1 * x == x;
-    mul_right_identity : forall x     : F, x * 1 == x;
-    left_distributive  : forall x y w : F, x * (y + w) == x * y + x * w;
-    right_distributive : forall x y w : F, (x + y) * w == x * w + y * w;
-    mul_commutative    : forall x y   : F, x * y == y * x;
-    (* mul_left_inverse carries a nonzero side condition, so it does not
-       fit Props.v&#39;s Invl (unconditional, like Group&#39;s negation) — it
-       stays named directly, not bound to a generic property class. *)
-    mul_left_inverse   : forall x : F, x =/= 0 -&gt; inv x * x == 1;
-    nontrivial         : (1 : F) =/= 0;
-    add_proper         : forall x y : F, x == y -&gt; forall u v : F, u == v -&gt; (x + u) == (y + v);
-    neg_proper         : forall x y : F, x == y -&gt; (- x) == (- y);
-    mul_proper         : forall x y : F, x == y -&gt; forall u v : F, u == v -&gt; (x * u) == (y * v);
-    inv_proper         : forall x y : F, x == y -&gt; inv x == inv y
+  Class Field (F : Type) {eq : EqRel F} {zero : Zero F} {add : HasAdd F}
+              {neg : HasNeg F} {one : One F} {mult : HasMult F}
+              {inv : HasInv F} := {
+    ring         :: Ring F;
+    inv_proper   :: Proper (equ ==&gt; equ) inv;
+    is_mul_commutative :: Commutative F mult;
+    is_mul_left_inverse :: LeftInverseOn F (nonzero F) mult inv 1;
+
+    nontrivial : (1 : F) =/= 0;
   }.
+  Hint Mode Field ! - - - - - - - : typeclass_instances.
 End Field.
-Notation Field := Field.Field.</code></pre>
-<p>The first twelve law fields are the ring’s laws restated (the derived
-instance <a
-href="coqdoc/Riktig.Interface.Field.html#Field_is_Ring"><code>Field_is_Ring</code></a>,
-just below the module, repackages them, so every ring theorem holds in a
-field unchanged). <a
-href="coqdoc/Riktig.Interface.Field.html#Field.mul_commutative"><code>Field.mul_commutative</code></a>
-supplies exactly the commutativity a general ring withholds. The inverse
-function <a href="coqdoc/Riktig.Ops.html#inv"><code>inv</code></a>
-arrives as the class parameter <code>Fi : HasInv F</code>, and <a
-href="coqdoc/Riktig.Interface.Field.html#Field.mul_left_inverse"><code>Field.mul_left_inverse</code></a>
-is its law. <a
+Export Field.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.Field.html#Field.ring"><code>Field.ring</code></a>
+holds an entire <code>Ring F</code> — the abelian group under
+<code>+</code>, the monoid under <code>*</code>, and the two
+distributive laws — so every ring theorem holds in a field unchanged,
+reached by projecting that field out. The remaining four are everything
+a field adds on top of a ring. <a
+href="coqdoc/Riktig.Interface.Field.html#Field.is_mul_commutative"><code>Field.is_mul_commutative</code></a>
+supplies exactly the commutativity a general ring withholds, as an
+instance of <a
+href="coqdoc/Riktig.Props.html#Commutative"><code>Commutative</code></a>,
+the same single-law class the abelian group used for <code>+</code>. The
+inverse function <a
+href="coqdoc/Riktig.Ops.html#inv"><code>inv</code></a> arrives as the
+class parameter <code>{inv : HasInv F}</code>; <a
+href="coqdoc/Riktig.Interface.Field.html#Field.inv_proper"><code>Field.inv_proper</code></a>
+says it sends equal inputs to equal outputs, the obligation every
+operation in the tower carries, and <a
+href="coqdoc/Riktig.Interface.Field.html#Field.is_mul_left_inverse"><code>Field.is_mul_left_inverse</code></a>
+is its law, discussed next. <a
 href="coqdoc/Riktig.Interface.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
 rules out the one-element ring where <code>0</code> and <code>1</code>
 coincide (and where “every nonzero element is invertible” would be
-vacuous).</p>
-<h2 id="why-the-inverse-law-has-a-side-condition">Why the inverse law
-has a side condition</h2>
+vacuous); it is the one field declared with <code>:</code> and not
+<code>::</code>, because it is a fact to cite by name rather than a law
+instance search should ever go looking for.</p>
+<p>When <code>==</code> is Coq’s built-in equality the
+<code>Proper</code> obligation is immediate; on the rationals below, it
+is a theorem that has to be supplied.</p>
+<h2 id="why-the-inverse-law-is-guarded">Why the inverse law is
+guarded</h2>
 <p>Compare the inverse law of a field with the negation law of a group.
 In a group, <code>- a</code> is defined for <em>every</em> element and
 <code>(- a) + a == 0</code> holds for <em>every</em> element, no
-exceptions. That unconditional shape is what lets the group’s negation
-register as a generic “left inverse” instance, usable by name
-anywhere.</p>
+exceptions — which is exactly what the class
+<code>LeftInverse G add neg 0</code> states.</p>
 <p>A field’s inverse cannot be like that. <a
 href="coqdoc/Riktig.Ops.html#inv"><code>inv</code></a> is a total
 function on the type — Coq requires <code>inv 0</code> to be
@@ -89,17 +87,42 @@ cannot hold at <code>a = 0</code>. In any nontrivial ring
 <code>x * 0 == 0</code> for every <code>x</code>, and
 <code>0 =/= 1</code>, so no <code>x</code> satisfies
 <code>x * 0 == 1</code>; zero simply has no inverse. The law must
-therefore carry the hypothesis <code>a =/= 0</code>, as <a
-href="coqdoc/Riktig.Interface.Field.html#Field.mul_left_inverse"><code>Field.mul_left_inverse</code></a>
-does. That extra hypothesis makes it a genuinely different
-<em>shape</em> of statement from the group’s unconditional inverse —
-which is why, as the source comment records, <a
-href="coqdoc/Riktig.Interface.Field.html#Field.mul_left_inverse"><code>Field.mul_left_inverse</code></a>
-stays a plainly named axiom rather than being bound to the generic <a
-href="coqdoc/Riktig.Props.html#Invl"><code>Invl</code></a> class the way
-group negation is. The asymmetry is not an accident of the encoding; it
-is the mathematical fact that subtraction is total and division is
-not.</p>
+therefore carry the hypothesis <code>a =/= 0</code>.</p>
+<p>A statement with a hypothesis is a different statement, so it is a
+different class. <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> states the
+guarded form with the domain left open:</p>
+<pre class="coq"><code>Section GuardedInverseLaws.
+  Context (T : Type) {eqT : EqRel T} (defined_on : Pred T)
+          (op : BinOp T) (inverse : T -&gt; T) (unit : T).
+  Local Infix &quot;⋆&quot; := op (at level 40, left associativity).
+
+  Class LeftInverseOn :=
+    left_inverse_on : forall a, defined_on a -&gt; inverse a ⋆ a == unit.
+  Class RightInverseOn :=
+    right_inverse_on : forall a, defined_on a -&gt; a ⋆ inverse a == unit.
+End GuardedInverseLaws.</code></pre>
+<p><code>defined_on</code> is any predicate on the carrier, and the law
+is claimed only where that predicate holds. A field passes it the
+predicate named just below, in the same file:</p>
+<pre class="coq"><code>Definition nonzero (T : Type) {eqT : EqRel T} {zeroT : Zero T} : Pred T :=
+  fun a =&gt; ~ (a == 0).</code></pre>
+<p>The two classes are not rivals, and the unguarded one is the
+stronger. An inverse that works everywhere works in particular on any
+domain, and <a href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>
+says so once, for every operation at once:</p>
+<pre class="coq"><code>#[global] Instance left_inverse_defined_everywhere T {eqT : EqRel T}
+    (defined_on : Pred T) (op : BinOp T) (inverse : T -&gt; T) (unit : T)
+    `{!LeftInverse T op inverse unit}
+  : LeftInverseOn T defined_on op inverse unit :=
+  fun a _ =&gt; @left_inverse T eqT op inverse unit _ a.</code></pre>
+<p>The body reads: given an element and a proof that it lies in the
+domain — discarded, which is what the <code>_</code> is — return the
+unconditional law at that element. So anything proved from the guarded
+law also holds of a group’s negation, with the guard never consulted,
+while the converse direction stays correctly blocked. The asymmetry is
+not an accident of the encoding; it is the mathematical fact that
+subtraction is total and division is not.</p>
 <h2 id="cancellation">Cancellation</h2>
 <p>The first thing an inverse buys is cancellation: if <code>a</code> is
 nonzero, <code>a * b == a * c</code> forces <code>b == c</code>. On the
@@ -119,33 +142,38 @@ b &amp;= 1\cdot b        &amp;&amp;\{\text{multiplicative identity}\}\\
 Proof.
   intros a b c Ha Heq.
   calc b
-    == (1 * b)             { idl }
-    == ((inv a * a) * b)   { (Field.mul_left_inverse a Ha) }
-    == (inv a * (a * b))   { (assoc (inv a) a b) }
+    == (1 * b)             { left_identity }
+    == ((inv a * a) * b)   { ((left_inverse_on (defined_on := nonzero _)) a Ha) }
+    == (inv a * (a * b))   { (associative (inv a) a b) }
     == (inv a * (a * c))   { Heq }
-    == ((inv a * a) * c)   { (assoc (inv a) a c) }
-    == (1 * c)             { (Field.mul_left_inverse a Ha) }
-    == c                   { idl }.
+    == ((inv a * a) * c)   { (associative (inv a) a c) }
+    == (1 * c)             { ((left_inverse_on (defined_on := nonzero _)) a Ha) }
+    == c                   { left_identity }.
 Qed.</code></pre>
 <p>Walking the seven steps: <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> is the
-left-identity law, and because the goal is about <code>1 * b</code> it
-resolves to <em>multiplication’s</em> identity <code>1 * b == b</code>
-(the same operation-chosen-by-the-goal mechanism the ring post used).
-<code>Field.mul_left_inverse a Ha</code> rewrites <code>1</code> as
-<code>inv a * a</code>, the one place the nonzero hypothesis
-<code>Ha</code> is spent. <code>assoc (inv a) a b</code> reassociates
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+is the left-identity law, and because the goal is about
+<code>1 * b</code> it resolves to <em>multiplication’s</em> identity
+<code>1 * b == b</code> (the same operation-chosen-by-the-goal mechanism
+the ring post used). <a
+href="coqdoc/Riktig.Props.html#left_inverse_on"><code>left_inverse_on</code></a>
+is the guarded law’s method; the annotation
+<code>(defined_on := nonzero _)</code> picks which guard is meant, since
+a carrier may carry several, and applying it to <code>a</code> and
+<code>Ha</code> spends the nonzero hypothesis and rewrites
+<code>1</code> as <code>inv a * a</code>.
+<code>associative (inv a) a b</code> reassociates
 <code>(inv a * a) * b</code> to <code>inv a * (a * b)</code>, tucking
 the pair <code>a * b</code> together. That pair is exactly what the
 hypothesis <code>Heq</code> rewrites, turning <code>a * b</code> into
 <code>a * c</code>. Then <a
-href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>
-reassociates the other way, <code>Field.mul_left_inverse a Ha</code>
-folds <code>inv a * a</code> back to <code>1</code>, and <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> strips it. The
-proof spends the nonzero hypothesis twice, once to introduce
-<code>inv a * a</code> and once to remove it, with <code>Heq</code>
-applied in the sheltered middle.</p>
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+reassociates the other way, the guarded law folds <code>inv a * a</code>
+back to <code>1</code>, and <a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+strips it. The proof spends the nonzero hypothesis twice, once to
+introduce <code>inv a * a</code> and once to remove it, with
+<code>Heq</code> applied in the sheltered middle.</p>
 <h2 id="the-rationals-where-equality-is-not-equality">The rationals,
 where equality is not equality</h2>
 <p>Now the point of the title. The rationals <code>Q</code> are the
@@ -170,12 +198,32 @@ representatives, one meaning — and choosing <code>Qeq</code> as
 equality would be the wrong mathematics: it would call <code>1/2</code>
 and <code>2/4</code> different, and no amount of later proof could
 repair the mistake. The price of the right choice is that every
-operation must be shown to <em>respect</em> the equivalence — the
-<code>Proper</code> fields in the ring and field classes — so that
-replacing a fraction by an equal one never changes a result. Those
-obligations are discharged by the standard library’s own registered
-morphisms for <code>Qplus</code>, <code>Qmult</code>, and the rest,
-reused verbatim.</p>
+operation must be shown to <em>respect</em> the equivalence — the <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+field of each magma in the tower, <a
+href="coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>Group.neg_proper</code></a>
+for negation, <a
+href="coqdoc/Riktig.Interface.Field.html#Field.inv_proper"><code>Field.inv_proper</code></a>
+for the reciprocal — so that replacing a fraction by an equal one never
+changes a result. Those obligations are discharged by the standard
+library’s own registered morphisms for <code>Qplus</code>,
+<code>Qmult</code> and the rest, reused verbatim. The guarded inverse
+law comes from the same place, once <code>Qmult_inv_r</code> has been
+flipped into the left-hand form the class asks for:</p>
+<pre class="coq"><code>#[global] Instance Q_mul_left_inverse : LeftInverseOn Q (nonzero Q) mult inv 1 :=
+  Qmult_inv_l.</code></pre>
+<p>With every law registered as an instance, the two structures at the
+top of the tower are declared in three lines:</p>
+<pre class="coq"><code>#[global] Instance Q_Ring : Ring Q := {}.
+#[global] Instance Q_Field : Field Q :=
+  { Field.inv_proper := Qinv_comp; Field.nontrivial := Q_apart_0_1 }.</code></pre>
+<p>The empty <code>{}</code> means “find every field by instance
+search”. The declaration of <a
+href="coqdoc/Riktig.Impl.Qf.html#Q_Field"><code>Q_Field</code></a> names
+only what search cannot supply: <code>Qinv_comp</code>, the standard
+library’s proof that <code>Qinv</code> respects <code>Qeq</code>, and
+<code>Q_apart_0_1</code>, that <code>1</code> and <code>0</code> are
+different rationals.</p>
 <p>Two concrete facts from the file make this tangible. First, the
 generic ring theory lands on a rational with no extra work — <a
 href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a>,

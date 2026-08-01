@@ -25,15 +25,19 @@ permutation of its input while leaving everything outside the range
 untouched.</p>
 <h2 id="a-recursive-lambda-term-with-a-termination-measure">A recursive
 lambda term with a termination measure</h2>
-<p>As in the two preceding posts, the algorithm is written as a plain
-recursive term rather than through any elaboration machinery. Two pieces
-of vocabulary carry over. A <em>decidable proposition</em> is one whose
-truth can be computed, so that <code>if dec P then .. else ..</code> is
-an ordinary <code>if</code> whose chosen branch also hands the proof the
-fact it just decided. Quicksort here is generic in a bare boolean
-comparison <code>leb : V -&gt; V -&gt; bool</code>; the correctness file
-will later add exactly two laws about it — totality and transitivity —
-that turn <code>leb</code> into a total preorder.</p>
+<p>The algorithm below is a plain recursive term — <code>fun</code>,
+<code>match</code>, <code>if</code>, and an explicit recursion
+combinator — rather than a definition handed to an elaboration front-end
+that rewrites it into something else. One piece of vocabulary is needed
+to read it: a <em>decidable proposition</em> is one whose truth can be
+computed, and <code>if dec P then .. else ..</code> is an ordinary
+two-way branch on that computation, except that the chosen branch also
+has in scope a proof of what was just decided — so the same test that
+steers the program hands the correctness proof the fact it needs.
+Quicksort here is generic in a bare boolean comparison
+<code>leb : V -&gt; V -&gt; bool</code>; the correctness file adds
+exactly two laws about it — totality and transitivity — that make
+<code>leb</code> a total preorder.</p>
 <p>A function that calls itself on smaller arguments is not
 automatically accepted by Coq: the checker insists on a reason the
 recursion stops. The reason is supplied explicitly with <code>Fix</code>
@@ -58,22 +62,23 @@ depends on how the memory is actually represented:</p>
     i0 m0 store0).
   all: unfold ltof; abstract lia.
   Defined.</code></pre>
-<p>The pivot is the value at the top index <a
-href="coqdoc/Riktig.Programs.Memprog.X86.html#hi"><code>hi</code></a>. A
-cursor <code>i</code> scans upward from <code>lo</code>; the measure
+<p>The pivot is the value at the top index <code>hi</code>. A cursor
+<code>i</code> scans upward from <code>lo</code>; the measure
 <code>hi - i</code> shrinks on every recursive call, and the two holes
 <code>_</code> are the proofs that it does, discharged in one line by
 <code>abstract lia</code> (kept abstract so the generated proof term
 stays small). A second pointer, <code>store</code>, marks the boundary
 of the “small” region. When <code>read m i</code> is at most the pivot,
 the element is swapped down to <code>store</code> and <code>store</code>
-advances; otherwise the cursor moves on alone. When the scan reaches <a
-href="coqdoc/Riktig.Programs.Memprog.X86.html#hi"><code>hi</code></a>,
-the pivot is swapped into place at <code>store</code>, and
-<code>store</code> is returned as its final index.</p>
-<p>Because <code>Fix</code> is opaque to computation, a companion lemma
-unfolds it one step. This is the only place the fixpoint is ever taken
-apart; every proof afterwards rewrites with this equation instead:</p>
+advances; otherwise the cursor moves on alone. When the scan reaches
+<code>hi</code>, the pivot is swapped into place at <code>store</code>,
+and <code>store</code> is returned as its final index.</p>
+<p>Applying <code>Fix</code> has one consequence:
+<code>part m store i hi</code> does not reduce by <code>simpl</code> the
+way a plain <code>Fixpoint</code> would, because the recursion is
+guarded by the well-foundedness proof. So a companion lemma unfolds it
+one step. This is the only place the fixpoint is ever taken apart; every
+proof afterwards rewrites with this equation instead:</p>
 <pre class="coq"><code>  Lemma part_step m store i hi :
     part m store i hi =
       if dec (i &lt; hi)
@@ -168,11 +173,14 @@ that the permutation and sortedness statements talk about.</p>
 <code>(lo, hi)</code>, via the measure <code>S hi - lo</code>, and each
 rewrites the recursion open with <a
 href="coqdoc/Riktig.Theory.Quicksort.html#qsort_step_part"><code>qsort_step_part</code></a>
-(the analogue of <a
-href="coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a>
-for the outer recursion) and then appeals to the partition
-postcondition. The shortest of the three is the <em>frame</em>: sorting
-the range <code>[lo, hi]</code> changes no cell outside it —</p>
+— <a
+href="coqdoc/Riktig.Programs.Quicksort.html#qsort_step"><code>qsort_step</code></a>,
+the outer recursion’s counterpart of <a
+href="coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a>,
+specialized to the case where the pivot really does land inside the
+range — and then appeals to the partition postcondition. The shortest of
+the three is the <em>frame</em>: sorting the range <code>[lo, hi]</code>
+changes no cell outside it —</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>&lt;</mo><mi>l</mi><mi>o</mi><mspace width="0.222em"></mspace><mo>∨</mo><mspace width="0.222em"></mspace><mi>h</mi><mi>i</mi><mo>&lt;</mo><mi>k</mi><mspace width="0.278em"></mspace><mo>⟹</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">q</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">t</mi></mrow><mspace width="0.222em"></mspace><mi>m</mi><mspace width="0.222em"></mspace><mi>l</mi><mi>o</mi><mspace width="0.222em"></mspace><mi>h</mi><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>m</mi><mo stretchy="false" form="prefix">[</mo><mi>k</mi><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">k &lt; lo \ \vee\ hi &lt; k \;\implies\; (\mathrm{qsort}\ m\ lo\ hi)[k] = m[k].</annotation></semantics></math></p>
 <p>The argument is short because every step is a named fact rather than
 fresh work — the two recursive calls stay within their sub-ranges, so a
@@ -214,14 +222,11 @@ then the right”, the side condition (the pivot lands in bounds) closed
 inline.</li>
 <li>The two <code>rewrite (IH ...)</code> lines apply the induction
 hypothesis to the pairs <code>(S piv, hi)</code> and
-<code>(lo, piv - 1)</code>: cell <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> lies
-outside both sub-ranges (the pivot bounds make that an arithmetic fact),
-so neither recursive sort moves it.</li>
+<code>(lo, piv - 1)</code>: cell <code>k</code> lies outside both
+sub-ranges (the pivot bounds make that an arithmetic fact), so neither
+recursive sort moves it.</li>
 <li><code>apply Hfr; lia</code> finishes with the partition’s own frame:
-partition did not touch <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
-either.</li>
+partition did not touch <code>k</code> either.</li>
 </ul>
 <p>The proof itself is barely a dozen lines, and no step is arithmetic
 dressed up as reasoning — the <code>lia</code> calls only discharge
@@ -230,7 +235,7 @@ sortedness, follow the same skeleton but do more gluing work, so they
 run longer; each of their steps is again a single named lemma (<a
 href="coqdoc/Riktig.Theory.Quicksort.html#slice_split_pivot"><code>slice_split_pivot</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Quicksort.html#perm_transpose"><code>perm_transpose</code></a>,
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_slice_out"><code>qsort_slice_out</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Quicksort.html#sorted_glue"><code>sorted_glue</code></a>),
 which is what keeps them readable rather than short.</p>

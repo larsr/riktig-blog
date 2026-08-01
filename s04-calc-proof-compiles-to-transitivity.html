@@ -75,53 +75,77 @@ equal.</p>
 <em>setoid</em>. What licenses a relation to be chained like equality is
 exactly the three properties of an equivalence relation — reflexivity,
 symmetry, and transitivity, the last one licensing the gluing.</p>
-<p>A <em>monoid</em>, recapping the earlier post, is a carrier type with
-an addition, a zero, an equality, and three laws: associativity and the
-two identity laws:</p>
-<pre class="coq"><code>Module Monoid.
-  Class Monoid (T : Type) {Te : EqRel T} {Tz : Zero T} {Ta : HasAdd T} := {
-    equivalence    : Equivalence (@equ T _);
-    associative    : forall x y w : T, (x + y) + w == x + (y + w);
-    left_identity  : forall x     : T, 0 + x == x;
-    right_identity : forall x     : T, x + 0 == x;
-    add_proper     : forall x y : T, x == y -&gt; forall u v : T, u == v -&gt; (x + u) == (y + v)
+<p>A <em>monoid</em> is a carrier type with an addition, a zero, an
+equality, and three laws: associativity and the two identity laws. Those
+laws are spread over three small classes, each holding the previous one
+as a field: a <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>
+fixes the equality and demands that the operation respect it, a <a
+href="coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>
+adds associativity, a <a
+href="coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
+adds the two identities. Here are the first and the last, from <a
+href="coqdoc/Riktig.Interface.Magma.html"><code>Interface/Magma.v</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Monoid.html"><code>Interface/Monoid.v</code></a>:</p>
+<pre class="coq"><code>Module Magma.
+  Class Magma (M : Type) {eq : EqRel M} (op : BinOp M) := {
+    equivalence :: Equivalence eq;
+    op_proper   :: Proper (equ ==&gt; equ ==&gt; equ) op;
   }.
+  Hint Mode Magma ! - - : typeclass_instances.
+End Magma.
+Export Magma.</code></pre>
+<pre class="coq"><code>Module Monoid.
+  Class Monoid (M : Type) {eq : EqRel M} {zero : Zero M} {add : HasAdd M} := {
+    semigroup  :: Semigroup M add;
+    is_left_identity  :: LeftIdentity M M add 0;
+    is_right_identity :: RightIdentity M M add 0;
+  }.
+  Hint Mode Monoid ! - - - : typeclass_instances.
+  Hint Rewrite @left_identity @right_identity : algebra_db.
 End Monoid.
-Notation Monoid := Monoid.Monoid.</code></pre>
+Export Monoid.</code></pre>
 <p>The carrier’s equality, zero, and addition are class parameters (the
-<code>{Te : EqRel T}</code> binders); the fields are laws only. <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.equivalence"><code>Monoid.equivalence</code></a>
-is the field that matters here: every monoid carries, as part of its
-definition, a proof that its <code>==</code> is an equivalence relation
-— a monoid cannot be declared over a relation that isn’t one. <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.add_proper"><code>Monoid.add_proper</code></a>
-says addition respects <code>==</code>, which is what lets a law rewrite
+<code>{eq : EqRel M}</code> binders); the fields are laws and
+substructures only. Two of the magma’s matter here. <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.equivalence"><code>Magma.equivalence</code></a>
+says the chosen <code>==</code> is an equivalence relation, so nothing
+in this tower can be declared over a relation that isn’t one. <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+says the operation respects <code>==</code>: the type
+<code>Proper (equ ==&gt; equ ==&gt; equ) op</code> is Coq’s spelling of
+“equal arguments give equal results,” and it is what lets a law rewrite
 an expression buried inside a larger one, such as replacing
 <code>g + (-g)</code> by <code>0</code> under an outer
 <code>h + _</code>.</p>
-<p>Coq puts <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.equivalence"><code>Monoid.equivalence</code></a>
-to work without being asked. A <em>typeclass</em> declares a family of
-facts indexed by a type (or a relation); an <em>instance</em> registers
-one such fact in a database that Coq searches whenever a proof step
-needs a fact of that family — nothing is ever addressed by name. Right
-below the class, <a
-href="coqdoc/Riktig.Interface.Monoid.html"><code>Interface/Monoid.v</code></a>
-registers the field itself as such an instance
-(<code>#[global] Existing Instance Monoid.equivalence.</code>), so every
-monoid makes <code>Equivalence</code> findable for its <code>==</code>,
+<p>Coq puts both to work without being asked. A <em>typeclass</em>
+declares a family of facts indexed by a type (or a relation); an
+<em>instance</em> registers one such fact in a database that Coq
+searches whenever a proof step needs a fact of that family — nothing is
+ever addressed by name. The <code>::</code> in front of a field’s type
+is what registers it: writing <code>equivalence :: Equivalence eq</code>
+declares the field and files it as an instance in one stroke, so every
+magma makes <code>Equivalence</code> findable for its <code>==</code>,
 and the standard library derives <code>Transitive</code> from
-<code>Equivalence</code> automatically. That is why
-<code>transitivity y</code> — which splits a goal <code>R x z</code>
-into <code>R x y</code> and <code>R y z</code> — already finds its proof
-unassisted: it searches the database for <code>Transitive</code> at the
-relation in the goal. The same search resolves each step’s cited law: <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a>, used below, is
-the sole field of a two-line class shaped <code>op a unit == a</code>,
-and the same file registers every monoid’s right-identity law under that
-name (<code>Monoid_RightIdentity : Idr T add zero</code>), so
-<code>rewrite idr</code> finds whichever instance matches the goal’s
-operation and unit.</p>
+<code>Equivalence</code> automatically. <a
+href="coqdoc/Riktig.Interface.Monoid.html#Monoid.semigroup"><code>Monoid.semigroup</code></a>
+is a <code>::</code> field too, and so is the semigroup’s own magma
+field, so a monoid in scope puts all of it within one projection’s
+reach. That is why <code>transitivity y</code> — which splits a goal
+<code>R x z</code> into <code>R x y</code> and <code>R y z</code> —
+already finds its proof unassisted: it searches the database for
+<code>Transitive</code> at the relation in the goal.</p>
+<p>The same search resolves each step’s cited law. <a
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>,
+used below, is the method of a class in <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> shaped
+<code>x · unit == x</code> for a given operation and unit, and <a
+href="coqdoc/Riktig.Interface.Monoid.html#Monoid.is_right_identity"><code>Monoid.is_right_identity</code></a>
+<em>is</em> an instance of that class — declared by its own
+<code>::</code>, with no separate registration anywhere — so
+<code>rewrite right_identity</code> finds whichever instance matches the
+operation and unit in the goal.</p>
 <h2 id="the-chain-notation-in-full">The chain notation, in full</h2>
 <p>The notation lives in one file; its two working parts are each a few
 lines of Ltac, Coq’s language for proof-script procedures. The first
@@ -169,9 +193,9 @@ file repeats the identical pattern up to eight terms: no recursion,
 nothing clever, one declaration per length.</p>
 <h2 id="a-real-group-theorem-blackboard-and-coq">A real group theorem,
 blackboard and Coq</h2>
-<p>Here is a theorem from the group-theory file, chosen because every
-law it cites was introduced earlier in this series: <strong>in any
-group, an element that cancels
+<p>Here is a theorem from <a
+href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>:
+<strong>in any group, an element that cancels
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
 on the left is the inverse of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math></strong>
@@ -192,48 +216,61 @@ h &amp;= h + 0            &amp;&amp; \text{(right identity)} \\
   Proof.
     intros g h Heq.
     calc h
-      == (h + 0)          { idr  }
-      == (h + (g + - g))  { invr }
-      == ((h + g) + - g)  { assoc }
+      == (h + 0)          { right_identity  }
+      == (h + (g + - g))  { right_inverse }
+      == ((h + g) + - g)  { associative }
       == (0 + - g)        { Heq  }
-      == (- g)            { idl  }.
+      == (- g)            { left_identity  }.
   Qed.</code></pre>
 <p><code>intros</code> brings in the group elements and
 <code>Heq : h + g == 0</code>. <code>calc</code> checks <code>h</code>
 and <code>(- g)</code> against the goal’s sides, then closes each step
 with <code>calc_by</code> on its cited law. <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a> erases the
-<code>+ 0</code>. <a
-href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> collapses
-<code>g + - g</code> to <code>0</code>, applied backward — the
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
+erases the <code>+ 0</code>. <a
+href="coqdoc/Riktig.Props.html#right_inverse"><code>right_inverse</code></a>
+collapses <code>g + - g</code> to <code>0</code>, applied backward — the
 blackboard introduces the pair, <code>calc_by</code> finds the same law
 reads the other way. <a
-href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
 reassociates. <code>Heq</code> replaces <code>h + g</code> by
 <code>0</code>, a brace citing a local hypothesis exactly like a
 registered law. <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> erases the
-leading <code>0 +</code>.</p>
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+erases the leading <code>0 +</code>.</p>
 <p>This six-term chain compiles the same way, one nesting level deeper:
 five <code>transitivity</code> splits and five <code>calc_by</code>
 calls, an ordinary Coq proof term that <code>Qed</code> accepts — the
 chain notation only spells it more legibly.</p>
-<h2 id="three-ways-to-write-a-chain-and-where-else-it-applies">Three
-ways to write a chain, and where else it applies</h2>
+<h2 id="writing-a-chain-and-where-else-it-applies">Writing a chain, and
+where else it applies</h2>
 <p><a
 href="coqdoc/Riktig.Theory.Group.html#neg_unique_l"><code>neg_unique_l</code></a>
 used the <em>justified</em> form: one law per step, in braces, direction
 found automatically. Two siblings share the skeleton. The <em>plain</em>
 form drops the braces and proves each step afterward as its own bullet,
 in order — for a step needing more than a one-law rewrite. The
-<em>named</em> form gives each step a bracketed name instead, proved
-afterward with Coq’s <code>[name]:</code> selector in any order. All
-three compile to the same <code>transitivity</code>/<code>calc_by</code>
-skeleton; only the bookkeeping around each step differs.</p>
-<p>The mechanism works over any type with a registered equivalence
-relation, not only the abstract carrier <code>G</code> above — rationals
-are one instance, <code>1#1</code> and <code>2#2</code> being different
-pairs equal only under <code>Qeq</code>:</p>
+<em>named</em> form gives each step a bracketed name instead,
+<code>calc x ==[unit] y ==[cancel] z</code>, proved afterward with Coq’s
+<code>[name]:</code> selector in any order. All three compile to the
+same <code>transitivity</code>/<code>calc_by</code> skeleton; only the
+bookkeeping around each step differs, so one chain may also mix the
+justified and named forms — one step named, the rest braced — which is
+how a single awkward step avoids promoting a whole chain to the named
+form. A variant spelled <code>calcrw</code> proves a small chain about a
+<em>sub-term</em> and then rewrites the goal with the result, so the
+unchanging context around that sub-term is written once, in the goal,
+instead of once per step.</p>
+<p>The chain’s <code>==</code> is literal notation belonging to
+<code>calc</code>, not the setoid <code>==</code> of the monoid above:
+<code>calc_ends</code> reads whatever relation the goal is built from,
+and <code>transitivity</code> looks up a <code>Transitive</code>
+instance for that relation. So the same chains prove goals about Coq’s
+<code>=</code>, about the tower’s <code>==</code>, and about relations
+like list permutation, unchanged. The rationals are the concrete case
+this post opened with — <code>1#1</code> and <code>2#2</code> are
+different pairs, equal only under <code>Qeq</code>, and that equality is
+decidable:</p>
 <pre class="coq"><code>Example q_dec_eq_check : {(1#1)%Q == (2#2)%Q} + {(1#1)%Q =/= (2#2)%Q} :=
   dec_eq (1#1)%Q (2#2)%Q.</code></pre>
 <p>The next post uses these chains at greater length: abelian groups and

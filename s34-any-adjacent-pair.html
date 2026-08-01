@@ -10,135 +10,278 @@
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
 <h1 id="any-adjacent-pair">Any adjacent pair</h1>
-<p><em>Twenty-sixth post documenting the <strong>riktig</strong>
-project. The determinant thread continues: a fourth attempt narrows the
-gap further, proving something strictly stronger than what came before
-it, while the very last piece keeps its precise shape.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. The earlier post on sidestepping the
-determinant reformulated it as a sum over permutations to get around a
-row-relocation obstruction that had stalled two earlier attempts, and
-proved the row-swap half of general antisymmetry. What was still missing
-was the harder half: showing the permutation’s <em>sign</em> itself
-flips under a swap. This post gets that, for adjacent rows — genuinely,
-not just as a repeat of an old special case.</p>
-</blockquote>
-<h2 id="what-adjacent-already-meant-and-what-changed">What “adjacent”
-already meant, and what changed</h2>
-<p>Back in the original cofactor-recursion attempt (<a
-href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>), <a
-href="coqdoc/Riktig.Impl.Elim.html#det_swap_F1_FS2"><code>det_swap_F1_FS2</code></a>
-proved that swapping <em>the first two rows specifically</em> negates
-the determinant — useful, but pinned to one fixed pair, because the
-recursion’s own structure made every other pair much harder to track.
-Today’s result removes that restriction entirely:</p>
-<pre class="coq"><code>Theorem perm_sign_postcompose_adj : forall (n : nat) (k : Fin.t n) (sigma : Perm (S n)),
-  perm_sign (perm_postcompose sigma (swap_fin (fweaken k) (Fin.FS k))
-                                    (swap_fin (fweaken k) (Fin.FS k)))
-    == - perm_sign sigma.
-
-Theorem detM_swap_adjacent : forall (n : nat) (k : Fin.t n) (A : Matrix (S n) (S n) F),
-  detM (row_swap A (fweaken k) (Fin.FS k)) == - detM A.</code></pre>
-<p>Reading the notation: both <code>fweaken k</code> and
-<code>Fin.FS k</code> embed <code>k : Fin.t n</code> into
+<p>Exchange two rows of a square matrix and its determinant changes
+sign. Read off the permutation sum</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>σ</mi></munder><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∏</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>j</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">\det A \;=\; \sum_{\sigma} \operatorname{sign}(\sigma)
+  \prod_j A_{\sigma(j),\,j},</annotation></semantics></math></p>
+<p>the claim splits cleanly in two. Swapping rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+replaces each factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">A_{\sigma(j),j}</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>A</mi><mrow><mi>τ</mi><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">A_{\tau(\sigma(j)),j}</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+is the transposition of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+— so every term of the sum becomes the term belonging to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo>∘</mo><mi>σ</mi></mrow><annotation encoding="application/x-tex">\tau \circ \sigma</annotation></semantics></math>,
+except for its sign. That is the easy half: it is a rewrite inside a
+product, with no case analysis. The other half is that the sign really
+does differ, that</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>τ</mi><mo>∘</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\operatorname{sign}(\tau \circ \sigma) \;=\; -\operatorname{sign}(\sigma),</annotation></semantics></math></p>
+<p>and it is a fact about permutations alone — no matrix appears in it.
+This post proves it when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+exchanges two <em>neighbouring</em> positions, which is where the
+induction closes, and reads off adjacent-row antisymmetry of the
+determinant as a consequence.</p>
+<h2 id="why-the-sign-half-is-the-harder-one">Why the sign half is the
+harder one</h2>
+<p>The sign of a permutation has to be computed from <em>something</em>.
+Here permutations are values of an inductive type (<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>):
+<code>Perm_S c p</code> records that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
+sends the first position to <code>c</code> and defers the rest to a
+smaller permutation <code>p</code>. The sign is the product, down that
+spine, of <a
+href="coqdoc/Riktig.Impl.Det.html#sign_at"><code>sign_at</code></a> at
+each level’s chosen value:</p>
+<pre class="coq"><code>  Fixpoint perm_sign {n : nat} (sigma : Perm n) {struct sigma} : F :=
+    match sigma with
+    | Perm_O =&gt; 1
+    | Perm_S c p =&gt; sign_at c * perm_sign p
+    end.</code></pre>
+<p>with <code>sign_at c</code> alternating
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><mi>−</mi><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi>…</mi></mrow><annotation encoding="application/x-tex">1, -1, 1, \dots</annotation></semantics></math>
+with the position. So <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(-1)</annotation></semantics></math>
+raised to the sum of the chosen indices — the inversion count, computed
+structurally.</p>
+<p>Now the difficulty is visible. To ask what postcomposition does to
+the sign you must <em>have</em> the postcomposed permutation as a value
+of <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#Perm"><code>Perm</code></a>,
+because that is the only thing <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
+can be applied to. Knowing where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo>∘</mo><mi>σ</mi></mrow><annotation encoding="application/x-tex">\tau \circ \sigma</annotation></semantics></math>
+sends each point is not enough; the recursion needs the spine.</p>
+<h2 id="postcomposition-as-a-permutation-value">Postcomposition as a
+permutation value</h2>
+<p>That construction is <a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_postcompose"><code>perm_postcompose</code></a>
+(<a
+href="coqdoc/Riktig.Impl.DetSign.html"><code>Impl/DetSign.v</code></a>).
+It takes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>,
+a function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+and an inverse
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>τ</mi><mo>′</mo></msup><annotation encoding="application/x-tex">\tau&#39;</annotation></semantics></math>
+for it — supplied as a pair rather than as an existence claim, so the
+result computes — and rebuilds the spine:</p>
+<pre class="coq"><code>  Fixpoint perm_postcompose {n : nat} (sigma : Perm n) {struct sigma}
+      : (Fin.t n -&gt; Fin.t n) -&gt; (Fin.t n -&gt; Fin.t n) -&gt; Perm n :=
+    match sigma in Perm n0
+      return (Fin.t n0 -&gt; Fin.t n0) -&gt; (Fin.t n0 -&gt; Fin.t n0) -&gt; Perm n0
+    with
+    | Perm_O =&gt; fun _ _ =&gt; Perm_O
+    | @Perm_S m c p =&gt; fun tau tau&#39; =&gt;
+        Perm_S (tau c) (perm_postcompose p (bijection_skip_step c tau tau&#39;) (bijection_skip_step_inv c tau tau&#39;))
+    end.</code></pre>
+<p>The chosen value <code>c</code> becomes <code>tau c</code>. At the
+next level down, one position has been consumed, so <code>tau</code>
+must be restricted to the remaining ones — that is <a
+href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>,
+the “restrict a bijection through the injection that misses a point”
+primitive from <a
+href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>. The
+construction is correct in the only sense that matters:</p>
+<pre class="coq"><code>  Theorem perm_apply_postcompose : forall (n : nat) (sigma : Perm n)
+      (tau tau&#39; : Fin.t n -&gt; Fin.t n),
+    (forall x, tau&#39; (tau x) = x) -&gt; (forall y, tau (tau&#39; y) = y) -&gt;
+    forall x : Fin.t n, perm_apply (perm_postcompose sigma tau tau&#39;) x = tau (perm_apply sigma x).</code></pre>
+<p>Applying the rebuilt permutation is applying
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+after
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>,
+pointwise, for any two-sided inverse pair.</p>
+<h2 id="the-sign-flips-at-every-adjacent-pair">The sign flips, at every
+adjacent pair</h2>
+<p>An <em>adjacent</em> pair of positions is written
+<code>fin_weaken k</code> and <code>Fin.FS k</code> for a shared
+<code>k : Fin.t n</code>. Both embed <code>k</code> into
 <code>Fin.t (S n)</code> — the first keeping its value, the second
-shifting it by one — so together they denote positions
+shifting it by one — so they denote positions
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k+1</annotation></semantics></math>,
-and the pair ranges over <em>every</em> adjacent pair as <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> does. And
-<code>perm_postcompose sigma tau tau'</code> builds “apply
-<code>sigma</code>, then <code>tau</code>” as a permutation value,
-taking <code>tau</code> together with its inverse <code>tau'</code>; a
-transposition is its own inverse, which is why the same <a
+and as <code>k</code> ranges over <code>Fin.t n</code> the pair ranges
+over every neighbouring pair there is.</p>
+<pre class="coq"><code>  Theorem perm_sign_postcompose_adj : forall (n : nat) (k : Fin.t n) (sigma : Perm (S n)),
+    (perm_sign (perm_postcompose sigma (swap_fin (fin_weaken k) (Fin.FS k)) (swap_fin (fin_weaken k) (Fin.FS k))) : F)
+      == - perm_sign sigma.</code></pre>
+<p>A transposition is its own inverse, which is why the same <a
 href="coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>
 appears twice.</p>
-<p>Any adjacent pair, anywhere in the matrix — not just the top two. The
-smoke test checks this on a concrete
+<p><strong>How it goes.</strong> Induct on the size. Write
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
+as <code>Perm_S c p</code> and peel one level: the postcomposed spine
+starts with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\tau(c)</annotation></semantics></math>
+instead of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>,
+and continues with <code>p</code> postcomposed by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+<em>restricted past
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math></em>.
+The case analysis is on where <code>c</code> sits relative to the
+swapped pair, and the two ways of being one of them are symmetric.</p>
+<ul>
+<li><code>c</code> is one of the two swapped positions. Then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\tau(c)</annotation></semantics></math>
+is the other one, and the two contribute opposite <a
+href="coqdoc/Riktig.Impl.Det.html#sign_at"><code>sign_at</code></a>
+values — that is <a
+href="coqdoc/Riktig.Impl.DetSign.html#sign_at_fweaken_FS"><code>sign_at_fweaken_FS</code></a>,
+the statement that <code>sign_at (Fin.FS k)</code> and
+<code>sign_at (fin_weaken k)</code> are exact opposites, since they
+differ by exactly one position and <a
+href="coqdoc/Riktig.Impl.Det.html#sign_at"><code>sign_at</code></a>
+alternates. What survives to the next level is the <em>identity</em>:
+the two swapped positions are neighbours, so once one of them is
+consumed there is nothing left between them to move. <a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_sign_postcompose_id"><code>perm_sign_postcompose_id</code></a>
+says postcomposing by a pointwise identity changes nothing, and the flip
+comes entirely from the sign at the peeled level.</li>
+<li><code>c</code> is neither. Then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">\tau(c) = c</annotation></semantics></math>,
+that level contributes the same sign as before, and the restricted
+transposition is again a transposition of an adjacent pair — one size
+smaller. The induction hypothesis supplies the flip.</li>
+</ul>
+<p>One bookkeeping lemma runs through all of it: functions built by <a
+href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>
+are only ever equal to a canonical description <em>pointwise</em>, never
+as terms, so <a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_sign_postcompose_ext"><code>perm_sign_postcompose_ext</code></a>
+— pointwise equal
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>s
+give equal signs after postcomposing — is what lets the case analysis
+rewrite at all.</p>
+<h2 id="from-the-sign-to-the-matrix">From the sign to the matrix</h2>
+<p>With the sign flip in hand, the two halves compose. Reindexing the
+sum over all permutations by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo>↦</mo><mi>τ</mi><mo>∘</mo><mi>σ</mi></mrow><annotation encoding="application/x-tex">\sigma \mapsto \tau \circ \sigma</annotation></semantics></math>
+needs a <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>-level
+version of “a sum does not care about a bijective relabelling of its
+index” (<a
+href="coqdoc/Riktig.Impl.DetSign.html#psum_reindex"><code>psum_reindex</code></a>,
+built from <a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_postcompose"><code>perm_postcompose</code></a>
+and its correctness theorem); <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>
+rewrites the product half; <a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_sign_postcompose_adj"><code>perm_sign_postcompose_adj</code></a>
+supplies the sign. That gives antisymmetry for the permutation-sum
+determinant, and the theorem that the two determinant formulas agree
+carries it back to the cofactor recursion:</p>
+<pre class="coq"><code>  Theorem detM_swap_adjacent : forall (n : nat) (k : Fin.t n) (A : Matrix (S n) (S n) F),
+    detM (row_swap A (fin_weaken k) (Fin.FS k)) == - detM A.
+  Proof.
+    intros n k A.
+    calc (detM (row_swap A (fin_weaken k) (Fin.FS k)))
+      == (detM_leibniz (row_swap A (fin_weaken k) (Fin.FS k)))
+           { (detM_leibniz_eq_detM (S n) (row_swap A (fin_weaken k) (Fin.FS k))) }
+      == (- detM_leibniz A) { (detM_leibniz_swap_adjacent n k A) }
+      == (- detM A) { (detM_leibniz_eq_detM (S n) A) }.
+  Qed.</code></pre>
+<p>That is a chained calculation: <code>calc</code> states a starting
+expression and then a sequence of
+<code>== target { justification }</code> steps, each justification being
+a proof that the previous expression equals the next one, and the whole
+chain proving that the first equals the last. Three steps here. Replace
+<a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> by the
+permutation sum, apply antisymmetry there, and replace the sum back by
+<a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
+underneath the negation — the last step rewrites inside <code>-</code>,
+which is allowed because negation respects equality.</p>
+<h2 id="on-numbers">On numbers</h2>
+<p>The pair being arbitrary is worth checking on an instance that is not
+the top two rows. Take the nonsingular
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
-matrix by swapping the <em>middle</em> two rows, deliberately not the
-pair every earlier version of this fact was limited to.</p>
-<h2 id="why-the-permutation-sum-representation-makes-this-tractable">Why
-the permutation-sum representation makes this tractable</h2>
-<p>That earlier post explained why <a
-href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod"><code>perm_prod</code></a>,
-the flat permutation-indexed product, lets a row swap act by pure
-postcomposition — no relocation surgery. Sign is the harder half because
-<a
-href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
-isn’t read off the matrix at all; it’s a property of the <em>permutation
-itself</em>, computed by its own recursive structure (choose
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma(1)</annotation></semantics></math>,
-recurse on the rest). Concretely, a <code>Perm n</code> is a
-Lehmer-style encoding — <code>Perm_S c p</code> records the choice
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">\sigma(1) = c</annotation></semantics></math>
-and recurses with <code>p</code> on the remaining positions — and
-<code>perm_sign (Perm_S c p) == sign_at c * perm_sign p</code>, where
-<code>sign_at c</code> alternates
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><mi>−</mi><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi>…</mi></mrow><annotation encoding="application/x-tex">1, -1, 1, \dots</annotation></semantics></math>
-with the position chosen; multiplied out over all levels, that is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(-1)</annotation></semantics></math>
-raised to the sum of the chosen indices, the permutation’s inversion
-count. To show sign flips under postcomposition by a transposition, you
-first need to construct
-“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>,
-then apply
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>”
-<em>as an actual permutation value</em> your recursion can compute on —
-not just as an equation about where things end up.</p>
-<p>That construction, <a
-href="coqdoc/Riktig.Impl.DetSign.html#perm_postcompose"><code>perm_postcompose</code></a>,
-is the piece that had to exist before sign’s behavior could even be
-asked about. Once it does, sign’s recursive definition gives a clean
-case split: postcompose by a transposition, peel one level of the
-recursion, and ask what happens to the <em>remaining</em> transposition
-at the smaller instance. For an <em>adjacent</em> pair, the answer is
-either “it vanishes” (if the peeled position was one of the two swapped)
-or “it survives, relocated” (otherwise) — both clean, both closing by
-structural induction.</p>
-<h2 id="where-it-stops-precisely">Where it stops, precisely</h2>
-<p>For a <em>non-adjacent</em> pair, the same peeling produces something
-else entirely: a genuine 3-cycle on the remaining positions, not a
-transposition. The induction that closes the adjacent case simply
-doesn’t apply to a 3-cycle — it’s the wrong shape of object. This isn’t
-a proof-search failure; it’s confirmed by direct hand computation and
-recorded as such.</p>
-<p>The classical fix is well known and doesn’t need new ideas, just more
-of the same kind of work: any transposition of two positions
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i, j</annotation></semantics></math>
-factors as an odd-length chain of <em>adjacent</em> transpositions (the
-textbook “bubble” identity, recursed on the distance
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>i</mi><mo>−</mo><mi>j</mi><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">|i-j|</annotation></semantics></math>),
-and sign’s flip under an adjacent transposition — now proved — pushes
-through that chain by induction. What’s needed to make the push-through
-work is one more composition lemma, showing sign behaves correctly when
-two postcompositions are chained rather than just one — a precise,
-identified, one-more-induction task, not a new kind of difficulty.</p>
-<p>Four attempts have now gone into general determinant multiplicativity
-— two direct ones that stalled, the permutation-sum reformulation, and
-today’s adjacent-pair sign flip — and each kept its progress; the
-remaining gap is one composition lemma and one factorization argument,
-both with their proof route already sketched.</p>
-<p><em>Next: <a
-href="coqdoc/Riktig.Impl.DetSignGeneral.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>,
-the composition lemma that chains adjacent transpositions into arbitrary
-ones — attempt #5, or a pivot to Stage B’s softmax/ReLU if that keeps
-for another round.</em></p>
+matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>4</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>5</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>6</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>8</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>10</mn></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{smallmatrix}1&amp;2&amp;3\\4&amp;5&amp;6\\7&amp;8&amp;10\end{smallmatrix}</annotation></semantics></math>,
+whose determinant computes to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">-3</annotation></semantics></math>,
+and exchange its <em>middle</em> two rows:</p>
+<pre class="coq"><code>Example detM_swap_adjacent_mid_Q_compute :
+  detM (row_swap mat3_ns (fin_weaken (Fin.FS Fin.F1)) (Fin.FS (Fin.FS Fin.F1)))
+    == (3#1)%Q.
+Proof.
+  reflexivity.
+Qed.</code></pre>
+<p>Both sides evaluate independently, with no appeal to the theorem: the
+swapped matrix really has determinant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>+</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">+3</annotation></semantics></math>.
+Applying <a
+href="coqdoc/Riktig.Impl.DetSign.html#detM_swap_adjacent"><code>detM_swap_adjacent</code></a>
+to the same instance then closes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">3 = -(-3)</annotation></semantics></math>
+as a resolution check.</p>
+<h2 id="where-adjacency-was-used">Where adjacency was used</h2>
+<p>Exactly once: in the case where the peeled position is one of the two
+being swapped. Neighbouring positions have nothing strictly between
+them, so consuming one of them leaves the identity. For a pair that is
+<em>not</em> adjacent, peeling at one of them leaves a genuine
+three-cycle on the remaining positions — an object of a different shape,
+which the induction above cannot consume.</p>
+<p>The classical repair is to build an arbitrary transposition out of
+adjacent ones. What that argument needs from here is the theorem above,
+unchanged, at <em>every</em> adjacent pair — which is why proving it for
+one fixed pair, say the top two, would not have been enough.</p>
+<p><em>Next: factoring an arbitrary transposition into adjacent ones,
+and row-swap antisymmetry with no restriction on the pair.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.DetSign.html"><code>Impl/DetSign.v</code></a>
 (<a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_postcompose"><code>perm_postcompose</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetSign.html#perm_apply_postcompose"><code>perm_apply_postcompose</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetSign.html#sign_at_fweaken_FS"><code>sign_at_fweaken_FS</code></a>,
+<a
 href="coqdoc/Riktig.Impl.DetSign.html#perm_sign_postcompose_adj"><code>perm_sign_postcompose_adj</code></a>,
 <a
-href="coqdoc/Riktig.Impl.DetSign.html#detM_swap_adjacent"><code>detM_swap_adjacent</code></a>,
-and the precise gap in its header) · <a
+href="coqdoc/Riktig.Impl.DetSign.html#psum_reindex"><code>psum_reindex</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetSign.html#detM_swap_adjacent"><code>detM_swap_adjacent</code></a>)
+· <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>
-(the permutation-sum reformulation this builds on) · <a
-href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a> (<a
-href="coqdoc/Riktig.Impl.Elim.html#det_swap_F1_FS2"><code>det_swap_F1_FS2</code></a>,
-the fixed-pair special case now strictly generalized).</p>
+(<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#Perm"><code>Perm</code></a>, <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_leibniz_eq_detM</code></a>)
+· <a href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Fin.html#fin_weaken"><code>fin_weaken</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>).</p>
 </main>
 </body>
 </html>

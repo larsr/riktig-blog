@@ -10,187 +10,296 @@
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
 <h1 id="sidestepping-the-determinant">Sidestepping the determinant</h1>
-<p><em>Twenty-third post documenting the <strong>riktig</strong>
-project. A story about changing the representation instead of pushing
-harder on a stuck proof — and how far that gets you, honestly reported
-short of the finish line.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. The earlier post on a determinant you can
-compute defined <a
-href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> by
-cofactor expansion and flagged general row-swap antisymmetry — swapping
-any two rows negates the determinant — as needed but not yet proved. Two
-dedicated attempts at proving it directly, documented in <a
-href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>’s own
-header, both stalled on the same wall. This post is the third attempt,
-and it took a different route entirely.</p>
-</blockquote>
-<h2 id="why-the-direct-route-stalled">Why the direct route stalled</h2>
-<p><a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> is
-defined by cofactor expansion: pick the first column, multiply each
-entry by the determinant of the matrix with that row and column deleted,
-alternate signs, sum. To prove that swapping rows
+<p>A textbook gives the determinant twice. First as <em>cofactor
+expansion</em>: pick a column, multiply each entry by the determinant of
+the matrix with that entry’s row and column struck out, alternate signs,
+add. Second as a <em>sum over permutations</em>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mrow><mi>σ</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∏</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>j</mi></mrow></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">\det A \;=\; \sum_{\sigma \in S_n} \operatorname{sign}(\sigma)
+  \prod_j A_{\sigma(j),\,j}.</annotation></semantics></math></p>
+<p>The two agree — that is a theorem, not a definition — and a course
+usually proves it once and then uses whichever is convenient. Which one
+is convenient is not a matter of taste. The properties that fall out
+easily from one are painful from the other, and the split is sharp
+enough that the right response to a stuck proof is often to change the
+formula rather than to push harder on it.</p>
+<p>This post is about one such switch, and about the theorem that
+licenses it. The property in question is <em>antisymmetry</em>: exchange
+two rows of a matrix and its determinant negates.</p>
+<h2 id="why-antisymmetry-resists-the-recursion">Why antisymmetry resists
+the recursion</h2>
+<p>Take the cofactor definition, expanding along the first column (<a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, in <a
+href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a>):</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>i</mi></munder><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msup><msub><mi>A</mi><mrow><mi>i</mi><mn>1</mn></mrow></msub><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">minor </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>A</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\det A \;=\; \sum_i (-1)^{i-1} A_{i1} \det(\text{minor } A_i),</annotation></semantics></math></p>
+<p>where the minor deletes row
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and column one. To show that swapping rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
-negates the result, the natural approach tracks what happens to rows
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>
+negates the whole thing, you follow rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
-as the recursion deletes some <em>other</em> row
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>r</mi><mo>′</mo></msup><annotation encoding="application/x-tex">r&#39;</annotation></semantics></math>
-and shrinks the matrix by one — you need to know where
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>
+through the recursion. The recursion deletes some row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+and shrinks the matrix by one — so before the induction hypothesis
+applies, you must know <em>where rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
-<em>land</em> inside the smaller matrix, which needs the computational
-inverse of the recursion’s own row-deletion function.</p>
-<p>That inverse (<a
-href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>) got
-built, and the single-row case that never needs it got proved: <a
-href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>
-establishes linearity in the <em>first</em> row unconditionally — row F1
-stays put when any other row is deleted, so there is nothing to
-relocate. Its own header records that linearity in an <em>arbitrary</em>
-row resisted a clean proof within that session’s budget. And
-antisymmetry is harder still: it needs to track <em>two</em> rows
-through the same deletion simultaneously, and the two relocated
-positions interact — one can land on the other, or on the deleted row,
-in enough combinations that the argument stopped being “one clean
-induction” and turned into a real case-work explosion. Not a
-proof-search problem — a combinatorial one. <code>Elim.v</code>’s header
-names the next move precisely: either push the general case through
-anyway, or reformulate <a
-href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> entirely
-as a sum over permutations, the textbook’s other definition, where
-antisymmetry is closer to definitional.</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>
+have landed inside the smaller matrix</em>.</p>
+<p>The deletion is implemented by <code>skip r</code>, the increasing
+injection <code>Fin.t n -&gt; Fin.t (S n)</code> that misses
+<code>r</code>. Relocating a row through it means computing its inverse,
+which is partial: the deleted position is the one thing
+<code>skip r</code> never produces, so it has no preimage to compute in
+the smaller matrix. That inverse exists (<a
+href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>, in
+<a href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>),
+and with it a single tracked row is manageable. Two tracked rows are
+not. Each of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>
+may or may not be the deleted row, they may land on each other, and they
+may land on the position the recursion has singled out — and the cases
+multiply until the argument is no longer one induction but a
+combinatorial case analysis in its own right. Nothing about it is
+subtle; it is simply large, and it grows for reasons that have nothing
+to do with the mathematics being proved.</p>
 <h2 id="the-reformulation">The reformulation</h2>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><munder><mo>∑</mo><mrow><mi>σ</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∏</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\det A = \sum_{\sigma \in S_n} \operatorname{sign}(\sigma)
-  \prod_j A_{\sigma(j),\,j}</annotation></semantics></math></p>
-<pre class="coq"><code>Definition detM_leibniz {n : nat} (A : Matrix n n F) : F :=
-  psum (fun sigma : Perm n =&gt; perm_sign sigma * perm_prod A sigma).</code></pre>
-<p>The point of this definition isn’t elegance for its own sake — it’s
-that swapping two rows of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-now acts on the formula by <strong>postcomposing</strong>
+<p>The permutation sum has no recursion to track. A row swap acts on it
+by <em>postcomposing</em>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>’s
-<em>values</em> with the transposition, a pointwise rewrite with no
-recursion to track at all:</p>
-<pre class="coq"><code>Theorem perm_prod_row_swap : forall (n : nat) (A : Matrix n n F)
-    (i j : Fin.t n) (sigma : Perm n),
-  perm_prod (row_swap A i j) sigma
-    == prodF (fun c : Fin.t n =&gt; A (swap_fin i j (perm_apply sigma c)) c).</code></pre>
-<p>Read the right-hand side carefully: it’s a pointwise rewrite of the
-product through the transposition <code>swap_fin i j</code>,
-<em>not</em> yet <code>perm_prod A</code> applied to some permutation
-<em>value</em> — packaging that postcomposition as an actual
-<code>Perm n</code> the sum can be reindexed over is exactly the gap the
-final section describes.</p>
-<p>No <a
-href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>, no
-relocation, no case-work — the obstruction that stopped the direct route
-simply isn’t present in this representation. That’s the whole idea of a
-representation change: the same mathematical fact, restated so that the
-hard part becomes easy and (usually) something else becomes hard
-instead.</p>
-<h2 id="whats-now-proved-unconditionally">What’s now proved,
-unconditionally</h2>
-<p>Two real theorems, general in both the field and the matrix size:</p>
-<pre class="coq"><code>Theorem detM_leibniz_eq_detM : forall (n : nat) (A : Matrix n n F),
-  detM_leibniz A == detM A.
+values with a transposition, which is a pointwise rewrite of each factor
+and nothing else.</p>
+<p>Making that precise needs a data type of permutations that Coq can
+enumerate and compute with. <code>Perm n</code> is the standard “choose
+the first value, recurse on the rest” encoding, reusing the same <a
+href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>
+injection — once, to build the enumeration, never to relocate an
+already-fixed row:</p>
+<pre class="coq"><code>Inductive Perm : nat -&gt; Type :=
+| Perm_O : Perm O
+| Perm_S : forall {n : nat}, Fin.t (S n) -&gt; Perm n -&gt; Perm (S n).
 
-Theorem perm_prod_row_swap : forall (n : nat) (A : Matrix n n F)
-    (i j : Fin.t n) (sigma : Perm n),
-  perm_prod (row_swap A i j) sigma
-    == prodF (fun c : Fin.t n =&gt; A (swap_fin i j (perm_apply sigma c)) c).</code></pre>
-<p>The first is the classical “cofactor expansion equals the permutation
-sum” theorem — proved by induction, matching the permutation encoding’s
-own recursive structure (<code>Perm_S c p</code>, choosing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma(1)</annotation></semantics></math>
-and recursing) term-by-term against the Laplace recursion, with the
-peeling always happening at a <em>fixed</em> position rather than a
-relocated one, so <a
-href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
-never enters the picture. The second is the row-swap half of
-antisymmetry, and it holds unconditionally for <em>any</em> two rows,
-not just adjacent ones — already more general than either of the two
-failed direct attempts managed.</p>
-<p>A useful side effect: building the permutation-sum needed a general
-reindexing lemma for <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
-(<a
-href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>’s
-summation combinator) — “a sum is invariant under any bijective
-relabeling of its index” — which didn’t exist before and is reusable
-well beyond determinants.</p>
-<h2 id="whats-still-missing-precisely">What’s still missing,
-precisely</h2>
-<p>Antisymmetry itself isn’t finished. <a
-href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>
-handles the <em>product</em> term; the <em>sum</em> over all
-permutations still needs to be reindexed by “postcompose every
+Fixpoint perm_apply {n : nat} (sigma : Perm n) {struct sigma} : Fin.t n -&gt; Fin.t n :=
+  match sigma in Perm n0 return Fin.t n0 -&gt; Fin.t n0 with
+  | Perm_O =&gt; fun x =&gt; Fin.case0 (fun _ =&gt; Fin.t 0) x
+  | @Perm_S m c p =&gt; fun x =&gt;
+      Fin.caseS&#39; x (fun _ =&gt; Fin.t (S m)) c (fun x&#39; =&gt; skip c (perm_apply p x&#39;))
+  end.</code></pre>
+<p><code>Perm_S c p</code> says:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
-with the transposition,” which needs its own bijective-reindexing
-argument at the level of <a
+sends the first position to <code>c</code>, and the remaining positions
+go where <code>p</code> sends them among the values other than
+<code>c</code>. That is the Lehmer-code way of writing a bijection down,
+and it makes the collection of them a finite, computable enumeration —
+so “sum over all permutations” becomes a structural recursion, <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>,
+mirroring <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#Perm"><code>Perm</code></a>’s
+own shape:</p>
+<pre class="coq"><code>  Fixpoint psum {n : nat} (h : Perm n -&gt; F) {struct n} : F :=
+    match n as n0 return (Perm n0 -&gt; F) -&gt; F with
+    | O =&gt; fun h0 =&gt; h0 Perm_O
+    | S m =&gt; fun h0 =&gt;
+        bigopF (fun i : Fin.t (S m) =&gt; psum (fun p : Perm m =&gt; h0 (Perm_S i p)))
+    end h.</code></pre>
+<p>The sign of a permutation is the product, over the levels of that
+tree, of <a
+href="coqdoc/Riktig.Impl.Det.html#sign_at"><code>sign_at</code></a> at
+each level’s chosen value — <code>sign_at c</code> being
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><mi>−</mi><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi>…</mi></mrow><annotation encoding="application/x-tex">1, -1, 1, \dots</annotation></semantics></math>
+by recursion on the position, the same alternating sign the cofactor
+expansion uses:</p>
+<pre class="coq"><code>  Fixpoint perm_sign {n : nat} (sigma : Perm n) {struct sigma} : F :=
+    match sigma with
+    | Perm_O =&gt; 1
+    | Perm_S c p =&gt; sign_at c * perm_sign p
+    end.</code></pre>
+<p>The product term is flat — it never recurses through a minor:</p>
+<pre class="coq"><code>  Definition perm_prod {n : nat} (A : Matrix n n F) (sigma : Perm n) : F :=
+    prodF (fun j =&gt; A (perm_apply sigma j) j).</code></pre>
+<p>and the definition is the textbook formula, transcribed:</p>
+<pre class="coq"><code>  Definition detM_leibniz {n : nat} (A : Matrix n n F) : F :=
+    psum (fun sigma : Perm n =&gt; perm_sign sigma * perm_prod A sigma).</code></pre>
+<h2 id="the-two-formulas-agree">The two formulas agree</h2>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo>∑</mo><mi>σ</mi></munder><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo><munder><mo>∏</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>j</mi></mrow></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>i</mi></munder><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msup><msub><mi>A</mi><mrow><mi>i</mi><mn>1</mn></mrow></msub><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mtext mathvariant="normal">minor </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>A</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\sum_{\sigma} \operatorname{sign}(\sigma) \prod_j A_{\sigma(j),j}
+  \;=\; \sum_i (-1)^{i-1} A_{i1} \det(\text{minor } A_i).</annotation></semantics></math></p>
+<p><strong>Blackboard.</strong> Group the permutations by their value at
+the first position. Those with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">\sigma(1) = i</annotation></semantics></math>
+contribute
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>A</mi><mrow><mi>i</mi><mn>1</mn></mrow></msub><annotation encoding="application/x-tex">A_{i1}</annotation></semantics></math>
+times a sum over the permutations of the remaining positions, and that
+sum is the Leibniz determinant of the minor at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>;
+the sign
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{sign}
+(\sigma)</annotation></semantics></math> factors as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">(-1)^{i-1}</annotation></semantics></math>
+times the sign of the smaller permutation. Induct.</p>
+<p><strong>Coq.</strong> The grouping is not a construction to be built
+— it is what <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
-rather than <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a> —
-mechanical, and the same shape as the lemma already proved, just not yet
-built.</p>
-<p>The genuinely hard piece is a different, older theorem hiding inside
-the definition: <a
-href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
-needs to change by exactly
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
-under postcomposition by <em>any</em> transposition, for <em>any</em>
-starting permutation. That’s “sign is a group homomorphism
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>S</mi><mi>n</mi></msub><mo>→</mo><mo stretchy="false" form="prefix">{</mo><mi>±</mi><mn>1</mn><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">S_n \to \{\pm 1\}</annotation></semantics></math>”
-— the classical fact usually proved by counting inversions, or by
-reducing an arbitrary permutation to a product of adjacent
-transpositions. It’s genuinely new combinatorics, not a corollary of
-anything built so far, and — reported honestly — comparable in
-difficulty to the two attempts that already didn’t finish. <a
-href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>,
-the fact this whole chain was building toward, is still an open
-<code>Context</code> hypothesis in <a
-href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>.</p>
-<h2 id="why-report-an-unfinished-proof-at-all">Why report an unfinished
-proof at all</h2>
-<p>Because the alternative — silently declaring victory, or quietly
-dropping the thread — is worse than a precise account of exactly how far
-the ladder reaches. <a
-href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>’s
-header already modeled this: name exactly what’s proved, exactly what’s
-missing, and exactly what the next move should be, so the next attempt
-(by me, or eventually by Lars) doesn’t have to rediscover the shape of
-the problem from scratch. <a
-href="coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>
-does the same. Three attempts in, the remaining gap is smaller and
-better understood than when this started — a genuine
-representation-changing win, even short of the finish line.</p>
-<p><em>Next: the sign-homomorphism theorem itself, or — if that keeps
-resisting — a pivot back to Stage B of the ML roadmap, concrete
-differentiable layers, which doesn’t need <a
-href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
-at all.</em></p>
+already does. Peeling one level of <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
+produces exactly the <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+over first values that <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>’s own
+expansion produces, so the two peelings match term by term:</p>
+<pre class="coq"><code>  Theorem detM_leibniz_eq_detM : forall (n : nat) (A : Matrix n n F),
+    detM_leibniz A == detM A.</code></pre>
+<p>The inductive step is a five-link <code>calc</code> chain inside one
+<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>.
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign_S"><code>perm_sign_S</code></a>
+and <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_S"><code>perm_prod_S</code></a>
+split the two factors at the peeled level, turning each summand into a
+product of four things:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mi>i</mi></msub><mo>⋅</mo><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mi>p</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>A</mi><mrow><mi>i</mi><mn>1</mn></mrow></msub><mo>⋅</mo><mo>∏</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><msub><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mi>i</mi></msub><mo>⋅</mo><msub><mi>A</mi><mrow><mi>i</mi><mn>1</mn></mrow></msub><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mrow><mi>sign</mi><mo>&#8289;</mo></mrow><mi>p</mi><mo>⋅</mo><mo>∏</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(\operatorname{sign}_i \cdot \operatorname{sign} p) \cdot (A_{i1} \cdot \textstyle\prod p)
+\;=\; (\operatorname{sign}_i \cdot A_{i1}) \cdot (\operatorname{sign} p \cdot \textstyle\prod p).</annotation></semantics></math></p>
+<p>The two belonging to the peeled level have to be brought together,
+and the two belonging to the smaller instance likewise. That regrouping
+is an equation between two products of the same four factors, so <code
+class="nolink">ring</code> proves it, and the whole link is</p>
+<pre class="coq"><code>      + apply psum_ext. intros p. ring.</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum_ext"><code>psum_ext</code></a>
+reduces the two sums to their terms, and <code
+class="nolink">ring</code> normalizes both sides of the term equation
+and finds them identical. Then <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum_scale"><code>psum_scale</code></a>
+— the <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
+mirror of the “constant factor comes out of a sum” lemma — pulls the
+level’s factor out, and the induction hypothesis rewrites the remaining
+sum to <code>detM (minor A i)</code>. Crucially, the peeling always
+happens at the fixed first position of the <em>product’s own index</em>,
+never at a position relocated through someone else’s deletion, so <a
+href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
+never appears.</p>
+<h2 id="what-a-row-swap-does-to-the-product">What a row swap does to the
+product</h2>
+<p>Here is the payment for the reformulation.</p>
+<pre class="coq"><code>  Theorem perm_prod_row_swap : forall (n : nat) (A : Matrix n n F)
+      (i j : Fin.t n) (sigma : Perm n),
+    perm_prod (row_swap A i j) sigma
+      == prodF (fun c : Fin.t n =&gt; A (swap_fin i j (perm_apply sigma c)) c).
+  Proof.
+    intros n A i j sigma.
+    unfold perm_prod.
+    apply prodF_ext. intros c.
+    exact (row_swap_eq_swap_fin n A i j (perm_apply sigma c) c).
+  Qed.</code></pre>
+<p>Three lines. <a
+href="coqdoc/Riktig.Theory.BigOp.html#prodF_ext"><code>prodF_ext</code></a>
+says two products agree if their factors do, and <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#row_swap_eq_swap_fin"><code>row_swap_eq_swap_fin</code></a>
+says reading entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mo>,</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(r,c)</annotation></semantics></math>
+of the row-swapped matrix is reading entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>τ</mi><mi>r</mi><mo>,</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\tau r, c)</annotation></semantics></math>
+of the original, for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+the transposition <code>swap_fin i j</code>. So swapping rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+replaces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo>∘</mo><mi>σ</mi></mrow><annotation encoding="application/x-tex">\tau \circ \sigma</annotation></semantics></math>
+inside every factor, for <em>any</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+— adjacent or not, distinct or not. There is no relocation, no case
+analysis, and no induction: the obstruction that stopped the recursion
+is not present in this representation at all.</p>
+<p>What is left is the other half of antisymmetry, and it is a genuinely
+different question: the <em>sign</em> must also flip, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>sign</mi><annotation encoding="application/x-tex">\operatorname{sign}</annotation></semantics></math>
+is a property of the permutation, not of the matrix, so nothing above
+touches it.</p>
+<h2 id="a-reindexing-lemma-worth-having-on-its-own">A reindexing lemma
+worth having on its own</h2>
+<p>Turning “every term is rewritten by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>”
+into “the sum is unchanged” needs to know that a finite sum does not
+care about a bijective relabelling of its index. That is worth stating
+once, for any commutative monoid, rather than for determinants:</p>
+<pre class="coq"><code>  Theorem bigopF_reindex : forall (n : nat) (g : Fin.t n -&gt; M)
+      (tau tau&#39; : Fin.t n -&gt; Fin.t n),
+    (forall x, tau&#39; (tau x) = x) -&gt; (forall y, tau (tau&#39; y) = y) -&gt;
+    bigopF g == bigopF (fun i =&gt; g (tau i)).</code></pre>
+<p>A bijection is supplied as a pair of mutually inverse functions
+rather than as an existence claim, so the proof can compute with it. The
+induction peels the sum at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\tau(1)</annotation></semantics></math>
+and needs the restriction of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
+to the remaining positions — which is <a
+href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>,
+the same “restrict a bijection through <a
+href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>”
+primitive the permutation encoding uses.</p>
+<h2 id="running-it">Running it</h2>
+<p>The reformulation is a definition that computes, so it can be checked
+against the original on actual numbers rather than only related to it by
+a theorem:</p>
+<pre class="coq"><code>Example detM_leibniz_2x2_Q :
+  detM_leibniz (mat2 (1#1)%Q (2#1)%Q (3#1)%Q (4#1)%Q) == ((-2)#1)%Q.
+Proof.
+  rewrite (detM_leibniz_eq_detM 2 (mat2 (1#1)%Q (2#1)%Q (3#1)%Q (4#1)%Q)).
+  exact det2_Q.
+Qed.</code></pre>
+<p>And the reindexing lemma gets its own test at a real transposition on
+three positions, with both sides of the reordered sum evaluated
+independently by conversion —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>+</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">1 + (2 + (3 + 0))</annotation></semantics></math>
+against
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>+</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">2 + (1 + (3 + 0))</annotation></semantics></math>
+— before the theorem itself is applied at the same transposition.</p>
+<p><em>Next: the sign half — what postcomposing a permutation by a
+transposition does to <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html"><code>Impl/DetLeibniz.v</code></a>
 (<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#Perm"><code>Perm</code></a>, <a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_apply"><code>perm_apply</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>,
+<a href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod"><code>perm_prod</code></a>,
+<a
 href="coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz"><code>detM_leibniz</code></a>,
 <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_leibniz_eq_detM</code></a>,
 <a
-href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>,
-<a
+href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>)
+· <a href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, the
+cofactor recursion the reformulation is compared against) · <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+(<a
 href="coqdoc/Riktig.Theory.BigOp.html#bigopF_reindex"><code>bigopF_reindex</code></a>)
-· <a href="coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>
-(the two direct attempts, and the recommendation that led here) · <a
-href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
-(the still-open <a
-href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
-Context hypothesis).</p>
+· <a href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>
+(<a href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>, <a
+href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>, <a
+href="coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>).</p>
 </main>
 </body>
 </html>

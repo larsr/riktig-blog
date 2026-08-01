@@ -11,32 +11,68 @@
 <main>
 <h1 id="linear-algebra-without-coordinates">Linear algebra without
 coordinates</h1>
-<p><em>Ninth post in the series documenting the <strong>riktig</strong>
-project. This one is a little different: it teaches a piece of a linear
-algebra course, with each proof shown twice — once as you’d write it on
-a blackboard, once as it lives in the repository — so you can check,
-line by line, that the machine proof is the human proof.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved in Coq, aiming for <em>modifiability</em>:
-change something, re-establish a few local facts, trust the rest. In <a
-href="s78-the-shopping-list-for-analysis.html">the earlier post
-assembling the algebra analysis needs</a> we bought the algebra that
-analysis needs. Now we start the linear algebra course proper — and we
-do it <strong>without coordinates</strong>. No matrices in this post. A
-matrix, when it finally appears, will be a <em>representation</em> of a
-linear map, never the definition of one.</p>
-</blockquote>
+<p>A first linear algebra course usually reaches matrices within a week,
+and from then on a “linear map” means a grid of numbers. But the two
+defining equations of a linear map mention no grid, and neither do most
+of its theorems. This post does a piece of the course the other way: the
+maps themselves, no coordinates anywhere, with each proof shown twice —
+once as you would write it on a blackboard, once as Coq checks it — so
+you can compare them line by line.</p>
 <h2 id="the-cast-linear-maps">The cast: linear maps</h2>
 <p>A linear map between vector spaces is a function that respects the
-structure. In the repository (<a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>)
-it is a record: a function <a
-href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>,
-respect for equality (<a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>),
-and two laws</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">f(u + v) = f(u) + f(v) \qquad f(a\,u) = a\,f(u).</annotation></semantics></math></p>
+structure: it carries sums to sums and scalings to scalings,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">f(u + v) = f(u) + f(v) \qquad f(a\,u) = a\,f(u),</annotation></semantics></math></p>
+<p>and it respects the chosen equality <code>==</code> on each space —
+throughout, <code>==</code> is a setoid equality, an equivalence
+relation picked for the carrier, not Coq’s equality of terms. Those
+three demands are stated as a class about a plain function, so a lambda
+written anywhere can be shown linear without first being packaged (<a
+href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>):</p>
+<pre class="coq"><code>Class Linear (F U V : Type)
+    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V}
+    (f : U -&gt; V) := {
+  proper         :: Proper (equ ==&gt; equ) f;
+  is_additive    :: Additive U V add add f;
+  is_homogeneous :: Homogeneous F U V scale (fun a =&gt; a) f;
+}.</code></pre>
+<p><a href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
+are two one-line classes that take the operations they talk about as
+arguments, so the same class serves several situations.
+<code>Additive U V add add f</code> unfolds to
+<code>f (x + y) == f x + f y</code> — carry <code>+</code> on
+<code>U</code> to <code>+</code> on <code>V</code>.
+<code>Homogeneous F U V scale (fun a =&gt; a) f</code> unfolds to
+<code>f (a *: x) == a *: f x</code>, where the
+<code>fun a =&gt; a</code> is the weight applied to the scalar on the
+way through: the identity here, but a squaring for a quadratic form,
+which is why the class takes it as a parameter rather than fixing it.
+The <code>::</code> in front of each field registers it for instance
+search, so anything already known to be additive — a linear map,
+multiplication by a ring element — is found by search rather than named
+by hand.</p>
+<p>A <em>linear map</em> is then the data: the function, plus a proof
+that it is linear (<a
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>):</p>
+<pre class="coq"><code>Record LinearMap (F U V : Type)
+    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
+  lm_fun :&gt; U -&gt; V;
+  lm_linear :: Linear F U V lm_fun;
+}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>
+is declared a coercion (<code>:&gt;</code>), so a map is applied as
+<code>f u</code> and never as <code>lm_fun f u</code>. The three laws
+are reachable under the names <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
+and <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>,
+which is how the proofs below name them.</p>
 <h2 id="theorem-1-a-linear-map-sends-zero-to-zero">Theorem 1: a linear
 map sends zero to zero</h2>
 <p>Every course proves this first, and the proof is a small gem because
@@ -53,15 +89,17 @@ wait, that’s the trick: rewrite the goal
 as
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f(0) + f(0) = f(0) + 0</annotation></semantics></math>
 and cancel on the left. ∎</p>
-<p><strong>Repository</strong> (<a
+<p><strong>In Coq</strong> (<a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a> —
 note it’s proved for <em>any</em> additive map between groups; vector
 spaces inherit it):</p>
 <pre class="coq"><code>Theorem hom_zero : f 0 == 0.
 Proof.
   apply (cancel_l (f 0)).
-  rewrite &lt;- fadd, idl, idr.
-  reflexivity.
+  calc (f 0 + f 0)
+    == (f (0 + 0)) { (fadd 0 0) }
+    == (f 0)       { left_identity }
+    == (f 0 + 0)   { right_identity }.
 Qed.</code></pre>
 <p>To check the Coq proof against the blackboard, you need the types of
 the pieces:</p>
@@ -84,8 +122,10 @@ href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a></td>
 additivity)</td>
 </tr>
 <tr>
-<td><a href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a>, <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a></td>
+<td><a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>,
+<a
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a></td>
 <td><code>0 + a == a</code>, <code>a + 0 == a</code></td>
 </tr>
 </tbody>
@@ -93,14 +133,18 @@ href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a></td>
 <p>Read it backwards, the way <code>apply</code> works: to show
 <code>f 0 == 0</code>, by <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
-it suffices to show <code>f 0 + f 0 == f 0 + 0</code>. Rewriting
-right-to-left with <code>fadd</code> turns the left side into
-<code>f (0 + 0)</code>; <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> collapses the
-inner <code>0 + 0</code>; <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a> collapses the
-right side; both sides are now <code>f 0</code>. That <em>is</em> the
-blackboard proof, with the bookkeeping made honest.</p>
+it suffices to show <code>f 0 + f 0 == f 0 + 0</code>. The
+<code>calc</code> block is that chain written out, each step naming the
+law that licenses it: <code>fadd</code> read right to left folds
+<code>f 0 + f 0</code> into <code>f (0 + 0)</code>; <a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+collapses the inner <code>0 + 0</code> to <code>0</code>; <a
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
+expands <code>f 0</code> into <code>f 0 + 0</code>, the right-hand side
+wanted. Each <code>{ ... }</code> holds the justification for the step
+above it, and the block elaborates to a chain of transitivity steps — so
+the displayed proof and the term Coq checks are the same sequence of
+equalities.</p>
 <h2 id="the-twist-the-maps-themselves-form-a-vector-space">The twist:
 the maps themselves form a vector space</h2>
 <p>Here is where the course usually gets interesting. Define, for linear
@@ -133,19 +177,44 @@ Qed.</code></pre>
 doing exactly the marked step. Closure of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi></mrow><annotation encoding="application/x-tex">a\,f</annotation></semantics></math>
 under the scale law is the one place a <em>commutativity</em> of scalars
-sneaks in:
+is used:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mi>b</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a\,f(b\,u) = ab\,f(u) = ba\,f(u) = b\,(a\,f(u))</annotation></semantics></math>
-— in the repo this is the lemma <a
+— that step is the lemma <a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a>,
 and it is why Hom over a <em>noncommutative</em> ring would be a subtler
 story.</p>
-<p><strong>Laws</strong> (the boring part, and that’s the point):
+<p><strong>Laws</strong> (the routine part, and that’s the point):
 associativity, identities, inverses for <code>+</code> on maps all hold
-<em>because they hold at every point</em> <code>u</code>. Each proof in
-the repository is three lines of “apply the pointwise law”. We built
-this pattern once, as the pointwise construction in the earlier post on
-representations and isomorphisms; Hom just rides it through <a
-href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>.</p>
+<em>because they hold at every point</em> <code>u</code>. Take the left
+identity: the zero of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,V)</annotation></semantics></math>
+is the map sending everything to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+so</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">(0 + f)(u) = 0(u) + f(u) = 0 + f(u) = f(u),</annotation></semantics></math></p>
+<p>the middle step being nothing but
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>’s
+own left-identity law at the point
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.
+In Coq:</p>
+<pre class="coq"><code>Lemma hom_idl : forall f : Hom, 0 + f == f.
+Proof.
+  intros f u.
+  exact (left_identity _).
+Qed.</code></pre>
+<p><code>intros f u</code> fixes the map and a single argument
+<code>u</code>, because equality of linear maps <em>is</em> agreement at
+every argument; what remains is <code>V</code>’s own identity law at
+that point. The scaling laws bundle into a <code>ScaleLaws F Hom</code>
+instance and the additive ones into an <code>AbGroup Hom</code>, and a
+vector space is exactly those two put side by side:</p>
+<pre class="coq"><code>#[global] Instance Hom_VectorSpace : VectorSpace F Hom :=
+  {| VectorSpace.vectors := Hom_AbGroup; VectorSpace.scaling := Hom_ScaleLaws |}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+has precisely those two fields — an abelian group of vectors and the
+laws relating scalars to it — so building the instance means naming the
+two proofs already in hand, with nothing further to prove.</p>
 <h2 id="dual-space-measurements-are-vectors-too">Dual space:
 measurements are vectors too</h2>
 <p>A special case with a famous name (<a
@@ -155,8 +224,9 @@ href="coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>):</p>
 Since scalars form a (one-dimensional) vector space over themselves,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>V</mi><mo>*</mo></msup><annotation encoding="application/x-tex">V^*</annotation></semantics></math>
 is a vector space by the theorem above, with <em>nothing new to
-prove</em>: in the repository the instance resolves automatically:</p>
-<pre class="coq"><code>Example dual_vs_check : VectorSpace F (Dual F V) := _.</code></pre>
+prove</em>: the instance resolves automatically:</p>
+<pre class="coq"><code>Example dual_vs_check (F V : Type) `{FF : Field F} `{VV : VectorSpace F V} :
+  VectorSpace F (Dual F V) := _.</code></pre>
 <p>That underscore is Coq assembling the whole proof by instance
 search.</p>
 <p>And now the most elegant map in this post. Every vector
@@ -165,35 +235,59 @@ search.</p>
 returns the functional’s value on it:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ι</mi><mo>:</mo><mi>V</mi><mo>→</mo><msup><mi>V</mi><mrow><mi>*</mi><mo>*</mo></mrow></msup><mo>,</mo><mspace width="2.0em"></mspace><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\iota : V \to V^{**}, \qquad \iota(v)(\varphi) = \varphi(v).</annotation></semantics></math></p>
 <p>Note what is <strong>not</strong> in that definition: no basis, no
-coordinates, no choices. Its linearity is, satisfyingly, each
+coordinates, no choices. This map is <a
+href="coqdoc/Riktig.Theory.Hom.html#into_double_dual"><code>into_double_dual</code></a>.
+Its underlying function is written
+<code>bilinear_map_appr eval_pair</code>: <a
+href="coqdoc/Riktig.Theory.Hom.html#eval_pair"><code>eval_pair</code></a>
+is the two-slot map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>↦</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\varphi, v) \mapsto \varphi(v)</annotation></semantics></math>,
+and <a
+href="coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appr"><code>bilinear_map_appr</code></a>
+fixes its right slot, leaving a linear map in the remaining one — that
+is exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>↦</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo>↦</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">v \mapsto (\varphi \mapsto \varphi(v))</annotation></semantics></math>.
+Its linearity is each
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>φ</mi><annotation encoding="application/x-tex">\varphi</annotation></semantics></math>’s
 own linearity read backwards —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>φ</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>ι</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>φ</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\iota(u+v)(\varphi) = \varphi(u+v) = \varphi(u)+\varphi(v) =
 \big(\iota(u)+\iota(v)\big)(\varphi)</annotation></semantics></math> —
-and in the repository the middle equality is literally
-<code>linear_map_additive φ</code>, each functional testifying for the
-map. (That
+so its additivity proof has nothing left to do but fix a functional and
+hand over that functional’s own law:</p>
+<pre class="coq"><code>Lemma dd_add : forall u v : V,
+  bilinear_map_appr eval_pair (u + v) == bilinear_map_appr eval_pair u + bilinear_map_appr eval_pair v.
+Proof.
+  intros u v f.
+  exact (linear_map_additive f u v).
+Qed.</code></pre>
+<p><code>intros u v f</code> fixes the two vectors and then a functional
+<code>f</code>, since equality in the double dual is agreement on every
+functional; <code>exact (linear_map_additive f u v)</code> is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>φ</mi><annotation encoding="application/x-tex">\varphi</annotation></semantics></math>
+testifying for the map. (That
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ι</mi><annotation encoding="application/x-tex">\iota</annotation></semantics></math>
 is an <em>isomorphism</em> when
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
 is finite-dimensional is a later theorem; it needs bases, which is
 exactly why it’s later.)</p>
-<h2 id="why-this-ordering-pays">Why this ordering pays</h2>
-<p>The earlier post on representations and isomorphisms ended with “the
-representation is a degree of freedom”. This post built the space where
-representations of <em>operations</em> will live: in wave L2 (in
-progress as this posts), choosing bases for
+<h2 id="what-the-space-of-maps-is-for">What the space of maps is
+for</h2>
+<p>Once
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,V)</annotation></semantics></math>
+is a vector space, it is the place representations of
+<em>operations</em> live. Choosing bases for
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>U</mi><annotation encoding="application/x-tex">U</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
 gives an isomorphism</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><msup><mi>F</mi><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,V) \;\cong\; F^{m \times n}</annotation></semantics></math></p>
-<p>and the punchline theorem
+<p>and with it the theorem
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo>∘</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\![g \circ f]\!] = [\![g]\!]\,[\![f]\!]</annotation></semantics></math>:
-<strong>matrix multiplication is function composition, transported along
-that isomorphism.</strong> Every matrix identity you’ve ever memorized
-will be a one-line rewrite along a representation change. The blackboard
-and the kernel agree; bring your own coordinates, or don’t.</p>
+matrix multiplication is function composition, transported along that
+isomorphism. Every matrix identity is then a rewrite along a
+representation change rather than a fresh calculation with indices. The
+blackboard and the machine agree; bring your own coordinates, or
+don’t.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>

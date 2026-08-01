@@ -14,19 +14,17 @@ specification</h1>
 <p>There are two ways to pin down a mathematical operation. One is to
 give a formula that computes it. The other is to list the laws it must
 obey and refuse to say anything more — no formula, no construction, just
-the properties any implementation must have. A function that raises <a
-href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> to a power,
-for instance, can be pinned down entirely by four laws (it sends
-<code>0</code> to <code>1</code>, turns sums into products, and so on);
-everything you can prove about it then follows from those laws alone,
-and holds for <em>every</em> function that satisfies them, whether you
-built it from a power series or some other way. This post applies
-exactly that move to integration: an interface that says what an
-integral <em>is</em>, by its laws, with no Riemann sums and no Lebesgue
-measure anywhere in sight.</p>
+the properties any implementation must have. A function that raises
+<code>e</code> to a power, for instance, can be pinned down entirely by
+four laws (it sends <code>0</code> to <code>1</code>, turns sums into
+products, and so on); everything you can prove about it then follows
+from those laws alone, and holds for <em>every</em> function that
+satisfies them, whether you built it from a power series or some other
+way. This post applies exactly that move to integration: an interface
+that says what an integral <em>is</em>, by its laws, with no Riemann
+sums and no Lebesgue measure anywhere in sight.</p>
 <h2 id="the-laws-an-integral-obeys">The laws an integral obeys</h2>
-<p>Write <code>int f a b</code> for the integral of <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> from
+<p>Write <code>int f a b</code> for the integral of <code>f</code> from
 <code>a</code> to <code>b</code> — on the blackboard,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>f</mi></mrow><annotation encoding="application/x-tex">\int_a^b f</annotation></semantics></math>.
 The scalars <code>a</code>, <code>b</code> come from an ordered field
@@ -37,30 +35,31 @@ The scalars <code>a</code>, <code>b</code> come from an ordered field
 <code>‖ v ‖</code>). Here is the whole specification, from <a
 href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>:</p>
 <pre class="coq"><code>Module Integral.
-  Class Integral (F V : Type) `{OrderedField.OrderedField F}
-      {intgE : EqRel V} {intgZ : Zero V} {intgA : HasAdd V} {intgN : HasNeg V}
-      {intgS : HasScale F V} {VS : VectorSpace F V}
-      {intgNorm : HasNorm F V} {NS : NormedSpace F V} := {
-    (* integrand, lower endpoint, upper endpoint *)
-    int             : (F -&gt; V) -&gt; F -&gt; F -&gt; V;
-    proper          : forall f g : F -&gt; V, (forall t : F, f t == g t) -&gt;
-                      forall a b : F, a == b -&gt;
-                      forall c d : F, c == d -&gt; int f a c == int g b d;
-    linear_additive : forall (f g : F -&gt; V) (a b : F),
-      int (fun t : F =&gt; f t + g t) a b == int f a b + int g a b;
-    linear_scale    : forall (c : F) (f : F -&gt; V) (a b : F),
-      int (fun t : F =&gt; c *: f t) a b == c *: int f a b;
-    additivity      : forall (f : F -&gt; V) (a b c : F),
+  Class Integral (F V : Type) `{OrderedField F}
+      {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V}
+      {Vs : HasScale F V} {VS : VectorSpace F V}
+      {Vnorm : HasNorm F V} {NS : NormedSpace F V} := {
+    int    : (F -&gt; V) -&gt; F -&gt; F -&gt; V;
+    proper :: Proper (pointwise_relation F equ ==&gt; equ ==&gt; equ ==&gt; equ) int;
+
+    is_additive    :: forall a b : F,
+      Additive (F -&gt; V) V (fun f g t =&gt; f t + g t) add (fun f =&gt; int f a b);
+    (* `scale` spelled out: Interface/Norm.v exports a NormedSpace field
+       of that name, which shadows the operation here. *)
+    is_homogeneous :: forall a b : F,
+      @Homogeneous F (F -&gt; V) V Ve (fun c f t =&gt; c *: f t) (@Ops.scale F V Vs)
+                   (fun c =&gt; c) (fun f =&gt; int f a b);
+    additivity     : forall (f : F -&gt; V) (a b c : F),
       int f a b + int f b c == int f a c;
-    constant        : forall (v : V) (a b : F),
+    constant       : forall (v : V) (a b : F),
       int (fun _ : F =&gt; v) a b == (b + - a) *: v;
-    bound           : forall (f : F -&gt; V) (a b M : F),
+    bound          : forall (f : F -&gt; V) (a b M : F),
       (forall t : F, a &lt;= t -&gt; t &lt;= b -&gt; ‖ f t ‖ &lt;= M) -&gt;
       a &lt;= b -&gt;
-      ‖ int f a b ‖ &lt;= M * (b + - a)
+      ‖ int f a b ‖ &lt;= M * (b + - a);
   }.
 End Integral.
-Notation Integral := Integral.Integral.
+Export Integral.
 Notation int := Integral.int.</code></pre>
 <p>Read the fields one at a time. The first, <a
 href="coqdoc/Riktig.Interface.Integral.html#Integral.int"><code>int</code></a>,
@@ -74,15 +73,21 @@ them.</p>
 href="coqdoc/Riktig.Interface.Integral.html#Integral.proper"><code>Integral.proper</code></a>
 says the integral respects equality: replacing the integrand by a
 pointwise-equal one, or an endpoint by an equal one, gives an equal
-result. (<code>==</code> is the structure’s own equality, and <a
-href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is its
-name.)</li>
+result. (<code>==</code> is the structure’s own equality, <a
+href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is its name, and
+<code>pointwise_relation F equ</code> is that equality read argument by
+argument on integrands.) The <code>::</code> declares it as an instance,
+which is what lets <code>rewrite</code> replace equals in any of <a
+href="coqdoc/Riktig.Interface.Integral.html#Integral.int"><code>int</code></a>’s
+three arguments.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.linear_additive"><code>Integral.linear_additive</code></a>
+href="coqdoc/Riktig.Interface.Integral.html#Integral.is_additive"><code>Integral.is_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.linear_scale"><code>Integral.linear_scale</code></a>
+href="coqdoc/Riktig.Interface.Integral.html#Integral.is_homogeneous"><code>Integral.is_homogeneous</code></a>
 are linearity: the integral of a sum is the sum of the integrals, and a
-scalar pulls straight out through the integral sign.</li>
+scalar pulls straight out through the integral sign. They are stated in
+the vocabulary the rest of the development uses for those two
+properties, which is worth a paragraph of its own below.</li>
 <li><a
 href="coqdoc/Riktig.Interface.Integral.html#Integral.additivity"><code>Integral.additivity</code></a>
 is the gluing law,
@@ -101,6 +106,37 @@ stays below <code>M</code> across <code>[a, b]</code> and
 <code>a &lt;= b</code>, then the integral is no larger than
 <code>M</code> times the width of the interval.</li>
 </ul>
+<p>The two linearity fields deserve unpacking, because they look
+stranger than they are. <code>Additive A B opA opB f</code> is a small
+reusable class saying <code>f (x ⋆ y) == f x · f y</code> where
+<code>⋆</code> is <code>opA</code> and <code>·</code> is
+<code>opB</code>; <code>Homogeneous F A B action weight f</code> says
+<code>f (a *: x) == weight a · f x</code>. Fixing the two endpoints
+turns the integral into a function of the integrand alone,
+<code>fun f =&gt; int f a b</code>, whose domain is the function space
+<code>F -&gt; V</code>. Addition on that domain is
+<code>fun f g t =&gt; f t + g t</code> and scaling is
+<code>fun c f t =&gt; c *: f t</code>, and those are exactly the
+operations passed in. So <a
+href="coqdoc/Riktig.Interface.Integral.html#Integral.is_additive"><code>is_additive</code></a>
+says: the map “integrate over <code>[a,b]</code>” is a homomorphism from
+pointwise addition of integrands to addition of vectors. It is the same
+class that states what a linear map does to sums, applied to a space
+whose points are functions.</p>
+<p>That phrasing is precise but inconvenient to rewrite with, so the
+file immediately unfolds both back into the equations a caller
+wants:</p>
+<pre class="coq"><code>  Definition linear_additive {F V : Type} `{Integral F V}
+    : forall (f g : F -&gt; V) (a b : F),
+      int (fun t : F =&gt; f t + g t) a b == int f a b + int g a b :=
+    fun f g a b =&gt; additive (f := fun h =&gt; int h a b) f g.</code></pre>
+<p><a href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a>
+is the projection of the <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
+class, and the implicit argument <code>f := fun h =&gt; int h a b</code>
+tells search which homomorphism is meant. <a
+href="coqdoc/Riktig.Interface.Integral.html#Integral.linear_scale"><code>Integral.linear_scale</code></a>
+is the matching one-liner for scaling.</p>
 <p>That is the entire contract. Nothing here says how to
 <em>compute</em> an integral, and nothing here mentions completeness —
 the property that distinguishes the real numbers from the rationals. So
@@ -126,7 +162,7 @@ href="coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>:</p
 Proof.
   intros f a.
   apply (cancel_l (int f a a)).
-  rewrite Integral.additivity, idr.
+  rewrite Integral.additivity, right_identity.
   reflexivity.
 Qed.</code></pre>
 <p>Walking it:</p>
@@ -141,10 +177,9 @@ two smaller sides being equal forces the original ones equal.</li>
 <code>int f a a + int f a a</code> matches additivity at endpoints
 <code>(a, a, a)</code>, which rewrites it to a single
 <code>int f a a</code>.</li>
-<li><code>rewrite idr</code> handles the right side:
+<li><code>rewrite right_identity</code> handles the right side:
 <code>int f a a + 0</code> is just <code>int f a a</code> by the
-right-identity law <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a>.</li>
+right-identity law.</li>
 <li><code>reflexivity</code> closes it — both sides are now
 <code>int f a a</code>.</li>
 </ul>
@@ -218,17 +253,16 @@ three plain consequences the theory file records.</p>
 <p>The law you might expect at the top — the fundamental theorem, that
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>g</mi><mo>=</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>G</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\int_a^b g = G(b) - G(a)</annotation></semantics></math>
 when <code>G</code> is an antiderivative of <code>g</code> — is
-<em>not</em> in the class, and the interface file says so in as many
-words. It is not provable from the laws above (those pin the integral
-down on constant and piecewise data, but connecting it to derivatives
-needs either completeness or a concrete construction), and it is not yet
-a field of the class either, because it would drag in the derivative’s
-exact formulation before that has settled. So it waits — either as a
-theorem in a file that has both a derivative and a model, or as a law of
-a stronger class that extends this one. Leaving it out is not a gap; it
-is the same discipline — state only what the laws can support — that
-lets the three theorems above hold for every integral there will ever
-be, without any of them having been built yet.</p>
+<em>not</em> in the class. It is not provable from the laws above (those
+pin the integral down on constant and piecewise data, but connecting it
+to derivatives needs either completeness or a concrete construction),
+and it is not yet a field of the class either, because it would drag in
+the derivative’s exact formulation before that has settled. So it waits
+— either as a theorem in a file that has both a derivative and a model,
+or as a law of a stronger class that extends this one. Leaving it out is
+not a gap; it is the same discipline — state only what the laws can
+support — that lets the three theorems above hold for every integral
+there will ever be, without any of them having been built yet.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>

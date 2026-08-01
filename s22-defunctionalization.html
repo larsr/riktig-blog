@@ -33,11 +33,9 @@ values it captured from its surroundings. So represent each abstraction
 as a constructor of an ordinary datatype, let that constructor carry the
 captured values as fields, and replace every call <code>f x</code> with
 a call to one dispatcher — traditionally named <code>apply</code> — that
-looks at which constructor <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> is and
-does what that abstraction would have done. The function space becomes a
-datatype; application becomes a <code>match</code>. No functions
-survive.</p>
+looks at which constructor <code>f</code> is and does what that
+abstraction would have done. The function space becomes a datatype;
+application becomes a <code>match</code>. No functions survive.</p>
 <p>This post builds a small higher-order program in the lambda calculus,
 defunctionalizes it, and proves the two versions compute the very same
 term.</p>
@@ -79,24 +77,20 @@ Fixpoint build (base : tm) (is : list instr) (k : tm -&gt; tm) : tm :=
   | IArg t :: is&#39;  =&gt; build base is&#39; (fun r =&gt; k (App r t))
   | ILam   :: is&#39;  =&gt; build base is&#39; (fun r =&gt; k (Abs r))
   end.</code></pre>
-<p>The continuation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is a real
-function, created fresh at every step and handed to the next call. That
-is the higher-order feature we want to remove. And notice — this is the
-observation defunctionalization rests on — that the functions ever
-stored in <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> come from
-exactly three source abstractions:</p>
+<p>The continuation <code>k</code> is a real function, created fresh at
+every step and handed to the next call. That is the higher-order feature
+we want to remove. And notice — this is the observation
+defunctionalization rests on — that the functions ever stored in
+<code>k</code> come from exactly three source abstractions:</p>
 <ul>
 <li>the initial identity <code>fun x =&gt; x</code>, whatever the caller
 passes at the top;</li>
 <li><code>fun r =&gt; k (App r t)</code>, built at an
-<code>IArg t</code> step, capturing <code>t</code> and the enclosing <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>;</li>
+<code>IArg t</code> step, capturing <code>t</code> and the enclosing
+<code>k</code>;</li>
 <li><code>fun r =&gt; k (Abs r)</code>, built at an <a
 href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> step,
-capturing the enclosing <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>.</li>
+capturing the enclosing <code>k</code>.</li>
 </ul>
 <p>Three shapes. That finiteness is what makes the technique work.</p>
 <h2 id="the-datatype-and-the-apply-dispatcher">The datatype and the
@@ -112,16 +106,12 @@ carrying exactly what that shape captured:</p>
 <p><a href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>
 is the identity; <code>Kapp t k</code> is
 <code>fun r =&gt; k (App r t)</code> with its captured argument
-<code>t</code> and enclosing continuation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>;
+<code>t</code> and enclosing continuation <code>k</code>;
 <code>Kabs k</code> is <code>fun r =&gt; k (Abs r)</code> with its
-enclosing <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. Now the
-one dispatcher. “Apply the continuation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> to
-<code>v</code>” becomes a <code>match</code> on <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> doing, in
-each case, precisely what the original abstraction did:</p>
+enclosing <code>k</code>. Now the one dispatcher. “Apply the
+continuation <code>k</code> to <code>v</code>” becomes a
+<code>match</code> on <code>k</code> doing, in each case, precisely what
+the original abstraction did:</p>
 <pre class="coq"><code>Fixpoint apply_clo (k : cont) (v : tm) : tm :=
   match k with
   | Kid       =&gt; v
@@ -210,8 +200,7 @@ Proof.
   - rewrite IH. reflexivity.
   - rewrite IH. reflexivity.
 Qed.</code></pre>
-<p>Induction on the closure <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>. For <a
+<p>Induction on the closure <code>k</code>. For <a
 href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>, both
 sides are <code>v</code> — <code>reflexivity</code>. For
 <code>Kapp t k'</code>, both sides step to the <code>k'</code> case on

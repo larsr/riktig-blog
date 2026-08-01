@@ -10,64 +10,63 @@
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
 <h1 id="backprop-is-associativity">Backprop is associativity</h1>
-<p><em>Twenty-first post documenting the <strong>riktig</strong>
-project. The linear algebra course meets the analysis course, and the
-punchline is that two famous algorithms are the same theorem, bracketed
-two different ways.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. The post introducing
-<code>docs/ML-ROADMAP.md</code> named the goal precisely: get
-transformers, flash attention, and diffusion models into reach. Today’s
-post is the first payoff of that plan — the fact that makes automatic
-differentiation work at all, stated and proved in a form short enough to
-fit in this paragraph’s neighborhood.</p>
-</blockquote>
-<h2 id="the-question">The question</h2>
-<p>A transformer, or any layered network, is a <em>chain</em> of
-differentiable functions:
+<p>A layered network is a chain of differentiable functions,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>3</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">f_3 \circ f_2 \circ f_1</annotation></semantics></math>.
-The chain rule says the derivative of the composite is the product of
-the derivatives — a product of matrices (Jacobians), once a basis is
-chosen:</p>
+The chain rule says its derivative at a point is the composite of the
+derivatives, and once bases are chosen each derivative is a matrix — its
+Jacobian — so the derivative of the whole chain is a product of
+matrices:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>f</mi><mn>3</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>2</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">D(f_3 \circ f_2 \circ f_1)(a) \;=\; J_3 \cdot J_2 \cdot J_1.</annotation></semantics></math></p>
-<p>Two famous algorithms compute this product by grouping the
-multiplications differently:</p>
+<p>Two well-known algorithms compute that product, and they differ only
+in how they group the multiplications.</p>
 <ul>
-<li><strong>Forward-mode AD</strong> seeds a tangent vector
+<li><strong>Forward mode</strong> seeds a tangent vector
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
-at the <em>input</em> and pushes it forward:
+at the <em>input</em> and pushes it through:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>1</mn></msub><mi>v</mi></mrow><annotation encoding="application/x-tex">J_1 v</annotation></semantics></math>,
 then
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>1</mn></msub><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">J_2(J_1 v)</annotation></semantics></math>,
 then
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>3</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>1</mn></msub><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">J_3(J_2(J_1 v))</annotation></semantics></math>
-— the running product grows on the <em>left</em>, bracketed
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>3</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>1</mn></msub><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">J_3(J_2(J_1 v))</annotation></semantics></math>.
+The running product starts at the input-side factor and grows by
+extending on the <em>left</em>, which is the right-associated bracketing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>2</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">J_3 \cdot (J_2 \cdot J_1)</annotation></semantics></math>.</li>
-<li><strong>Reverse-mode AD — backprop</strong> seeds a cotangent
+<li><strong>Reverse mode</strong>, which is backpropagation, seeds a
+cotangent row vector
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
-at the <em>output</em> and pulls it backward:
+at the <em>output</em> and pulls it back:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><msub><mi>J</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">w J_3</annotation></semantics></math>,
 then
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>w</mi><msub><mi>J</mi><mn>3</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>J</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">(w J_3) J_2</annotation></semantics></math>,
 then
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>w</mi><msub><mi>J</mi><mn>3</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>J</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">((w J_3) J_2) J_1</annotation></semantics></math>
-— the running product grows on the <em>right</em>, bracketed
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>w</mi><msub><mi>J</mi><mn>3</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>J</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">((w J_3) J_2) J_1</annotation></semantics></math>.
+The running product starts at the output-side factor and grows by
+extending on the <em>right</em>, which is the left-associated bracketing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">(J_3 \cdot J_2) \cdot J_1</annotation></semantics></math>.</li>
 </ul>
-<p>Every course states this and moves on to the efficiency argument (why
-reverse-mode is cheap for scalar losses). The thing that’s usually
-<em>asserted</em> rather than shown is the easy half: that both
-bracketings give the <strong>same matrix</strong> in the first place.
-That’s the theorem this post proves — and it turns out to need almost
-nothing beyond a fact you already know: matrix multiplication is
-associative.</p>
-<h2 id="the-proof-twice">The proof, twice</h2>
-<p>At the level of linear maps, composition (<a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_comp"><code>linear_map_comp</code></a>)
-is just function composition — <code>fun u =&gt; g (f u)</code>. Any two
-ways of bracketing three composed functions beta-reduce to the identical
-function. So the general fact is <code>reflexivity</code>:</p>
+<p>Which name goes with which bracketing is worth deriving rather than
+recalling: “forward” and “backward” are directions of <em>data
+flow</em>, not directions of association, and reading off the names
+instead of tracing the computation gets the two backwards. Trace the
+running product, as above, and the assignment is fixed.</p>
+<p>Courses state this pair and move straight to the cost argument — why
+reverse mode is cheap when the output is a single number. The half that
+gets asserted rather than shown is the prior one: that the two
+bracketings produce the <em>same matrix</em> at all. That is the theorem
+here, and it needs almost nothing beyond a fact everybody already
+knows.</p>
+<h2 id="two-levels-one-fact">Two levels, one fact</h2>
+<p>Before matrices there are the maps themselves. Composition of linear
+maps in this development is not an abstract operation with laws to
+check; <code>linear_map_comp g f</code> is literally
+<code>fun u =&gt; g (f u)</code>. So</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>∘</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>k</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo>∘</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(g \circ h) \circ k \;=\; g \circ (h \circ k)</annotation></semantics></math></p>
+<p>holds because both sides are the function
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>↦</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">u \mapsto g(h(k(u)))</annotation></semantics></math>
+— the same term, not merely equal terms. Equality of linear maps here is
+pointwise, so introducing an argument leaves a goal whose two sides
+reduce to that one term, and the proof is <code>reflexivity</code> (<a
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>):</p>
 <pre class="coq"><code>Theorem lm_comp_assoc : forall (g : LinearMap F R S) (h : LinearMap F Q R)
     (k : LinearMap F P Q),
   linear_map_comp (linear_map_comp g h) k == linear_map_comp g (linear_map_comp h k).
@@ -75,18 +74,27 @@ Proof.
   intros g h k u.
   reflexivity.
 Qed.</code></pre>
-<p>An earlier post (well — the linear algebra track generally) already
-proved that <a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
-the map from a <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
-to its matrix in a chosen basis, is a <code>Proper</code> morphism:
-equal linear maps get equal matrices. Feed <a
+<p><code>intros ... u</code> opens the pointwise equality at an
+arbitrary argument; <code>reflexivity</code> closes it because beta
+reduction takes both sides to the same normal form.</p>
+<p>Getting from there to matrices takes one step. A Jacobian is not a
+new construction: it is the matrix of the derivative in the chosen
+bases, so <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>
+is defined as <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+applied to the derivative map. And <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+is a <code>Proper</code> morphism, <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_proper"><code>mat_of_proper</code></a>
+— equal linear maps have equal matrices. Feeding <a
 href="coqdoc/Riktig.Theory.HomVS.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>
-through that morphism and the headline theorem — the one about actual
-differentiable functions, actual <a
+through <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_proper"><code>mat_of_proper</code></a>
+gives the theorem about actual differentiable functions, with actual <a
 href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
-witnesses, actual Jacobians — is one line:</p>
+witnesses and actual Jacobians:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>3</mn></msub><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><msub><mi>L</mi><mn>3</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>2</mn></msub><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">[\![(L_3 L_2) L_1]\!] \;=\; [\![L_3 (L_2 L_1)]\!].</annotation></semantics></math></p>
 <pre class="coq"><code>Theorem jacobian_chain3_assoc :
   forall (f1 : U -&gt; V) (f2 : V -&gt; W) (f3 : W -&gt; X) (a : U)
     (L1 : LinearMap F U V) (L2 : LinearMap F V W) (L3 : LinearMap F W X)
@@ -94,109 +102,138 @@ witnesses, actual Jacobians — is one line:</p>
     (Hd1 : is_deriv f1 a L1) (Hd2 : is_deriv f2 (f1 a) L2)
     (Hd3 : is_deriv f3 (f2 (f1 a)) L3),
   jacobian n q BU BX
-    (deriv_comp f1 (fun v =&gt; f3 (f2 v)) a L1 (linear_map_comp L3 L2) _ Hd1
+    (deriv_comp f1 (fun v : V =&gt; f3 (f2 v)) a L1 (linear_map_comp L3 L2)
+       (fun_comp_proper f2 f3 P2 P3) Hd1
        (deriv_comp f2 f3 (f1 a) L2 L3 P3 Hd2 Hd3))
   == jacobian n q BU BX
-    (deriv_comp (fun u =&gt; f2 (f1 u)) f3 a (linear_map_comp L2 L1) L3 P3
+    (deriv_comp (fun u : U =&gt; f2 (f1 u)) f3 a (linear_map_comp L2 L1) L3 P3
        (deriv_comp f1 f2 a L1 L2 P2 Hd1 Hd2) Hd3).
 Proof.
+  intros f1 f2 f3 a L1 L2 L3 P2 P3 Hd1 Hd2 Hd3.
   exact (mat_of_proper BU BX (linear_map_comp (linear_map_comp L3 L2) L1)
            (linear_map_comp L3 (linear_map_comp L2 L1)) (lm_comp_assoc L3 L2 L1)).
 Qed.</code></pre>
-<p>The two sides are the Jacobian computed by composing the chain rule
-one way, versus the other. <a
+<p>The statement is long because it names the two computations rather
+than their results. <a
 href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
-is the chain rule from the earlier post on the derivative as a linear
-map; everything downstream of it — the Jacobian, the matrix product,
-this theorem — is bookkeeping around that one fact. Named corollaries
-unpack each side as an explicit matrix product, so the two algorithms
-are visible by name:</p>
-<pre class="coq"><code>Theorem jacobian_reverse_mode : ... ==
-  mat_mul (mat_mul (jacobian ... Hd3) (jacobian ... Hd2)) (jacobian ... Hd1).
-
-Theorem jacobian_forward_mode : ... ==
-  mat_mul (jacobian ... Hd3) (mat_mul (jacobian ... Hd2) (jacobian ... Hd1)).</code></pre>
-<p>and a third theorem, <a
-href="coqdoc/Riktig.Theory.Backprop.html#backprop_eq_forward_mode"><code>backprop_eq_forward_mode</code></a>,
-restates the whole thing purely as <a
+is the chain rule: it turns derivatives of an inner and an outer
+function at matching points into a derivative of their composite, and it
+needs a <code>Proper</code> side condition on the outer function, which
+is why <code>P2</code> and <code>P3</code> are carried. On the left, <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
+is applied with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>1</mn></msub><annotation encoding="application/x-tex">f_1</annotation></semantics></math>
+as the inner function and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>3</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">f_3 \circ f_2</annotation></semantics></math>
+as the outer one — differentiate the tail first, so the derivative built
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>3</mn></msub><mo>∘</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><msub><mi>L</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">(L_3 \circ L_2) \circ L_1</annotation></semantics></math>.
+On the right the grouping is the other way,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>f</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">f_2 \circ f_1</annotation></semantics></math>
+inner and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mn>3</mn></msub><annotation encoding="application/x-tex">f_3</annotation></semantics></math>
+outer, giving
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>3</mn></msub><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>2</mn></msub><mo>∘</mo><msub><mi>L</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">L_3 \circ (L_2 \circ L_1)</annotation></semantics></math>.
+<a
+href="coqdoc/Riktig.Theory.Backprop.html#fun_comp_proper"><code>fun_comp_proper</code></a>
+supplies the side condition in the first case, where the outer function
+is itself a composite.</p>
+<p>The proof ignores all of it. Everything except the two derivative
+maps is bookkeeping, so the proof term hands <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_proper"><code>mat_of_proper</code></a>
+those two maps and the one-line reason they are equal.</p>
+<h2 id="the-two-algorithms-by-name">The two algorithms, by name</h2>
+<p>Two corollaries unfold each side of that equality into an explicit
+matrix product, so the two strategies appear under their own names: <a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_reverse_mode"><code>jacobian_reverse_mode</code></a>
+identifies the left-hand side with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">(J_3 \cdot J_2) \cdot J_1</annotation></semantics></math>,
+and <a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_forward_mode"><code>jacobian_forward_mode</code></a>
+identifies the right-hand side with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>2</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">J_3 \cdot (J_2 \cdot J_1)</annotation></semantics></math>,
+each factor being <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>
+applied to the corresponding derivative witness. Both are proved from <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>
+applied twice, in the two orders — pure linear algebra, with no <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+anywhere in the argument.</p>
+<p>Putting the two together strips the statement down to what it really
+is:</p>
+<pre class="coq"><code>Theorem backprop_eq_forward_mode :
+  forall (f1 : U -&gt; V) (f2 : V -&gt; W) (f3 : W -&gt; X) (a : U)
+    (L1 : LinearMap F U V) (L2 : LinearMap F V W) (L3 : LinearMap F W X)
+    (P2 : Proper (equ ==&gt; equ) f2) (P3 : Proper (equ ==&gt; equ) f3)
+    (Hd1 : is_deriv f1 a L1) (Hd2 : is_deriv f2 (f1 a) L2)
+    (Hd3 : is_deriv f3 (f2 (f1 a)) L3),
+  mat_mul (mat_mul (jacobian p q BW BX Hd3) (jacobian m p BV BW Hd2))
+    (jacobian n m BU BV Hd1)
+  == mat_mul (jacobian p q BW BX Hd3)
+       (mat_mul (jacobian m p BV BW Hd2) (jacobian n m BU BV Hd1)).
+Proof.
+  intros f1 f2 f3 a L1 L2 L3 P2 P3 Hd1 Hd2 Hd3.
+  exact (mat_mul_assoc q p m n (jacobian p q BW BX Hd3)
+           (jacobian m p BV BW Hd2) (jacobian n m BU BV Hd1)).
+Qed.</code></pre>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>2</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(J_3 \cdot J_2) \cdot J_1 \;=\; J_3 \cdot (J_2 \cdot J_1).</annotation></semantics></math></p>
+<p>The proof is <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
-at the Jacobian level — confirming that no new mathematics was smuggled
-in anywhere.</p>
-<h2
-id="getting-the-direction-right-by-deriving-it-not-assuming-it">Getting
-the direction right by <em>deriving</em> it, not assuming it</h2>
-<p>The stage-6½ entry on the analysis roadmap had already sketched this
-theorem — and had the bracketing direction backwards. It’s an easy
-mistake: “forward” and “backward” are directions of <em>data flow</em>,
-not directions of <em>association</em>, and it’s not obvious in advance
-which maps to which without actually tracing through what each algorithm
-computes. Rather than trust the earlier prose, the proof works it out
-from the cost argument directly: reverse-mode’s running product starts
-at the output-side factor and grows by extending on the <em>right</em>
-toward the input, which is the left-associated bracketing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">(J_3 \cdot J_2) \cdot J_1</annotation></semantics></math>;
-forward-mode’s running product starts at the input-side factor and grows
-by extending on the <em>left</em> toward the output, the
-right-associated bracketing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mn>3</mn></msub><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>J</mi><mn>2</mn></msub><mo>⋅</mo><msub><mi>J</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">J_3 \cdot (J_2 \cdot J_1)</annotation></semantics></math>.
-The roadmap entry has been corrected to match. Small thing, but it’s the
-kind of small thing that’s easy to get backwards in a textbook and hard
-to get backwards in a proof — the proof forces you to actually pin down
-which product is which.</p>
-<h2 id="what-this-doesnt-yet-claim">What this doesn’t yet claim</h2>
-<p>Two honest limits, stated rather than hidden:</p>
-<ul>
-<li>The file proves the
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">N=3</annotation></semantics></math>
+— associativity of matrix multiplication, which is itself one
+interchange of a double sum — applied to the three Jacobians.
+Backpropagation and forward mode agree because matrix multiplication is
+associative, and nothing else enters the argument.</p>
+<h2 id="what-is-not-claimed">What is not claimed</h2>
+<p>Two limits, stated rather than hidden.</p>
+<p>The chains proved are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">N = 3</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">N=4</annotation></semantics></math>
-cases explicitly, and shows by construction that
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">N=4</annotation></semantics></math>’s
-proof is just two applications of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">N=3</annotation></semantics></math>’s
-lemma — the general
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">N = 4</annotation></semantics></math>.
+The four-map version, <a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_chain4_assoc"><code>jacobian_chain4_assoc</code></a>,
+is <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_proper"><code>mat_of_proper</code></a>
+applied to <a
+href="coqdoc/Riktig.Theory.HomVS.html#lm_comp_assoc4"><code>lm_comp_assoc4</code></a>,
+which is in turn two applications of <a
+href="coqdoc/Riktig.Theory.HomVS.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>
+— the same move that derives general associativity from the pairwise law
+in any monoid, one step at a time. The general
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>-ary
-chain is the same induction one more time, left as a documented
-<code>TODO</code> rather than pushed through here. The fussy part isn’t
-the mathematics (associativity in any category generalizes for free);
-it’s indexing “the space after step
+chain is that induction carried out once more, and it is not proved. The
+obstacle is not the mathematics but the statement: a chain of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>
+steps means a dependent family of spaces indexed by the positions along
+it, with a vector-space structure at each and a linear map between
+consecutive ones, and getting “the space after step
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>”
-as a clean dependent family, which deserves its own pass.</li>
-<li>This theorem is about the <strong>Jacobian</strong>, the full
-matrix. Real backprop never materializes it — it composes linear-map
-<em>applications</em> directly, propagating a single vector through each
-layer at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false" form="prefix">(</mo><mrow><mi>dim</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">O(\dim)</annotation></semantics></math>
-cost instead of building and multiplying
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false" form="prefix">(</mo><msup><mrow><mi>dim</mi><mo>&#8289;</mo></mrow><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">O(\dim^2)</annotation></semantics></math>
-or
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false" form="prefix">(</mo><msup><mrow><mi>dim</mi><mo>&#8289;</mo></mrow><mn>3</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">O(\dim^3)</annotation></semantics></math>
-matrices. That’s a legitimate descend-to-implementation refinement,
-queued for later, in the same pattern as every other spec/impl split in
-this project.</li>
-</ul>
-<h2 id="why-this-is-the-right-first-move">Why this is the right first
-move</h2>
-<p><code>docs/ML-ROADMAP.md</code> staged the path to transformers,
-flash attention, and diffusion honestly by difficulty, and flagged the
-optimization- equivalence pattern — proving a <em>fast</em>
-implementation computes the <em>same</em> value as a naive spec — as the
-most novel part of the plan. Today’s theorem is the simplest possible
-instance of exactly that pattern, one level up: forward-mode and
-reverse-mode aren’t two different computations that happen to agree:
-they’re the <em>same</em> computation, differently grouped, and
-associativity is the proof. Flash attention will be a longer, harder
-version of the same shape of argument. Good to know the shape works
-before reaching for the hard case.</p>
-<p><em>Next: Stage A of the ML roadmap — a spec for <code>exp</code>,
-the transcendental function nothing in the tree defines yet, and the
-thing softmax, Gaussian densities, and diffusion’s score function all
-need before any of this touches an actual transformer.</em></p>
+to typecheck cleanly is the fussy part.</p>
+<p>The other limit is that this theorem is about the
+<strong>Jacobian</strong>, the whole matrix. Real backpropagation never
+builds it. It composes linear-map <em>applications</em> directly,
+propagating a single vector through each layer at a cost proportional to
+the dimension, rather than forming and multiplying matrices at a cost
+proportional to its square or cube. That is precisely the cost argument
+the first section set aside, and proving that the vector-at-a-time
+computation agrees with the matrix product is a separate result about an
+efficient implementation of this specification.</p>
+<p>The separation is what the theorem is for. Forward mode and reverse
+mode are not two computations that happen to agree; they are one
+computation, grouped two ways. Everything that separates them in
+practice — the cost, the memory, which one to use when the loss is a
+single number — is a question about evaluation order, asked on top of an
+identity that associativity has already settled.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Theory.Backprop.html"><code>Theory/Backprop.v</code></a>
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.HomVS.html#lm_comp_assoc"><code>lm_comp_assoc</code></a>,
+<a
+href="coqdoc/Riktig.Theory.HomVS.html#lm_comp_assoc4"><code>lm_comp_assoc4</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Backprop.html"><code>Theory/Backprop.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Backprop.html#fun_comp_proper"><code>fun_comp_proper</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Backprop.html#jacobian_chain3_assoc"><code>jacobian_chain3_assoc</code></a>,
 <a
@@ -204,18 +241,30 @@ href="coqdoc/Riktig.Theory.Backprop.html#jacobian_reverse_mode"><code>jacobian_r
 <a
 href="coqdoc/Riktig.Theory.Backprop.html#jacobian_forward_mode"><code>jacobian_forward_mode</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Backprop.html#backprop_eq_forward_mode"><code>backprop_eq_forward_mode</code></a>)
+href="coqdoc/Riktig.Theory.Backprop.html#backprop_eq_forward_mode"><code>backprop_eq_forward_mode</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Backprop.html#jacobian_chain4_assoc"><code>jacobian_chain4_assoc</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
-(the two-function case, <a
+(<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>,
+<a
 href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_comp"><code>jacobian_comp</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_proper"><code>mat_of_proper</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>,
 the chain rule) · <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/docs/ML-ROADMAP.md"><code>docs/ML-ROADMAP.md</code></a>
-(the plan this post is stage one of).</p>
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>).</p>
 </main>
 </body>
 </html>

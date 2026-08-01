@@ -52,7 +52,7 @@ recursion is justified by a measure: the <em>sum</em> of the two
 lengths, which drops by one at every call. From <a
 href="coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>:</p>
 <pre class="coq"><code>Section Merge.
-  Context {A : Type} `{O : DecTotalOrder.DecTotalOrder A}.
+  Context {A : Type} `{O : DecTotalOrder A}.
   Local Open Scope order_scope.
 
   Definition merge : list A -&gt; list A -&gt; list A.
@@ -75,9 +75,9 @@ href="coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>:</p>
     (subst p; unfold ltof; simpl; abstract lia).
    Defined.</code></pre>
 <p>The opening <code>Context</code> line, with its
-<code>DecTotalOrder.DecTotalOrder A</code> binder, is what makes the
-program generic: everything below is parameterised by an arbitrary
-carrier <code>A</code> with a decidable total order <code>O</code>, and
+<code>DecTotalOrder A</code> binder, is what makes the program generic:
+everything below is parameterised by an arbitrary carrier <code>A</code>
+with a decidable total order <code>O</code>, and
 <code>Local Open Scope order_scope</code> makes <code>&lt;</code> mean
 that order’s <a
 href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>.
@@ -91,7 +91,12 @@ program, and it uses just decidability, no order laws — and the smaller
 head is emitted. The two holes are the measure-decrease proofs, closed
 uniformly by <code>abstract lia</code>.</p>
 <p>The defining equations — the displayed case rule above, one lemma per
-clause — follow through <code>Fix_eq</code>:</p>
+clause — come next. The two empty cases fall out by
+<code>destruct</code>; the interesting clause goes through
+<code>Fix_eq</code>, the standard library’s lemma that a
+<code>Fix</code> equals its own body applied to itself, given that the
+body treats extensionally equal recursive calls alike (the second bullet
+below, discharged once):</p>
 <pre class="coq"><code>  Lemma merge_nil_l: forall l : list A, merge [] l = l.
     now destruct l. Qed.
   Lemma merge_nil_r: forall l : list A, merge l [] = l.
@@ -196,9 +201,8 @@ sorted inputs stays sorted</h2>
 each element is <code>&lt;=</code> the next; the standard-library
 <code>Sorted</code> predicate is built from a head-relation
 <code>HdRel ole x l</code>, “<code>x</code> is <code>&lt;=</code> the
-head of <a
-href="coqdoc/Riktig.Programs.BinarySearch.html#l"><code>l</code></a>”
-(vacuously true for the empty list). The one fact <a
+head of <code>l</code>” (vacuously true for the empty list). The one
+fact <a
 href="coqdoc/Riktig.Programs.Merge.html#merge"><code>merge</code></a>
 needs is that a bound below both inputs bounds the merge, because the
 head of <code>merge a b</code> is a head of <code>a</code> or of
@@ -311,9 +315,15 @@ plain <code>Fixpoint</code>; the merge is not redefined at all but is
 the generic <a
 href="coqdoc/Riktig.Programs.Merge.html#merge"><code>merge</code></a>
 above instantiated at <code>nat</code>’s order, with its two arguments
-swapped so that ties keep the original left-biased convention
+swapped
 (<code>Definition merge (l1 l2 : list nat) : list nat := Riktig.Programs.Merge.merge (O := Nat_DecTotalOrder) l2 l1.</code>).
-The recursion that needs a measure is <a
+The swap is what fixes the tie-break: the generic <a
+href="coqdoc/Riktig.Programs.Merge.html#merge"><code>merge</code></a>
+tests <code>a0 &lt; b0</code>, which is false when the two heads are
+equal, so on a tie it emits the head of its <em>second</em> argument —
+and exchanging which list is second makes this <a
+href="coqdoc/Riktig.Programs.Merge.html#merge"><code>merge</code></a>
+emit the head of the left one. The recursion that needs a measure is <a
 href="coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>
 itself, because it recurses on the <em>outputs</em> of <a
 href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>,
@@ -322,7 +332,7 @@ length:</p>
 <pre class="coq"><code>Definition msort : list nat -&gt; list nat.
 apply (Fix (well_founded_ltof (list nat) (@length nat)) (fun _ =&gt; list nat)).
 intros l rec.
-(* Term-mode `match l with ...` (as used by `part`/`qsort_aux` in
+(* Term-mode `match l with ...` (as used by `qsort` in
    Quicksort.v) does not propagate the pattern `x :: y :: rest` back
    into `rec`&#39;s type, since the Fix body here doesn&#39;t depend on `l`
    pointwise; `destruct` (tactic-mode) does perform that
@@ -409,14 +419,18 @@ sorted.</li>
 </ul>
 <p>The permutation half is
 <code>msort_perm : forall l, Permutation l (msort l)</code>, proved on
-the same skeleton: in the two-or-more case it chains <a
-href="coqdoc/Riktig.Theory.MergeSort.html#split_perm"><code>split_perm</code></a>
-(the input is a permutation of its two halves concatenated) with the
-induction hypothesis on each half and finally <a
-href="coqdoc/Riktig.Theory.Merge.html#merge_perm"><code>merge_perm</code></a>
-(merging is a permutation of the concatenation).</p>
-<p><em>Next: quicksort, where the same two halves are proved but the
-rearrangement happens in place, through a partition invariant.</em></p>
+the same skeleton; in the two-or-more case its inductive step is a
+three-step <code>calc</code> chain, this time over
+<code>Permutation</code> rather than <code>==</code>, running from the
+input to the two halves concatenated (<a
+href="coqdoc/Riktig.Theory.MergeSort.html#split_perm"><code>split_perm</code></a>),
+to the two recursively sorted halves concatenated
+(<code>Permutation_app</code> fed the induction hypothesis on each
+half), to their merge (<a
+href="coqdoc/Riktig.Theory.Merge.html#merge_perm"><code>merge_perm</code></a>).</p>
+<p><em>Next: what a proof about a <code>Fix</code>-defined function
+actually needs from the definition, which turns out to be one unfolding
+lemma and nothing else.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>

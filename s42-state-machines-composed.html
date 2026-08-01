@@ -160,7 +160,7 @@ href="coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>
 (after unfolding <a
 href="coqdoc/Riktig.Channel.Mealy.html#run_from_init"><code>run_from_init</code></a>)
 computes each relay’s output: <code>Hsent</code> becomes
-<code>wire_sent = app_in</code> and <code>Hrecv</code> becomes
+<code>app_in = wire_sent</code> and <code>Hrecv</code> becomes
 <code>wire_recv = app_out</code>. <code>unfold perfect</code> in
 <code>Hperfect</code> turns the channel fact into
 <code>wire_recv = wire_sent</code>. The <code>calc</code> block is the
@@ -175,27 +175,64 @@ confirms the two endpoints of the chain really are the goal
 Two echo endpoints over a perfect channel are the identity on traces —
 nothing was added, lost, or moved.</p>
 <h2 id="swapping-in-a-faulty-channel">Swapping in a faulty channel</h2>
-<p>The composition is transparent: the echo endpoints add nothing, so
-whatever relation the channel imposes is exactly the relation the
-composite imposes. Replace <a
-href="coqdoc/Riktig.Channel.Trace.html#perfect"><code>perfect</code></a>
-with the faulty <a
-href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
-and the same three-step reading gives, on paper,</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mo>,</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mo>,</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>:</mo></mrow><annotation encoding="application/x-tex">\mathrm{composed}(\mathit{app\_in}, \mathit{app\_out}) \;\Longrightarrow\; \mathrm{lossy\_dup}(\mathit{app\_in}, \mathit{app\_out}):</annotation></semantics></math></p>
-<p>the sender relay forces
+<p>Nothing in that argument used the channel being perfect except the
+last step, where <code>wire_recv = wire_sent</code> let the chain
+collapse to a single equality. Keep the channel abstract instead and the
+same two relay computations still apply, so the composite relation on
+application traces is the channel relation itself — for <em>every</em>
+<code>chan</code>, and in both directions:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mo>,</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo>⇔</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow><mo>,</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{composed}(\mathit{app\_in}, \mathit{app\_out}) \iff \mathrm{chan}(\mathit{app\_in}, \mathit{app\_out}).</annotation></semantics></math></p>
+<p>Left to right is the same substitution as before: the sender relay
+forces
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑠</mi><mi>𝑒</mi><mi>𝑛</mi><mi>𝑡</mi></mrow><mo>=</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑖</mi><mi>𝑛</mi></mrow></mrow><annotation encoding="application/x-tex">\mathit{wire\_sent} = \mathit{app\_in}</annotation></semantics></math>
 and the receiver relay forces
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑟</mi><mi>𝑒</mi><mi>𝑐</mi><mi>𝑣</mi></mrow><mo>=</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow></mrow><annotation encoding="application/x-tex">\mathit{wire\_recv} = \mathit{app\_out}</annotation></semantics></math>
-(both by <a
-href="coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>,
-exactly as in the perfect case), and substituting those two equalities
-into the channel fact <code>lossy_dup wire_sent wire_recv</code> leaves
-<code>lossy_dup app_in app_out</code>. The source file proves the
-perfect-channel theorem shown above and stops there; this faulty-channel
-counterpart is the same substitution argument with the channel fact
-carried through instead of collapsed to an equality, and is stated here
-on paper only.</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝑤</mi><mi>𝑖</mi><mi>𝑟</mi><mi>𝑒</mi><mi mathvariant="italic">_</mi><mi>𝑟</mi><mi>𝑒</mi><mi>𝑐</mi><mi>𝑣</mi></mrow><mo>=</mo><mrow><mi>𝑎</mi><mi>𝑝</mi><mi>𝑝</mi><mi mathvariant="italic">_</mi><mi>𝑜</mi><mi>𝑢</mi><mi>𝑡</mi></mrow></mrow><annotation encoding="application/x-tex">\mathit{wire\_recv} = \mathit{app\_out}</annotation></semantics></math>,
+so the channel fact <code>chan wire_sent wire_recv</code> <em>is</em>
+<code>chan app_in app_out</code> — carried through by rewriting instead
+of collapsed to an equality. Right to left is easier still: given
+<code>chan app_in app_out</code>, take the application traces themselves
+as the two wire traces.</p>
+<pre class="coq"><code>Theorem composed_trace_relay_transparent :
+  forall {App : Type} (chan : list App -&gt; list App -&gt; Prop)
+         (app_in app_out : list App),
+  composed_trace relay_m relay_m chan app_in app_out &lt;-&gt;
+  chan app_in app_out.
+Proof.
+  intros App chan app_in app_out.
+  split.
+  - intros [wire_sent [wire_recv [Hsent [Hchan Hrecv]]]].
+    unfold run_from_init in Hsent, Hrecv.
+    rewrite run_relay in Hsent. simpl in Hsent.
+    rewrite run_relay in Hrecv. simpl in Hrecv.
+    (* Hsent : app_in = wire_sent, Hrecv : wire_recv = app_out;
+       substitute both into the channel fact. *)
+    rewrite &lt;- Hsent, Hrecv in Hchan.
+    exact Hchan.
+  - intros Hchan.
+    exists app_in, app_out.
+    split.
+    + unfold run_from_init. rewrite run_relay. reflexivity.
+    + split.
+      * exact Hchan.
+      * unfold run_from_init. rewrite run_relay. reflexivity.
+Qed.</code></pre>
+<p>The perfect-channel theorem above is the instance
+<code>chan := perfect</code> of this one. The instance that matters for
+a protocol is the faulty one: put the drop-and-stutter wire in the
+middle and the application sees exactly the wire’s own fault class, no
+better and no worse.</p>
+<pre class="coq"><code>Corollary composed_trace_lossy_dup_relay :
+  forall {App : Type} (app_in app_out : list App),
+  composed_trace relay_m relay_m lossy_dup app_in app_out -&gt;
+  lossy_dup app_in app_out.
+Proof.
+  intros App app_in app_out Hcomp.
+  exact (proj1 (composed_trace_relay_transparent lossy_dup app_in app_out)
+           Hcomp).
+Qed.</code></pre>
+<p><code>proj1</code> picks the left-to-right half of the equivalence,
+applied at <code>chan := lossy_dup</code>; there is nothing left to
+prove.</p>
 <p>That is the ground a real protocol has to improve on: with echo
 endpoints the application inherits every fault of the wire. A sender and
 receiver that instead track sequence numbers and acknowledgements are
@@ -217,7 +254,11 @@ href="coqdoc/Riktig.Channel.Mealy.html#relay_m"><code>relay_m</code></a>,
 <a
 href="coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>,
 <a
-href="coqdoc/Riktig.Channel.Mealy.html#composed_trace_perfect_relay"><code>composed_trace_perfect_relay</code></a>)
+href="coqdoc/Riktig.Channel.Mealy.html#composed_trace_perfect_relay"><code>composed_trace_perfect_relay</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Mealy.html#composed_trace_relay_transparent"><code>composed_trace_relay_transparent</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Mealy.html#composed_trace_lossy_dup_relay"><code>composed_trace_lossy_dup_relay</code></a>)
 · <a
 href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
 (<a

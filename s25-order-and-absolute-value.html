@@ -55,78 +55,72 @@ href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>Ordere
 class, from <a
 href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>:</p>
 <pre class="coq"><code>Module OrderedField.
-  Class OrderedField (F : Type) `{Field.Field F}
-                     {Fl : HasLe F} {Fb : HasAbs F} := {
+  Class OrderedField (F : Type) `{Field F}
+                     {le : HasLe F} {abs : HasAbs F} := {
+    le_proper  :: Proper (equ ==&gt; equ ==&gt; iff) le;
+    abs_proper :: Proper (equ ==&gt; equ) abs;
+
     le_refl              : forall a : F, a &lt;= a;
     le_trans             : forall a b c : F, a &lt;= b -&gt; b &lt;= c -&gt; a &lt;= c;
     le_antisymmetric     : forall a b : F, a &lt;= b -&gt; b &lt;= a -&gt; a == b;
     le_total             : forall a b : F, a &lt;= b \/ b &lt;= a;
-    (* Setoid equality is not decidable, so squeeze arguments (&quot;x lies
-       below every positive eps, hence x is zero&quot;) end in a double
-       negation; this law discharges it.  Every intended model satisfies
-       it: decidable orders (Q) and classical models trivially, and
-       constructive Cauchy reals define &lt;= negatively (a &lt;= b := ~ b &lt; a),
-       so their &lt;= is stable as well. *)
     le_stable            : forall a b : F, ~ ~ a &lt;= b -&gt; a &lt;= b;
-    le_proper            : forall a b : F, a == b -&gt;
-                           forall c d : F, c == d -&gt; (a &lt;= c &lt;-&gt; b &lt;= d);
     add_le_monotone_left : forall a b c : F, a &lt;= b -&gt; c + a &lt;= c + b;
     mul_nonneg_closed    : forall a b : F, 0 &lt;= a -&gt; 0 &lt;= b -&gt; 0 &lt;= a * b;
-    abs_proper           : forall a b : F, a == b -&gt; abs a == abs b;
     abs_nonneg           : forall a : F, 0 &lt;= abs a;
     abs_zero_iff         : forall a : F, abs a == 0 &lt;-&gt; a == 0;
     abs_mul              : forall a b : F, abs (a * b) == abs a * abs b;
-    (* Constructively derivable from the other laws only via a case
-       analysis on le_total plus several monotonicity lemmas (abs (- a)
-       squares to abs a * abs a, then nonneg square roots are unique);
-       stated as a law to keep proofs that use it one rewrite long. *)
     abs_neg              : forall a : F, abs (- a) == abs a;
     abs_triangle         : forall a b : F, abs (a + b) &lt;= abs a + abs b;
-    abs_nonneg_identity  : forall a : F, 0 &lt;= a -&gt; abs a == a
+    abs_nonneg_identity  : forall a : F, 0 &lt;= a -&gt; abs a == a;
   }.
 End OrderedField.
-Notation OrderedField := OrderedField.OrderedField.</code></pre>
+Export OrderedField.</code></pre>
 <p>The <code>&lt;=</code> and <a
 href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
 operations are not fields of the class; they arrive as the implicit
-parameters <code>Fl</code> and <code>Fb</code>, alongside the field
-operations that <code>`{Field.Field F}</code> brings in. A class asserts
-laws about vocabulary that already exists, so a carrier declares its
-order and its absolute value as ordinary instances and the class then
-says how they behave. Wrapping the class in
+class parameters <code>HasLe F</code> and <code>HasAbs F</code>,
+alongside the field operations that <code>`{Field F}</code> brings in. A
+class asserts laws about vocabulary that already exists, so a carrier
+declares its order and its absolute value as ordinary instances and the
+class then says how they behave. Wrapping the class in
 <code>Module OrderedField</code> is what lets the laws keep short
 English names — the structure’s name arrives by qualification, <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>,
-and the <code>Notation</code> on the last line keeps
-<code>OrderedField F</code> writable as before.</p>
-<p>The first block governs <code>&lt;=</code>: it is reflexive,
+and the <code>Export</code> on the last line keeps
+<code>OrderedField F</code> writable unqualified.</p>
+<p>The class opens with its two respect laws: equal arguments compare
+and measure the same. The arrow notation states them one argument at a
+time. <code>Proper (equ ==&gt; equ ==&gt; iff) le</code> reads: replace
+either argument of <code>&lt;=</code> by something <code>==</code> to it
+and you get an equivalent proposition.
+<code>Proper (equ ==&gt; equ) abs</code> reads: replace <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>’s
+argument by something <code>==</code> to it and the result is
+<code>==</code> to what it was. Both fields are declared with
+<code>::</code> rather than <code>:</code>, which makes the field itself
+a typeclass instance the moment an <code>OrderedField F</code> is in
+scope; that is what lets <code>rewrite</code> move <code>==</code> under
+<code>&lt;=</code> and under <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
+without either law being named.</p>
+<p>The next block governs <code>&lt;=</code>: it is reflexive,
 transitive, antisymmetric — <code>a &lt;= b</code> and
 <code>b &lt;= a</code> force <code>a == b</code> — and <em>total</em>,
 meaning any two elements compare one way or the other. <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
 says <code>&lt;=</code> is not refuted by refuting its refutation; it
-stands in for decidability, which is deliberately not assumed. <a
+stands in for decidability, which is deliberately not assumed. Every
+intended model pays nothing for it: a decidable order like ℚ satisfies
+it trivially, and constructive Cauchy reals <em>define</em>
+<code>a &lt;= b</code> as <code>~ (b &lt; a)</code>, so their
+<code>&lt;=</code> is stable by construction. <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.add_le_monotone_left"><code>add_le_monotone_left</code></a>
 and <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.mul_nonneg_closed"><code>mul_nonneg_closed</code></a>
 are the two ways order interacts with the arithmetic: adding the same
 thing to both sides preserves <code>&lt;=</code>, and a product of
 nonnegatives is nonnegative.</p>
-<p><a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_proper"><code>le_proper</code></a>
-and <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_proper"><code>abs_proper</code></a>
-are the two respect laws: equal arguments compare and measure the same.
-They are handed to Coq’s rewriting machinery just below the module, so
-<code>==</code> can be rewritten under <code>&lt;=</code> and under <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>:</p>
-<pre class="coq"><code>#[global] Instance OrderedField_le_Proper (F : Type) `{Field.Field F}
-  {Fl : HasLe F} {Fb : HasAbs F} (H : OrderedField.OrderedField F)
-  : Proper (equ ==&gt; equ ==&gt; iff) (@le F _) := OrderedField.le_proper.
-
-#[global] Instance OrderedField_abs_Proper (F : Type) `{Field.Field F}
-  {Fl : HasLe F} {Fb : HasAbs F} (H : OrderedField.OrderedField F)
-  : Proper (equ ==&gt; equ) (@abs F _) := OrderedField.abs_proper.</code></pre>
 <p>The last block of the class is the point of the title. <a
 href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> is
 not defined as “<code>a</code> if <code>a</code> is nonnegative, else
@@ -148,7 +142,14 @@ href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_nonneg_identity"><code
 says <a
 href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
 leaves a nonnegative element alone. Everything else about absolute value
-is derived from these.</p>
+is derived from these. <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_neg"><code>abs_neg</code></a>
+is not strictly independent — it follows from the rest by a case split
+on <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>le_total</code></a>
+together with a uniqueness argument for nonnegative square roots — but
+it is asserted anyway, so that every later proof needing it is one
+rewrite instead of a detour.</p>
 <h2 id="the-absolute-value-of-one-is-one">The absolute value of one is
 one</h2>
 <p>Here is a first consequence, small but not free. In English: the
@@ -177,8 +178,8 @@ Proof.
   - intros Hz. exact (Field.nontrivial (proj1 (OrderedField.abs_zero_iff 1) Hz)).
   - calc (abs (1 : F) * abs (1 : F))
       == (abs ((1 : F) * 1))  { OrderedField.abs_mul }
-      == (abs (1 : F))        { idr }
-      == (abs (1 : F) * 1)    { idr }.
+      == (abs (1 : F))        { right_identity }
+      == (abs (1 : F) * 1)    { right_identity }.
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
@@ -201,11 +202,15 @@ each <code>{ ... }</code> names the single law that justifies its step:
 <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_mul"><code>OrderedField.abs_mul</code></a>
 folds the two factors into one absolute value, then <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a> — the
-right-identity law, here resolving to multiplication’s
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
+— the law class’s projection, here resolving to multiplication’s
 <code>x * 1 == x</code> — is used once to simplify <code>1 * 1</code> to
 <code>1</code> and once, in reverse, to reintroduce the <code>* 1</code>
-on the right.</li>
+on the right. That single name serves both a monoid and a field because
+<a
+href="coqdoc/Riktig.Props.html#RightIdentity"><code>RightIdentity</code></a>
+is stated once, over any operation and any unit, and instance search
+picks the one that fits the goal.</li>
 </ul>
 <h2 id="the-payoff-zero-is-at-most-one">The payoff: zero is at most
 one</h2>
@@ -261,8 +266,11 @@ with Coq’s standard <code>Qle</code> as the order and <code>Qabs</code>
 as the absolute value:</p>
 <pre class="coq"><code>#[global] Instance Q_Le  : HasLe Q := Qle.
 #[global] Instance Q_Abs : HasAbs Q := Qabs.</code></pre>
-<p>Those two instances <em>are</em> the <code>Fl</code> and
-<code>Fb</code> the class asks for. Each law is then discharged by the
+<p>Those two instances <em>are</em> the <a
+href="coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>
+parameters the class asks for. Each law is then discharged by the
 corresponding standard fact about <code>Q</code>, and the instance is
 assembled as one record of laws:</p>
 <pre class="coq"><code>#[global] Instance Q_OrderedField : OrderedField Q := {|

@@ -34,46 +34,57 @@ It takes an ordered field <code>F</code> and asks for a function
 <code>exp_fn</code> on it, together with four laws (and the fact that
 <code>exp_fn</code> respects the equality <code>==</code>):</p>
 <pre class="coq"><code>Module Exp.
-  Class Exp (F : Type) `{OrderedField.OrderedField F} := {
-    fn        : F -&gt; F;
-    fn_proper : forall a b : F, a == b -&gt; fn a == fn b;
+  Class Exp (F : Type) `{OrderedField F} := {
+    fn : F -&gt; F;
+    fn_proper :: Proper (equ ==&gt; equ) fn;
 
-    (* exp is a homomorphism from the additive group to the
-       multiplicative monoid. *)
-    zero      : fn 0 == 1;
-    add       : forall a b : F, fn (a + b) == fn a * fn b;
+    zero_to_one : fn 0 == 1;
+    add_to_mul  :: Additive F F add mult fn;
 
-    (* exp lands in the nonnegative reals. Strict positivity (exp_fn a
-       =/= 0, hence 0 &lt; exp_fn a since Exp.positive already gives 0 &lt;=
-       exp_fn a) is NOT stated as a further law: it is a cheap corollary
-       of Exp.add_to_mul/Exp.zero_to_one (exp a * exp (-a) == exp 0 == 1 forces exp a
-       to be invertible, hence nonzero) proved once and for all at
-       Theory level — see Theory/Exp.v&#39;s exp_nonzero and
-       exp_strict_pos. Stating it as a law here would be redundant. *)
     positive  : forall a : F, 0 &lt;= fn a;
 
-    (* Strict monotonicity: the property `log` (a later, separate
-       development) needs to invert exp onto the positive reals. *)
-    monotone  : forall a b : F, a &lt; b -&gt; fn a &lt; fn b
+    monotone  : forall a b : F, a &lt; b -&gt; fn a &lt; fn b;
   }.
+  Hint Mode Exp ! - - - - - - - - - - - : typeclass_instances.
 End Exp.
-Notation Exp := Exp.Exp.
-(* `exp_fn` keeps its short global spelling: it is the function this
-   whole file is about, written dozens of times per proof in
-   Theory/Exp.v, Theory/Log.v and Theory/MLDerivatives.v. *)
+Export Exp.
 Notation exp_fn := Exp.fn.</code></pre>
 <p>The class lives inside a <code>Module Exp</code>, so the fields are
 written with the module as their prefix — <a
 href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>,
 <a
+href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>.
+The <code>Export</code> on the second-to-last line lifts the class name
+itself out of the module, so the class can still be written
+<code>Exp F</code>; the final <code>Notation</code> gives the function
+field the short global spelling <code>exp_fn</code> it is quoted by
+everywhere below.</p>
+<p>Two fields are written with <code>::</code> rather than
+<code>:</code>, which declares them as typeclass instances rather than
+plain projections. <a
+href="coqdoc/Riktig.Interface.Exp.html#Exp.fn_proper"><code>fn_proper</code></a>
+— a <code>Proper (equ ==&gt; equ) fn</code>, <a
+href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> being the name of
+the relation written <code>==</code> — thereby lands in the database
+Coq’s <code>rewrite</code> consults, so equals can be rewritten under
+<code>exp_fn</code> with nothing further to declare.</p>
+<p><a
+href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>add_to_mul</code></a>
+is the more interesting one. It is not spelled out as an equation but
+named: <code>Additive F F add mult fn</code> is the reusable statement
+“<a href="coqdoc/Riktig.Interface.Exp.html#Exp.fn"><code>fn</code></a>
+carries the first operation to the second”,</p>
+<pre class="coq"><code>    Class Additive := additive : forall x y : A, f (x ⋆ y) == f x · f y.</code></pre>
+<p>so <code>Additive F F add mult fn</code> unfolds to
+<code>forall a b : F, fn (a + b) == fn a * fn b</code>. Declaring it
+with <code>::</code> puts that instance in scope, so a proof can reach
+the law by writing <a
+href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a> and
+letting search find which homomorphism is meant, rather than naming <a
 href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
-— and the two <code>Notation</code> lines give the class its short name
-back and the function field the global spelling <code>exp_fn</code> it
-is quoted by everywhere below. The <code>Proper</code> instance that
-hands <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.fn_proper"><code>Exp.fn_proper</code></a>
-to Coq’s rewriting machinery follows a few lines further down the
-file.</p>
+explicitly. The same class states what it means for a linear map to
+respect addition, or for the absolute value to respect multiplication;
+<code>exp</code> is the case where the two operations differ.</p>
 <p>The four laws read as plain statements about the function:</p>
 <ul>
 <li><a
@@ -96,7 +107,15 @@ increasing.</li>
 </ul>
 <p>No formula appears. <code>exp_fn</code> is an unknown function about
 which we assume only these four things. The claim of this post is that a
-surprising amount follows from just them.</p>
+surprising amount follows from just them — starting with the one
+property a reader might expect to find in the list and does not. Strict
+positivity, <code>exp_fn a =/= 0</code> and hence
+<code>0 &lt; exp_fn a</code>, is deliberately not a fifth law, because
+it follows from <a
+href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>.
+The next section is that derivation.</p>
 <h2 id="from-nonnegative-to-strictly-positive">From nonnegative to
 strictly positive</h2>
 <p><a
@@ -120,19 +139,25 @@ href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>:</
 Proof.
   intros a.
   calc (exp_fn a * exp_fn (- a))
-    == (exp_fn (a + - a)) { Exp.add_to_mul }
-    == (exp_fn 0)         { invr }
-    == (1 : F)            { Exp.zero_to_one }.
+    == (exp_fn (a + - a)) { (additive (opA := add) (opB := mult) (f := exp_fn) a (- a)) }
+    == (exp_fn (0 : F))   { (right_inverse (op := add) a) }
+    == (1 : F)            { (Exp.zero_to_one (F := F)) }.
 Qed.</code></pre>
 <p>Read the chain against the blackboard steps. The first step folds the
 product <code>exp_fn a * exp_fn (- a)</code> back into
-<code>exp_fn (a + - a)</code> — the <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
-law, matched here in its backward direction (<code>calc</code> tries
-both ways and takes whichever closes). <a
-href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> is the field
-law <code>a + - a == 0</code>, rewriting the argument to
-<code>exp_fn 0</code>. <a
+<code>exp_fn (a + - a)</code> — the sums-to-products law, matched here
+in its backward direction (<code>calc</code> tries both ways and takes
+whichever closes). It is invoked as <a
+href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a>, the
+projection of the <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
+class, with the three implicit arguments supplied by name:
+<code>opA := add</code> and <code>opB := mult</code> say which pair of
+operations, and <code>f := exp_fn</code> which homomorphism.
+<code>right_inverse (op := add)</code> is the group law
+<code>a + - a == 0</code>, rewriting the argument to
+<code>exp_fn 0</code>; the annotation is needed because a field has a
+second inverse law, for multiplication. <a
 href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>
 turns that into <code>1</code>, closing the chain at the goal’s own
 right-hand side.</p>
@@ -295,9 +320,9 @@ href="coqdoc/Riktig.Theory.Exp.html#exp_neg"><code>exp_neg</code></a>,
 href="coqdoc/Riktig.Theory.Exp.html#exp_strict_pos"><code>exp_strict_pos</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a>
-— was proved with a <code>Context {F : Type} `{Exp.Exp F}</code> at the
-top of the section and nothing else. Not one of them looked at a formula
-for <code>exp</code>, because there is no formula to look at: <a
+— was proved with a <code>Context {F : Type} `{Exp F}</code> at the top
+of the section and nothing else. Not one of them looked at a formula for
+<code>exp</code>, because there is no formula to look at: <a
 href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
 supplies only the four laws. So each of these facts holds for
 <em>any</em> function on <em>any</em> ordered field that satisfies <a
@@ -305,7 +330,7 @@ href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</c
 <a
 href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>,
+href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>
 and <a
 href="coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
 — the power series over the reals, the limit of

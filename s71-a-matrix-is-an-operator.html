@@ -10,151 +10,287 @@
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
 <h1 id="a-matrix-is-an-operator">A matrix is an operator</h1>
-<p><em>Thirtieth post in the series documenting the
-<strong>riktig</strong> project.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved in Coq, structure by structure — carriers, a
-task-appropriate equality <code>==</code>, operations, laws. <a
-href="s29-matrices-are-a-representation.html">the post on matrices as a
-representation</a> proved the abstract fact that a matrix
-<em>represents</em> a linear map between finite-dimensional spaces, and
-that under this representation composition of maps is matrix
-multiplication (<a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>,
+<p>A matrix is usually met twice, in two different roles that a first
+course rarely separates. It is a rectangle of numbers you can add, scale
+and multiply by the row-times-column rule; and it is a <em>thing that
+acts</em> — feed it a column of numbers and it gives back another
+column. The second role is the one that explains the first. Matrix
+multiplication looks arbitrary as a formula on rectangles; as an
+operation on actions it is nothing but <em>do one, then the
+other</em>.</p>
+<p>Two questions come out of that. First: is the action of a matrix
+really a <em>linear</em> map — a function that respects addition and
+scaling — or is that just a slogan? Second: if it is, does the
+row-times-column formula genuinely compute composition of those maps, or
+only something that resembles it? Both have checkable answers, and the
+second one has a practical consequence: whenever you would form a matrix
+product only to apply it to a vector, you never have to form the product
+at all.</p>
+<h2 id="what-a-matrix-does">What a matrix does</h2>
+<p>A matrix of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+rows and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+columns over a field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+is a function from a row index and a column index to a scalar; there is
+nothing to it beyond that:</p>
+<pre class="coq"><code>Definition Matrix (m n : nat) (F : Type) : Type :=
+  Fin.t m -&gt; Fin.t n -&gt; F.</code></pre>
+<p><code>Fin.t n</code> is the type of indices
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0,\dots,n-1</annotation></semantics></math>,
+so a <em>coordinate vector</em> of length
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+is a function <code>Fin.t n -&gt; F</code>. Such functions form a vector
+space with no extra work — add and scale them pointwise.</p>
+<p>Applying a matrix to a coordinate vector is the textbook dot product
+of each row against the vector, written as a finite sum <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+over the shared index (<a
+href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>):</p>
+<pre class="coq"><code>  Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
+      : Fin.t m -&gt; F :=
+    fun i =&gt; bigopF (fun j =&gt; A i j * v j).</code></pre>
+<p>Entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">A\cdot v</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>j</mi></msub><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mspace width="0.167em"></mspace><msub><mi>v</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">\sum_j A_{ij}\,v_j</annotation></semantics></math>.</p>
+<h2 id="the-action-is-linear-and-that-is-a-theorem">The action is
+linear, and that is a theorem</h2>
+<p><em>Linearity</em> is a property of a plain function: it respects the
+equivalence <code>==</code> each type carries, it turns sums into sums,
+and it pulls scalars out. <a
+href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>
+proves the two algebraic halves for <code>mat_vec A</code>. Additivity
+is distributivity pushed under the sum:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mi>j</mi></msub><mo>+</mo><msub><mi>w</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub><mo>+</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>w</mi><mi>j</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">distributivity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub><mo>+</mo><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>w</mi><mi>j</mi></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">sums split</mtext><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\sum_j A_{ij}(v_j + w_j) \;=\; \sum_j \bigl(A_{ij}v_j + A_{ij}w_j\bigr)
+\quad\{\text{distributivity}\}\;=\; \sum_j A_{ij}v_j + \sum_j A_{ij}w_j
+\quad\{\text{sums split}\}.</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma mat_vec_add : forall (m n : nat) (A : Matrix m n F)
+      (v w : Fin.t n -&gt; F),
+    mat_vec A (v + w) == mat_vec A v + mat_vec A w.
+  Proof.
+    intros m n A v w i.
+    calc (mat_vec A (v + w) i)
+      == (bigopF (fun j =&gt; A i j * v j + A i j * w j))
+      == ((mat_vec A v + mat_vec A w) i).
+    - apply bigopF_ext. intros j.
+      exact (left_distributive (A i j) (v j) (w j)).
+    - exact (bigopF_add n (fun j =&gt; A i j * v j) (fun j =&gt; A i j * w j)).
+  Qed.</code></pre>
+<p>Walking it: <code>intros ... i</code> fixes an output index, since
+two coordinate vectors are equal when they agree at every index. The
+<code>calc</code> chain has two steps, one per line of the blackboard
+chain — <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>
+rewrites the summand by distributivity, and <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_add"><code>bigopF_add</code></a>
+splits the sum of two summands into a sum of two sums.</p>
+<p>Homogeneity is the same shape with a commutativity swap instead of
+distributivity:</p>
+<pre class="coq"><code>  Lemma mat_vec_scale : forall (m n : nat) (A : Matrix m n F) (a : F)
+      (v : Fin.t n -&gt; F),
+    mat_vec A (a *: v) == a *: mat_vec A v.</code></pre>
+<p><code>Linear F U V f</code> is the class collecting exactly these
+three facts about a function <code>f</code> — <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.proper"><code>Linear.proper</code></a>,
 <a
-href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>).
-Today the same idea in its concrete, computable form: <strong>a matrix
-applied to a coordinate vector is a linear operator, and multiplying
-matrices is composing those operators.</strong> One definition, one
-packaging, one theorem — and a practical consequence the next post
-builds on: to apply a <em>product</em> of matrices you never need to
-form the product.</p>
-</blockquote>
-<h2 id="the-definition">The definition</h2>
-<p>A <code>Matrix m n F</code> in this repository is just a rectangle of
-scalars, <code>Fin.t m -&gt; Fin.t n -&gt; F</code> (<a
-href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>). A
-coordinate vector is a function <code>Fin.t n -&gt; F</code> — already a
-vector space, for free, by the pointwise construction of <a
-href="s60-representations-are-isomorphisms.html">the post on
-representations as isomorphisms</a>. What a matrix <em>does</em> is one
-line (<a
-href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>,
-where today’s whole story lives):</p>
-<pre class="coq"><code>Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
-    : Fin.t m -&gt; F :=
-  fun i =&gt; bigopF (fun j =&gt; A i j * v j).</code></pre>
-<p>Entry <code>i</code> of <code>A·v</code> is the dot product of row
-<code>i</code> with <code>v</code> — the textbook definition, as a sum
-<a href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
-over the shared index.</p>
-<h2 id="the-operator-is-linear">The operator is linear</h2>
-<p>“Operator” is earned, not assumed: <code>mat_vec A</code> must
-commute with the vector algebra. Additivity is distributivity pushed
-under the sum, homogeneity is a commutativity swap under the sum:</p>
-<pre class="coq"><code>Lemma mat_vec_add : forall (m n : nat) (A : Matrix m n F)
-    (v w : Fin.t n -&gt; F),
-  mat_vec A (v + w) == mat_vec A v + mat_vec A w.
-
-Lemma mat_vec_scale : forall (m n : nat) (A : Matrix m n F) (a : F)
-    (v : Fin.t n -&gt; F),
-  mat_vec A (a *: v) == a *: mat_vec A v.</code></pre>
-<p>With properness for <code>==</code>, that is exactly the content of
-the <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
-record (<a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>),
-so the file packages it:
-<code>mat_vec_lm A : LinearMap F (Fin.t n -&gt; F) (Fin.t m -&gt; F)</code>.
-A matrix <em>denotes</em> a linear map between coordinate spaces — as a
-value you can hand to every Hom-space theorem the library already
-has.</p>
-<h2 id="the-theorem-multiplication-is-composition">The theorem:
-multiplication is composition</h2>
-<pre class="coq"><code>Theorem mat_vec_mul : forall (m n p : nat) (A : Matrix m n F)
-    (B : Matrix n p F) (v : Fin.t p -&gt; F),
-  mat_vec (mat_mul A B) v == mat_vec A (mat_vec B v).</code></pre>
-<p>Applying the product is applying the factors in turn. The proof is a
-small pleasure: view <code>v</code> as a one-<em>column</em> matrix
-<code>fun k _ =&gt; v k : Matrix p 1 F</code>. Then both sides of the
-goal are, definitionally, one entry of the two associations of a triple
-matrix product — and <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
-(the Fubini argument proved once in <a
-href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>)
-closes it. No sum is manipulated twice. The same one-column view gives
-the identity law from <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_1l"><code>mat_mul_1l</code></a>:</p>
-<pre class="coq"><code>Theorem mat_vec_id : forall (n : nat) (v : Fin.t n -&gt; F),
-  mat_vec mat_id v == v.</code></pre>
-<p>And at the <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
-level,
-<code>mat_vec_lm (mat_mul A B) == linear_map_comp (mat_vec_lm A) (mat_vec_lm B)</code>
-(<a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm_mul"><code>mat_vec_lm_mul</code></a>):
-the packaging sends <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
-to composition, which is the concrete coordinate-space face of the
-representation theorem from the post on matrices as a
-representation.</p>
-<h2 id="what-this-buys">What this buys</h2>
+href="coqdoc/Riktig.Interface.Linear.html#Linear.is_additive"><code>Linear.is_additive</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.is_homogeneous"><code>Linear.is_homogeneous</code></a>
+— and a <code>LinearMap F U V</code> (<a
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>)
+is a function together with a proof that it is linear, two fields and no
+more. Its implicit binders are only what the two laws literally mention
+— an equality, an addition and a scaling on each carrier:</p>
+<pre class="coq"><code>Record LinearMap (F U V : Type)
+    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
+  lm_fun :&gt; U -&gt; V;
+  lm_linear :: Linear F U V lm_fun;
+}.</code></pre>
+<p>Nothing here demands that <code>F</code> be a field or that
+<code>U</code> and <code>V</code> be vector spaces. Additivity and
+homogeneity can be stated with only <code>+</code> and <code>*:</code>
+in hand, so those are the only assumptions the record makes; the field
+and vector-space structure appear later, in the theorems that need them
+— <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_zero"><code>linear_map_zero</code></a>
+needs a zero to preserve, and negation to cancel with.</p>
+<p>The <code>:&gt;</code> on <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>
+is what lets a caller write <code>f u</code> rather than
+<code>lm_fun f u</code>, and the <code>::</code> on <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_linear"><code>lm_linear</code></a>
+registers the linearity proof where instance search can find it. So the
+three lemmas package a matrix as a value of that record, built by <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+from the function and its three laws:</p>
+<pre class="coq"><code>  Definition mat_vec_lm {m n : nat} (A : Matrix m n F) :
+      LinearMap F (Fin.t n -&gt; F) (Fin.t m -&gt; F) :=
+    linear_map_from_laws
+      (mat_vec A)
+      (mat_vec_proper_v m n A)
+      (mat_vec_add m n A)
+      (mat_vec_scale m n A).</code></pre>
+<p>A matrix <em>denotes</em> a linear map between coordinate spaces — as
+a value that every theorem about linear maps accepts.</p>
+<h2 id="multiplication-is-composition">Multiplication is
+composition</h2>
+<p>Now the second question. On the blackboard, entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,k)</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A\cdot B</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>j</mi></msub><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>B</mi><mrow><mi>j</mi><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_j A_{ij}B_{jk}</annotation></semantics></math>,
+and applying that to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>i</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>k</mi></munder><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>B</mi><mrow><mi>j</mi><mi>k</mi></mrow></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><msub><mi>v</mi><mi>k</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><munder><mo>∑</mo><mi>k</mi></munder><msub><mi>B</mi><mrow><mi>j</mi><mi>k</mi></mrow></msub><msub><mi>v</mi><mi>k</mi></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">exchange the two sums</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>A</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mspace width="0.167em"></mspace><mi>v</mi><mo stretchy="false" form="postfix">)</mo><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>i</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">\bigl((A B)\,v\bigr)_i \;=\; \sum_k \Bigl(\sum_j A_{ij}B_{jk}\Bigr) v_k
+\;=\; \sum_j A_{ij}\Bigl(\sum_k B_{jk}v_k\Bigr) \quad\{\text{exchange the two sums}\}
+\;=\; \bigl(A\,(B\,v)\bigr)_i .</annotation></semantics></math></p>
+<p>The only real content is the exchange of the two finite sums — the
+same exchange that proves matrix multiplication associative. So the
+theorem can be had from associativity rather than redoing the
+exchange:</p>
+<pre class="coq"><code>  Theorem mat_vec_mul : forall (m n p : nat) (A : Matrix m n F)
+      (B : Matrix n p F) (v : Fin.t p -&gt; F),
+    mat_vec (mat_mul A B) v == mat_vec A (mat_vec B v).
+  Proof.
+    intros m n p A B v i.
+    exact (mat_mul_assoc m n p 1 A B
+             (fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k) i Fin.F1).
+  Qed.</code></pre>
+<p>Walking it: <code>intros ... i</code> again reduces to one output
+index. The term <code>fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k</code>
+views <code>v</code> as a matrix with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+rows and a single column. Under that view
+<code>mat_vec (mat_mul A B) v i</code> and
+<code>mat_vec A (mat_vec B v) i</code> are, by unfolding alone, the
+entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mrow><mtext mathvariant="normal">col </mtext><mspace width="0.333em"></mspace></mrow><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i, \text{col }0)</annotation></semantics></math>
+of the two bracketings of the triple product
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mspace width="0.167em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">A\,B\,v</annotation></semantics></math>
+— so <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+applied at the shapes <code>m n p 1</code> and read at row
+<code>i</code> and the sole column <code>Fin.F1</code>, is already the
+proof. The same one-column view gives the identity law from <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>:</p>
+<pre class="coq"><code>  Theorem mat_vec_id : forall (n : nat) (v : Fin.t n -&gt; F),
+    mat_vec mat_id v == v.</code></pre>
+<p>And at the level of the packaged maps, <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>
+sends the matrix product to composition of linear maps:</p>
+<pre class="coq"><code>  Theorem mat_vec_lm_mul : forall (m n p : nat) (A : Matrix m n F)
+      (B : Matrix n p F),
+    mat_vec_lm (mat_mul A B) == linear_map_comp (mat_vec_lm A) (mat_vec_lm B).
+  Proof.
+    intros m n p A B v.
+    exact (mat_vec_mul m n p A B v).
+  Qed.</code></pre>
+<p>Equality of linear maps here is agreement at every argument, so
+<code>intros ... v</code> turns the goal into <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>
+at <code>v</code> — the two statements are the same fact, once at the
+level of functions and once at the level of the record.</p>
+<h2 id="using-it-never-form-the-product">Using it: never form the
+product</h2>
 <p>Read <a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>
-right to left and it is an <em>algorithm choice</em>: to compute
-<code>(A·B)·v</code> you may instead compute <code>A·(B·v)</code> — two
-matrix-vector applications, no matrix product, no <code>m × p</code>
-intermediate. For one vector this drops the multiplication count from
-<code>m·n·p + m·p</code> to <code>n·p + m·n</code>. The equality is a
-theorem, so the cheap order is not an approximation; it is the same
-value, with a machine-checked proof.</p>
-<h2 id="what-was-proved-plainly">What was proved, plainly</h2>
-<ul>
-<li><code>mat_vec A</code> is a linear operator on coordinate spaces,
-packaged as a <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
-(<a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>),
-for every field <code>F</code> and every shape.</li>
-<li>The identity matrix acts as the identity operator (<a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_id"><code>mat_vec_id</code></a>),
-and matrix multiplication is operator composition (<a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>,
-<a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm_mul"><code>mat_vec_lm_mul</code></a>).</li>
-<li>Not proved here, honestly: anything about <em>which</em> linear maps
-arise this way (that every linear map between finite-dimensional spaces
-has a matrix is the subject of the post on matrices as a representation,
-in <a
+from right to left and it stops being an identity and becomes a choice
+of algorithm. To compute
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">(A\cdot B)\cdot v</annotation></semantics></math>
+you may instead compute
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo>⋅</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">A\cdot(B\cdot v)</annotation></semantics></math>:
+two matrix-vector applications, no matrix product, no
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>×</mo><mi>p</mi></mrow><annotation encoding="application/x-tex">m \times p</annotation></semantics></math>
+intermediate ever stored.</p>
+<p>Counting the scalar multiplications the definitions perform: forming
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A\cdot B</annotation></semantics></math>
+costs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mspace width="0.167em"></mspace><mi>n</mi><mspace width="0.167em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">m\,n\,p</annotation></semantics></math>
+(there are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">m p</annotation></semantics></math>
+entries, each a sum of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+products) and applying it to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+costs a further
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mspace width="0.167em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">m\,p</annotation></semantics></math>,
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>n</mi><mi>p</mi><mo>+</mo><mi>m</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">m n p + m p</annotation></semantics></math>
+in total. The other order costs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">n p</annotation></semantics></math>
+to form
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>⋅</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">B\cdot v</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>n</mi></mrow><annotation encoding="application/x-tex">m n</annotation></semantics></math>
+to apply
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+to the result —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>p</mi><mo>+</mo><mi>m</mi><mi>n</mi></mrow><annotation encoding="application/x-tex">n p + m n</annotation></semantics></math>.
+With
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+all around a thousand that is a billion multiplications against two
+million.</p>
+<p>The saving is not an approximation to be checked afterwards. The two
+expressions are provably the same coordinate vector, so a program may
+pick either one and a caller cannot tell the difference.</p>
+<p>What is <em>not</em> settled here is which linear maps arise this way
+at all. <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>
+goes from matrices to maps between the concrete coordinate spaces
+<code>Fin.t n -&gt; F</code>; the converse direction — every linear map
+between finite-dimensional spaces has a matrix, once bases are chosen —
+is a separate result over abstract spaces, in <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
-over abstract spaces with chosen bases; today’s file works directly on
-<code>Fin.t n -&gt; F</code>), and anything about evaluation cost — that
-is the next post, where this theorem does real work.</li>
-</ul>
-<p><em>Next: the payoff — a linear-attention layer computed in two
-orders, equal by one associativity, with the multiplication counts
-proved.</em></p>
+where no coordinates are given in advance and a basis has to supply
+them.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
+href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec"><code>mat_vec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_add"><code>mat_vec_add</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_scale"><code>mat_vec_scale</code></a>,
 <a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>,
 <a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>,
 <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm_mul"><code>mat_vec_lm_mul</code></a>,
+<a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_id"><code>mat_vec_id</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>, <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
+<a href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>)
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>)
+· <a
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>,
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>,
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_comp"><code>linear_map_comp</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>
-(the abstract representation theorem) · <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>.</p>
+(the representation of an abstract linear map by a matrix).</p>
 </main>
 </body>
 </html>

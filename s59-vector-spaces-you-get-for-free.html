@@ -76,28 +76,37 @@ functions:</p>
 <code>V</code>-level law there.</p>
 <pre class="coq"><code>Lemma pw_scale_add : forall (a : F) (u v : X -&gt; V),
   a *: (u + v) == a *: u + a *: v.
-Proof. intros a u v x. apply scale_distributes_over_vector_add. Qed.</code></pre>
+Proof. intros a u v x. exact (left_distributive a (u x) (v x)). Qed.</code></pre>
 <p><code>intros a u v x</code> fixes the scalar, the two functions, and
 — crucially — a single argument <code>x</code>, because equality of
 functions here <em>is</em> equality at every <code>x</code>. Once
 <code>x</code> is fixed both sides are ordinary elements of
 <code>V</code>, and <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#scale_distributes_over_vector_add"><code>scale_distributes_over_vector_add</code></a>
+href="coqdoc/Riktig.Props.html#left_distributive"><code>left_distributive</code></a>
 is exactly <code>V</code>’s law
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>+</mo><mi>a</mi><mo>⋅</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">a \cdot (u + v) = a \cdot u + a \cdot v</annotation></semantics></math>.
-One line, because the work was already done in <code>V</code>.</p>
-<p>The other laws are identical in shape
-(<code>apply scale_distributes_over_scalar_add</code>,
-<code>apply scale_associative</code>, <code>apply scale_identity</code>,
-each after <code>intros ... x</code>), so the full vector-space
-structure assembles with no genuinely new argument anywhere:</p>
+The name is generic: a single class <a
+href="coqdoc/Riktig.Props.html#LeftDistributive"><code>LeftDistributive</code></a>
+states “the operation on the left distributes over the <code>+</code> on
+the right” once, and it is instantiated both by a ring’s multiplication
+and by a vector space’s scaling, so the same projection serves both. One
+line, because the work was already done in <code>V</code>.</p>
+<p>The other laws are identical in shape —
+<code>exact (right_distributive a b (u x))</code>,
+<code>exact (associative _ _ _)</code>,
+<code>exact (left_identity _)</code>, each after
+<code>intros ... x</code> — so the four of them bundle into a
+<code>ScaleLaws F (X -&gt; V)</code> instance, and that instance plus
+the abelian-group one is already a whole vector space, because those two
+<em>are</em> the two fields of <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>:</p>
 <pre class="coq"><code>#[global] Instance PW_VectorSpace : VectorSpace F (X -&gt; V) :=
-  VectorSpace_from_parts F (X -&gt; V) PW_AbGroup PW_ScaleLaws.</code></pre>
+  {| VectorSpace.vectors := PW_AbGroup; VectorSpace.scaling := PW_ScaleLaws |}.</code></pre>
 <p>Because the construction is itself generic, it <em>iterates</em>:
 functions into functions into <code>V</code> are a vector space too,
 found by instance search with no extra code, which the file records as a
 check —</p>
-<pre class="coq"><code>Example pw_vs_nested (F V : Type) `{HF : Field.Field F} `{HV : VectorSpace.VectorSpace F V} :
+<pre class="coq"><code>Example pw_vs_nested (F V : Type) `{HF : Field F} `{HV : VectorSpace F V} :
   VectorSpace F (nat -&gt; bool -&gt; V) := _.</code></pre>
 <p>The <code>:= _</code> means Coq is asked to <em>find</em> the
 structure on <code>nat -&gt; bool -&gt; V</code>; it succeeds by peeling
@@ -106,17 +115,15 @@ one arrow, then the next, then landing on <code>V</code>.</p>
 times</h2>
 <p>The remaining constructions differ only in what “at each point”
 means.</p>
-<p><strong>Products.</strong> For vector spaces <code>A</code> and <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>,
-the pairs <code>A * B</code> form a vector space with everything acting
-componentwise —
+<p><strong>Products.</strong> For vector spaces <code>A</code> and
+<code>B</code>, the pairs <code>A * B</code> form a vector space with
+everything acting componentwise —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mn>1</mn></msub><mo>,</mo><msub><mi>b</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mn>2</mn></msub><mo>,</mo><msub><mi>b</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mn>1</mn></msub><mo>+</mo><msub><mi>a</mi><mn>2</mn></msub><mo>,</mo><mspace width="0.222em"></mspace><msub><mi>b</mi><mn>1</mn></msub><mo>+</mo><msub><mi>b</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a_1, b_1) + (a_2, b_2) = (a_1 + a_2,\ b_1 + b_2)</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>⋅</mo><mi>u</mi><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mo>⋅</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a \cdot (u, v) = (a \cdot u,\ a \cdot v)</annotation></semantics></math>
 — and equality the conjunction of the two componentwise equalities. Each
 law splits into its first and second component and is discharged by the
-corresponding law in <code>A</code> and in <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
+corresponding law in <code>A</code> and in <code>B</code>
 (<code>intros [u1 u2] ...; split; apply ...</code>).</p>
 <p><strong>The one-point space.</strong> <code>unit</code>, with its
 single inhabitant <code>tt</code>, is a vector space over <em>any</em>
@@ -134,35 +141,36 @@ scaling laws are the ring laws <code>F</code> already satisfies, handed
 over verbatim.</p>
 <pre class="coq"><code>#[global] Instance Field_Scale : HasScale F F := mult.
 
-(* Built fully applied: no field left for instance search to fill. *)
 #[global] Instance Field_ScaleLaws : ScaleLaws F F :=
-  {| scale_proper := field_sc_proper;
-     scale_distributes_over_vector_add := Ring.left_distributive;
-     scale_distributes_over_scalar_add := Ring.right_distributive;
-     scale_associative := Ring.mul_associative;
-     scale_identity := Ring.mul_left_identity |}.</code></pre>
+  {| ScaleLaws.scale_proper := field_scale_proper;
+     ScaleLaws.is_left_distributive  := left_distributive;
+     ScaleLaws.is_right_distributive  := right_distributive;
+     ScaleLaws.is_associative  := associative;
+     ScaleLaws.is_left_identity    := left_identity |}.</code></pre>
 <p>Read the second definition field by field: distributivity of scaling
-over a vector sum <em>is</em> <a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.left_distributive"><code>Ring.left_distributive</code></a>,
+over a vector sum <em>is</em> left-distributivity of <code>*</code>,
 scaling by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
-<em>is</em> <a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.mul_left_identity"><code>Ring.mul_left_identity</code></a>,
-and so on. No new proofs, just a re-labelling of laws <code>F</code>
-already had.</p>
+<em>is</em> <code>*</code>’s left identity law, and so on. The
+right-hand sides are not renamed copies — they are the very same
+projections the ring uses, found by instance search at the ring’s own
+instance, because scaling here <em>is</em> multiplication. No new
+proofs.</p>
 <p><strong>Linear maps.</strong> The most striking case: the <em>linear
 maps</em> from <code>U</code> to <code>V</code> — the functions
-respecting <code>==</code>, sums, and scaling — are themselves a vector
-space, <code>Hom U V</code>. Add two maps pointwise, scale a map
-pointwise, and each result is again linear because the laws hold in
-<code>V</code> at every point; the vector-space laws for
-<code>Hom U V</code> then reduce, once more, to the laws in
-<code>V</code>:</p>
+respecting <code>==</code>, sums, and scaling, bundled as
+<code>LinearMap F U V</code>, abbreviated <a
+href="coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a> in the
+file below — are themselves a vector space. Add two maps pointwise,
+scale a map pointwise, and each result is again linear because the laws
+hold in <code>V</code> at every point; the vector-space laws for <a
+href="coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a> then
+reduce, once more, to the laws in <code>V</code>:</p>
 <pre class="coq"><code>Lemma hom_scale_add : forall (a : F) (f g : Hom),
   a *: (f + g) == a *: f + a *: g.
 Proof.
   intros a f g u.
-  apply scale_distributes_over_vector_add.
+  exact (left_distributive a (f u) (g u)).
 Qed.</code></pre>
 <p>The same two-line rhythm — introduce a point <code>u</code>, appeal
 to the <code>V</code>-level law — now applied to a space whose
@@ -179,31 +187,46 @@ exactly the same information as a <em>pair of functions</em>,
 <code>(X -&gt; A) * (X -&gt; B)</code>.</p>
 <p>The right notion of sameness for vector spaces is an
 <em>isomorphism</em>: a linear map one way, a linear map back, and a
-proof that each undoes the other. In the code that is a four-field
-record:</p>
-<pre class="coq"><code>Record VSIso (F U V : Type) `{FF : Field.Field F}
+proof that each undoes the other. “Each undoes the other” is a property
+of a <em>pair of plain functions</em>, so it is stated on its own, about
+the functions:</p>
+<pre class="coq"><code>Module Inverse.
+  Class Inverse {U V : Type} {eU : EqRel U} {eV : EqRel V}
+      (f : U -&gt; V) (g : V -&gt; U) := {
+    from_to : forall u : U, g (f u) == u;
+    to_from : forall v : V, f (g v) == v;
+  }.
+End Inverse.</code></pre>
+<p>An isomorphism is then two linear maps carrying that property:</p>
+<pre class="coq"><code>Record VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
+    {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
   vsi_to : LinearMap F U V;
   vsi_from : LinearMap F V U;
-  vsi_fromto : forall u : U, vsi_from (vsi_to u) == u;
-  vsi_tofrom : forall v : V, vsi_to (vsi_from v) == v
+  vsi_inverse :: Inverse vsi_to vsi_from;
 }.</code></pre>
 <p>The two <a
 href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
-fields are the maps; the last two fields are the round-trip laws —
+fields are the maps; the third carries the two round-trip laws —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">\mathrm{from}(\mathrm{to}(u)) = u</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">\mathrm{to}(\mathrm{from}(v)) = v</annotation></semantics></math>:
-go over and back and you are where you started, in either direction.
-Anything true of one carrier transports to the other by rewriting along
-these two laws.</p>
+go over and back and you are where you started, in either direction. The
+<code>::</code> marks that third field as an instance, so once you hold
+a <a href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+the round trips are found by instance search rather than named by hand;
+under the names <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_fromto"><code>vsi_fromto</code></a>
+and <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_tofrom"><code>vsi_tofrom</code></a>
+they are also available directly, and anything true of one carrier
+transports to the other by rewriting along them.</p>
 <p>The main isomorphism is the record/column one,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>→</mo><mi>A</mi><mo>×</mo><mi>B</mi><mspace width="0.278em"></mspace><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">X \to A \times B \;\;\cong\;\; (X \to A) \times (X \to B).</annotation></semantics></math></p>
-<p>Splitting <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> into
-its two columns goes forward, zipping a pair of functions back into one
-goes backward, and both round-trips hold at every point:</p>
+<p>Splitting <code>f</code> into its two columns goes forward, zipping a
+pair of functions back into one goes backward, and both round-trips hold
+at every point:</p>
 <pre class="coq"><code>Lemma soa_fromto : forall f : X -&gt; A * B,
   (fun x : X =&gt; (fst (f x), snd (f x))) == f.
 Proof.
@@ -212,27 +235,23 @@ Proof.
   - reflexivity.
   - reflexivity.
 Qed.</code></pre>
-<p>Splitting <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> into
-its first and second components and re-pairing them at each
-<code>x</code> rebuilds <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> on the
+<p>Splitting <code>f</code> into its first and second components and
+re-pairing them at each <code>x</code> rebuilds <code>f</code> on the
 nose — the <a
 href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
 breaks the pair equality into its two halves, each an identity. The full
-isomorphism bundles that with the other round-trip and the two linear
-maps:</p>
+isomorphism hands the builder <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_from_laws"><code>vsiso_from_laws</code></a>
+the two linear maps and then the two round-trips:</p>
 <pre class="coq"><code>Definition vsiso_soa :
-  @VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols :=
-  @Build_VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols
-    soa_split soa_merge soa_fromto soa_tofrom.</code></pre>
+  VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) :=
+  vsiso_from_laws soa_split soa_merge soa_fromto soa_tofrom.</code></pre>
 <p>Take <code>X</code> to be <code>Fin n</code>, the type of positions
 <code>0, …, n-1</code>. Then <code>X -&gt; A * B</code> is an <em>array
 of structs</em> — <code>n</code> slots, each a record — and
 <code>(X -&gt; A) * (X -&gt; B)</code> is a <em>struct of arrays</em> —
-one array of the <code>A</code> fields beside one array of the <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
-fields. <a
+one array of the <code>A</code> fields beside one array of the
+<code>B</code> fields. <a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>
 is a machine-checked certificate that these two memory layouts hold the
 same vector, so a program may switch between them freely. The same file
@@ -252,8 +271,8 @@ href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>
 (products) · <a
 href="coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>
 (the one-point space) · <a
-href="coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>
-(a field over itself) · <a
+href="coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>
+(the class, and a field over itself) · <a
 href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
 (linear maps as a space) · <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>

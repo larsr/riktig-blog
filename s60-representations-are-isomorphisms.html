@@ -11,63 +11,46 @@
 <main>
 <h1 id="choose-your-representation-keep-your-theorems">Choose your
 representation, keep your theorems</h1>
-<p><em>Sixth post in the series documenting the <strong>riktig</strong>
-project.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved, layer by layer, in Coq. The goal is
-<em>modifiability</em>: a change only obliges you to re-establish a few
-local facts. Every post starts from zero. In <a
-href="s02-monoid-and-its-unique-identity.html">the post on mathematical
-structures</a> we defined mathematical structures — a carrier, an
-equality <code>==</code> chosen for the job, operations, laws — and
-proved things once, abstractly. Today one concrete payoff, worked end to
-end: <strong>the same data can be laid out in memory two different ways,
-and the two layouts are provably interchangeable — array-of-structs ≅
-struct-of-arrays, as a machine-checked isomorphism.</strong> That
-statement is the whole post: first what it says, then what it needs,
-then the proof.</p>
-</blockquote>
+<p>A table of records can be stored as one array of records, or as one
+array per field. Everyone who has written such a program believes the
+two layouts hold the same data, and chooses between them on grounds of
+speed. What does that belief actually claim, and can a machine check
+it?</p>
 <h2 id="the-claim-in-engineering-terms">The claim, in engineering
 terms</h2>
 <p>You have a table of records — say <code>n</code> rows, each holding
-an <code>A</code>-value and a <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>-value.
-There are two standard ways to store it:</p>
+an <code>A</code>-value and a <code>B</code>-value. There are two
+standard ways to store it:</p>
 <ul>
 <li><strong>Array of structs (AoS):</strong> one array of <code>n</code>
 records. As a type: a function from row index to record,
 <code>Fin n -&gt; A * B</code>.</li>
 <li><strong>Struct of arrays (SoA):</strong> two arrays side by side —
-all the <code>A</code>-values, then all the <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>-values.
-As a type: a <em>pair</em> of functions,
+all the <code>A</code>-values, then all the <code>B</code>-values. As a
+type: a <em>pair</em> of functions,
 <code>(Fin n -&gt; A) * (Fin n -&gt; B)</code>.</li>
 </ul>
 <p>The second layout is the transformation behind columnar databases and
-SIMD-friendly kernels. Everybody believes the two layouts hold the same
-information. The point of this post is to say <em>precisely</em> what
-“the same information, and the algebra doesn’t care” means, and to prove
-it once, for every field of scalars, every pair of component spaces, and
-every index type <code>X</code> (not just <code>Fin n</code>):</p>
+SIMD-friendly kernels. The claim to be made precise is “the same
+information, and the algebra doesn’t care”, and it should hold for every
+field of scalars, every pair of component spaces, and every index type
+<code>X</code> (not just <code>Fin n</code>):</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo>×</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mo stretchy="false" form="prefix">(</mo><mi>X</mi><mo>→</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(X \to A \times B) \;\cong\; (X \to A) \times (X \to B)</annotation></semantics></math></p>
 <p>Three things need content before that line is a theorem: why each
 side is a vector space at all, what <code>≅</code> means when a machine
-checks it, and the proof. In the repository the destination is <a
+checks it, and the proof. The destination is <a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>
 in <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>.</p>
 <h2 id="step-1-both-sides-are-vector-spaces-for-free">Step 1: both sides
 are vector spaces, for free</h2>
-<p>The structures in the post on mathematical structures were abstract:
-“any carrier with these operations and laws.” An <em>instance</em> is a
-proof that a concrete type keeps that promise — the repository has the
-expected ones (<code>Z</code> is a ring, <a
-href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>;
-<code>Q</code> with <code>Qeq</code> as its <code>==</code> is a field,
-<a href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>). The
-two instances the theorem needs are <em>constructions</em>: they build a
-new vector space from old ones.</p>
+<p>A <em>vector space</em> over a field is a carrier whose elements add
+(with a zero, negatives, addition associative and commutative) and scale
+by a scalar, with scaling distributing over both sums and composing by
+multiplication of scalars. A concrete type becomes one by an
+<em>instance</em>: a proof that its operations satisfy those laws. The
+two instances this theorem needs are <em>constructions</em> — they build
+a new vector space from old ones.</p>
 <p><strong>Functions into a space form a space</strong> (<a
 href="coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>).
 If <code>V</code> is a vector space, so is <code>X -&gt; V</code>, for
@@ -79,18 +62,19 @@ href="coqdoc/Riktig.Theory.Pointwise.html#PW_EqRel"><code>PW_EqRel</code></a>),
 and every law holds because it holds at each point. A typical proof in
 the file, whole:</p>
 <pre class="coq"><code>Lemma pw_idl : forall f : X -&gt; M, 0 + f == f.
-Proof. intros f x. apply Monoid.left_identity. Qed.</code></pre>
+Proof. intros f x. exact (left_identity (f x)). Qed.</code></pre>
 <p>Read it: to prove two functions <code>==</code>, prove it at an
 arbitrary point <code>x</code> — and there it is <code>M</code>’s own
 law. That single file makes <code>nat -&gt; Q</code>,
 <code>Fin n -&gt; F</code> (n-dimensional coordinate space, <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>),
 and both sides of today’s isomorphism into vector spaces with no new
-proofs. (One production note, in passing: an instance whose carrier is
+proofs. (One practical note, in passing: an instance whose carrier is
 <code>X -&gt; M</code> can send Coq’s instance search into infinite
-recursion when the carrier is unknown; this file once ran the compiler
-out of memory before <code>Hint Mode</code> annotations confined the
-search.)</p>
+recursion when the carrier is unknown — it keeps peeling arrows off a
+metavariable — which is why the structure classes carry
+<code>Hint Mode</code> annotations that refuse to search until the
+carrier is fixed.)</p>
 <p><strong>Pairs of spaces form a space</strong> (<a
 href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>).
 <code>A * B</code> with componentwise operations and componentwise
@@ -107,32 +91,49 @@ either way, lose nothing in a round trip, and — the part that makes
 theorems transport — <em>commute with the algebra</em>: adding two
 tables and then converting must equal converting and then adding. The
 maps that commute with the algebra are the <strong>linear maps</strong>:
-functions <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> with
-<code>f (u + v) == f u + f v</code> and
+functions <code>f</code> with <code>f (u + v) == f u + f v</code> and
 <code>f (a *: u) == a *: f u</code>, respecting <code>==</code> (<a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>;
-they get a proper treatment in the post on linear maps forming a vector
-space). So the repository’s notion of isomorphism-of-representations, <a
+href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>).
+So an isomorphism of representations, <a
 href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> in
 <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>,
 is: two linear maps that undo each other.</p>
-<pre class="coq"><code>Record VSIso (F U V : Type) `{FF : Field.Field F}
+<p>“Undoing each other” is a property of two plain functions, so it is
+stated separately, about the functions rather than about any bundle:</p>
+<pre class="coq"><code>Module Inverse.
+  Class Inverse {U V : Type} {eU : EqRel U} {eV : EqRel V}
+      (f : U -&gt; V) (g : V -&gt; U) := {
+    from_to : forall u : U, g (f u) == u;
+    to_from : forall v : V, f (g v) == v;
+  }.
+End Inverse.</code></pre>
+<p>and the isomorphism is the two maps carrying it:</p>
+<pre class="coq"><code>Record VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
+    {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
   vsi_to : LinearMap F U V;
   vsi_from : LinearMap F V U;
-  vsi_fromto : forall u : U, vsi_from (vsi_to u) == u;
-  vsi_tofrom : forall v : V, vsi_to (vsi_from v) == v
+  vsi_inverse :: Inverse vsi_to vsi_from;
 }.</code></pre>
-<p>Four fields, each earning its keep: the two maps are the conversions,
-the two round-trip laws say no information is lost, and linearity says
-any algebra you do in one representation agrees with doing it in the
-other. Once you hold a <a
+<p>Three fields, each earning its keep: the two maps are the
+conversions, <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_inverse"><code>vsi_inverse</code></a>
+says no information is lost either way round, and linearity — carried
+inside each <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+— says any algebra you do in one representation agrees with doing it in
+the other. The two halves of <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_inverse"><code>vsi_inverse</code></a>
+are available under the names <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_fromto"><code>vsi_fromto</code></a>
+and <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_tofrom"><code>vsi_tofrom</code></a>,
+and once you hold a <a
 href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>,
 every equation about one carrier can be moved to the other by rewriting
-along these laws — the proofs travel with the data.</p>
+along them — the proofs travel with the data.</p>
 <h2 id="step-3-the-proof">Step 3: the proof</h2>
 <p><strong>On paper.</strong> The forward map splits a table into its
 two columns:</p>
@@ -149,18 +150,24 @@ components” — the two sides are the same expression read in different
 orders. There is nothing deep here, and that is the point: once the
 definitions from steps 1 and 2 are in place, the theorem is bookkeeping,
 and bookkeeping is what the machine checks best.</p>
-<p><strong>In the repository.</strong> The two maps, with their
-linearity proofs attached (each proof is <code>reflexivity</code> at
-every point, in the sense above):</p>
+<p><strong>In Coq.</strong> The two maps, each built by <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+from its underlying function and the three linearity proofs (every one
+of which is <code>reflexivity</code> at every point, in the sense
+above):</p>
 <pre class="coq"><code>Definition soa_split : LinearMap F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) :=
-  @Build_LinearMap F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols
+  linear_map_from_laws
     (fun f : X -&gt; A * B =&gt; (fun x : X =&gt; fst (f x), fun x : X =&gt; snd (f x)))
-    soa_split_proper soa_split_add soa_split_scale.
+    soa_split_proper
+    soa_split_add
+    soa_split_scale.
 
 Definition soa_merge : LinearMap F ((X -&gt; A) * (X -&gt; B)) (X -&gt; A * B) :=
-  @Build_LinearMap F ((X -&gt; A) * (X -&gt; B)) (X -&gt; A * B) FF VCols VXAB
+  linear_map_from_laws
     (fun (p : (X -&gt; A) * (X -&gt; B)) (x : X) =&gt; (fst p x, snd p x))
-    soa_merge_proper soa_merge_add soa_merge_scale.</code></pre>
+    soa_merge_proper
+    soa_merge_add
+    soa_merge_scale.</code></pre>
 <p>one round trip, in full — equality of functions is pointwise
 (<code>intros f x</code>), equality of pairs is componentwise (<a
 href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>),
@@ -173,18 +180,17 @@ Proof.
   - reflexivity.
   - reflexivity.
 Qed.</code></pre>
-<p>and the record assembled:</p>
+<p>and the record assembled, by the matching builder <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_from_laws"><code>vsiso_from_laws</code></a>:</p>
 <pre class="coq"><code>Definition vsiso_soa :
-  @VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols :=
-  @Build_VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) FF VXAB VCols
-    soa_split soa_merge soa_fromto soa_tofrom.</code></pre>
+  VSIso F (X -&gt; A * B) ((X -&gt; A) * (X -&gt; B)) :=
+  vsiso_from_laws soa_split soa_merge soa_fromto soa_tofrom.</code></pre>
 <h2 id="what-was-proved-plainly">What was proved, plainly</h2>
 <ul>
 <li>For every field <code>F</code>, every index type <code>X</code>, and
-every pair of <code>F</code>-vector spaces <code>A</code>, <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>:
-splitting a table into columns and zipping columns into a table are
-linear maps, and they are mutually inverse (<a
+every pair of <code>F</code>-vector spaces <code>A</code>,
+<code>B</code>: splitting a table into columns and zipping columns into
+a table are linear maps, and they are mutually inverse (<a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_soa"><code>vsiso_soa</code></a>,
 <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>).
@@ -209,8 +215,8 @@ href="coqdoc/Riktig.Theory.VSIso.html#vsiso_sym"><code>vsiso_sym</code></a>/<a
 href="coqdoc/Riktig.Theory.VSIso.html#vsiso_trans"><code>vsiso_trans</code></a>
 so isomorphisms invert and chain — the file’s closing example normalizes
 <code>A × (B × ()) ≅ B × A</code> purely by chaining.</li>
-<li>And what is <em>not</em> proved, honestly: nothing about memory or
-cache behaviour. The theorem says the data and its algebra are preserved
+<li>And what is <em>not</em> proved: nothing about memory or cache
+behaviour. The theorem says the data and its algebra are preserved
 exactly; the performance of a layout is precisely the thing you are now
 free to choose on other grounds.</li>
 </ul>

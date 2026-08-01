@@ -10,120 +10,301 @@
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
 <h1 id="a-qr-for-real">A = QR, for real</h1>
-<p><em>Twentieth post documenting the <strong>riktig</strong> project;
-the linear-algebra course continues. A short one: one theorem, earned
-mostly by reuse.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. An earlier post built Gram-Schmidt: turn a
-family of vectors into an orthogonal one by subtracting, at each step,
-the projections onto everything already processed. Today that
-construction gets packaged the way every linear algebra course
-eventually packages it — as a matrix factorization,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mi>Q</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">A = QR</annotation></semantics></math>
-— and the proof that the packaging is <em>correct</em> turns out to need
-almost no new mathematics, because the mathematics was already done.</p>
-</blockquote>
-<h2 id="what-the-pieces-mean">What the pieces mean</h2>
 <p>Take
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
-vectors, the columns of a matrix
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>.
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
-columns are those same vectors, orthogonalized by Gram-Schmidt.
+vectors and make them mutually perpendicular without changing what they
+span. The recipe is old and short: walk the list from left to right, and
+from each new vector subtract its projection onto every vector already
+produced, keeping only the part that points in a direction none of the
+earlier ones covered. The projection of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+onto the axis through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow></mfrac><mi>w</mi></mrow><annotation encoding="application/x-tex">\frac{\langle u,w\rangle}{\langle w,w\rangle}w</annotation></semantics></math>,
+so each subtraction is a scalar multiple of an earlier output.</p>
+<p>That last remark is the whole of what follows. Because every
+subtraction is a multiple of an <em>earlier</em> output, each original
+vector can be rebuilt from the outputs by a combination that uses only
+outputs at its own position or before it. Arrange the original vectors
+as the columns of a matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+and the perpendicular ones as the columns of a matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>,
+and the table of rebuild coefficients is a third matrix
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
-records, for each original column, how to rebuild it from
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
-columns — and because Gram-Schmidt only ever subtracts <em>earlier</em>
-projections,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
-is upper triangular: column
+with</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mi>Q</mi><mspace width="0.167em"></mspace><mi>R</mi><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>R</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> whenever </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>&gt;</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">A = Q\,R, \qquad R_{ij} = 0 \text{ whenever } i &gt; j</annotation></semantics></math></p>
+<p>— zero below the diagonal, which is what <em>upper triangular</em>
+means. The factorization is not a new construction; it is bookkeeping
+about one that already exists. The question worth asking is what has to
+be proved to earn the two claims: that the product really is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
+and that the entries below the diagonal really are zero rather than
+merely small or conventionally ignored.</p>
+<h2 id="the-three-matrices">The three matrices</h2>
+<p>Fix a space
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+with a positive-definite pairing, a basis <code>B</code> of size
+<code>n</code> so that vectors can be written in coordinates, and a
+family of <code>n</code> vectors <code>v : Fin.t n -&gt; V</code>
+(<code>Fin.t n</code> being the type of indices
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0,\dots,n-1</annotation></semantics></math>).
+Write <code>gram_schmidt_fin v</code> for the perpendicularized family.
+Then all three matrices are one line each (<a
+href="coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a>):</p>
+<pre class="coq"><code>  Definition qr_Q (v : Fin.t n -&gt; V) : Matrix n n F :=
+    fun i j =&gt; basis_coords B (gram_schmidt_fin v j) i.
+
+  Definition qr_R_coeff (v : Fin.t n -&gt; V) (j k : Fin.t n) : F :=
+    if lt_dec (fin_to_nat k) (fin_to_nat j)
+      then ⟨ v j , gram_schmidt_fin v k ⟩ * inv (norm2 (gram_schmidt_fin v k)) else 0.
+
+  Definition qr_R (v : Fin.t n -&gt; V) : Matrix n n F :=
+    fun i j =&gt; e j i + qr_R_coeff v j i.
+
+  Definition qr_A (v : Fin.t n -&gt; V) : Matrix n n F :=
+    fun i j =&gt; basis_coords B (v j) i.</code></pre>
+<p><code>basis_coords B w i</code> is coordinate <code>i</code> of the
+vector <code>w</code> in the chosen basis, so column <code>j</code> of
+<a href="coqdoc/Riktig.Impl.QR.html#qr_Q"><code>qr_Q</code></a> is the
+<code>j</code>-th perpendicularized vector written out in coordinates,
+and column <code>j</code> of <a
+href="coqdoc/Riktig.Impl.QR.html#qr_A"><code>qr_A</code></a> is the
+<code>j</code>-th original one. The entry <code>qr_R v i j</code> has
+two summands. The second, <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R_coeff"><code>qr_R_coeff</code></a>,
+is the projection coefficient of <code>v j</code> onto the
+<code>i</code>-th output, <em>gated</em> by the test
+<code>fin_to_nat i &lt; fin_to_nat j</code>: it is the coefficient when
+the output is strictly earlier than the column, and zero otherwise. The
+gate is where “only earlier vectors were subtracted” enters the matrix.
+The first summand is the Kronecker delta from the standard basis,</p>
+<pre class="coq"><code>  Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F :=
+    fun j =&gt; if dec (i = j) then 1 else 0.</code></pre>
+<p>so <code>e j i</code> contributes a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+exactly on the diagonal.</p>
+<h2 id="upper-triangular-proved">Upper triangular, proved</h2>
+<p><strong>Statement.</strong> Below the diagonal, <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R"><code>qr_R</code></a> is
+zero.</p>
+<p>On the blackboard, read the two summands separately at an entry with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>&lt;</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j &lt; i</annotation></semantics></math>.
+The Kronecker delta <code>e j i</code> is zero because
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+are different indices — they cannot be equal, since one is strictly
+smaller than the other. And the gated coefficient is zero because its
+gate asks whether
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>&lt;</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i &lt; j</annotation></semantics></math>,
+which is false when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>&lt;</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j &lt; i</annotation></semantics></math>:
+an ordering cannot hold both ways. Zero plus zero is zero.</p>
+<pre class="coq"><code>  Theorem qr_R_upper : forall (v : Fin.t n -&gt; V) (i j : Fin.t n),
+    (fin_to_nat j &lt; fin_to_nat i)%nat -&gt; qr_R v i j == 0.
+  Proof.
+    intros v i j Hji.
+    assert (Hne : j &lt;&gt; i).
+    { intros Heq. rewrite Heq in Hji. exact (Nat.lt_irrefl (fin_to_nat i) Hji). }
+    unfold qr_R, qr_R_coeff.
+    rewrite (e_at_neq n j i Hne).
+    destruct (lt_dec (fin_to_nat i) (fin_to_nat j)) as [Hlt | _].
+    - destruct (Nat.lt_asymm (fin_to_nat j) (fin_to_nat i) Hji Hlt).
+    - exact (left_identity (0 : F)).
+  Qed.</code></pre>
+<p>Walking it: the <code>assert</code> establishes
+<code>j &lt;&gt; i</code> — if they were equal, the hypothesis
+<code>Hji</code> would say an index is strictly less than itself, which
+<code>Nat.lt_irrefl</code> refutes. <code>unfold</code> exposes the two
+summands, and <a
+href="coqdoc/Riktig.Impl.FinVecBasis.html#e_at_neq"><code>e_at_neq</code></a>
+rewrites the delta at distinct indices to <code>0</code>. The
+<code>destruct</code> runs the gate’s decision: in the branch where the
+gate fires we have both
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>&lt;</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j &lt; i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>&lt;</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i &lt; j</annotation></semantics></math>,
+which <code>Nat.lt_asymm</code> turns into a proof of
+<code>False</code>, closing that branch; in the branch where it does
+not, the entry is <code>0 + 0</code>, and <a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+— zero is a left identity for addition — finishes.</p>
+<h2 id="the-diagonal-is-one-not-the-length">The diagonal is one, not the
+length</h2>
+<p><strong>Statement.</strong> On the diagonal, <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R"><code>qr_R</code></a> is
+<code>1</code>.</p>
+<p>This is where the factorization differs from the picture in most
+courses, where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>’s
+diagonal holds the <em>lengths</em> of the perpendicularized vectors and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
+columns come out with length one. The reason for the difference is worth
+stating plainly: normalizing a vector means dividing by its length, and
+length is a square root. No square root is available over an unspecified
+ordered field, so the construction here never normalizes — <a
+href="coqdoc/Riktig.Impl.QR.html#qr_Q"><code>qr_Q</code></a>’s columns
+are the raw perpendicularized vectors, orthogonal but not of unit
+length.</p>
+<p>Given that, the diagonal is forced. Each original vector
+satisfies</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mi>j</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mtext mathvariant="normal">the </mtext><mspace width="0.333em"></mspace></mrow><mi>j</mi><mtext mathvariant="normal">-th output</mtext><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mtext mathvariant="normal">a combination of strictly earlier outputs</mtext><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">v_j \;=\; \bigl(\text{the } j\text{-th output}\bigr)
+\;+\; \bigl(\text{a combination of strictly earlier outputs}\bigr),</annotation></semantics></math></p>
+<p>which is <a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin_reconstruct"><code>gram_schmidt_fin_reconstruct</code></a>,
+and matching the coefficient of the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+output on both sides of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mi>Q</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">A = QR</annotation></semantics></math>
+leaves exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>.
+The proof is again two summands read at one entry: the delta at equal
+indices is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>,
+and the gate asks whether
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>&lt;</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">i &lt; i</annotation></semantics></math>,
+which is false, so the coefficient is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>.</p>
+<pre class="coq"><code>  Theorem qr_R_diag : forall (v : Fin.t n -&gt; V) (i : Fin.t n), qr_R v i i == 1.
+  Proof.
+    intros v i.
+    unfold qr_R, qr_R_coeff.
+    rewrite (e_at_eq n i i eq_refl).
+    destruct (lt_dec (fin_to_nat i) (fin_to_nat i)) as [Hlt | _].
+    - destruct (Nat.lt_irrefl (fin_to_nat i) Hlt).
+    - exact (right_identity (1 : F)).
+  Qed.</code></pre>
+<p>Walking it: <a
+href="coqdoc/Riktig.Impl.FinVecBasis.html#e_at_eq"><code>e_at_eq</code></a>
+rewrites the delta at equal indices to <code>1</code>; the
+<code>destruct</code> on the gate discards the impossible branch with
+<code>Nat.lt_irrefl</code>; and <a
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
+— zero is a right identity — turns <code>1 + 0</code> into
+<code>1</code>.</p>
+<p>One consequence comes for free and is stronger than the textbook
+version. The diagonal is nonzero <em>unconditionally</em>: it is the
+multiplicative unit, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1 \ne 0</annotation></semantics></math>
+is part of what being a field means, so no hypothesis about the input
+vectors is needed at all.</p>
+<pre class="coq"><code>  Theorem qr_R_diag_nonzero : forall (v : Fin.t n -&gt; V) (i : Fin.t n),
+    qr_R v i i =/= 0.
+  Proof.
+    intros v i Hcontra.
+    apply (Field.nontrivial (F:=F)).
+    transitivity (qr_R v i i).
+    - symmetry. exact (qr_R_diag v i).
+    - exact Hcontra.
+  Qed.</code></pre>
+<p>The proof reads as a contradiction: assume the diagonal entry is
+<code>0</code>; then <code>1 == qr_R v i i == 0</code> by <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R_diag"><code>qr_R_diag</code></a>
+and that assumption, and <a
+href="coqdoc/Riktig.Interface.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
+— the field axiom <code>1 =/= 0</code> — refutes it.</p>
+<h2 id="the-factorization-itself">The factorization itself</h2>
+<p><strong>Statement.</strong> Provided every perpendicularized vector
+has nonzero squared length,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+is the product
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mspace width="0.167em"></mspace><mi>R</mi></mrow><annotation encoding="application/x-tex">Q\,R</annotation></semantics></math>.</p>
+<pre class="coq"><code>  Theorem qr_factorization : forall (v : Fin.t n -&gt; V),
+    (forall k : Fin.t n, norm2 (gram_schmidt_fin v k) =/= 0) -&gt;
+    qr_A v == mat_mul (qr_Q v) (qr_R v).</code></pre>
+<p>The hypothesis is not decoration. <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R_coeff"><code>qr_R_coeff</code></a>
+divides by <code>norm2 (gram_schmidt_fin v k)</code>, so unless that is
+nonzero the coefficients are not the reconstruction coefficients and the
+product is not
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>.
+Constructively, “every output has nonzero squared length” is what “the
+input family was linearly independent” amounts to: if some input were a
+combination of the earlier ones, subtracting the projections would leave
+nothing behind. Notice where the hypothesis is <em>not</em> needed — the
+two triangularity theorems above take none, because they are facts about
+the shape of <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R"><code>qr_R</code></a>, not about
+what it reconstructs.</p>
+<p>The proof reads
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mi>Q</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">A = QR</annotation></semantics></math>
+off <a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin_reconstruct"><code>gram_schmidt_fin_reconstruct</code></a>
+one basis coordinate at a time: entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">Q R</annotation></semantics></math>
+is a sum over
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>Q</mi><mrow><mi>i</mi><mi>k</mi></mrow></msub><msub><mi>R</mi><mrow><mi>k</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">Q_{ik}R_{kj}</annotation></semantics></math>,
+which is coordinate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of the combination of outputs that <a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin_reconstruct"><code>gram_schmidt_fin_reconstruct</code></a>
+says rebuilds <code>v j</code>, and coordinate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of <code>v j</code> is entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
 of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-only ever needs
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
-columns
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
-through
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>.</p>
-<pre class="coq"><code>Theorem qr_factorization : forall (v : Fin.t n -&gt; V),
-  (forall k, norm2 (gs_fin v k) =/= 0) -&gt;
-  qr_A B v == mat_mul (qr_Q B v) (qr_R v).
-
-Theorem qr_R_upper : forall i j,
-  fin_to_nat j &lt; fin_to_nat i -&gt; qr_R v i j == 0.</code></pre>
-<p><a
-href="coqdoc/Riktig.Impl.QR.html#qr_R_upper"><code>qr_R_upper</code></a>
-is a genuine theorem, not something true by definition — it says the
-entries above the diagonal are provably zero, which is the honest
-content of “upper triangular.”</p>
-<h2 id="the-one-surprise-rs-diagonal-isnt-the-norm">The one surprise:
-R’s diagonal isn’t the norm</h2>
-<p>Every textbook picture has
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>’s
-diagonal holding the <em>lengths</em> of the orthogonalized vectors, so
-that
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
-ends up orthonormal. Here it doesn’t — and the reason is worth sitting
-with, because it’s not a bug, it’s what the construction is actually
-doing. The earlier Gram-Schmidt construction never normalizes;
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
-columns are orthogonal, not unit-length (normalizing needs a square
-root, and this project doesn’t have one yet — it’s deliberately deferred
-to the interval-refinement track, where “square root” gets an honest
-constructive meaning). Since
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>’s
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
-column <em>is</em> the raw Gram-Schmidt output, reconstructing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>’s
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
-column from it needs coefficient exactly
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
-on the matching column — not the norm, which would only be the right
-coefficient if
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
-had already been normalized to length one. So:</p>
-<pre class="coq"><code>Theorem qr_R_diag_nonzero : forall i, qr_R v i i =/= 0.</code></pre>
-<p>proved <em>unconditionally</em> — no hypothesis needed, because the
-diagonal is forced to be the multiplicative identity, and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1 \ne 0</annotation></semantics></math>
-is just what it means to be a field. A stronger, cleaner fact than the
-textbook version, and it falls out for free from being honest about what
-“orthogonal, not orthonormal” QR actually looks like.</p>
-<h2 id="why-the-proof-was-mostly-reuse">Why the proof was mostly
-reuse</h2>
-<p>The interesting engineering wasn’t the theorem — it was
-<em>fitting</em> the earlier list-based Gram-Schmidt to matrices, which
-need columns indexed by <code>Fin n</code>, not an unindexed list. The
-tempting route — convert the indexed family to a list, run <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gs"><code>gs</code></a>,
-convert back — turns out to lose exactly the information the
-orthogonality proof needs: list-level Gram-Schmidt’s own orthogonality
-theorem only concludes <em>“orthogonal, or the same vector”</em> (a
-disjunction), because a list forgets which position produced which
-output. Matrices need to know <em>which column</em>. So the fix
-re-expresses Gram-Schmidt directly at <code>Fin</code>-indexed families
-and proves, as a bridge lemma, that this re-expression computes the
-<em>same</em> thing the earlier Gram-Schmidt construction does — letting
-every hard-won property from that file (orthogonality, the
-projection-subtraction structure) transfer across untouched. The
-representation changed; the theorems didn’t need to be re-proved. That
-sentence could be this whole project’s motto.</p>
-<p><em>Next: back to the open mathematics — general row/column swap
-invariance for the determinant, or a fresh front on Wave L8’s
-architecture cleanup.</em></p>
+by definition.</p>
+<h2 id="why-the-construction-was-re-expressed-for-fin.t-n">Why the
+construction was re-expressed for <code>Fin.t n</code></h2>
+<p>There is a design point buried in <a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin"><code>gram_schmidt_fin</code></a>
+that is easy to miss. The list-based Gram–Schmidt of <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
+already proves its output pairwise orthogonal — but it does so through
+membership in a list, and its conclusion is a <em>disjunction</em>: any
+two members are orthogonal <strong>or</strong> literally the same
+vector. A list has no notion of “the vector at position 3”, so once
+positions are erased into membership, “these two are different vectors”
+is the only way left to say “these are two different outputs” — and
+deciding whether two vectors are different is exactly the sort of test
+that is unavailable here.</p>
+<p>Matrices need positions: column
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+against column
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>,
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>≠</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i \ne j</annotation></semantics></math>
+as indices, not as vectors. So <a
+href="coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a>
+re-expresses the same recursion at <code>Fin.t n</code>-indexed families
+and proves, as a bridge lemma <a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin_aux_eq"><code>gram_schmidt_fin_aux_eq</code></a>,
+that this re-expression computes the very same vectors the list version
+does. Every property established for the list construction then
+transfers across unchanged, and the orthogonality statement can be
+phrased on indices, without the disjunction. Changing the representation
+cost a bridge lemma; it cost no re-proving of the mathematics.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a> (<a
-href="coqdoc/Riktig.Impl.QR.html#qr_factorization"><code>qr_factorization</code></a>,
-<a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin"><code>gram_schmidt_fin</code></a>,
+<a href="coqdoc/Riktig.Impl.QR.html#qr_Q"><code>qr_Q</code></a>, <a
+href="coqdoc/Riktig.Impl.QR.html#qr_R"><code>qr_R</code></a>, <a
+href="coqdoc/Riktig.Impl.QR.html#qr_A"><code>qr_A</code></a>, <a
 href="coqdoc/Riktig.Impl.QR.html#qr_R_upper"><code>qr_R_upper</code></a>,
 <a
-href="coqdoc/Riktig.Impl.QR.html#qr_R_diag_nonzero"><code>qr_R_diag_nonzero</code></a>)
+href="coqdoc/Riktig.Impl.QR.html#qr_R_diag"><code>qr_R_diag</code></a>,
+<a
+href="coqdoc/Riktig.Impl.QR.html#qr_R_diag_nonzero"><code>qr_R_diag_nonzero</code></a>,
+<a
+href="coqdoc/Riktig.Impl.QR.html#qr_factorization"><code>qr_factorization</code></a>,
+<a
+href="coqdoc/Riktig.Impl.QR.html#gram_schmidt_fin_reconstruct"><code>gram_schmidt_fin_reconstruct</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
-(the construction QR packages).</p>
+(the list-based construction QR packages) · <a
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
+(<code>e</code>, the standard-basis delta) · <a
+href="coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Basis.html#basis_coords"><code>basis_coords</code></a>).</p>
 </main>
 </body>
 </html>

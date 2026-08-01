@@ -11,183 +11,397 @@
 <main>
 <h1 id="the-determinant-is-multiplicative">The determinant is
 multiplicative</h1>
-<p><em>Thirty-third post in the series documenting the
-<strong>riktig</strong> project.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved in Coq. One thread of this series has chased
-a single classical theorem across seven attempts:
-<code>det(A·B) = det A · det B</code> for the computable
-Laplace-recursion determinant <a
-href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> of <a
-href="s32-a-determinant-you-can-compute.html">the earlier post on a
-determinant you can compute</a>. The posts from <a
-href="s33-sidestepping-the-determinant.html">the post on sidestepping
-the determinant</a> through <a href="s36-equal-rows-vanish.html">the
-post where equal rows vanish</a> built the classical ingredients one by
-one — the Leibniz reformulation, row-swap antisymmetry in full
-generality, the characteristic-free alternating fact, arbitrary-row
-linearity, and all three elementary-matrix identities — leaving exactly
-one gap: the composition argument that assembles them. Today it is
-assembled. <strong>Multiplicativity is proved, by certified Gaussian
-elimination, for every field with decidable equality — and
-unconditionally over ℚ, where it discharges the long-standing hypothesis
-of the coordinate-free determinant.</strong></p>
-</blockquote>
-<h2 id="the-theorem-and-its-one-honest-hypothesis">The theorem, and its
-one honest hypothesis</h2>
-<pre class="coq"><code>Theorem detM_mul_dec : forall (dec : DecEq F) (n : nat)
-    (A B : Matrix n n F),
-  detM (mat_mul A B) == detM A * detM B.</code></pre>
-<p>The <code>DecEq F</code> argument deserves a plain explanation,
-because it is a mathematical necessity, not a proof-engineering
-shortcut. The argument runs by Gaussian elimination, and elimination
-must at each step <em>decide</em> whether a pivot candidate is zero. In
-this library a <a
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(AB) \;=\; \det(A)\,\det(B).</annotation></semantics></math></p>
+<p>Everything one wants from a determinant follows from this. The
+determinant of a linear map on a space of finite dimension is computed
+by choosing a basis, writing the map as a matrix and taking the
+determinant of that matrix — and the number is only worth calling a
+property of the <em>map</em> if it comes out the same in every basis.
+Two matrices for the same map are related by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>↦</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mi>A</mi><mi>P</mi></mrow><annotation encoding="application/x-tex">A \mapsto P^{-1}AP</annotation></semantics></math>,
+so basis-independence is the calculation</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mi>A</mi><mi>P</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\det(P^{-1}AP) \;=\; \det(P^{-1})\det(A)\det(P) \;=\; \det(A),</annotation></semantics></math></p>
+<p>which is multiplicativity and nothing else. Invertibility, the
+composition law, and the fact that a determinant detects singularity all
+rest on it in the same way.</p>
+<p>Neither definition of the determinant makes it obvious. Cofactor
+expansion is a recursion on the size of the matrix, and the entries of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">AB</annotation></semantics></math>
+are sums, so expanding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB)</annotation></semantics></math>
+produces a mass of terms with no visible relation to the two smaller
+expansions. The permutation sum does no better:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∏</mo><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\prod_j (AB)_{\sigma(j),j}</annotation></semantics></math>
+is a product of sums, and multiplying it out ranges over all functions
+rather than all permutations.</p>
+<p>There are two ways through, and this post takes both. They need
+different things from the field, which is the interesting part.</p>
+<h2 id="what-the-determinant-is-as-a-function-of-its-rows">What the
+determinant is, as a function of its rows</h2>
+<p>Both routes use the same three facts, none of which mentions a
+product of matrices:</p>
+<ul>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>det</mi><annotation encoding="application/x-tex">\det</annotation></semantics></math>
+is <strong>additive in each row</strong>: splitting one row as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mn>1</mn></msub><mo>+</mo><msub><mi>r</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">r_1 + r_2</annotation></semantics></math>
+splits the determinant (<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>).</li>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>det</mi><annotation encoding="application/x-tex">\det</annotation></semantics></math>
+is <strong>homogeneous in each row</strong>: scaling one row by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>
+scales the determinant by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>
+(<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>).</li>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>det</mi><annotation encoding="application/x-tex">\det</annotation></semantics></math>
+is <strong>alternating</strong>: two equal rows force
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+(<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>).</li>
+</ul>
+<p>They hold for <a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, the
+cofactor-recursion determinant of <a
+href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a>, over any
+field, with no assumption on the characteristic.</p>
+<h2 id="route-one-elimination-and-the-price-of-a-pivot">Route one:
+elimination, and the price of a pivot</h2>
+<p>Gaussian elimination reduces a square matrix to the identity, or
+exposes a zero row, by a finite sequence of row operations, each of
+which multiplies the determinant by a known factor. If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+reduces to the identity by operations with accumulated factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>,
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>A</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">f\det A = 1</annotation></semantics></math>;
+run the same operations on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">AB</annotation></semantics></math>
+— they act on the left factor — and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">f\det(AB) = \det B</annotation></semantics></math>.
+Regroup and the product law drops out, with no division performed
+anywhere.</p>
+<p>Turning that into a proof means making “reduces to” a value rather
+than a story. An <a
+href="coqdoc/Riktig.Impl.DetMul.html#ElemOp"><code>ElemOp</code></a> is
+a row operation carrying its own justification: a swap of two positions
+carrying their distinctness, a scaling carrying a certified inverse for
+the scale factor (<code>c * d == 1</code> is part of the value), or an
+add-a-multiple carrying its distinctness. <a
+href="coqdoc/Riktig.Impl.DetMul.html#elem_op_apply"><code>elem_op_apply</code></a>
+acts by left multiplication with the corresponding elementary matrix, <a
+href="coqdoc/Riktig.Impl.DetMul.html#elem_op_factor"><code>elem_op_factor</code></a>
+names the factor the determinant picks up, and <a
+href="coqdoc/Riktig.Impl.DetMul.html#det_eop_apply"><code>det_eop_apply</code></a>
+proves the two agree. Lists of operations inherit all of it: factors
+multiply (<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_eops_apply"><code>det_eops_apply</code></a>),
+the accumulated factor keeps a certified inverse (<a
+href="coqdoc/Riktig.Impl.DetMul.html#elem_ops_factor_cofactor"><code>elem_ops_factor_cofactor</code></a>),
+and applying a list commutes with multiplying on the right (<a
+href="coqdoc/Riktig.Impl.DetMul.html#elem_ops_apply_mul"><code>elem_ops_apply_mul</code></a>).</p>
+<p>The reduction itself is then a theorem producing such a list:</p>
+<pre class="coq"><code>  Theorem gauss_reduce : forall (dec : DecEq F) (n : nat) (A : Matrix n n F),
+    exists l : list (ElemOp n),
+      (elem_ops_apply l A == @mat_id F _ _ n)
+      \/ (exists i : Fin.t n, forall j : Fin.t n, elem_ops_apply l A i j == 0).</code></pre>
+<p>Every square matrix goes, by finitely many certified row operations,
+either to the identity or to a matrix with an explicit zero row. The
+disjunction <em>is</em> the singular/nonsingular dichotomy, carried as
+data: no rank, no dimension theory, no case left implicit.</p>
+<p>Note the first argument. Elimination has to <em>choose a pivot</em>,
+which means deciding whether a candidate entry is zero. A <a
 href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-carries no such decision procedure — field equality is a setoid
-<code>==</code>, and for a general field there is no algorithm answering
-<code>x == 0</code>. So the theorem takes the decision procedure as an
-explicit argument, on exactly the two results that need it, and nothing
-else in the file assumes it. For any concrete field of interest the
-hypothesis is free: over ℚ,</p>
+here is a setoid with an equality relation <code>==</code>; for a
+general field there is no algorithm answering <code>x == 0</code>, so
+the decision procedure is taken as an explicit argument on exactly the
+results that need it.</p>
+<pre class="coq"><code>  Theorem detM_mul_dec : forall (dec : DecEq F) (n : nat)
+      (A B : Matrix n n F),
+    detM (mat_mul A B) == detM A * detM B.</code></pre>
+<p>The nonsingular branch is the regrouping above. The singular branch
+is shorter: a matrix with a zero row has determinant zero (<a
+href="coqdoc/Riktig.Impl.DetMul.html#det_zero_row"><code>det_zero_row</code></a>
+— which is row scaling at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>:=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">c := 0</annotation></semantics></math>,
+so it too says nothing about characteristic), and a zero row of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+is still a zero row of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">AB</annotation></semantics></math>
+(<a
+href="coqdoc/Riktig.Impl.DetMul.html#mat_mul_zero_row"><code>mat_mul_zero_row</code></a>),
+so both sides are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+once the accumulated factor is cancelled through its certified
+inverse.</p>
+<p>For the rationals the hypothesis costs nothing:</p>
 <pre class="coq"><code>Corollary detM_mul_Q : forall (n : nat) (A B : Matrix n n Q),
   detM (mat_mul A B) == detM A * detM B.</code></pre>
-<p>is unconditional.</p>
-<h2 id="the-shape-of-the-proof">The shape of the proof</h2>
-<p>Everything lives in <a
-href="coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a>.
-The engine is a <em>certificate</em>, not a computation on paper:</p>
-<pre class="coq"><code>Theorem gauss_reduce : forall (dec : DecEq F) (n : nat) (A : Matrix n n F),
-  exists l : list (ElemOp n),
-    (eops_apply l A == mat_id)
-    \/ (exists i : Fin.t n, forall j : Fin.t n, eops_apply l A i j == 0).</code></pre>
-<p>Every square matrix is taken, by a finite list of elementary row
-operations, either to the identity or to a matrix with an explicit zero
-row. No rank, no dimension theory, no case analysis left implicit — the
-disjunction <em>is</em> the singular/nonsingular dichotomy, carried as
-data. The elementary operations are proof-carrying values (<a
-href="coqdoc/Riktig.Impl.DetMul.html#ElemOp"><code>ElemOp</code></a>): a
-swap, a scale that carries a certified inverse (<code>c*d == 1</code> is
-part of the value), or an add-multiple-of-a-row. Each kind changes the
-determinant by a known factor — packaged from the earlier posts’ <a
-href="coqdoc/Riktig.Impl.DetSignGeneral.html#det_elem_swap"><code>det_elem_swap</code></a>,
-<a
-href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>,
-<a
-href="coqdoc/Riktig.Impl.DetAlternating.html#det_elem_add"><code>det_elem_add</code></a>
-— and factors of a list multiply (<a
-href="coqdoc/Riktig.Impl.DetMul.html#det_eops_apply"><code>det_eops_apply</code></a>),
-the accumulated factor keeping a certified inverse of its own.</p>
-<p>From the certificate, the headline theorem is two short stories:</p>
-<ul>
-<li><strong>A reduces to the identity.</strong> With <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> the
-accumulated factor, <code>f · det A == 1</code>; pushing the same
-operation list through <code>A·B</code> (they act on the left factor: <a
-href="coqdoc/Riktig.Impl.DetMul.html#eops_apply_mul"><code>eops_apply_mul</code></a>)
-gives <code>f · det(A·B) == det B</code>. The product law follows by
-commutative regrouping of those two equations — notably, <em>no division
-is ever performed</em>.</li>
-<li><strong>A reduces to a zero row.</strong> A matrix with a zero row
-has zero determinant (<a
-href="coqdoc/Riktig.Impl.DetMul.html#det_zero_row"><code>det_zero_row</code></a>
-— which is arbitrary-row scaling at <code>c := 0</code>, so it too is
-characteristic-free), and a zero row of <code>A</code> survives into
-<code>A·B</code> (<a
-href="coqdoc/Riktig.Impl.DetMul.html#mat_mul_zero_row"><code>mat_mul_zero_row</code></a>),
-so both sides are <code>0</code> once the factor is cancelled through
-its certified inverse.</li>
-</ul>
-<p>One standalone deliverable fell out on the way, the fact the roadmap
-had always predicted this argument would need:</p>
-<pre class="coq"><code>Theorem det_upper_triangular : forall (n : nat) (A : Matrix n n F),
-  (forall i j : Fin.t n, (fin_to_nat j &lt; fin_to_nat i)%nat -&gt; A i j == 0) -&gt;
-  detM A == prodF (fun i =&gt; A i i).</code></pre>
-<p>— the determinant of an upper-triangular matrix is the product of its
-diagonal, by induction: an upper-triangular first column has one
-possibly-nonzero entry, so the Laplace recursion collapses to a single
-term per level. (The final proof route through <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>
-ended up not needing it; it is proved because it was promised, and it is
-true, unconditionally.)</p>
-<h2 id="the-debt-it-pays-off">The debt it pays off</h2>
-<p><a href="s46-everything-sent-eventually-arrives.html">The post that
-introduced the coordinate-free determinant</a> introduced — and posts
-since have honestly repeated — the one conditional corner of the
-linear-algebra tower: <a
-href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
-defines the determinant of an endomorphism coordinate-freely,
-<code>det B f := detM (mat_of B B f)</code>, but its two headline
-consequences stood under an undischarged <code>Context</code>
-hypothesis: multiplicativity of <a
-href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>. Over ℚ,
-that hypothesis is now discharged, and the conditional theorems become
-theorems:</p>
-<pre class="coq"><code>Corollary det_comp_Q : forall (U : Type) (VU : VectorSpace Q U) (n : nat)
+<p>The same file proves the classical triangular fact on the way, which
+is worth having on its own:</p>
+<pre class="coq"><code>  Theorem det_upper_triangular : forall (n : nat) (A : Matrix n n F),
+    (forall i j : Fin.t n, (fin_to_nat j &lt; fin_to_nat i)%nat -&gt; A i j == 0) -&gt;
+    detM A == prodF (fun i =&gt; A i i).</code></pre>
+<p>The determinant of an upper-triangular matrix is the product of its
+diagonal, by induction: such a matrix has one possibly-nonzero entry in
+its first column, so the cofactor expansion collapses to a single term
+at each level.</p>
+<h2 id="route-two-a-determinant-is-the-only-thing-it-could-be">Route
+two: a determinant is the only thing it could be</h2>
+<p>The decidability hypothesis is an artifact of elimination, not of the
+theorem. The classical way to avoid it is the uniqueness argument: a
+function of the rows that is multilinear, alternating, and takes the
+value
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+at the identity matrix <em>is</em> the determinant — so to prove
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(A)\det(B)</annotation></semantics></math>,
+fix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+and observe that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>↦</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">A \mapsto
+\det(AB)</annotation></semantics></math> is multilinear and alternating
+in the rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
+hence equal to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(A)</annotation></semantics></math>
+times its own value at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mi>I</mi></mrow><annotation encoding="application/x-tex">A = I</annotation></semantics></math>.</p>
+<p>Carried out in <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html"><code>Impl/DetMulGeneral.v</code></a>,
+that argument has three pieces.</p>
+<p><strong>Antisymmetry, abstractly.</strong> Row swaps negate any
+function that is row-additive and alternating — not just the
+determinant. The proof is the classical
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>r</mi><mi>i</mi></msub><mo>+</mo><msub><mi>r</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(r_i + r_j)</annotation></semantics></math>
+trick: set <em>both</em> rows
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mi>i</mi></msub><mo>+</mo><msub><mi>r</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">r_i + r_j</annotation></semantics></math>,
+which is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+by alternating, and expand that same value by additivity in row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and then in row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>;
+two of the four cross terms vanish by alternating, and the remaining two
+are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(A)</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>,</mo><mi>j</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> swapped</mtext></mrow><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(A \text{ with } i, j \text{ swapped})</annotation></semantics></math>.</p>
+<pre class="coq"><code>  Theorem g_swap_antisym : forall (n:nat) (g : Matrix n n F -&gt; F),
+    Proper (equ ==&gt; equ) g -&gt;
+    (forall (i:Fin.t n)(A:Matrix n n F)(r1 r2:Fin.t n-&gt;F),
+       g (upd_row A i (fun k=&gt;r1 k+r2 k)) == g(upd_row A i r1)+g(upd_row A i r2)) -&gt;
+    (forall (A:Matrix n n F)(i j:Fin.t n), i&lt;&gt;j -&gt; (forall c, A i c==A j c) -&gt; g A == 0) -&gt;
+    forall (A:Matrix n n F)(i j:Fin.t n), i&lt;&gt;j -&gt; g (row_swap A i j) == - g A.</code></pre>
+<p>No characteristic assumption, no homogeneity, no permutation
+combinatorics — pure algebra, proved once and instantiated twice
+below.</p>
+<p><strong>Expansion over all row assignments.</strong> Write each row
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+as a combination of standard basis rows and use multilinearity once per
+row. What comes out is a sum over <em>all</em> functions from row
+indices to column indices — <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#fsum"><code>fsum</code></a>,
+not a sum over permutations, so there is no injectivity bookkeeping:</p>
+<pre class="coq"><code>  Theorem row_expand : forall (n p : nat) (g : Matrix p n F -&gt; F),
+    Proper (equ ==&gt; equ) g -&gt;
+    (forall (i:Fin.t p)(A:Matrix p n F)(r1 r2:Fin.t n-&gt;F),
+       g (upd_rowP A i (fun k=&gt;r1 k+r2 k)) == g(upd_rowP A i r1)+g(upd_rowP A i r2)) -&gt;
+    (forall (i:Fin.t p)(A:Matrix p n F)(c:F)(r0:Fin.t n-&gt;F),
+       g (upd_rowP A i (fun k=&gt;c*r0 k)) == c*g(upd_rowP A i r0)) -&gt;
+    forall A : Matrix p n F,
+    g A == fsum n p (fun f : Fin.t p -&gt; Fin.t n =&gt;
+      prodF (fun i : Fin.t p =&gt; A i (f i)) * g (basis_rowsP f)).</code></pre>
+<p><a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
+satisfies the same hypotheses, so the same expansion applies to it.
+Matching the two term by term reduces everything to one question: what
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+at a matrix whose rows are basis rows?</p>
+<p><strong>The termwise comparison.</strong> For every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+— injective or not —
+<code>g (basis_rowsP f) == g mat_id * detM (basis_rowsP f)</code>, by
+strong induction on how many positions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+moves. If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+takes the same value twice, two rows of <code>basis_rowsP f</code> are
+literally equal and both sides are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+outright. Otherwise pick a position
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+moves; precomposing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+with the transposition of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(p)</annotation></semantics></math>
+turns <code>basis_rowsP f</code> into its own row swap and strictly
+decreases the count of moved positions, so antisymmetry applied to both
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+and <a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>,
+plus the induction hypothesis, closes the step.</p>
+<p>The measure argument needs to decide equality of <em>indices</em>,
+which is always available — <code>Fin.t n</code> has decidable equality
+for every <code>n</code> — and never equality of field elements. That is
+the whole difference from route one.</p>
+<p>Putting the three together gives the uniqueness statement — any
+row-multilinear alternating
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
+is <a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
+scaled by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>’s
+own value at the identity:</p>
+<pre class="coq"><code>  Theorem g_row_expand_eq : forall (N:nat) (g : Matrix N N F -&gt; F),
+    Proper (equ ==&gt; equ) g -&gt;
+    (forall (i:Fin.t N)(A:Matrix N N F)(r1 r2:Fin.t N-&gt;F),
+       g (upd_row A i (fun k=&gt;r1 k+r2 k)) == g(upd_row A i r1)+g(upd_row A i r2)) -&gt;
+    (forall (i:Fin.t N)(A:Matrix N N F)(c:F)(r0:Fin.t N-&gt;F),
+       g (upd_row A i (fun k=&gt;c*r0 k)) == c*g(upd_row A i r0)) -&gt;
+    (forall (A:Matrix N N F)(i j:Fin.t N), i&lt;&gt;j -&gt; (forall c, A i c==A j c) -&gt; g A == 0) -&gt;
+    forall A : Matrix N N F, g A == g mat_id * detM A.</code></pre>
+<p>Applying it to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>:=</mo><mi>A</mi><mo>↦</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g := A \mapsto \det(AB)</annotation></semantics></math>
+gives the theorem.</p>
+<pre class="coq"><code>  Theorem detM_mul : forall (N:nat)(A B:Matrix N N F), detM (mat_mul A B) == detM A * detM B.
+  Proof.
+    intros N A B.
+    destruct N as [| p0].
+    - rewrite (detM_0 (mat_mul A B)), (detM_0 A), (detM_0 B).
+      ring.
+    - assert (Hg := g_row_expand_eq (S p0) (g_mulB B) (g_mulB_proper (S p0) B)
+                 (fun i A&#39; r1 r2 =&gt; g_mulB_add (S p0) p0 eq_refl B i A&#39; r1 r2)
+                 (fun i A&#39; c r0 =&gt; g_mulB_scale (S p0) p0 eq_refl B i A&#39; c r0)
+                 (g_mulB_alt (S p0) B) A).
+      unfold g_mulB in Hg.
+      calc (detM (mat_mul A B))
+        == (detM (mat_mul mat_id B) * detM A)
+        == (detM A * detM (mat_mul mat_id B))
+        == (detM A * detM B).
+      + exact Hg.
+      + exact (mul_comm (detM (mat_mul mat_id B)) (detM A)).
+      + apply Magma.op_proper; [reflexivity |].
+        apply detM_proper. exact (mat_mul_left_identity (S p0) (S p0) B).
+  Qed.</code></pre>
+<p>The empty matrix is handled separately because its determinant is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+by definition: <a
+href="coqdoc/Riktig.Impl.Det.html#detM_0"><code>detM_0</code></a>
+rewrites all three determinants to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>,
+leaving
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>=</mo><mn>1</mn><mo>⋅</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">1 = 1 \cdot 1</annotation></semantics></math>,
+and <code class="nolink">ring</code> — Coq’s decision procedure for
+polynomial identities in a commutative ring — closes that without anyone
+having to name the unit law. Otherwise <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_row_expand_eq"><code>g_row_expand_eq</code></a>
+is instantiated at <code>g_mulB B</code>, which is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>↦</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">A \mapsto \det(AB)</annotation></semantics></math>
+packaged with its three proofs. The two linearity ones come from <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#mat_mul_upd_row"><code>mat_mul_upd_row</code></a>
+— row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">AB</annotation></semantics></math>
+reads only row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
+linearly, through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+— composed with <a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>
+and <a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>.
+The alternating one is <a
+href="coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>
+again: equal rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+force equal rows of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">AB</annotation></semantics></math>.
+The uniqueness statement then reads
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(IB)\det(A)</annotation></semantics></math>,
+and the last two links are commutativity and dropping the identity
+factor.</p>
+<p>No decidability, no characteristic assumption, any size, any
+field.</p>
+<h2 id="what-it-buys">What it buys</h2>
+<p>The coordinate-free determinant of an endomorphism,
+<code>det B f := detM (mat_of B B f)</code>, lives in <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>.
+Two of its theorems — that it is multiplicative under composition, and
+that it does not depend on the basis — are stated there under a named
+local hypothesis rather than proved, because matrix multiplicativity is
+not in scope at that point in the development:</p>
+<pre class="coq"><code>  Context (detM_mul : forall (m : nat) (A A&#39; : Matrix m m F),
+    detM (mat_mul A A&#39;) == detM A * detM A&#39;).</code></pre>
+<p>That is a parameter, not an axiom: every caller of <a
+href="coqdoc/Riktig.Theory.Determinant.html#det_comp"><code>det_comp</code></a>
+or <a
+href="coqdoc/Riktig.Theory.Determinant.html#det_basis_independent"><code>det_basis_independent</code></a>
+must hand it over. <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
+above hands it over for any field, so those two theorems hold
+unconditionally wherever it is in scope. <a
+href="coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a>
+also records the rational instances explicitly, discharged through the
+elimination route:</p>
+<pre class="coq"><code>Corollary det_comp_Q : forall (U : Type)
+    (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
+    (sU : HasScale Q U) (VU : VectorSpace Q U) (n : nat)
     (B : Basis n Q U) (f g : LinearMap Q U U),
   det B (linear_map_comp f g) == det B f * det B g.
 
-Corollary det_basis_indep_Q : forall (U : Type) (VU : VectorSpace Q U)
+Corollary det_basis_indep_Q : forall (U : Type)
+    (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
+    (sU : HasScale Q U) (VU : VectorSpace Q U)
     (n : nat) (B B&#39; : Basis n Q U) (f : LinearMap Q U U),
   det B&#39; f == det B f.</code></pre>
-<p>The determinant of a linear map on any ℚ-vector space, read through
-any basis, is multiplicative under composition and does not depend on
-the basis. That is the coordinate-free statement this whole thread was
-for.</p>
-<h2 id="checked-on-actual-numbers">Checked on actual numbers</h2>
-<p>As always, the theorems are also run. With the house-standard
-nonsingular matrix <code>[[1,2,3],[4,5,6],[7,8,10]]</code> (determinant
-−3) and a second matrix with determinant 5, both sides of the product
-law are evaluated <em>independently</em> by <code>reflexivity</code> —
-<code>detM (A·B)</code> computes to −15, <code>detM A * detM B</code>
-computes to −15 — before the theorem is applied to the same instance as
-a resolution check. The triangular fact gets its own evaluation:
-diagonal 2, 3, 4, determinant 24.</p>
-<h2 id="what-was-proved-plainly-and-what-remains">What was proved,
-plainly — and what remains</h2>
-<ul>
-<li><code>detM (A·B) == detM A · detM B</code> for every field with
-decidable equality (<a
-href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>),
-unconditionally over ℚ (<a
-href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_Q"><code>detM_mul_Q</code></a>),
-with <a
-href="coqdoc/Riktig.Impl.DetMul.html#det_comp_Q"><code>det_comp_Q</code></a>
-and <a
-href="coqdoc/Riktig.Impl.DetMul.html#det_basis_indep_Q"><code>det_basis_indep_Q</code></a>
-as the coordinate-free payoff. Zero <code>Admitted</code>, zero
-<code>Axiom</code>, characteristic-free throughout.</li>
-<li>Unconditional supporting theorems for any field: <a
-href="coqdoc/Riktig.Impl.DetMul.html#det_zero_row"><code>det_zero_row</code></a>,
-<a
-href="coqdoc/Riktig.Impl.DetMul.html#mat_mul_zero_row"><code>mat_mul_zero_row</code></a>,
-<a
-href="coqdoc/Riktig.Impl.DetMul.html#det_upper_triangular"><code>det_upper_triangular</code></a>,
-and the proof-carrying elementary-operation layer with its factor
-calculus.</li>
-<li>What remains, honestly: <a
-href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
-<em>without</em> <a
-href="coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a> —
-the candidate route is a Leibniz/Cauchy–Binet-style expansion of
-<code>detM (A·B)</code>, where the only case analysis is injectivity of
-maps on <code>Fin n</code>, decidable for free. <a
-href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>’s
-<code>Context</code> hypothesis deliberately stays as the interface
-until that strengthening exists; it is now known to be dischargeable for
-every concrete field this repository uses.</li>
-</ul>
-<p><em>Next: the unconditional strengthening, or <a
-href="coqdoc/Riktig.Interface.Determinant.html"><code>Interface/Determinant.v</code></a>
-— the abstract spec this seven-attempt thread has effectively written
-the contents of.</em></p>
+<h2 id="on-numbers">On numbers</h2>
+<p>The product law is also run. With the matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>4</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>5</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>6</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>8</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>10</mn></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{smallmatrix}1&amp;2&amp;3\\4&amp;5&amp;6\\7&amp;8&amp;10\end{smallmatrix}</annotation></semantics></math>,
+determinant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">-3</annotation></semantics></math>,
+and a second matrix of determinant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>5</mn><annotation encoding="application/x-tex">5</annotation></semantics></math>,
+both sides are evaluated independently by conversion before the theorem
+is applied to the same instance:</p>
+<pre class="coq"><code>Example detM_mulGeneral_Q_compute_lhs :
+  detM (mat_mul mat3_ns_g mat3_b_g) == ((-15)#1)%Q.
+Proof. reflexivity. Qed.
+
+Example detM_mulGeneral_Q_compute_rhs :
+  detM mat3_ns_g * detM mat3_b_g == ((-15)#1)%Q.
+Proof. reflexivity. Qed.</code></pre>
+<p>Two computations that know nothing about each other land on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>15</mn></mrow><annotation encoding="application/x-tex">-15</annotation></semantics></math>.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a> (<a
-href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>,
+href="coqdoc/Riktig.Impl.DetMulGeneral.html"><code>Impl/DetMulGeneral.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_swap_antisym"><code>g_swap_antisym</code></a>,
 <a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#fsum"><code>fsum</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#row_expand"><code>row_expand</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#basis_rows_g_eq_detM"><code>basis_rows_g_eq_detM</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_row_expand_eq"><code>g_row_expand_eq</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a> (<a
+href="coqdoc/Riktig.Impl.DetMul.html#ElemOp"><code>ElemOp</code></a>, <a
 href="coqdoc/Riktig.Impl.DetMul.html#gauss_reduce"><code>gauss_reduce</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>,
 <a
 href="coqdoc/Riktig.Impl.DetMul.html#det_upper_triangular"><code>det_upper_triangular</code></a>,
 <a
@@ -198,11 +412,20 @@ href="coqdoc/Riktig.Impl.DetMul.html#det_comp_Q"><code>det_comp_Q</code></a>,
 href="coqdoc/Riktig.Impl.DetMul.html#det_basis_indep_Q"><code>det_basis_indep_Q</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.DetAlternating.html"><code>Impl/DetAlternating.v</code></a>
-/ <a
-href="coqdoc/Riktig.Impl.DetSignGeneral.html"><code>Impl/DetSignGeneral.v</code></a>
-(the ingredients) · <a
+(<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_add"><code>det_rowI_add</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_scale</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
-(the coordinate-free determinant).</p>
+(<a
+href="coqdoc/Riktig.Theory.Determinant.html#det"><code>det</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Determinant.html#det_comp"><code>det_comp</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Determinant.html#det_basis_independent"><code>det_basis_independent</code></a>).</p>
 </main>
 </body>
 </html>

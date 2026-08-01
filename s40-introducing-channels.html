@@ -12,22 +12,15 @@
 <h1
 id="introducing-channels-possibilistic-not-probabilistic">Introducing
 channels: possibilistic, not probabilistic</h1>
-<p><em>Fifteenth post documenting the <strong>riktig</strong> project,
-and the proper opening of a new thread: communication channels, the
-telecom leg of the work. Every post starts from zero, so does this
-one.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. So far the project has proved things about
-numbers, vector spaces, and programs. Today it starts proving things
-about <strong>wires</strong> — the physical or logical links that carry
-messages between machines, and that lose them, duplicate them, and
-reorder them, because that is simply what real networks do. The goal is
-the same as everywhere else in riktig: state the honest general fact,
-prove it, and let real protocols (TCP’s retransmission logic, QUIC’s
-per-stream reliability) inherit it instead of re-deriving it by hand
-each time.</p>
-</blockquote>
+<p>A wire between two machines loses messages, duplicates them, and
+reorders them, because that is what real networks do. Before any
+protocol can be proved correct over such a wire, “such a wire” has to be
+written down as mathematics. This post writes it down one way — a
+channel is a <em>relation</em> between the list of messages sent and the
+list that arrived, so a fault class is a set of possible outcomes rather
+than a probability — and shows the four fault classes that fall out
+(loss, duplication, both together, reordering), how they nest, and how
+one proves that a nesting arrow is genuinely missing.</p>
 <h2 id="the-modeling-decision-that-shapes-everything-downstream">The
 modeling decision that shapes everything downstream</h2>
 <p>Ask an engineer to describe a lossy channel and they’ll usually reach
@@ -39,13 +32,13 @@ how often to worry about it. Worse, reasoning about probabilities forces
 you to pick a probability <em>space</em> — independence assumptions,
 distributions — baggage a correctness argument shouldn’t need to
 carry.</p>
-<p>riktig makes a different choice, and it’s the choice this whole
-thread is built on: <strong>a channel is a relation between what was
-sent and what arrived.</strong> Not a number, not a distribution — a set
-of possible outcomes. “This channel might deliver the messages
-untouched, or drop some, or duplicate some, or all three” is captured
-completely by <em>which pairs (sent, received) the relation
-contains</em> — no probabilities anywhere.</p>
+<p>So take the other choice, the one everything below is built on:
+<strong>a channel is a relation between what was sent and what
+arrived.</strong> Not a number, not a distribution — a set of possible
+outcomes. “This channel might deliver the messages untouched, or drop
+some, or duplicate some, or all three” is captured completely by
+<em>which pairs (sent, received) the relation contains</em> — no
+probabilities anywhere.</p>
 <p>This buys two things, and they’re the two things a communications
 engineer actually wants:</p>
 <ul>
@@ -58,29 +51,34 @@ handles it when it occurs.</li>
 “Everything sent is eventually delivered” genuinely cannot be
 unconditional — a channel that eats every packet forever really does
 deliver nothing. So liveness proofs state exactly the assumption they
-need (a <em>fairness</em> condition — future posts), and probability, if
-it ever shows up again, only enters to <em>justify</em> that the
-fairness assumption holds in practice. It never touches the correctness
-argument itself.</li>
+need (a <em>fairness</em> condition), and probability, if it ever shows
+up again, only enters to <em>justify</em> that the fairness assumption
+holds in practice. It never touches the correctness argument
+itself.</li>
 </ul>
 <h2 id="the-fault-classes-as-relations-on-lists">The fault classes, as
 relations on lists</h2>
 <p>A conversation is a list of messages. In <a
 href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
-every fault class is an inductively-defined relation between the sent
-list and the received list — literally a specification of which
-transformations the channel is allowed to perform.</p>
+every fault class is a relation between the sent list and the received
+list — literally a specification of which transformations the channel is
+allowed to perform.</p>
 <p><strong>Perfect</strong> — the trivial case, everything arrives
 exactly as sent:</p>
 <pre class="coq"><code>Definition perfect s r : Prop := r = s.</code></pre>
 <p><strong>Lossy</strong> — the received list is a <em>subsequence</em>
-of the sent one (elements kept in order, some dropped):</p>
-<pre class="coq"><code>Inductive subseq : list M -&gt; list M -&gt; Prop :=
-  | subseq_nil  : subseq [] []
+of the sent one (elements kept in order, some dropped). The subsequence
+relation is ordinary list theory with no channel content of its own, so
+it is defined on its own, over an arbitrary element type, in <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>:</p>
+<pre class="coq"><code>Inductive subseq : list A -&gt; list A -&gt; Prop :=
+  | subseq_nil : subseq [] []
   | subseq_keep : forall x r s, subseq r s -&gt; subseq (x :: r) (x :: s)
-  | subseq_drop : forall x r s, subseq r s -&gt; subseq r (x :: s).
-
-Definition lossy s r : Prop := subseq r s.</code></pre>
+  | subseq_drop : forall x r s, subseq r s -&gt; subseq r (x :: s).</code></pre>
+<p>and the fault class is that relation, with the arguments the other
+way round, since a channel is written <code>(sent, received)</code> and
+a subsequence is written <code>(sub, super)</code>:</p>
+<pre class="coq"><code>Definition lossy s r : Prop := subseq r s.</code></pre>
 <p>Read the three constructors as the three things a lossy wire can do
 at each step: deliver nothing more (<code>nil</code>), deliver the next
 message and continue (<code>keep</code>), or silently swallow the next
@@ -92,17 +90,20 @@ probability, just which sequences of keep/drop are
 order, to a sent element, but a sent element may show up more than
 once:</p>
 <pre class="coq"><code>Inductive dup : list M -&gt; list M -&gt; Prop :=
-  | dup_nil     : dup [] []
-  | dup_keep    : forall x s r, dup s r -&gt; dup (x :: s) (x :: r)
+  | dup_nil : dup [] []
+  | dup_keep : forall x s r, dup s r -&gt; dup (x :: s) (x :: r)
   | dup_stutter : forall x s r, dup s (x :: r) -&gt; dup s (x :: x :: r).</code></pre>
 <p><strong>Lossy and duplicating together</strong> — the wire a real
 retransmission protocol actually faces, combining <code>drop</code> and
 <code>stutter</code>:</p>
 <pre class="coq"><code>Inductive lossy_dup : list M -&gt; list M -&gt; Prop :=
-  | lossy_dup_nil     : lossy_dup [] []
-  | lossy_dup_keep    : forall x s r, lossy_dup s r -&gt; lossy_dup (x :: s) (x :: r)
-  | lossy_dup_drop    : forall x s r, lossy_dup s r -&gt; lossy_dup (x :: s) r
-  | lossy_dup_stutter : forall x s r, lossy_dup s (x :: r) -&gt; lossy_dup s (x :: x :: r).</code></pre>
+  | lossy_dup_nil : lossy_dup [] []
+  | lossy_dup_keep : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) (x :: r)
+  | lossy_dup_drop : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) r
+  | lossy_dup_stutter : forall x s r,
+      lossy_dup s (x :: r) -&gt; lossy_dup s (x :: x :: r).</code></pre>
 <p><strong>Reordering</strong> — no need to invent anything; this is
 exactly the standard library’s <code>Permutation</code>, wearing the
 domain’s name:</p>
@@ -111,14 +112,46 @@ domain’s name:</p>
 and the arrows that are genuinely missing</h2>
 <p>These classes aren’t independent — they nest. Every perfect run is
 also a lossy run (drop nothing); every lossy run and every duplicating
-run is also a lossy-and-duplicating run. The file proves the whole
-inclusion lattice as small lemmas — <a
-href="coqdoc/Riktig.Channel.Trace.html#perfect_lossy"><code>perfect_lossy</code></a>,
-<a
-href="coqdoc/Riktig.Channel.Trace.html#lossy_lossy_dup"><code>lossy_lossy_dup</code></a>,
-<a
+run is also a lossy-and-duplicating run. Each inclusion is its own
+lemma. Here is the first one in full — <code>perfect s r</code> says
+<code>r = s</code>, so rewriting by it turns the goal
+<code>subseq r s</code> into <code>subseq r r</code>, which is
+reflexivity of the subsequence relation:</p>
+<pre class="coq"><code>Lemma perfect_lossy : forall s r, perfect s r -&gt; lossy s r.
+Proof.
+  intros s r H. destruct H. exact (subseq_refl r).
+Qed.</code></pre>
+<p><code>destruct H</code> is what does the rewriting:
+<code>H : r = s</code> is an equality, and destructing it replaces
+<code>s</code> by <code>r</code> everywhere. <a
+href="coqdoc/Riktig.Channel.Trace.html#perfect_reorder"><code>perfect_reorder</code></a>
+is the same two lines with <code>Permutation_refl</code> in place of <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_refl"><code>subseq_refl</code></a>.
+The two inclusions into <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
+are inductions on the incoming derivation that rename one constructor to
+its counterpart: <a
+href="coqdoc/Riktig.Channel.Trace.html#subseq_lossy_dup"><code>subseq_lossy_dup</code></a>
+sends <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_keep"><code>subseq_keep</code></a>
+to <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_keep"><code>lossy_dup_keep</code></a>
+and <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_drop"><code>subseq_drop</code></a>
+to <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_drop"><code>lossy_dup_drop</code></a>
+(and <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_lossy_dup"><code>lossy_lossy_dup</code></a>
+is that lemma verbatim, since <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy"><code>lossy</code></a>
+<em>is</em> <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
+with its arguments swapped), and <a
 href="coqdoc/Riktig.Channel.Trace.html#dup_lossy_dup"><code>dup_lossy_dup</code></a>
-— each a short induction, each doing exactly what its name says.</p>
+sends <a
+href="coqdoc/Riktig.Channel.Trace.html#dup_stutter"><code>dup_stutter</code></a>
+to <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_stutter"><code>lossy_dup_stutter</code></a>.</p>
 <p>The more interesting proofs are the ones showing an arrow is
 <strong>genuinely absent</strong> — that the lattice isn’t secretly a
 total order in disguise. Reordering is not a special case of
@@ -138,19 +171,15 @@ href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
 really is a distinct, weaker notion than <a
 href="coqdoc/Riktig.Channel.Trace.html#reorder"><code>reorder</code></a>,
 not an accident of how the lemmas happened to get proved.</p>
-<h2 id="what-this-sets-up">What this sets up</h2>
-<p>Every one of these relations is now available as a hypothesis. A
-protocol’s safety theorem will read almost exactly like “for any
+<h2 id="using-a-fault-class-as-a-hypothesis">Using a fault class as a
+hypothesis</h2>
+<p>Each of these relations is a statement a theorem can assume. A
+protocol’s safety theorem then reads almost exactly like “for any
 <code>wire</code> such that
 <code>lossy_dup (sender's packets) wire</code>, the receiver never
 delivers anything corrupted” — a single <code>forall</code> over every
-possible bad thing the wire could do, proved once, holding forever. That
-is genuinely the whole plan for the rest of this thread: define what a
-channel is allowed to do, and let every protocol’s correctness proof be
-a statement about <em>all</em> the things in that set at once.</p>
-<p><em>Next: protocol endpoints as state machines, composed through a
-channel relation into one end-to-end trace — and then the first real
-payoff, the alternating-bit protocol’s safety theorem.</em></p>
+possible bad thing the wire could do, proved once for all of them at
+once, rather than one argument per failure scenario.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>

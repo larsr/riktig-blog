@@ -26,63 +26,57 @@ composition</h2>
 some other effect). It comes with two operations: <code>ret x</code>
 produces the value <code>x</code> with no effect, and
 <code>bind m f</code> — written <code>m &gt;&gt;= f</code> — runs
-<code>m</code>, and if it produced a value, hands that value to <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> to get
-the next computation. Throughout, <code>==</code> is a setoid equality:
-a chosen equivalence relation, one per result type, that every operation
-must respect. For the <code>option</code> monad it is simple —
-<code>Some a == Some b</code> holds exactly when <code>a = b</code>.</p>
+<code>m</code>, and if it produced a value, hands that value to
+<code>f</code> to get the next computation. Throughout, <code>==</code>
+is a setoid equality: a chosen equivalence relation, one per result
+type, that every operation must respect. For the <code>option</code>
+monad it is simple — <code>Some a == Some b</code> holds exactly when
+<code>a = b</code>.</p>
 <p>An ordinary function composes with <code>∘</code>: given
 <code>f : A -&gt; B</code> and <code>g : B -&gt; C</code>, the composite
-<code>g ∘ f</code> feeds <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s
-output into <code>g</code>. When the functions are effectful — of the
-shape <code>A -&gt; M B</code> and <code>B -&gt; M C</code>, each
-returning a value <em>inside</em> the monad <code>M</code> — plain
-<code>∘</code> no longer type-checks: <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>’s
-output is an <code>M B</code>, but <code>g</code> wants a <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>.
-Kleisli composition is the fix. It runs <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>, then
-<a href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s
+<code>g ∘ f</code> feeds <code>f</code>’s output into <code>g</code>.
+When the functions are effectful — of the shape <code>A -&gt; M B</code>
+and <code>B -&gt; M C</code>, each returning a value <em>inside</em> the
+monad <code>M</code> — plain <code>∘</code> no longer type-checks:
+<code>f</code>’s output is an <code>M B</code>, but <code>g</code> wants
+a <code>B</code>. Kleisli composition is the fix. It runs
+<code>f</code>, then <a
+href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s
 its value into <code>g</code>, threading the monad through:</p>
 <pre class="coq"><code>Notation &quot;f &gt;=&gt; g&quot; := (fun x =&gt; bind (f x) g) (at level 55, right associativity).</code></pre>
 <p>So <code>(f &gt;=&gt; g) x</code> is <code>f x &gt;&gt;= g</code>:
-run <a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
-on <code>x</code>, and pipe the result into <code>g</code>. This is
-<code>∘</code> for functions that live in a monad, and it is what lets
-us write a pipeline of effectful steps as one arrow.</p>
+run <code>f</code> on <code>x</code>, and pipe the result into
+<code>g</code>. This is <code>∘</code> for functions that live in a
+monad, and it is what lets us write a pipeline of effectful steps as one
+arrow.</p>
 <h2 id="a-kleisli-isomorphism-a-round-trip-that-lands-on-ret">A Kleisli
 isomorphism: a round trip that lands on <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a></h2>
 <p>The channel we want to insert is a matched encode/decode pair.
-Encoding turns a <a
-href="coqdoc/Riktig.Programs.Memprog.Syntax.html#B"><code>B</code></a>
-into some wire representation <code>B'</code>, decoding turns it back;
-both are effectful, so encoding is a Kleisli arrow
-<code>B -&gt; M B'</code> and decoding is <code>B' -&gt; M B</code>. For
-the pair to be a lossless round trip, going one way and back must return
-the original value with no effect — that is, must equal <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>.
-Bundling the two arrows with the two round-trip laws gives a record:</p>
-<pre class="coq"><code>Record KleisliIso (M : Type -&gt; Type) `{Monad.Monad M} (A B : Type) := {
-  ki_to : A -&gt; M B;
-  ki_from : B -&gt; M A;
-  ki_fromto : forall a : A, bind (ki_to a) ki_from == ret a;
-  ki_tofrom : forall b : B, bind (ki_from b) ki_to == ret b
-}.</code></pre>
+Encoding turns a <code>B</code> into some wire representation
+<code>B'</code>, decoding turns it back; both are effectful, so encoding
+is a Kleisli arrow <code>B -&gt; M B'</code> and decoding is
+<code>B' -&gt; M B</code>. For the pair to be a lossless round trip,
+going one way and back must return the original value with no effect —
+that is, must equal <a
+href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>.</p>
+<p>Being a lossless round trip is a property of the <em>pair</em> of
+arrows, so it is stated about the pair, as a typeclass with two fields —
+one per direction:</p>
+<pre class="coq"><code>Module KleisliInverse.
+  Class KleisliInverse {M : Type -&gt; Type} `{Monad M} {A B : Type}
+      (f : A -&gt; M B) (g : B -&gt; M A) := {
+    from_to : forall a : A, bind (f a) g == ret a;
+    to_from : forall b : B, bind (g b) f == ret b;
+  }.
+End KleisliInverse.
+Notation KleisliInverse := KleisliInverse.KleisliInverse.</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>
-is the forward arrow and <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
-the backward one. The law <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_fromto"><code>ki_fromto</code></a>
-says: encode any <code>a</code>, then bind the result through <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
-to decode it, and you are back to <code>ret a</code> — the original
-value, no effect left over. <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_tofrom"><code>ki_tofrom</code></a>
+href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.from_to"><code>KleisliInverse.from_to</code></a>
+says: encode any <code>a</code>, then bind the result through
+<code>g</code> to decode it, and you are back to <code>ret a</code> —
+the original value, no effect left over. <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.to_from"><code>KleisliInverse.to_from</code></a>
 is the same round trip started from the other side. These two
 <code>bind ... == ret ...</code> equations are the entire content of
 “lossless.” (The round trips land on <a
@@ -91,6 +85,34 @@ on the raw identity function, because in a monad the identity for <a
 href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> is
 <a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>,
 not <code>fun x =&gt; x</code>.)</p>
+<p>A codec is then a record holding the two arrows plus one instance of
+that class about them:</p>
+<pre class="coq"><code>Record KleisliIso (M : Type -&gt; Type) `{Monad M} (A B : Type) := {
+  ki_to : A -&gt; M B;
+  ki_from : B -&gt; M A;
+  ki_inverse :: KleisliInverse ki_to ki_from;
+}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>
+is the forward arrow and <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
+the backward one. The <code>::</code> on the third field declares it as
+a typeclass instance rather than a plain projection, so from any <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+in scope Coq can find the round-trip laws for its two arrows by instance
+search, without being handed the record by name.</p>
+<p>The two laws also get direct names, so that a caller who does hold
+the record can apply either one to a value:</p>
+<pre class="coq"><code>Definition ki_fromto (k : KleisliIso M A B)
+  : forall a : A, bind (ki_to k a) (ki_from k) == ret a :=
+  KleisliInverse.from_to (f := ki_to k) (g := ki_from k).
+
+Definition ki_tofrom (k : KleisliIso M A B)
+  : forall b : B, bind (ki_from k b) (ki_to k) == ret b :=
+  KleisliInverse.to_from (f := ki_to k) (g := ki_from k).</code></pre>
+<p>Each is the corresponding class field with the two arrows read off
+the record — no proof content of its own, just the law under the name
+the proofs below use.</p>
 <h2 id="the-theorem-the-channel-is-transparent">The theorem: the channel
 is transparent</h2>
 <p>Now the claim. Take two programs <code>prog1 : A -&gt; M B</code> and
@@ -246,19 +268,19 @@ Proof.
 Qed.</code></pre>
 <p>Each proof unfolds the <code>option</code> bind and its equality,
 then rewrites by the matching cancellation law; the two sides become
-identical. Packaging the arrows and laws into the record gives the
-channel:</p>
+identical. The builder <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#kleisli_iso_from_laws"><code>kleisli_iso_from_laws</code></a>
+takes the two arrows and the two laws in that order and assembles the
+record and its instance field, which is how the channel is packaged:</p>
 <pre class="coq"><code>Definition nat_pair_codec : KleisliIso option (nat * nat) nat :=
-  {| ki_to := fun p : nat * nat =&gt; Some (to_nat p);
-     ki_from := fun n : nat =&gt; Some (of_nat n);
-     ki_fromto := nat_pair_fromto;
-     ki_tofrom := nat_pair_tofrom |}.</code></pre>
-<p><a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>
-sends a pair to its single-<code>nat</code> “wire format,” <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
-reads it back. Now two toy programs to sit on either side of it — one
-producing a pair, one consuming it:</p>
+  kleisli_iso_from_laws
+    (fun p : nat * nat =&gt; Some (to_nat p))
+    (fun n : nat =&gt; Some (of_nat n))
+    nat_pair_fromto
+    nat_pair_tofrom.</code></pre>
+<p>The forward arrow sends a pair to its single-<code>nat</code> “wire
+format,” the backward one reads it back. Now two toy programs to sit on
+either side of it — one producing a pair, one consuming it:</p>
 <pre class="coq"><code>Definition split_n (n : nat) : option (nat * nat) := Some (n, n).
 Definition sum_pair (p : nat * nat) : option nat := Some (Nat.add (fst p) (snd p)).</code></pre>
 <p><a
@@ -287,8 +309,12 @@ equality.</em></p>
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
 (the <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.KleisliInverse"><code>KleisliInverse</code></a>
+class, the <a
 href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
 record, <a
+href="coqdoc/Riktig.Theory.KleisliIso.html#kleisli_iso_from_laws"><code>kleisli_iso_from_laws</code></a>,
+<a
 href="coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>,
 <a
 href="coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion"><code>channel_insertion</code></a>,

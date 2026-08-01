@@ -163,11 +163,11 @@ recoverable by prepending the exact prefix that was consumed. The file
 states this once, as a property of parsers in general, rather than a
 proof about any one of them:</p>
 <pre class="coq"><code>(* &quot;Whenever this parser succeeds, the leftover really is a suffix of
-   the input&quot; — witnessed concretely by the consumed prefix. This is
-   the general form of &quot;satisfy/many/etc. succeed, the leftover
-   suffix really is a suffix of the original input&quot; from the task
-   description, stated once and composed through bind/ret/alt instead
-   of re-derived combinator by combinator. *)
+   the input&quot; — witnessed concretely by the consumed prefix.  The
+   general form of &quot;satisfy/many/etc. succeed, and the leftover really
+   is a suffix of the original input&quot;, stated once and composed
+   through bind/ret/alt instead of re-derived combinator by
+   combinator. *)
 Definition ParserSound {T : Type} (p : Parser string T) : Prop :=
   forall s v s&#39;, p s = Some (v, s&#39;) -&gt; exists prefix, s = prefix ++ s&#39;.</code></pre>
 <p>This is the formal counterpart of “never claims a match on input it
@@ -513,13 +513,14 @@ text itself into structured data, then hands that data to <a
 href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>
 to build an actual parser function on the fly, and runs that parser on
 the input string — here, <code>"Host: example com"</code> followed by a
-line feed, standing in for one line of an HTTP request. No
-<code>parse_header</code> function was written by hand anywhere in this
-codebase; the grammar text above is the entire specification, and the
-proof that it produces the stated tree is <code>reflexivity</code> — Coq
-runs the whole pipeline (parse the grammar, build the parser, run it on
-the input) and checks the result against the literal value written
-down.</p>
+line feed, standing in for one line of an HTTP request. No function that
+reads a header line was written by hand anywhere — <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#test_grammar_header"><code>test_grammar_header</code></a>
+is a string, not code; the grammar text is the entire specification of
+the format, and the proof that it produces the stated tree is
+<code>reflexivity</code> — Coq runs the whole pipeline (parse the
+grammar, build the parser, run it on the input) and checks the result
+against the literal value written down.</p>
 <p>Read the output tree, and its shape says something worth noticing.
 <code>name</code> and <a
 href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a> are

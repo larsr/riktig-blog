@@ -11,52 +11,90 @@
 <main>
 <h1 id="matrix-multiplication-is-not-a-definition">Matrix multiplication
 is not a definition</h1>
-<p><em>Tenth post documenting the <strong>riktig</strong> project;
-second in the linear-algebra course thread of <a
-href="s08-vector-spaces-without-coordinates.html">the post on vector
-spaces without coordinates</a>, with proofs shown blackboard-style and
-as they live in the repository.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. The earlier post on linear maps as a
-vector space built the space of linear maps without ever mentioning
-coordinates. Today coordinates arrive — in their proper place. A matrix
-is not what a linear map <em>is</em>; it is how a linear map is
-<em>written down</em> once you choose bases. And the row-times-column
-rule you memorized is a <strong>theorem</strong>: matrix multiplication
-is function composition, transported along that choice.</p>
-</blockquote>
-<h2 id="the-carrier-costs-nothing">The carrier costs nothing</h2>
-<p>A matrix is a grid of scalars (<a
+<p>Everyone learns how to multiply two matrices before being told why
+that is the rule. You run along a row of the left grid and down a column
+of the right one, multiply the pairs you meet, and add them up:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>i</mi><mi>k</mi></mrow></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mspace width="0.167em"></mspace><msub><mi>B</mi><mrow><mi>j</mi><mi>k</mi></mrow></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">(AB)_{ik} \;=\; \sum_j A_{ij}\, B_{jk}.</annotation></semantics></math></p>
+<p>Adding two grids entry by entry is what anyone would guess. Doing
+<em>that</em> to multiply them is not, and “because it works” is not a
+reason.</p>
+<p>The rule does have a source, and the source is not about grids. A
+linear map is a function between vector spaces that respects addition
+and scaling; it exists before anyone writes down a number. Choosing a
+basis for the source space and one for the target lets you <em>write a
+map down</em>: each source basis vector has an image, that image has
+coordinates in the target basis, and stacking those coordinate columns
+side by side gives a grid. Composing two maps, meanwhile, is ordinary
+composition of functions and involves no grids at all.</p>
+<p>That leaves a question with one right answer. Which operation on
+grids makes the two agree — write down, then combine, versus compose,
+then write down? Answer it and the row-times-column rule stops being a
+convention to accept and becomes the only thing it could have been. What
+follows derives it, and then checks the derivation in Coq.</p>
+<h2 id="a-grid-of-scalars-costs-nothing">A grid of scalars costs
+nothing</h2>
+<p>A matrix is a function of two bounded indices — <code>Fin.t m</code>
+is the type with exactly <code>m</code> elements — into a field (<a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>):</p>
-<pre class="coq"><code>Definition Matrix (m n : nat) (F : Type) := Fin.t m -&gt; Fin.t n -&gt; F.</code></pre>
-<p>Functions into functions into a field — so by the pointwise
-construction from the earlier post on representations and isomorphisms,
-applied twice, matrices form a vector space with <em>zero new
-proofs</em>. Multiplication is the familiar sum,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>i</mi><mi>k</mi></mrow></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>B</mi><mrow><mi>j</mi><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\;(AB)_{ik} = \sum_j A_{ij} B_{jk}</annotation></semantics></math>,
-and its laws are finite-sum algebra: associativity is the interchange of
-a double sum
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mo>∑</mo><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mo>∑</mo><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i \sum_j = \sum_j \sum_i</annotation></semantics></math>
-— Fubini for finite sums, proved by induction in <a
-href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>),
-and the identity laws are the delta collapse from the earlier post
-introducing bases as coordinate isomorphisms. Square matrices form a
-<strong>ring</strong> — noncommutative, like <code>End V</code> from the
-earlier post on linear maps as a vector space. That’s no coincidence, as
-we’re about to see.</p>
+<pre class="coq"><code>Definition Matrix (m n : nat) (F : Type) : Type :=
+  Fin.t m -&gt; Fin.t n -&gt; F.</code></pre>
+<p>Functions into a vector space form a vector space under pointwise
+operations. Reading the definition above as functions into functions
+into the field, and the field as a one-dimensional space over itself,
+that construction applies twice and gives matrices their zero, their
+addition and their scalar multiplication for free. The file records the
+fact as a check that Coq’s instance search assembles the structure
+unaided, with nothing to prove:</p>
+<pre class="coq"><code>Example matrix_vs_check (F : Type) `{FF : Field F} (m n : nat) :
+  VectorSpace F (Matrix m n F) := _.</code></pre>
+<p>Multiplication is the familiar sum, written with <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>,
+the finite sum of a family indexed by <code>Fin.t n</code>:</p>
+<pre class="coq"><code>Definition mat_mul {m n p : nat} (A : Matrix m n F) (B : Matrix n p F)
+    : Matrix m p F :=
+  fun i k =&gt; bigopF (fun j =&gt; A i j * B j k).</code></pre>
+<p>Its laws are all finite-sum bookkeeping. <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+is one application of <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>,
+the interchange
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mo>∑</mo><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mo>∑</mo><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i \sum_j = \sum_j \sum_i</annotation></semantics></math>
+for finite sums, proved by induction in <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>;
+the unit laws <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
+and <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_right_identity"><code>mat_mul_right_identity</code></a>
+are the standard-basis delta collapse, since <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a> is
+defined to be that delta. Square matrices therefore form a ring, <a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix_Ring"><code>Matrix_Ring</code></a>
+— noncommutative, exactly as the ring of linear maps from a space to
+itself is. That the two rings match is not a coincidence, and the next
+two sections are why.</p>
 <h2 id="writing-a-map-down">Writing a map down</h2>
-<p>Fix a basis
+<p>A basis, here, is not a list of vectors but a coordinate system. A
+<code>Basis n F V</code> bundles a family <a
+href="coqdoc/Riktig.Interface.Basis.html#basis_vec"><code>basis_vec</code></a>
+of <code>n</code> vectors in <code>V</code> with a <em>linear map</em>
+<a
+href="coqdoc/Riktig.Interface.Basis.html#basis_coords"><code>basis_coords</code></a>
+from <code>V</code> to the coordinate space
+<code>Fin.t n -&gt; F</code>, subject to two round-trip laws: rebuilding
+a vector from its coordinates returns the vector (<a
+href="coqdoc/Riktig.Interface.Basis.html#basis_reconstruction"><code>basis_reconstruction</code></a>),
+and reading off the coordinates of a combination returns the
+coefficients (<a
+href="coqdoc/Riktig.Interface.Basis.html#basis_coords_linear_combination"><code>basis_coords_linear_combination</code></a>).</p>
+<p>With a basis
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>b</mi><mn>1</mn><mi>U</mi></msubsup><mo>,</mo><mi>…</mi><mo>,</mo><msubsup><mi>b</mi><mi>n</mi><mi>U</mi></msubsup></mrow><annotation encoding="application/x-tex">b^U_1,\dots,b^U_n</annotation></semantics></math>
 of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>U</mi><annotation encoding="application/x-tex">U</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>b</mi><mn>1</mn><mi>V</mi></msubsup><mo>,</mo><mi>…</mi><mo>,</mo><msubsup><mi>b</mi><mi>m</mi><mi>V</mi></msubsup></mrow><annotation encoding="application/x-tex">b^V_1,\dots,b^V_m</annotation></semantics></math>
 of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
-(recall the earlier post introducing bases as coordinate isomorphisms: a
-basis <em>is</em> a linear coordinate map with two round-trip laws).
-Every linear map
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>,
+every linear map
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">f : U \to V</annotation></semantics></math>
 gets a matrix: <strong>the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
@@ -64,57 +102,88 @@ column holds the coordinates of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>’s
 value on the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
-basis vector.</strong></p>
+source basis vector.</strong> That is the definition, verbatim (<a
+href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>):</p>
 <pre class="coq"><code>Definition mat_of (f : LinearMap F U V) : Matrix m n F :=
   fun i j =&gt; basis_coords BV (f (basis_vec BU j)) i.</code></pre>
-<p>The theorem package (<a
-href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>)
-says this is a faithful translation: <a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
-has an inverse <a
-href="coqdoc/Riktig.Theory.MatRep.html#hom_of"><code>hom_of</code></a>,
-both are linear, and the pair is a representation isomorphism in the
-sense of the earlier post on representations and isomorphisms:</p>
-<p><span class="math display">$$\mathrm{Hom}(U,V) \;\cong\; F^{m\times
-n}
-\qquad\text{(\texttt{vsiso\_matrix})}$$</span></p>
+<p>Nothing is lost in the writing down. The same file rebuilds a map
+from a grid — <code>hom_of A</code> sends <code>u</code> to the
+combination of target basis vectors whose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
+coefficient is row
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+of <code>A</code> against <code>u</code>’s coordinates — and proves the
+two round trips:</p>
+<pre class="coq"><code>Theorem hom_of_mat_of : forall f : LinearMap F U V,
+  hom_of (mat_of f) == f.</code></pre>
+<pre class="coq"><code>Theorem mat_of_hom_of : forall A : Matrix m n F,
+  mat_of (hom_of A) == A.</code></pre>
+<p>Both directions are linear as well (<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_add"><code>mat_of_add</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_scale"><code>mat_of_scale</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#hom_of_matadd"><code>hom_of_matadd</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#hom_of_matscale"><code>hom_of_matscale</code></a>),
+so the round trips and the linearity package into one isomorphism of
+vector spaces, <a
+href="coqdoc/Riktig.Theory.MatRep.html#vsiso_matrix"><code>vsiso_matrix</code></a>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>≅</mo><mspace width="0.278em"></mspace><msup><mi>F</mi><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,V) \;\cong\; F^{m\times n}.</annotation></semantics></math></p>
 <h2 id="the-theorem-you-memorized-as-a-definition">The theorem you
 memorized as a definition</h2>
 <p><strong>Blackboard.</strong> Let
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">f : U \to V</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">f : U \to V</annotation></semantics></math>
+and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>:</mo><mi>V</mi><mo>→</mo><mi>W</mi></mrow><annotation encoding="application/x-tex">g : V \to W</annotation></semantics></math>.
 What is the matrix of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">g \circ f</annotation></semantics></math>?
-Entry
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>:
-expand
+Its
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+entry is the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
+coordinate of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msubsup><mi>b</mi><mi>j</mi><mi>U</mi></msubsup><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">g(f(b^U_j))</annotation></semantics></math>.
+Expand
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msubsup><mi>b</mi><mi>j</mi><mi>U</mi></msubsup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(b^U_j)</annotation></semantics></math>
 in the
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>-basis,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msubsup><mi>b</mi><mi>j</mi><mi>U</mi></msubsup><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msub><mo>∑</mo><mi>k</mi></msub><msub><mi>c</mi><mi>k</mi></msub><mspace width="0.167em"></mspace><msubsup><mi>b</mi><mi>k</mi><mi>V</mi></msubsup></mrow><annotation encoding="application/x-tex">f(b^U_j) = \sum_k c_k\, b^V_k</annotation></semantics></math>
-where
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>k</mi></msub><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_k = [\![f]\!]_{kj}</annotation></semantics></math>,
-and push
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>-basis
+— by the definition of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\![f]\!]</annotation></semantics></math>,
+its
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-th
+coefficient is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">[\![f]\!]_{kj}</annotation></semantics></math>
+— and push
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
-through the sum by linearity:</p>
+through the sum, which linearity permits:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo>∘</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">[</mo><mi>g</mi><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><munder><mo>∑</mo><mi>k</mi></munder><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub><mspace width="0.167em"></mspace><msubsup><mi>b</mi><mi>k</mi><mi>V</mi></msubsup><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">]</mo><mi>i</mi></msub><mo>=</mo><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">[</mo><munder><mo>∑</mo><mi>k</mi></munder><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub><mspace width="0.167em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><msubsup><mi>b</mi><mi>k</mi><mi>V</mi></msubsup><mo stretchy="false" form="postfix">)</mo><msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">]</mo><mi>i</mi></msub><mo>=</mo><munder><mo>∑</mo><mi>k</mi></munder><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>i</mi><mi>k</mi></mrow></msub><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>k</mi><mi>j</mi></mrow></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">[\![g \circ f]\!]_{ij}
  = \Big[g\Big(\textstyle\sum_k [\![f]\!]_{kj}\, b^V_k\Big)\Big]_i
  = \Big[\textstyle\sum_k [\![f]\!]_{kj}\, g(b^V_k)\Big]_i
  = \textstyle\sum_k [\![g]\!]_{ik} [\![f]\!]_{kj}.</annotation></semantics></math></p>
-<p>The last expression is exactly the
+<p>The last expression is the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
 entry of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\![g]\!] [\![f]\!]</annotation></semantics></math>.
-So <strong>the row-times-column rule is forced</strong>: it is the
-unique rule that makes “write down, then multiply” agree with “compose,
-then write down”. ∎</p>
-<p><strong>Repository.</strong> The three blackboard steps are one
-reusable computation rule — coordinates of an image, as a
-matrix-weighted sum of coordinates:</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\![g]\!]\,[\![f]\!]</annotation></semantics></math>
+under the row-times-column rule. Nothing was chosen along the way, so
+the rule is forced: it is the unique operation on grids that makes
+“write down, then multiply” agree with “compose, then write down”. ∎</p>
+<p><strong>Coq.</strong> The three blackboard steps are packaged once,
+as a rule for computing the coordinates of an image: they are the
+matrix, applied to the coordinates of the argument.</p>
 <pre class="coq"><code>Theorem mat_of_coords : forall (f : LinearMap F U V) (u : U)
     (i : Fin.t m),
   basis_coords BV (f u) i == hom_of_coeff (mat_of f) u i.</code></pre>
-<p>and with it the headline is a <em>one-line</em> proof:</p>
+<p>With that in hand the headline is one line. Take <code>u</code> to be
+the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
+source basis vector and read the equation at row <code>i</code>: the
+left side is by definition the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+entry of the matrix of the composite, and the right side is by
+definition the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+entry of the product.</p>
 <pre class="coq"><code>Theorem mat_of_comp : forall (g : LinearMap F V W) (f : LinearMap F U V),
   mat_of BU BW (linear_map_comp g f)
     == mat_mul (mat_of BV BW g) (mat_of BU BV f).
@@ -122,51 +191,103 @@ Proof.
   intros g f i j.
   exact (mat_of_coords BV BW g (f (basis_vec BU j)) i).
 Qed.</code></pre>
-<p>The lemma types you need to believe it: <a
+<p><code>intros g f i j</code> opens the pointwise equality of two
+matrices at one entry; what closes it is <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
+for the outer map, read at the point <code>f (basis_vec BU j)</code>.
+Both sides of the goal are then the same sum by conversion, so no
+rewriting is needed at all.</p>
+<p>Two lemmas carry the blackboard steps. <a
 href="coqdoc/Riktig.Theory.MatRep.html#lm_lincomb"><code>lm_lincomb</code></a>
-(linear maps commute with linear combinations — the “push
+is “push
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
-through the sum” step, itself proved by induction from <a
+through the sum”: a linear map applied to a linear combination is the
+combination of the images, proved by induction on the index type out of
+<a
 href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_zero"><code>linear_map_zero</code></a>,
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>,
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>),
-and <code>coords_vec : basis_coords B (basis_vec B j) == e j</code> (a
-basis vector’s coordinates are a delta — the round trip laws from the
-earlier post introducing bases as coordinate isomorphisms, specialized).
-Everything you did in first-year exercises — expand, push through,
-collect — is now a named rewrite.</p>
-<h2 id="why-this-matters-beyond-the-aesthetics">Why this matters beyond
-the aesthetics</h2>
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>.
+<a
+href="coqdoc/Riktig.Theory.MatRep.html#coords_vec"><code>coords_vec</code></a>
+says a basis vector’s coordinates are a delta,
+<code>basis_coords B (basis_vec B j) == e j</code>; it follows from <a
+href="coqdoc/Riktig.Interface.Basis.html#basis_coords_linear_combination"><code>basis_coords_linear_combination</code></a>
+once a delta-weighted combination is collapsed to its single surviving
+term. Expand, push through, collect — the three moves from first-year
+exercises — are each a named rewrite.</p>
+<h2 id="multiplying-two-actual-matrices">Multiplying two actual
+matrices</h2>
+<p>Over
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ℚ</mi><annotation encoding="application/x-tex">\mathbb{Q}</annotation></semantics></math>,
+a field the definitions above actually compute in, the rule runs. <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat2"><code>mat2</code></a> builds
+a two-by-two grid from its entries in row-major order, and each entry of
+the product is one row-times-column sum a reader can redo by hand:</p>
+<pre class="coq"><code>Definition MA : Matrix 2 2 Q := mat2 (1#1)%Q (2#1)%Q (3#1)%Q (4#1)%Q.
+Definition MB : Matrix 2 2 Q := mat2 (5#1)%Q (6#1)%Q (7#1)%Q (8#1)%Q.
+
+Example mat_mul_2x2 :
+  mat_mul MA MB == mat2 (19#1)%Q (22#1)%Q (43#1)%Q (50#1)%Q.
+Proof.
+  intros i k; revert k; revert i.
+  refine (fin2_case _ _ _); [ | intros i1 ]; refine (fin2_case _ _ _);
+    intros; vm_compute; reflexivity.
+Qed.</code></pre>
+<p>Equality of matrices is pointwise, so the proof splits on each of the
+two indices — <a
+href="coqdoc/Riktig.Impl.Matrix.html#fin2_case"><code>fin2_case</code></a>
+is the two-case eliminator for <code>Fin.t 2</code> — and then each of
+the four scalar equations is a closed computation that
+<code>vm_compute</code> decides.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>⋅</mo><mn>5</mn><mo>+</mo><mn>2</mn><mo>⋅</mo><mn>7</mn><mo>=</mo><mn>19</mn></mrow><annotation encoding="application/x-tex">1\cdot 5 + 2\cdot 7 = 19</annotation></semantics></math>,
+and so on.</p>
+<h2 id="what-the-isomorphism-buys">What the isomorphism buys</h2>
 <p>Because <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
-is an isomorphism, every question about matrices can be answered on
-whichever side is easier, and the answer transports. Associativity of <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>?
-Prove it directly by Fubini on double sums — that proof is in the repo
-(<a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
-<a href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>)
-— or observe that matrix multiplication <em>is</em> composition, which
-is associative, and transport along <a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>.
-Change of basis? Conjugation along two <a
-href="coqdoc/Riktig.Theory.MatRep.html#vsiso_matrix"><code>vsiso_matrix</code></a>es.
-And when the derivative arrives (the analysis track is already at
-limits), the Jacobian will need no new theory: it is <a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
-applied to the total derivative. The chain rule will BE <a
+is an isomorphism, a question about matrices may be answered on
+whichever side is easier and the answer transports. Associativity of <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+is provable directly, by the interchange of a double sum — that is <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+— or by observing that the product <em>is</em> composition, which is
+associative because function composition is, and transporting along <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>.</p>
-<p><em>Next in the course thread: determinants as “how a map scales
-alternating forms” — no cofactors until they’re a computation
-lemma.</em></p>
+<p>The derivative is where this stops being an aesthetic point. The
+Fréchet derivative of a function at a point is a linear map, not a grid;
+the Jacobian is that linear map written down in chosen bases. So the
+Jacobian needs no theory of its own, and gets none — it is literally <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
+applied to the derivative:</p>
+<pre class="coq"><code>Definition jacobian {f : U -&gt; V} {a : U} {L : LinearMap F U V}
+    (Hd : is_deriv f a L) : Matrix m n F :=
+  mat_of BU BV L.</code></pre>
+<p>And the chain rule for Jacobians, the statement that the Jacobian of
+a composite is the product of the Jacobians, is <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>
+under that definition — the proof of <a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>
+is the same one-liner, with the differentiability hypotheses carried
+only so the statement can be phrased in derivative language.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>
-(carrier, <a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>, <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
-the matrix ring) · <a
+<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix_Ring"><code>Matrix_Ring</code></a>,
+the numeric example) · <a
+href="coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Basis.html#basis_vec"><code>basis_vec</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Basis.html#basis_coords"><code>basis_coords</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
@@ -175,10 +296,21 @@ href="coqdoc/Riktig.Theory.MatRep.html#hom_of"><code>hom_of</code></a>,
 <a
 href="coqdoc/Riktig.Theory.MatRep.html#vsiso_matrix"><code>vsiso_matrix</code></a>,
 <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>,
+<a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
-(finite-sum Fubini).</p>
+(<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>).</p>
 </main>
 </body>
 </html>

@@ -37,20 +37,26 @@ parameters and says nothing about what they are, only how they behave.
 From <a
 href="coqdoc/Riktig.Interface.DecTotalOrder.html"><code>Interface/DecTotalOrder.v</code></a>:</p>
 <pre class="coq"><code>Module DecTotalOrder.
-  Class DecTotalOrder (A : Type) {Alt : HasOlt A} {Ale : HasOle A} := {
-    olt_dec    : forall x y : A, Decidable (olt x y);
-    olt_strict : StrictOrder (@olt A Alt);
+  Class DecTotalOrder (A : Type) {olt : HasOlt A} {ole : HasOle A} := {
+    olt_dec    :: forall x y : A, Decidable (olt x y);
+    olt_strict :: StrictOrder olt;
+
     olt_total  : forall x y : A, olt x y \/ x = y \/ olt y x;
-    ole_not_lt : forall x y : A, ole x y &lt;-&gt; ~ olt y x
+    ole_not_lt : forall x y : A, ole x y &lt;-&gt; ~ olt y x;
   }.
-End DecTotalOrder.</code></pre>
+End DecTotalOrder.
+Export DecTotalOrder.</code></pre>
 <p>The class sits inside a module of the same name, so each law is
 written <a
 href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>,
 <a
 href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
 and so on: the module path carries the prefix instead of every field
-name repeating it.</p>
+name repeating it. The <code>Export</code> line then puts the module’s
+contents into scope for anyone who imports the file, so the class itself
+can still be named plain <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
+when a type is declared to satisfy it.</p>
 <p>Reading the four laws. <a
 href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
 is the single decision procedure — for every pair <code>x y</code>,
@@ -70,15 +76,20 @@ href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code
 ties the two relations together: <code>x &lt;= y</code> means precisely
 <em>not</em> <code>y &lt; x</code>.</p>
 <p>Two of those laws are things instance search should be able to use on
-its own — deciding a comparison, and rewriting with transitivity — so
-they are handed back to it as instances just below the module:</p>
-<pre class="coq"><code>#[global] Instance DecTotalOrder_olt_dec (A : Type) {Alt : HasOlt A} {Ale : HasOle A}
-  {O : DecTotalOrder.DecTotalOrder A} : forall x y : A, Decidable (olt x y)
-  := DecTotalOrder.olt_dec.
-
-#[global] Instance DecTotalOrder_StrictOrder (A : Type) {Alt : HasOlt A} {Ale : HasOle A}
-  {O : DecTotalOrder.DecTotalOrder A} : StrictOrder (@olt A Alt)
-  := DecTotalOrder.olt_strict.</code></pre>
+its own — deciding a comparison, and reasoning with irreflexivity and
+transitivity — and the <code>::</code> on the first two fields is what
+says so. A field declared with <code>::</code> rather than
+<code>:</code> is registered as a typeclass instance the moment a type
+is shown to satisfy the class. So writing <code>dec (olt x y)</code>
+resolves through <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
+and the standard library’s <code>StrictOrder_Irreflexive</code> and
+<code>transitivity</code> reach <a
+href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>DecTotalOrder.olt_strict</code></a>,
+with no separate instance declaration anywhere. The last two fields are
+ordinary <code>:</code> fields: a proof names them directly, and
+instance search has nothing to do with a disjunction or an
+<code>iff</code>.</p>
 <p>The other two comparisons need no new content — they are the same two
 relations with their arguments swapped, and each needs only its
 operation, not the laws:</p>

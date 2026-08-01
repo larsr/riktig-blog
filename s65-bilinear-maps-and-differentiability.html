@@ -35,7 +35,66 @@ already enough to make such a map differentiable, with no further
 analysis to check by hand.</p>
 <h2 id="a-bilinear-map-is-linear-in-each-slot-separately">A bilinear map
 is linear in each slot separately</h2>
-<pre class="coq"><code>Record BilinearMap (F U V W : Type) `{FF : Field.Field F}
+<p>Linearity of a single function is stated first, as a <em>property of
+a plain function</em> — a typeclass indexed by the function
+<code>f</code>, so a lambda written at any use site can be shown linear
+without being packaged into anything:</p>
+<pre class="coq"><code>Module Linear.
+  Class Linear (F U V : Type)
+      {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+      {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V}
+      (f : U -&gt; V) := {
+    proper         :: Proper (equ ==&gt; equ) f;
+    is_additive    :: Additive U V add add f;
+    is_homogeneous :: Homogeneous F U V scale (fun a =&gt; a) f;
+  }.
+End Linear.</code></pre>
+<p><code>Additive U V add add f</code> is the reusable statement
+“<code>f</code> carries the first operation to the second”,
+i.e. <code>f (x + y) == f x + f y</code>;
+<code>Homogeneous F U V scale (fun a =&gt; a) f</code> is
+“<code>f</code> carries scaling to scaling, reweighting the scalar by
+the identity”, i.e. <code>f (a *: x) == a *: f x</code>. Both are named
+laws that other structures use too, so linearity is assembled from them
+rather than restating them.</p>
+<p>Bilinearity is then that same property, twice, once per slot:</p>
+<pre class="coq"><code>Module Bilinear.
+  Class Bilinear (F U V W : Type)
+      {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+      {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
+      {VU : VectorSpace F U}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+      {VV : VectorSpace F V}
+      {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W}
+      {VW : VectorSpace F W}
+      (b : U -&gt; V -&gt; W) := {
+    proper :: Proper (equ ==&gt; equ ==&gt; equ) b;
+
+    linear_l :: forall v : V, Linear F U W (fun u =&gt; b u v);
+    linear_r :: forall u : U, Linear F V W (b u);
+  }.
+End Bilinear.</code></pre>
+<p>The long list of braced binders is the ambient algebra:
+<code>F</code> has to be a field, and each of <code>U</code>,
+<code>V</code>, <code>W</code> a vector space over it, before the laws
+can even be stated. The content is the last three lines, and it says
+literally what the English says. <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.linear_l"><code>linear_l</code></a>
+fixes the second argument at an arbitrary <code>v</code> and demands
+that <code>fun u =&gt; b u v</code> be linear; <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.linear_r"><code>linear_r</code></a>
+fixes the first at an arbitrary <code>u</code> and demands the same of
+<code>b u</code>. The <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.proper"><code>proper</code></a>
+field says
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+respects the setoid equality in both arguments.</p>
+<p>A <em>bilinear map</em> is then that property attached to a function,
+as a record:</p>
+<pre class="coq"><code>Record BilinearMap (F U V W : Type)
+    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
     {VU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
@@ -43,32 +102,37 @@ is linear in each slot separately</h2>
     {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W}
     {VW : VectorSpace F W} := {
   bm_fun :&gt; U -&gt; V -&gt; W;
-  #[global] bilinear_map_proper :: Proper (equ ==&gt; equ ==&gt; equ) bm_fun;
-  bilinear_left_additive  : forall (u u&#39; : U) (v : V),
-    bm_fun (u + u&#39;) v == bm_fun u v + bm_fun u&#39; v;
-  bilinear_left_scale     : forall (a : F) (u : U) (v : V),
-    bm_fun (a *: u) v == a *: bm_fun u v;
-  bilinear_right_additive : forall (u : U) (v v&#39; : V),
-    bm_fun u (v + v&#39;) == bm_fun u v + bm_fun u v&#39;;
-  bilinear_right_scale    : forall (a : F) (u : U) (v : V),
-    bm_fun u (a *: v) == a *: bm_fun u v
+  bm_bilinear :: Bilinear F U V W bm_fun;
 }.</code></pre>
-<p>The record is data — a <em>choice</em> of map
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
-together with proofs that it obeys four laws. Fix the second argument
-and it is linear in the first (<a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>,
-<a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_scale"><code>bilinear_left_scale</code></a>);
-fix the first and it is linear in the second (<a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_additive"><code>bilinear_right_additive</code></a>,
-<a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_scale"><code>bilinear_right_scale</code></a>).
-The extra <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_map_proper"><code>bilinear_map_proper</code></a>
-field says
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
-respects the setoid equality in both arguments.</p>
+<p>Two fields: the function, and one proof that the function is
+bilinear. A record rather than a class, because a bilinear map is an
+<em>element</em> — of a vector space of its own, as it happens — and
+typeclass search must never go hunting for one; the laws themselves are
+the class above, and those search may look for freely. The coercion
+<code>:&gt;</code> on <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bm_fun"><code>bm_fun</code></a>
+means a <a
+href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+named <code>b</code> can be applied directly, <code>b u v</code>.</p>
+<p>Working with nested classes at the point of use is awkward, so the
+file also unfolds the two <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+fields back into the four flat equations a caller actually rewrites
+with. Each is a one-liner reading a law off the appropriate slot:</p>
+<pre class="coq"><code>  Definition bilinear_left_additive (b : BilinearMap F U V W)
+    : forall (u u&#39; : U) (v : V), b (u + u&#39;) v == b u v + b u&#39; v :=
+    fun u u&#39; v =&gt; additive (f := fun x =&gt; bm_fun b x v) u u&#39;.</code></pre>
+<p>Here <a
+href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a> is
+the projection of the <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> law,
+and the implicit argument <code>f := fun x =&gt; bm_fun b x v</code>
+tells Coq <em>which</em> function’s additivity is wanted — the left slot
+with <code>v</code> frozen. The same shape gives
+<code>bilinear_left_scale b</code>,
+<code>bilinear_right_additive b</code>,
+<code>bilinear_right_scale b</code>, and
+<code>bilinear_map_proper b</code>.</p>
 <p>Here is the one distinction to get right, because it is what makes
 bilinearity genuinely different from linearity. A bilinear map is
 <em>not</em> a linear map on the product space
@@ -107,12 +171,16 @@ href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_scale"><code>bilinear
 are precisely the two linear-map laws for that function. The file
 packages exactly this:</p>
 <pre class="coq"><code>  Definition bilinear_map_appl (u : U) : LinearMap F V W :=
-    @Build_LinearMap F V W FF VV VW (fun v : V =&gt; b u v)
+    linear_map_from_laws
+      (fun v : V =&gt; b u v)
       (bilinear_map_appl_proper u)
       (bilinear_right_additive b u)
       (fun (a : F) (v : V) =&gt; bilinear_right_scale b a u v).</code></pre>
-<p>Read the three proof arguments: the additivity law of the new linear
-map is <code>bilinear_right_additive b u</code> — the right-slot
+<p><a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+is the builder that takes a function and its three laws and returns the
+record. Read the three proof arguments: the additivity law of the new
+linear map is <code>bilinear_right_additive b u</code> — the right-slot
 additivity of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
 with the first argument frozen at
@@ -386,10 +454,16 @@ gives its derivative — and the associativity behind backpropagation —
 for free.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+class) · <a
 href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
 (the <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>
+class, the <a
 href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
-record and its four laws) · <a
+record, and the four flat slot laws) · <a
 href="coqdoc/Riktig.Theory.Bilinear.html"><code>Theory/Bilinear.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appl"><code>bilinear_map_appl</code></a>,

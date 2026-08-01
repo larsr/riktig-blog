@@ -11,22 +11,17 @@
 <main>
 <h1 id="a-protocol-that-cannot-lie-to-you">A protocol that cannot lie to
 you</h1>
-<p><em>Sixteenth post documenting the <strong>riktig</strong> project.
-The channels thread opened in <a
-href="s40-introducing-channels.html">the post introducing channels</a>
-reaches its first real payoff; the linear-algebra course also closes out
-inner-product geometry. Proofs shown at the level of “here is the
-theorem and why it is true,” in the project’s usual style.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. The post introducing channels modeled a
-faulty channel as a <em>relation</em> between what was sent and what
-arrived — no probabilities, just possibility. Today that relation earns
-its keep: <strong>the alternating-bit protocol</strong>, the oldest
-trick in telecom for talking reliably over an unreliable wire, gets a
-safety proof that holds unconditionally — for <em>any</em> pattern of
-loss and duplication, <em>any</em> number of retransmissions.</p>
-</blockquote>
+<p>A faulty wire can be described without probabilities: fix a relation
+between the list of packets a sender emitted and the list a receiver
+saw, and let the relation contain exactly the manglings the wire is
+allowed to perform. Call the relation that permits dropping packets and
+duplicating them, in any pattern, <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>.
+This post proves that the <strong>alternating-bit protocol</strong> —
+the oldest arrangement for talking reliably over an unreliable wire —
+never hands the application anything it was not sent, for every
+behaviour in that relation and every number of retransmissions, with no
+assumption whatever about how much gets through.</p>
 <h2 id="the-protocol-in-one-paragraph">The protocol, in one
 paragraph</h2>
 <p>You want to send messages
@@ -47,19 +42,17 @@ job: let the receiver recognize a stale duplicate of the message it
 already has, and throw it away.</p>
 <h2 id="the-theorem">The theorem</h2>
 <pre class="coq"><code>Theorem abp_safety : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
-  lossy_dup (sender_stream b0 ms k) wire -&gt;
-  subseq (deliver b0 wire) ms.</code></pre>
+  lossy_dup (sender_stream b0 ms k) wire -&gt; subseq (deliver b0 wire) ms.</code></pre>
 <p>Read it in English: <em>whatever the wire delivers — for any channel
 behavior in the <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
-class, any retransmission budget <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>, any
-message list <code>ms</code> — the sequence of messages the receiver
-actually accepts is a subsequence of what was sent.</em> No duplicates
-get through that were never sent. No reordering. No message the
-application never wrote gets fabricated. This is the entire safety
-contract of a reliable-delivery protocol, and it is a
-<strong>theorem</strong>, not a hope.</p>
+class, any retransmission budget <code>k</code>, any message list
+<code>ms</code> — the sequence of messages the receiver actually accepts
+is a subsequence of what was sent.</em> No duplicates get through that
+were never sent. No reordering. No message the application never wrote
+gets fabricated. This is the entire safety contract of a
+reliable-delivery protocol, and it is a <strong>theorem</strong>, not a
+hope.</p>
 <p>Notice what’s absent: no assumption that packets eventually get
 through. If the channel drops <em>everything</em>, <a
 href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
@@ -68,27 +61,29 @@ returns the empty list — still, trivially, a subsequence of
 liveness (something good eventually happens) are different properties,
 and this theorem only claims the first. Liveness needs a
 <em>fairness</em> hypothesis — “the channel doesn’t drop forever” —
-which is deliberately not assumed here; it’s queued as the next stage
-(T4) of the roadmap, precisely so today’s theorem stays this strong and
-this simple.</p>
+which is deliberately not assumed here, precisely so today’s theorem
+stays this strong and this simple.</p>
 <h2 id="why-the-proof-needed-a-detour-through-channels-themselves">Why
 the proof needed a detour through channels themselves</h2>
 <p>The interesting lemma isn’t about ABP at all — it’s about <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
 alone:</p>
-<pre class="coq"><code>Lemma lossy_dup_app_split : forall s1 s2 r,
-  lossy_dup (s1 ++ s2) r -&gt;
-  exists r1 r2, r = r1 ++ r2 /\ lossy_dup s1 r1 /\ lossy_dup s2 r2.</code></pre>
-<p><em>If the channel acted on a sent list that happens to be a
-concatenation <code>s1 ++ s2</code>, then the received list splits to
-match — a <a
+<pre class="coq"><code>Lemma lossy_dup_app_split : forall (s r : list M),
+  lossy_dup s r -&gt; forall l1 l2 : list M, s = l1 ++ l2 -&gt;
+  exists r1 r2, r = r1 ++ r2 /\ lossy_dup l1 r1 /\ lossy_dup l2 r2.</code></pre>
+<p><em>If the channel acted on a sent list <code>s</code> that happens
+to be a concatenation <code>l1 ++ l2</code>, then the received list
+splits to match — a <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>-behavior
-on the first part, followed by one on the second.</em> This sounds
-obvious and is not: the <code>stutter</code> constructor (duplication)
-can re-emit the <em>front</em> of what’s already been received without
-consuming anything more from the sent side, so a run of duplicates near
-the boundary could, in principle, straddle it in an awkward way. The
-proof goes by induction on the <a
+on the first part, followed by one on the second.</em> Note the shape of
+the statement: the channel’s behaviour comes first and the split point
+<code>s = l1 ++ l2</code> only afterwards, so the split stays free while
+the proof works on the behaviour. This sounds obvious and is not: the
+<code>stutter</code> constructor (duplication) can re-emit the
+<em>front</em> of what’s already been received without consuming
+anything more from the sent side, so a run of duplicates near the
+boundary could, in principle, straddle it in an awkward way. The proof
+goes by induction on the <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>
 <em>derivation itself</em> — not on the lists — precisely to track that
 possibility honestly.</p>
@@ -98,31 +93,35 @@ trace at each message’s retransmission burst, note that a whole burst
 one</strong> delivered message no matter how the channel maims it —
 duplicates all carry the identical bit and get rejected after the first
 — and induct over the message list.</p>
-<p>This is the project’s recurring shape again: a hard, general fact
-about the substrate (<a
+<p>This is the recurring shape: a hard, general fact about the substrate
+(<a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>,
 purely about relations on lists) makes the domain-specific theorem (<a
 href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>)
-almost fall out. The next protocols in the roadmap — Go-Back-N,
-selective repeat, the mechanism at the heart of TCP — will reuse this
-exact lemma; a new retransmission scheme only ever owes its <em>own</em>
-burst-delivery argument, not a new proof that channels behave
-sanely.</p>
-<h2 id="also-in-this-wave-inner-product-geometry-finished">Also in this
-wave: inner-product geometry, finished</h2>
-<p>Two theorems complete <a href="s10-polarization-identity.html">the
-polarization-identity post</a>’s geometry, in a different thread from
-today’s protocol work. Adjoints reverse composition order —
+almost fall out. Go-Back-N, which replaces the alternating bit by an
+unbounded sequence number, reuses this exact lemma unchanged — it never
+mentions a packet type at all, so a new retransmission scheme only ever
+owes its <em>own</em> burst-delivery argument, not a new proof that
+channels behave sanely.</p>
+<h2 id="also-here-inner-product-geometry-finished">Also here:
+inner-product geometry, finished</h2>
+<p>Two theorems, on an unrelated subject, complete <a
+href="s10-polarization-identity.html">the polarization-identity
+post</a>’s geometry. Adjoints reverse composition order —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>∘</mo><mi>h</mi><msup><mo stretchy="false" form="postfix">)</mo><mo>*</mo></msup><mo>=</mo><msup><mi>h</mi><mo>*</mo></msup><mo>∘</mo><msup><mi>f</mi><mo>*</mo></msup></mrow><annotation encoding="application/x-tex">(f \circ h)^* = h^* \circ f^*</annotation></semantics></math>
-— in <a
+— which is <a
+href="coqdoc/Riktig.Theory.Adjoint.html#is_adjoint_comp"><code>is_adjoint_comp</code></a>
+in <a
 href="coqdoc/Riktig.Theory.Adjoint.html"><code>Theory/Adjoint.v</code></a>,
-and Gram–Schmidt orthogonalization lands with its independence
-assumption stated explicitly in the theorem, in <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>.
-The post on the QR factorization builds directly on the latter.</p>
-<p><em>Next: liveness for ABP under a fairness hypothesis (T4), and — on
-the algebra side — the coordinate-free determinant proper, riding on the
-alternating-forms machinery introduced earlier.</em></p>
+and <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>
+orthogonalizes, with the hypothesis it genuinely needs written into the
+statement of <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_pairwise_orthogonal"><code>gram_schmidt_pairwise_orthogonal</code></a>:
+every vector the procedure produces has nonzero norm, which is the
+constructive reading of “the input vectors were linearly independent”,
+in <a
+href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>

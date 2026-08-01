@@ -66,14 +66,17 @@ Packaging them is the whole construction, from <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</code></a>:</p>
 <pre class="coq"><code>  Definition mat_mul_bilinear :
       BilinearMap F (Matrix m n F) (Matrix n p F) (Matrix m p F) :=
-    @Build_BilinearMap F (Matrix m n F) (Matrix n p F) (Matrix m p F) _ _ _ _
-      (@mat_mul F _ m n p)
+    bilinear_map_from_laws
+      (mat_mul (F:=F) (m:=m) (n:=n) (p:=p))
       (mat_mul_proper m n p)
       (mat_mul_add_l m n p)
       (mat_mul_scale_l m n p)
       (mat_mul_add_r m n p)
       (mat_mul_scale_r m n p).</code></pre>
-<p>The four middle fields are the two-slots-of-linearity spelled out: <a
+<p><a
+href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_map_from_laws"><code>bilinear_map_from_laws</code></a>
+takes the function first and then the five proofs. The four at the end
+are the two-slots-of-linearity spelled out: <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_add_l"><code>mat_mul_add_l</code></a>
 and <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_scale_l"><code>mat_mul_scale_l</code></a>
@@ -139,7 +142,7 @@ Proof.
   split.
   - exact zero_le_one.
   - intros A B.
-    rewrite idl.
+    rewrite left_identity.
     exact (mat_mul_norm_submultiplicative A B).
 Qed.</code></pre>
 <p>Walking it: <code>exists 1</code> names the constant; <a
@@ -148,7 +151,7 @@ leaves two goals, that the constant is non-negative and that the bound
 holds with it. <code>exact zero_le_one</code> discharges
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0 \le 1</annotation></semantics></math>.
 For the bound, <code>intros A B</code> fixes the two matrices,
-<code>rewrite idl</code> erases the leading factor
+<code>rewrite left_identity</code> erases the leading factor
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>⋅</mo></mrow><annotation encoding="application/x-tex">1 \cdot</annotation></semantics></math>
 in front of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">‖</mo><mi>A</mi><mo stretchy="true" form="postfix">‖</mo></mrow><annotation encoding="application/x-tex">\lVert A\rVert</annotation></semantics></math>,

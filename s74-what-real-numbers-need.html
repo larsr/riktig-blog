@@ -43,88 +43,114 @@ closes the gap: every inhabited, bounded-above set does have a least
 upper bound (a <em>supremum</em>) inside the system. That, plus the
 ordered-field structure, is the whole specification of the real
 numbers.</p>
-<h2 id="the-specification-in-full">The specification, in full</h2>
-<p>Here is the entire class, verbatim from <a
-href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>.
-It takes a type <code>R</code> that is already a <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-and asks for a compatible total order and the completeness axiom:</p>
-<pre class="coq"><code>Module Reals.
-  Class Reals (R : Type) `{Field.Field R} := {
-    (* Total order, compatible with the setoid equality. *)
-    le         : Rel R;
-    le_proper  : forall x y : R, x == y -&gt;
-                 forall u v : R, u == v -&gt; (le x u &lt;-&gt; le y v);
-    le_refl    : forall x : R, le x x;
-    le_trans   : forall x y z : R, le x y -&gt; le y z -&gt; le x z;
-    le_antisym : forall x y : R, le x y -&gt; le y x -&gt; x == y;
-    le_total   : forall x y : R, le x y \/ le y x;
+<h2 id="the-ordered-field-comes-first-and-separately">The ordered field
+comes first, and separately</h2>
+<p>Everything in the first paragraph — the arithmetic, the order, the
+two compatibility conditions — is already a structure of its own, <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+in <a
+href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>.
+It takes a type <code>F</code> that is already a <a
+href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+an order <a
+href="coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a> and an
+absolute value <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> on
+it, and states the laws all three must jointly satisfy:</p>
+<pre class="coq"><code>Module OrderedField.
+  Class OrderedField (F : Type) `{Field F}
+                     {le : HasLe F} {abs : HasAbs F} := {
+    le_proper  :: Proper (equ ==&gt; equ ==&gt; iff) le;
+    abs_proper :: Proper (equ ==&gt; equ) abs;
 
-    (* Ordered-field compatibility. *)
-    le_add_compat : forall x y z : R, le x y -&gt; le (x + z) (y + z);
-    le_mul_compat : forall x y : R, le 0 x -&gt; le 0 y -&gt; le 0 (x * y);
-
-    (* Least-upper-bound completeness: every inhabited set bounded above
-       has a supremum.  This is the axiom Q cannot satisfy — the set
-       { q | q * q &lt;= 2 } is inhabited and bounded but has no rational
-       supremum — and the one existence theorems (IVT, MVT) consume. *)
-    complete : forall P : R -&gt; Prop,
-      (exists x : R, P x) -&gt;
-      (exists b : R, forall x : R, P x -&gt; le x b) -&gt;
-      exists s : R,
-        (forall x : R, P x -&gt; le x s) /\
-        (forall b : R, (forall x : R, P x -&gt; le x b) -&gt; le s b)
+    le_refl              : forall a : F, a &lt;= a;
+    le_trans             : forall a b c : F, a &lt;= b -&gt; b &lt;= c -&gt; a &lt;= c;
+    le_antisymmetric     : forall a b : F, a &lt;= b -&gt; b &lt;= a -&gt; a == b;
+    le_total             : forall a b : F, a &lt;= b \/ b &lt;= a;
+    le_stable            : forall a b : F, ~ ~ a &lt;= b -&gt; a &lt;= b;
+    add_le_monotone_left : forall a b c : F, a &lt;= b -&gt; c + a &lt;= c + b;
+    mul_nonneg_closed    : forall a b : F, 0 &lt;= a -&gt; 0 &lt;= b -&gt; 0 &lt;= a * b;
+    abs_nonneg           : forall a : F, 0 &lt;= abs a;
+    abs_zero_iff         : forall a : F, abs a == 0 &lt;-&gt; a == 0;
+    abs_mul              : forall a b : F, abs (a * b) == abs a * abs b;
+    abs_neg              : forall a : F, abs (- a) == abs a;
+    abs_triangle         : forall a b : F, abs (a + b) &lt;= abs a + abs b;
+    abs_nonneg_identity  : forall a : F, 0 &lt;= a -&gt; abs a == a;
   }.
-End Reals.
-Notation Reals := Reals.Reals.</code></pre>
-<p>The class sits inside a <code>Module Reals</code>, so each field is
-spelled with the module as its prefix — <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le"><code>Reals.le</code></a>,
-<a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le_refl"><code>Reals.le_refl</code></a>,
-<a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>Reals.complete</code></a>
-— and the <code>Notation</code> on the last line lets the class itself
-still be written <code>Reals R</code>.</p>
-<p>Read it in three groups. The first six fields introduce the order <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le"><code>Reals.le</code></a>
-and its laws: it respects the field’s own equality <code>==</code> (<a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le_proper"><code>Reals.le_proper</code></a>),
-it is reflexive, transitive, antisymmetric, and total — that is exactly
-what makes <code>&lt;=</code> a total order rather than a partial one.
-The next two fields, <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le_add_compat"><code>Reals.le_add_compat</code></a>
+End OrderedField.</code></pre>
+<p>The order half is the five laws after the two properness fields:
+<code>&lt;=</code> is reflexive, transitive, antisymmetric and total — a
+total order, not merely a partial one — and <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
+says a doubly-negated inequality is an inequality, which is what lets a
+proof argue by contradiction about <code>&lt;=</code> without assuming
+excluded middle everywhere. Then <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.add_le_monotone_left"><code>add_le_monotone_left</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le_mul_compat"><code>Reals.le_mul_compat</code></a>,
-are the compatibility conditions that turn “a field with an order” into
-“an <em>ordered</em> field”: you may add the same <code>z</code> to both
-sides of an inequality, and a product of two nonnegative elements stays
-nonnegative.</p>
-<p>The last field, <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>Reals.complete</code></a>,
-is the real content. Read it as a sentence about an arbitrary set
-<code>P : R -&gt; Prop</code>. <em>If</em> <code>P</code> is inhabited
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.mul_nonneg_closed"><code>mul_nonneg_closed</code></a>
+are the two compatibility conditions that make the order an order <em>of
+a field</em>: you may add the same <code>c</code> to both sides, and a
+product of two nonnegative elements is nonnegative. The last six laws
+pin down <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>. It
+is carried as its own operation rather than defined as “if
+<code>0 &lt;= a</code> then <code>a</code> else <code>- a</code>,”
+because that definition would have to <em>decide</em> the order, and for
+a general model of the reals no such decision procedure exists.</p>
+<p>Two fields are declared with <code>::</code> rather than
+<code>:</code>. That makes the field itself a typeclass instance
+whenever an <code>OrderedField F</code> is in scope, so
+<code>rewrite</code> can replace an argument of <code>&lt;=</code> or of
+<a href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> by
+anything <code>==</code> to it without the law ever being named.</p>
+<p>The rationals satisfy every line of that class. So does every model
+of the reals. The class does not distinguish them.</p>
+<h2 id="the-specification-in-full">The specification, in full</h2>
+<p>Here is <a
+href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>,
+the entire file:</p>
+<pre class="coq"><code>From Riktig.Interface Require Export Order.
+
+Module Reals.
+  Class Reals (R : Type) `{OrderedField R} := {
+    complete : forall P : Pred R,
+      (exists x : R, P x) -&gt;
+      (exists b : R, forall x : R, P x -&gt; x &lt;= b) -&gt;
+      exists s : R,
+        (forall x : R, P x -&gt; x &lt;= s) /\
+        (forall b : R, (forall x : R, P x -&gt; x &lt;= b) -&gt; s &lt;= b);
+  }.
+  Hint Mode Reals ! - - - - - - - - - - - : typeclass_instances.
+End Reals.
+Export Reals.</code></pre>
+<p>One field. The backtick binder <code>`{OrderedField R}</code> says:
+before you may even state this, <code>R</code> must already be an
+ordered field, and the <code>&lt;=</code> appearing below is
+<em>that</em> order — not a fresh relation with its own copy of the
+order laws. Everything the first two sections described is inherited,
+and what is left is the single thing the rationals lack.</p>
+<p>Read <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>complete</code></a>
+as a sentence about an arbitrary set <code>P : Pred R</code>, where
+<code>Pred T</code> abbreviates <code>T -&gt; Prop</code> — a set is the
+property of belonging to it. <em>If</em> <code>P</code> is inhabited
 (<code>exists x, P x</code>) <em>and</em> bounded above
 (<code>exists b</code> above every element), <em>then</em> there exists
 an <code>s</code> that is (i) an upper bound —
-<code>forall x, P x -&gt; le x s</code> — and (ii) the <em>least</em>
-one: any other upper bound <code>b</code> satisfies <code>le s b</code>,
-so <code>s</code> sits below every competitor. Those two conjuncts are
-the definition of “least upper bound”, written out with no appeal to
-anything outside the class.</p>
-<h2 id="no-instance-on-purpose">No instance — on purpose</h2>
-<p>One thing must be said plainly. <a
-href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>
-is the file quoted above, one <code>Proper</code> instance handing <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.le_proper"><code>Reals.le_proper</code></a>
-to the rewriting machinery, and one further line,</p>
-<pre class="coq"><code>#[global] Hint Mode Reals.Reals ! - - - - - - - - : typeclass_instances.</code></pre>
-<p>which only tells Coq’s instance search to wait until it knows the
-carrier type <code>R</code> — the one position marked <code>!</code> —
-before trying to solve a <a
+<code>forall x, P x -&gt; x &lt;= s</code> — and (ii) the <em>least</em>
+one: any other upper bound <code>b</code> satisfies
+<code>s &lt;= b</code>, so <code>s</code> sits below every competitor.
+Those two conjuncts are the definition of “least upper bound”, written
+out with no appeal to anything outside the class.</p>
+<p>The <code>Hint Mode</code> line tells Coq’s instance search to wait
+until it knows the carrier type <code>R</code> — the position marked
+<code>!</code> — before trying to solve a <a
 href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>
-goal. Nowhere does the file exhibit a concrete type and prove it
-satisfies <a
+goal. Without it, search asked for <code>Reals ?R</code> would try to
+invent the carrier, which does not terminate.</p>
+<h2 id="no-instance-on-purpose">No instance — on purpose</h2>
+<p>Nowhere does the file exhibit a concrete type and prove it satisfies
+<a
 href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>.
 The specification says <em>what</em> a real-number system must satisfy
 and stops there.</p>
@@ -143,41 +169,47 @@ suprema in any argument that needs them — these are statements about
 <em>any</em> type satisfying <a
 href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>,
 and their proofs quote <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>Reals.complete</code></a>
+href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>complete</code></a>
 and the order laws by name, never the internal machinery of cuts or
-sequences. The file comment names this split directly: “Impl/ Rstd.v
-(stdlib R, classical) and later a constructive Cauchy build are the
-intended models; everything downstream programs against this class
-only.”</p>
+sequences.</p>
 <p>The reward for the split is concrete. Anything proved generically
 against the <a
 href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>
-class — with a <code>Context {R : Type} `{Reals.Reals R}</code> at the
-top, the way <a
+class — with a <code>Context {R : Type} `{Reals R}</code> at the top,
+the way <a
 href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>
 proves things against <a
 href="coqdoc/Riktig.Interface.Exp.html#Exp.Exp"><code>Exp</code></a> —
 holds automatically for <em>every</em> model the class will ever have.
 Prove the intermediate value theorem once from <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>Reals.complete</code></a>,
+href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>complete</code></a>,
 and it is simultaneously a theorem about the classical stdlib reals and
 about the constructive Cauchy reals, the moment either instance is
 supplied. The construction is a plug fitted later into a socket whose
 shape is already fixed; the theorems are wired to the socket, not the
 plug.</p>
-<p>So this short file has exactly one thing to show, and it has shown
-it: the eight order-and-compatibility laws and the one completeness
-axiom that, together, are the definition of a real-number system — with
-the construction left as the separate task it genuinely is.</p>
+<p>The split also explains why the file is fourteen lines. A first draft
+might reasonably have restated the order and its eight laws inside <a
+href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>,
+and the class would then carry two orders that happen to coincide — its
+own <a href="coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a>
+and the ordered field’s — with every downstream lemma having to be told
+which one it meant. Requiring <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+as a superclass instead means there is exactly one <code>&lt;=</code> in
+play, and the file has nothing left to say except the one axiom that
+distinguishes the reals from the rationals.</p>
 <p><em>Next: the same specification-first move applied to a single
 function — <code>exp</code> pinned down by four laws, with no formula
 written at all.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>
-(the complete-ordered-field spec) · <a
+(the completeness axiom, and nothing else) · <a
+href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+(the ordered field it builds on) · <a
 href="coqdoc/Riktig.Interface.Field.html"><code>Interface/Field.v</code></a>
-(the field it builds on).</p>
+(the field under that).</p>
 </main>
 </body>
 </html>

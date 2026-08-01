@@ -15,23 +15,22 @@ style, concretely</h1>
 an application <code>f a</code>. Variables are de Bruijn indices — a
 number counting the binders out to the <code>λ</code> that bound the
 variable — so <code>λ.0</code> is the identity function. We evaluate
-call-by-value and left-to-right: to run <code>f a</code>, reduce <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> to a
-function, reduce <code>a</code> to a value, then substitute the value
-into the function’s body. A <em>value</em> is anything that is not a
-pending application: an abstraction, or a variable that is stuck for
-lack of an argument.</p>
+call-by-value and left-to-right: to run <code>f a</code>, reduce
+<code>f</code> to a function, reduce <code>a</code> to a value, then
+substitute the value into the function’s body. A <em>value</em> is
+anything that is not a pending application: an abstraction, or a
+variable that is stuck for lack of an argument.</p>
 <h2 id="what-cps-makes-explicit">What CPS makes explicit</h2>
 <p>In ordinary evaluation a function <em>returns</em>: it computes a
 result and hands it back to whoever called it, and “whoever called it”
 is implicit machinery, not something the program can name.
 Continuation-passing style makes that machinery explicit. Every function
 takes one extra argument — the <em>continuation</em>, conventionally
-called <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> —
-which is a function describing “what happens next.” Instead of returning
-its result, a CPS function calls the continuation with the result.
-Nothing ever returns in the ordinary sense; a program is one long chain
-of tail calls threading a continuation through.</p>
+called <code>k</code> — which is a function describing “what happens
+next.” Instead of returning its result, a CPS function calls the
+continuation with the result. Nothing ever returns in the ordinary
+sense; a program is one long chain of tail calls threading a
+continuation through.</p>
 <p>Why go to this trouble: once “what happens next” is an ordinary
 value, you can do ordinary things with it. You can hold onto a
 continuation and call it later, call it more than once, or call it from
@@ -42,25 +41,19 @@ please. That uniformity is why CPS is a standard intermediate form
 inside compilers.</p>
 <h2 id="the-transform">The transform</h2>
 <p>The call-by-value CPS transform (due to Fischer and Plotkin) rewrites
-each of the three term shapes so that it takes a continuation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> and ends by
-calling <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>:</p>
+each of the three term shapes so that it takes a continuation
+<code>k</code> and ends by calling <code>k</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">[\![x]\!] = \lambda k.\,k\,x</annotation></semantics></math></p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>λ</mi><mi>.</mi><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![\lambda.E]\!] = \lambda k.\,k\,(\lambda x.\,[\![E]\!])</annotation></semantics></math></p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>F</mi><mspace width="0.167em"></mspace><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>F</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>f</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>E</mi><mo stretchy="false" form="postfix">]</mo><mspace width="-0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>e</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>e</mi><mspace width="0.167em"></mspace><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\![F\,E]\!] = \lambda k.\,[\![F]\!]\,(\lambda f.\,[\![E]\!]\,(\lambda e.\,f\,e\,k))</annotation></semantics></math></p>
 <p>A variable hands itself to the continuation. An abstraction hands the
 continuation a CPS-converted function. An application is the interesting
 case: run <code>[[F]]</code> with a continuation that names its result
-<a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>,
-then run <code>[[E]]</code> with a continuation that names its result <a
-href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>, then apply
-<a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> to
-<a href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> — passing
-along the outer continuation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> so the call
-knows what to do next. The left-to-right order of evaluation is now
-literally the nesting order of the continuations.</p>
+<code>f</code>, then run <code>[[E]]</code> with a continuation that
+names its result <code>e</code>, then apply <code>f</code> to
+<code>e</code> — passing along the outer continuation <code>k</code> so
+the call knows what to do next. The left-to-right order of evaluation is
+now literally the nesting order of the continuations.</p>
 <p>In de Bruijn form the binders introduced by each rule shift the
 payloads so their free variables keep pointing at the right place, and
 that lifting is all the arithmetic in the definition:</p>
@@ -75,9 +68,8 @@ that lifting is all the arithmetic in the definition:</p>
   end.</code></pre>
 <p>In the <a
 href="coqdoc/Riktig.Lambda.Syntax.html#Var"><code>Var</code></a> rule,
-<code>x</code> now sits under the new <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> binder, so
-index <code>n</code> becomes <code>S n</code>. In the <a
+<code>x</code> now sits under the new <code>k</code> binder, so index
+<code>n</code> becomes <code>S n</code>. In the <a
 href="coqdoc/Riktig.Lambda.Syntax.html#App"><code>App</code></a> rule,
 inside the innermost abstraction the three names in scope are
 <code>e = 0</code>, <code>f = 1</code>, <code>k = 2</code>, which is why
@@ -123,14 +115,14 @@ and that is exactly what the two helper lemmas say:</p>
 
 Lemma cps_abs_beta : forall c b,
   subst 0 c (App (Var 0) (Abs (lift 1 1 (cps b)))) = App c (Abs (cps b)).</code></pre>
-<p>For a variable, substituting <code>c</code> for the continuation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> turns the
-body <code>k x</code> into <code>c x</code>. For an abstraction, the
-same substitution turns <code>k (λ. cps b ↑)</code> into
-<code>c (λ. cps b)</code> — the outward lift <code>lift 1 1</code> that
-the transform inserted is undone precisely by the substitution, which is
-why the twin <code>psi (Abs b) = Abs (cps b)</code> comes out clean
-rather than carrying stray index shifts.</p>
+<p>For a variable, substituting <code>c</code> for the continuation
+<code>k</code> turns the body <code>k x</code> into <code>c x</code>.
+For an abstraction, the same substitution turns
+<code>k (λ. cps b ↑)</code> into <code>c (λ. cps b)</code> — the outward
+lift <code>lift 1 1</code> that the transform inserted is undone
+precisely by the substitution, which is why the twin
+<code>psi (Abs b) = Abs (cps b)</code> comes out clean rather than
+carrying stray index shifts.</p>
 <p>Run against the identity continuation specifically, the answer is
 <code>Ψ v</code> on the nose:</p>
 <pre class="coq"><code>Lemma cps_value_id : forall v, value v -&gt;
@@ -154,13 +146,12 @@ that common value:</p>
 Proof. reflexivity. Qed.</code></pre>
 <p>The result is <code>λx.λk. k x</code> (in de Bruijn form
 <code>Abs (Abs (App (Var 0) (Var 1)))</code>, where inside the two
-binders <code>Var 0</code> is <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> and
-<code>Var 1</code> is <code>x</code>). That is precisely
-<code>Ψ(λ.0)</code> — the CPS-converted identity, a function that takes
-its argument and a continuation and hands the argument to the
-continuation. Direct evaluation returned <code>λ.0</code>; the CPS run
-returned that function’s twin, which is exactly what <a
+binders <code>Var 0</code> is <code>k</code> and <code>Var 1</code> is
+<code>x</code>). That is precisely <code>Ψ(λ.0)</code> — the
+CPS-converted identity, a function that takes its argument and a
+continuation and hands the argument to the continuation. Direct
+evaluation returned <code>λ.0</code>; the CPS run returned that
+function’s twin, which is exactly what <a
 href="coqdoc/Riktig.Lambda.CPS.html#cps_value_step"><code>cps_value_step</code></a>
 predicted, played out through a two-step computation rather than a
 single beta step.</p>

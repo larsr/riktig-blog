@@ -81,15 +81,17 @@ and the bivector
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>
 (<a
 href="coqdoc/Riktig.Impl.Cliff2.html"><code>Impl/Cliff2.v</code></a>).
-Its carrier, <code>C2 F</code>, is a four-field record whose fields
-<code>c2_s, c2_1, c2_2, c2_12</code> are the coefficients of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">1, e_1, e_2,
-e_{12}</annotation></semantics></math>. Half of those four dimensions —
-1 and
+Its carrier, <code>Cl2 F</code>, is a four-field record whose fields
+<code>scalar_part, e1_part, e2_part, e12_part</code> are the
+coefficients of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">1, e_1, e_2, e_{12}</annotation></semantics></math>.
+Half of those four dimensions — 1 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>12</mn></msub><annotation encoding="application/x-tex">e_{12}</annotation></semantics></math>
 alone, the <em>even</em> part, built from an even number of vector
-factors — is closed under multiplication:</p>
-<pre class="coq"><code>  Definition c2_even (x : C2 F) : Prop := c2_1 x == 0 /\ c2_2 x == 0.</code></pre>
+factors — is closed under multiplication (the definition sits inside
+<code>Module Cl2</code>, so from outside it reads <a
+href="coqdoc/Riktig.Impl.Cliff2.html#Cl2.is_even"><code>Cl2.is_even</code></a>):</p>
+<pre class="coq"><code>    Definition is_even (x : Cl2 F) : Prop := e1_part x == 0 /\ e2_part x == 0.</code></pre>
 <p>and that even part turns out to match the complex numbers
 exactly.</p>
 <h2 id="the-planes-even-part-is-the-complex-numbers">The plane’s even
@@ -97,23 +99,24 @@ part is the complex numbers</h2>
 <p>The two directions of the correspondence read off, or rebuild, the
 even part’s two surviving coordinates against a complex number’s real
 and imaginary parts:</p>
-<pre class="coq"><code>  Definition c2_to_c (x : C2 F) : C F := mkC (c2_s x) (c2_12 x).
-  Definition c_to_c2 (z : C F) : C2 F := mkC2 (re z) 0 0 (im z).</code></pre>
+<pre class="coq"><code>  Definition even_to_complex (x : Cl2 F) : C F := mkC (scalar_part x) (e12_part x).
+  Definition complex_to_even (z : C F) : Cl2 F := mkCl2 (re z) 0 0 (im z).</code></pre>
 <p>They are mutually inverse exactly on the even part. Round-tripping a
-general element of <code>C2 F</code> through <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c_to_c2"><code>c_to_c2</code></a>
+general element of <code>Cl2 F</code> through <a
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#complex_to_even"><code>complex_to_even</code></a>
 forgets its vector coordinates, so that direction only holds under <a
-href="coqdoc/Riktig.Impl.Cliff2.html#c2_even"><code>c2_even</code></a>;
+href="coqdoc/Riktig.Impl.Cliff2.html#Cl2.is_even"><code>Cl2.is_even</code></a>;
 the other direction needs no hypothesis at all, because <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c_to_c2"><code>c_to_c2</code></a>’s
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#complex_to_even"><code>complex_to_even</code></a>’s
 image is always even:</p>
-<pre class="coq"><code>  Lemma c_to_c2_to_c : forall x : C2 F, c2_even x -&gt; c_to_c2 (c2_to_c x) == x.
-  Lemma c2_to_c_to_c2 : forall z : C F, c2_to_c (c_to_c2 z) == z.</code></pre>
+<pre class="coq"><code>  Lemma even_round_trip : forall x : Cl2 F,
+    Cl2.is_even x -&gt; complex_to_even (even_to_complex x) == x.
+  Lemma complex_round_trip : forall z : C F, even_to_complex (complex_to_even z) == z.</code></pre>
 <p>A bijection between two four- and two-dimensional carriers is cheap;
 what makes this a ring isomorphism rather than a relabeling is that
 <em>multiplication</em> matches too, and multiplication is where the two
-constructions could have disagreed. <code>C2 F</code> was built entirely
-from the relations
+constructions could have disagreed. <code>Cl2 F</code> was built
+entirely from the relations
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>1</mn></msub><mo>=</mo><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">e_1e_1=e_2e_2=1</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo>=</mo><mi>−</mi><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">e_1e_2=-e_2e_1</annotation></semantics></math>
 — nothing in its definition mentions complex numbers. Checking that its
@@ -121,25 +124,25 @@ multiplication, restricted to even elements, reproduces the complex
 numbers’ product is a real theorem, verified directly against
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>’s
 own multiplication table:</p>
-<pre class="coq"><code>  Lemma c2_to_c_mul_even : forall x y : C2 F,
-    c2_even x -&gt; c2_even y -&gt; c2_to_c (x * y) == c2_to_c x * c2_to_c y.</code></pre>
+<pre class="coq"><code>  Lemma even_to_complex_mul : forall x y : Cl2 F,
+    Cl2.is_even x -&gt; Cl2.is_even y -&gt;
+    even_to_complex (x * y) == even_to_complex x * even_to_complex y.</code></pre>
 <p>(0, 1, addition, and negation match unconditionally — <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_to_c_zero"><code>c2_to_c_zero</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_zero"><code>even_to_complex_zero</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_to_c_one"><code>c2_to_c_one</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_one"><code>even_to_complex_one</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_to_c_add"><code>c2_to_c_add</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_add"><code>even_to_complex_add</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_to_c_neg"><code>c2_to_c_neg</code></a>
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_neg"><code>even_to_complex_neg</code></a>
 — because those operations only ever touch the scalar and bivector
 coordinates, whether or not the vector coordinates happen to be zero.)
-Contrast this with a smaller construction elsewhere in the same
-codebase,
+Contrast this with the smaller algebra
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(0,1)</annotation></semantics></math>:
 there, a one-dimensional space is embedded directly <em>into</em> the
 complex numbers, which are the carrier by definition — the match is
 built in from the start, a coincidence of carriers. Here
-<code>C2 F</code> is an independent four-dimensional ring, built from
+<code>Cl2 F</code> is an independent four-dimensional ring, built from
 the geometric relations alone, and its agreement with the complex
 numbers under multiplication had to be checked, and could in principle
 have failed.</p>
@@ -242,15 +245,15 @@ each proved the same way): the even part of
 complex multiplication</h2>
 <p>A rotor is an even element, written directly by its two coordinates,
 with no angle mentioned:</p>
-<pre class="coq"><code>  Definition rotor (c s : F) : C2 F := mkC2 c 0 0 s.</code></pre>
+<pre class="coq"><code>  Definition rotor (c s : F) : Cl2 F := mkCl2 c 0 0 s.</code></pre>
 <p>and reversal — the operation that will let a rotor act correctly on a
 vector — fixes the scalar coordinate and flips the sign of the bivector
 one, since reversing the order of the two vectors inside
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>=</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_{12}=e_1e_2</annotation></semantics></math>
 gives
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub><mo>=</mo><mi>−</mi><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">e_2e_1=-e_{12}</annotation></semantics></math>:</p>
-<pre class="coq"><code>  Definition c2_reverse (x : C2 F) : C2 F :=
-    mkC2 (c2_s x) (c2_1 x) (c2_2 x) (- c2_12 x).</code></pre>
+<pre class="coq"><code>  Definition cl2_reverse (x : Cl2 F) : Cl2 F :=
+    mkCl2 (scalar_part x) (e1_part x) (e2_part x) (- e12_part x).</code></pre>
 <p>Composing two rotors — multiplying them as elements of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>
 — gives back a rotor, at the ordinary angle-addition pair:</p>
@@ -268,40 +271,28 @@ exactly this equation, checked against the multiplication table:</p>
   Proof.
     intros c1 s1 c2 s2.
     unfold rotor.
-    repeat split; simpl.
-    - rewrite mul_0_l.
-      autorewrite with grp.
-      reflexivity.
-    - repeat rewrite mul_0_l.
-      repeat rewrite mul_0_r.
-      autorewrite with grp.
-      reflexivity.
-    - repeat rewrite mul_0_l.
-      repeat rewrite mul_0_r.
-      autorewrite with grp.
-      reflexivity.
-    - rewrite mul_0_l.
-      autorewrite with grp.
-      reflexivity.
+    repeat split; simpl; ring.
   Qed.</code></pre>
-<p>Unfolding <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor"><code>rotor</code></a>
-splits the goal into four field-level equations, one per coordinate of
-the result; a rotor’s own vector coordinates are always 0, so <a
-href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a>/<a
-href="coqdoc/Riktig.Theory.Ring.html#mul_0_r"><code>mul_0_r</code></a>
-erase every term multiplying one of them, and the grouping lemmas
-gathered as <code>grp</code> close what remains.</p>
+<p><code>unfold rotor</code> exposes both sides as explicit
+four-coordinate records, and <code>repeat split; simpl</code> turns the
+goal into four field-level equations, one per coordinate of the result.
+Each of the four is a polynomial identity in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>c</mi><mn>2</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">c_1,s_1,c_2,s_2</annotation></semantics></math>
+and the two zeros a rotor carries in its vector coordinates, so <code
+class="nolink">ring</code> discharges all four at once — the section
+declares <code>Add Ring</code> over the coefficient field, which is what
+makes the tactic available on a setoid equality rather than Coq’s
+built-in <code>eq</code>.</p>
 <p>That this matches complex multiplication is not a second coincidence
 — it is one instance of the homomorphism theorem above, since a rotor is
 always even (<a
 href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_even"><code>rotor_even</code></a>):</p>
-<pre class="coq"><code>  Lemma rotor_mul_to_c : forall c1 s1 c2 s2 : F,
-    c2_to_c (rotor c1 s1 * rotor c2 s2)
-    == c2_to_c (rotor c1 s1) * c2_to_c (rotor c2 s2).
+<pre class="coq"><code>  Lemma rotor_mul_to_complex : forall c1 s1 c2 s2 : F,
+    even_to_complex (rotor c1 s1 * rotor c2 s2)
+    == even_to_complex (rotor c1 s1) * even_to_complex (rotor c2 s2).
   Proof.
     intros c1 s1 c2 s2.
-    exact (c2_to_c_mul_even (rotor c1 s1) (rotor c2 s2)
+    exact (even_to_complex_mul (rotor c1 s1) (rotor c2 s2)
              (rotor_even c1 s1) (rotor_even c2 s2)).
   Qed.</code></pre>
 <p>Putting the two together — the image of a product of rotors equals
@@ -309,17 +300,17 @@ the product of images, and the product of rotors is itself the
 angle-added rotor — gives the statement that composing rotors literally
 is multiplying complex numbers:</p>
 <pre class="coq"><code>  Theorem rotor_composition_is_u1 : forall c1 s1 c2 s2 : F,
-    c2_to_c (rotor c1 s1) * c2_to_c (rotor c2 s2)
-    == c2_to_c (rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)).
+    even_to_complex (rotor c1 s1) * even_to_complex (rotor c2 s2)
+    == even_to_complex (rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)).
   Proof.
     intros c1 s1 c2 s2.
-    rewrite &lt;- (rotor_mul_to_c c1 s1 c2 s2).
+    rewrite &lt;- (rotor_mul_to_complex c1 s1 c2 s2).
     rewrite (rotor_mul c1 s1 c2 s2).
     reflexivity.
   Qed.</code></pre>
 <p>The first rewrite turns the left side, a product of two complex
 images, back into the image of a single product of rotors (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul_to_c"><code>rotor_mul_to_c</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul_to_complex"><code>rotor_mul_to_complex</code></a>,
 read right to left); the second replaces that product of rotors with the
 already-computed angle-added rotor (<a
 href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul"><code>rotor_mul</code></a>);
@@ -446,19 +437,19 @@ rotation matrix, with no trigonometry</h2>
 href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>
 above wrapped one around any element of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>:</p>
-<pre class="coq"><code>  Definition c2_sandwich (R x : C2 F) : C2 F := R * x * c2_reverse R.</code></pre>
+<pre class="coq"><code>  Definition cl2_sandwich (R x : Cl2 F) : Cl2 F := R * x * cl2_reverse R.</code></pre>
 <p>Feed it a pure vector — an element with only its
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_1, e_2</annotation></semantics></math>
-coordinates set, <code>c2_vec (row2 v1 v2)</code> where
-<code>row2 a b</code> is just the pair
+coordinates set, <code>Cl2.vec (plane_vector v1 v2)</code> where
+<code>plane_vector a b</code> is just the pair
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a,b)</annotation></semantics></math>
 read as a function on two indices. Computed directly from the
 multiplication table, with no hypothesis on
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>,</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">c,s</annotation></semantics></math>
 anywhere:</p>
-<pre class="coq"><code>  Lemma c2_sandwich_rotor_vec : forall c s v1 v2 : F,
-    c2_sandwich (rotor c s) (c2_vec (row2 v1 v2))
-    == c2_vec (row2
+<pre class="coq"><code>  Lemma cl2_sandwich_rotor_vec : forall c s v1 v2 : F,
+    cl2_sandwich (rotor c s) (Cl2.vec (plane_vector v1 v2))
+    == Cl2.vec (plane_vector
          ((c*c + - (s*s)) * v1 + (c*s + c*s) * v2)
          (- ((c*s + c*s) * v1) + (c*c + - (s*s)) * v2)).</code></pre>
 <p>Wrapping
@@ -496,7 +487,7 @@ rather than
 not an error.) A further theorem, proved the same way from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>
 alone (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_sandwich_rotor_preserves_dot"><code>c2_sandwich_rotor_preserves_dot</code></a>),
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich_rotor_preserves_dot"><code>cl2_sandwich_rotor_preserves_dot</code></a>),
 checks that the squared length
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>v</mi><mn>1</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>v</mi><mn>2</mn><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">v_1^2+v_2^2</annotation></semantics></math>
 is exactly preserved: the sandwich is a genuine rotation, not merely
@@ -505,13 +496,13 @@ some linear map that happens to look like one.</p>
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.Cliff2Rotor.html"><code>Theory/Cliff2Rotor.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_to_c"><code>c2_to_c</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex"><code>even_to_complex</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c_to_c2"><code>c_to_c2</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#complex_to_even"><code>complex_to_even</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_to_c_mul_even"><code>c2_to_c_mul_even</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_reverse"><code>c2_reverse</code></a>,
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_reverse"><code>cl2_reverse</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor"><code>rotor</code></a>,
 <a
@@ -519,7 +510,7 @@ href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul"><code>rotor_mul</code></a
 <a
 href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_composition_is_u1"><code>rotor_composition_is_u1</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#c2_sandwich_rotor_vec"><code>c2_sandwich_rotor_vec</code></a>)
+href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich_rotor_vec"><code>cl2_sandwich_rotor_vec</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a> (<a
 href="coqdoc/Riktig.Impl.Cliff3.html#c3_even"><code>c3_even</code></a>,

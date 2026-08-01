@@ -34,7 +34,7 @@ href="coqdoc/Riktig.Interface.Category.html"><code>theories/Interface/Category.v
   Class Functor {C D : Type} (cC : Category C) (cD : Category D) := {
     fobj      : C -&gt; D;
     fmap      : forall {x y : C}, (x ~&gt; y) -&gt; (fobj x ~&gt; fobj y);
-    #[global] fmap_proper :: forall x y : C, Proper (equ ==&gt; equ) (@fmap x y);
+    fmap_proper :: forall x y : C, Proper (equ ==&gt; equ) (@fmap x y);
     fmap_id   : forall x : C, fmap (@cat_id C cC x) == cat_id;
     fmap_comp : forall (x y z : C) (f : y ~&gt; z) (g : x ~&gt; y),
         fmap (f ∘ g) == fmap f ∘ fmap g
@@ -43,21 +43,18 @@ End Functor.
 Notation Functor := Functor.Functor.
 Notation fobj    := Functor.fobj.
 Notation fmap    := Functor.fmap.</code></pre>
-<p>A functor from category <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a> to category
-<code>D</code> has:</p>
+<p>A functor from category <code>C</code> to category <code>D</code>
+has:</p>
 <ul>
 <li><a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fobj"><code>fobj</code></a>,
-the action on objects: every object of <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a> is sent to
-an object of <code>D</code>.</li>
+the action on objects: every object of <code>C</code> is sent to an
+object of <code>D</code>.</li>
 <li><a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>,
-the action on arrows: an arrow <code>x ~&gt; y</code> in <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a> is sent to
-an arrow <code>fobj x ~&gt; fobj y</code> in <code>D</code>. The functor
-moves the endpoints by <a
+the action on arrows: an arrow <code>x ~&gt; y</code> in <code>C</code>
+is sent to an arrow <code>fobj x ~&gt; fobj y</code> in <code>D</code>.
+The functor moves the endpoints by <a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fobj"><code>fobj</code></a>
 and the arrow between them by <a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>.</li>
@@ -83,15 +80,13 @@ and <a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>
 spelled the way every proof writes them.</p>
 <h2 id="the-list-functor-map">The list functor: map</h2>
-<p>Take <a href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>
-and <code>D</code> both to be <a
+<p>Take <code>C</code> and <code>D</code> both to be <a
 href="coqdoc/Riktig.Impl.CoqCat.html#CoqCat"><code>CoqCat</code></a>.
 For each type <code>X</code>, the type <code>list X</code> is another
 type — that is the action on objects. For each function
 <code>f : X -&gt; Y</code>, <code>map f : list X -&gt; list Y</code>
-applies <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> to
-every element — that is the action on arrows. This is a functor from <a
+applies <code>f</code> to every element — that is the action on arrows.
+This is a functor from <a
 href="coqdoc/Riktig.Impl.CoqCat.html#CoqCat"><code>CoqCat</code></a> to
 itself, defined in <a
 href="coqdoc/Riktig.Impl.CatFunctors.html"><code>theories/Impl/CatFunctors.v</code></a>.
@@ -131,11 +126,9 @@ href="coqdoc/Riktig.Impl.CatFunctors.html#list_fmap_comp"><code>list_fmap_comp</
 is <a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_comp"><code>Functor.fmap_comp</code></a>:
 mapping a composed function <code>fun x =&gt; f (g x)</code> is the same
-as mapping <code>g</code> and then mapping <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>. This
-is the standard-library fact <code>map_map</code>, and it is the law a
-compiler uses to fuse two passes over a list into one. A third small
-lemma, <a
+as mapping <code>g</code> and then mapping <code>f</code>. This is the
+standard-library fact <code>map_map</code>, and it is the law a compiler
+uses to fuse two passes over a list into one. A third small lemma, <a
 href="coqdoc/Riktig.Impl.CatFunctors.html#list_fmap_proper"><code>list_fmap_proper</code></a>,
 gives <a
 href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_proper"><code>fmap_proper</code></a>
@@ -153,14 +146,12 @@ every object and every arrow where it is; the same file defines it, <a
 href="coqdoc/Riktig.Impl.CatFunctors.html#IdFunctor"><code>IdFunctor</code></a>,
 on any category, and both its laws are <code>reflexivity</code>.</p>
 <h2 id="natural-transformations">Natural transformations</h2>
-<p>Given two functors <code>F</code> and <code>G</code> from <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a> to
-<code>D</code>, a <strong>natural transformation</strong> is a way to
-turn <code>F</code> into <code>G</code>: a family of arrows in
-<code>D</code>, one for each object of <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>, that
-commutes with everything the functors do to arrows. Same file, same
-source:</p>
+<p>Given two functors <code>F</code> and <code>G</code> from
+<code>C</code> to <code>D</code>, a <strong>natural
+transformation</strong> is a way to turn <code>F</code> into
+<code>G</code>: a family of arrows in <code>D</code>, one for each
+object of <code>C</code>, that commutes with everything the functors do
+to arrows. Same file, same source:</p>
 <pre class="coq"><code>Module NaturalTransformation.
   Class NaturalTransformation {C D : Type} {cC : Category C} {cD : Category D}
       (F G : Functor cC cD) := {
@@ -182,13 +173,11 @@ is the traditional name, the Greek letter η.)</li>
 <li><a
 href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>
 is the single law that makes the family coherent. Take any arrow
-<code>f : x ~&gt; y</code> in <a
-href="coqdoc/Riktig.Impl.Complex.html#C"><code>C</code></a>. There are
-two ways to get from <code>F</code>’s version of <code>x</code> to
-<code>G</code>’s version of <code>y</code>: apply the family at
-<code>x</code> and then move along <code>G f</code>, or move along
-<code>F f</code> and then apply the family at <code>y</code>. Naturality
-says these two are equal:
+<code>f : x ~&gt; y</code> in <code>C</code>. There are two ways to get
+from <code>F</code>’s version of <code>x</code> to <code>G</code>’s
+version of <code>y</code>: apply the family at <code>x</code> and then
+move along <code>G f</code>, or move along <code>F f</code> and then
+apply the family at <code>y</code>. Naturality says these two are equal:
 <code>fmap_G f ∘ eta x == eta y ∘ fmap_F f</code>. This equation is
 called the <em>naturality square</em>, because it says two sides of a
 square of arrows compose to the same thing.</li>
@@ -220,16 +209,12 @@ href="coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a>, and the
 family <a
 href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.eta"><code>eta</code></a>
 is <code>rev</code>. Writing the naturality square out with those
-substitutions, it says, for every <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>:</p>
+substitutions, it says, for every <code>f</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">p</mi></mrow><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.278em"></mspace><mo>∘</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">v</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">v</mi></mrow><mspace width="0.278em"></mspace><mo>∘</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">p</mi></mrow><mspace width="0.167em"></mspace><mi>f</mi></mrow><annotation encoding="application/x-tex">\mathrm{map}\,f \;\circ\; \mathrm{rev} \;=\; \mathrm{rev} \;\circ\; \mathrm{map}\,f</annotation></semantics></math></p>
-<p>Reverse a list and then map <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> over
-it, or map <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> over it
-and then reverse — the same list either way. Spelled out on an element
-<a href="coqdoc/Riktig.Programs.BinarySearch.html#l"><code>l</code></a>,
-that is <code>map f (rev l) = rev (map f l)</code>, which is the
+<p>Reverse a list and then map <code>f</code> over it, or map
+<code>f</code> over it and then reverse — the same list either way.
+Spelled out on an element <code>l</code>, that is
+<code>map f (rev l) = rev (map f l)</code>, which is the
 standard-library fact <code>map_rev</code>. So the entire proof is one
 step: <code>intros l; apply map_rev</code>. The content is not the proof
 effort — it is the recognition that <a

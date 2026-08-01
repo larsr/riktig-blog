@@ -63,14 +63,16 @@ is only
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">d \times d</annotation></semantics></math>.
 From <a
 href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>:</p>
-<pre class="coq"><code>  (* Left-to-right: materializes the n×n score matrix Q·Kᵀ.           *)
-  Definition attn_naive : Matrix n d F := mat_mul (mat_mul Q (mat_tr K)) V.
+<pre class="coq"><code>  (* Left-to-right: materializes the n×n score matrix Q·Kᵀ. *)
+  Definition attention_naive : Matrix n d F :=
+    mat_mul (mat_mul Q (mat_transpose K)) V.
 
-  (* Right-to-left: materializes only the d×d matrix Kᵀ·V.            *)
-  Definition attn_fast : Matrix n d F := mat_mul Q (mat_mul (mat_tr K) V).</code></pre>
+  (* Right-to-left: materializes only the d×d matrix Kᵀ·V. *)
+  Definition attention_fast : Matrix n d F :=
+    mat_mul Q (mat_mul (mat_transpose K) V).</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_tr"><code>mat_tr</code></a>
-is the transpose, so <code>mat_tr K</code> is
+href="coqdoc/Riktig.Theory.MatVec.html#mat_transpose"><code>mat_transpose</code></a>
+is the transpose, so <code>mat_transpose K</code> is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>K</mi><mi>𝖳</mi></msup><annotation encoding="application/x-tex">K^\mathsf{T}</annotation></semantics></math>.
 The naive form builds the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
@@ -80,9 +82,9 @@ Nothing of size
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
 is ever formed. That these two produce the same matrix is a single
 application of associativity:</p>
-<pre class="coq"><code>  Theorem attn_assoc : attn_naive == attn_fast.
+<pre class="coq"><code>  Theorem attention_assoc : attention_naive == attention_fast.
   Proof.
-    exact (mat_mul_assoc n d n d Q (mat_tr K) V).
+    exact (mat_mul_assoc n d n d Q (mat_transpose K) V).
   Qed.</code></pre>
 <p>The proof names no tactics at all — <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
@@ -173,33 +175,33 @@ Proof. reflexivity. Qed.</code></pre>
 <h2 id="one-rewrite-makes-the-two-implementations-equal">One rewrite
 makes the two implementations equal</h2>
 <p>The point of proving <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>
+href="coqdoc/Riktig.Impl.Attention.html#attention_assoc"><code>attention_assoc</code></a>
 is that a “simple” implementation, written to read like the definition,
 and an “efficient” one, written to be cheap, can be shown to be the same
 layer — not by inspection, but by a setoid rewrite that the checker
 verifies. <a
 href="coqdoc/Riktig.Examples.AttentionLayer.html"><code>Examples/AttentionLayer.v</code></a>
 writes both:</p>
-<pre class="coq"><code>  Definition attn_simple : Matrix n d F :=
-    mat_mul (mat_mul Q (mat_tr K)) V.
+<pre class="coq"><code>  Definition attention_simple : Matrix n d F :=
+    mat_mul (mat_mul Q (mat_transpose K)) V.
 
-  Definition attn_efficient : Matrix n d F :=
-    mat_mul Q (mat_mul (mat_tr K) V).</code></pre>
+  Definition attention_efficient : Matrix n d F :=
+    mat_mul Q (mat_mul (mat_transpose K) V).</code></pre>
 <p><a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 respects the matrix equality <code>==</code> — replacing a factor by an
 equal one gives an equal product — so the associativity law is usable as
 a rewrite rule on a matrix expression. One rewrite turns the simple form
 into the efficient one:</p>
-<pre class="coq"><code>  Theorem attn_equal : attn_simple == attn_efficient.
+<pre class="coq"><code>  Theorem attention_equal : attention_simple == attention_efficient.
   Proof.
-    unfold attn_simple, attn_efficient.
+    unfold attention_simple, attention_efficient.
     rewrite mat_mul_assoc.
     reflexivity.
   Qed.</code></pre>
 <p>Walking it: <code>unfold</code> replaces the two names by their
 definitions, so the goal becomes
-<code>mat_mul (mat_mul Q (mat_tr K)) V == mat_mul Q (mat_mul (mat_tr K) V)</code>.
+<code>mat_mul (mat_mul Q (mat_transpose K)) V == mat_mul Q (mat_mul (mat_transpose K) V)</code>.
 <code>rewrite mat_mul_assoc</code> applies associativity left to right,
 rebracketing the left side to match the right. <code>reflexivity</code>
 closes what is now an identity. The simple and the efficient
@@ -228,13 +230,13 @@ Definition Vm3 : Matrix 3 2 Q :=
 (Q K^\mathsf{T})\,V = \begin{pmatrix} 9 &amp; 7\\ 2 &amp; 3\\ 3 &amp; -2 \end{pmatrix}.</annotation></semantics></math></p>
 <p>The naive order is checked against those six output entries by
 computation:</p>
-<pre class="coq"><code>Example attn_naive_Q_compute :
-     attn_naive 3 2 Qm3 Km3 Vm3 Fin.F1 Fin.F1 == (9#1)%Q
-  /\ attn_naive 3 2 Qm3 Km3 Vm3 Fin.F1 (Fin.FS Fin.F1) == (7#1)%Q
-  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS Fin.F1) Fin.F1 == (2#1)%Q
-  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS Fin.F1) (Fin.FS Fin.F1) == (3#1)%Q
-  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS (Fin.FS Fin.F1)) Fin.F1 == (3#1)%Q
-  /\ attn_naive 3 2 Qm3 Km3 Vm3 (Fin.FS (Fin.FS Fin.F1)) (Fin.FS Fin.F1)
+<pre class="coq"><code>Example attention_naive_Q_compute :
+     attention_naive 3 2 Qm3 Km3 Vm3 Fin.F1 Fin.F1 == (9#1)%Q
+  /\ attention_naive 3 2 Qm3 Km3 Vm3 Fin.F1 (Fin.FS Fin.F1) == (7#1)%Q
+  /\ attention_naive 3 2 Qm3 Km3 Vm3 (Fin.FS Fin.F1) Fin.F1 == (2#1)%Q
+  /\ attention_naive 3 2 Qm3 Km3 Vm3 (Fin.FS Fin.F1) (Fin.FS Fin.F1) == (3#1)%Q
+  /\ attention_naive 3 2 Qm3 Km3 Vm3 (Fin.FS (Fin.FS Fin.F1)) Fin.F1 == (3#1)%Q
+  /\ attention_naive 3 2 Qm3 Km3 Vm3 (Fin.FS (Fin.FS Fin.F1)) (Fin.FS Fin.F1)
        == ((-2)#1)%Q.
 Proof.
   repeat split; reflexivity.
@@ -244,10 +246,10 @@ column; the six conjuncts are the six entries of the output matrix
 above. <code>repeat split</code> breaks the conjunction apart and
 <code>reflexivity</code> evaluates each entry — the layer really
 computes these rationals. The reassociated order, <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_fast_Q_compute"><code>attn_fast_Q_compute</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_fast_Q_compute"><code>attention_fast_Q_compute</code></a>,
 is checked against the same six literals independently, with no appeal
 to <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>:
+href="coqdoc/Riktig.Impl.Attention.html#attention_assoc"><code>attention_assoc</code></a>:
 two different bracketings, computed separately, land on the same
 matrix.</p>
 <h2 id="what-this-is-not">What this is not</h2>
@@ -267,20 +269,20 @@ multiplication is associative.</p>
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
 (<a
-href="coqdoc/Riktig.Impl.Attention.html#attn_naive"><code>attn_naive</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_naive"><code>attention_naive</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_fast"><code>attn_fast</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_fast"><code>attention_fast</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_assoc"><code>attention_assoc</code></a>,
 the cost model and its concrete counts, the run over <code>Q</code>) ·
 <a
 href="coqdoc/Riktig.Examples.AttentionLayer.html"><code>Examples/AttentionLayer.v</code></a>
 (<a
-href="coqdoc/Riktig.Examples.AttentionLayer.html#attn_simple"><code>attn_simple</code></a>,
+href="coqdoc/Riktig.Examples.AttentionLayer.html#attention_simple"><code>attention_simple</code></a>,
 <a
-href="coqdoc/Riktig.Examples.AttentionLayer.html#attn_efficient"><code>attn_efficient</code></a>,
+href="coqdoc/Riktig.Examples.AttentionLayer.html#attention_efficient"><code>attention_efficient</code></a>,
 <a
-href="coqdoc/Riktig.Examples.AttentionLayer.html#attn_equal"><code>attn_equal</code></a>
+href="coqdoc/Riktig.Examples.AttentionLayer.html#attention_equal"><code>attention_equal</code></a>
 by one rewrite, and <a
 href="coqdoc/Riktig.Examples.AttentionLayer.html#naive_over_fast_is_16"><code>naive_over_fast_is_16</code></a>).</p>
 </main>

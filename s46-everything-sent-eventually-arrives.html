@@ -11,29 +11,23 @@
 <main>
 <h1 id="everything-sent-eventually-arrives">Everything sent eventually
 arrives</h1>
-<p><em>Seventeenth post documenting the <strong>riktig</strong> project.
-The channels thread closes its opening arc: <a
-href="s44-a-protocol-that-cannot-lie-to-you.html">the previous post</a>
-proved the alternating-bit protocol </em>safe<em>; today it is proved
-</em>live<em> — under the one hypothesis an honest liveness theorem has
-to have.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> Verified software in
-Coq, built for modifiability. <a
-href="s44-a-protocol-that-cannot-lie-to-you.html">The previous post</a>
-proved the alternating-bit protocol never lets a corrupted or duplicated
-message through — <em>safety</em>, unconditional. Safety alone is a low
-bar: a protocol that discards every packet is perfectly safe. Today’s
-other half is <em>liveness</em> — does anything actually get through? —
-and the interesting part is not the proof but the hypothesis: what is
-the <em>weakest</em> assumption about the wire under which delivery can
-be guaranteed at all?</p>
-</blockquote>
+<p>The alternating-bit protocol tags each message with a bit that
+alternates, retransmits until it is satisfied the message arrived, and
+discards any packet carrying the wrong bit. It has a <em>safety</em>
+theorem, <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>:
+whatever the wire does to the packets — dropping some, duplicating
+others, in any pattern — the receiver only ever accepts a subsequence of
+what was sent. Safety alone is a low bar, since a protocol that discards
+every packet satisfies it. This post is about the other half,
+<em>liveness</em> — does anything actually arrive? — and the interesting
+part is not the proof but the hypothesis: what is the weakest assumption
+about the wire under which delivery can be guaranteed at all?</p>
 <h2 id="safety-was-free-liveness-has-a-price">Safety was free; liveness
 has a price</h2>
-<p>That theorem held for <em>any</em> channel behavior — total packet
-loss included, in which case delivery is silently empty. That’s honest
-but unsatisfying: you also want a guarantee that messages
+<p>The safety theorem held for <em>any</em> channel behavior — total
+packet loss included, in which case delivery is silently empty. That’s
+honest but unsatisfying: you also want a guarantee that messages
 <em>arrive</em>. That guarantee cannot be unconditional — a channel that
 eats every packet forever really does deliver nothing, and no proof can
 say otherwise. So liveness needs a <strong>hypothesis</strong>, and the
@@ -42,10 +36,9 @@ networks.</p>
 <p>The hypothesis lives in <a
 href="coqdoc/Riktig.Channel.Fairness.html"><code>Channel/Fairness.v</code></a>,
 and it mirrors the sender’s own structure: the sender emits one
-<em>burst</em> of <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> identical
-copies per message, and the wire trace is required to split into
-per-burst fragments in lock-step with the message list —</p>
+<em>burst</em> of <code>k</code> identical copies per message, and the
+wire trace is required to split into per-burst fragments in lock-step
+with the message list —</p>
 <pre class="coq"><code>Fixpoint fair_wire (b : bit) (ms : list M) (k : nat) (wire : list Packet) : Prop :=
   match ms with
   | [] =&gt; wire = []
@@ -115,19 +108,14 @@ infinitely often is eventually delivered” — needs coinductive traces,
 and is deliberately deferred until the library models runs as streams.
 The finite setting turned out to admit a clean finitary hypothesis, so
 nothing weaker than the honest claim is being sold.</p>
-<p>This closes the arc the roadmap laid out: <strong>T1</strong> gave
-channels a vocabulary (relations, not probabilities),
-<strong>T2</strong> gave protocols a shape (state machines composed
-through a channel), <strong>T3</strong> proved safety unconditionally,
-<strong>T4</strong> proved liveness under the one hypothesis reality
-actually satisfies. The next protocols on the roadmap — Go-Back-N,
-selective repeat, the reliability core of TCP — inherit this whole
-structure; a new retransmission scheme only ever owes its own
-burst-delivery argument.</p>
-<h2 id="also-in-this-wave-the-determinant-conditionally">Also in this
-wave: the determinant, conditionally</h2>
-<p>The algebra side of this wave produced the coordinate-free
-determinant <em>specification</em> (<a
+<p>Nothing in the argument is specific to a single alternating bit: a
+sliding-window protocol such as Go-Back-N inherits the whole structure,
+and a new retransmission scheme only ever owes its own burst-delivery
+argument.</p>
+<h2 id="also-here-the-determinant-conditionally">Also here: the
+determinant, conditionally</h2>
+<p>On an unrelated subject, here is the coordinate-free determinant
+<em>specification</em> (<a
 href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>):
 <code>det B f := detM (mat_of B B f)</code>, with <a
 href="coqdoc/Riktig.Theory.Determinant.html#det_id"><code>det_id</code></a>
@@ -136,11 +124,7 @@ unconditional, and basis-independence and
 named hypothesis — the multiplicativity of the matrix determinant —
 carried as a visible <code>Context</code> assumption rather than a
 hidden gap or an <code>Axiom</code>. Discharging that hypothesis is a
-genuine story of its own, and it is told properly in the posts that
-follow.</p>
-<p><em>Next: a look at the shape of the library itself — where the
-Interface/Theory/Impl discipline has held, and where it has
-slipped.</em></p>
+genuine piece of work in its own right.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Channel.Fairness.html"><code>Channel/Fairness.v</code></a>

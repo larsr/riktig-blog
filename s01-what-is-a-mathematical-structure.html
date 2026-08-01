@@ -13,38 +13,21 @@ them</title>
 <h1
 id="mathematical-structures-and-how-this-library-encodes-them">Mathematical
 structures, and how this library encodes them</h1>
-<p><em>This is the first post in a series documenting the
-<strong>riktig</strong> project.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved, layer by layer, in the Coq proof assistant
-— sorting algorithms down to machine code, a small operating-system
-kernel, network protocols generated from their grammars. The goal is not
-proof for its own sake: it is <em>modifiability</em>. In ordinary code,
-changing anything means fearing everything, because any line may depend
-on an assumption made somewhere else. We want code where a change only
-obliges you to re-establish a few <em>local</em> facts, and the
-structure of the system guarantees the rest. Every post starts from
-zero; you need no Coq background, only patience for a little
-algebra.</p>
-</blockquote>
-<p>Today: the bottom layer of the whole tower — <em>mathematical
-structures</em> — what they are, why a software project should care, and
-how we wrote the first ones.</p>
+<p>Programmers already know half of what a <em>mathematical
+structure</em> is. An interface says which operations exist: this thing
+can be compared, that thing can be concatenated. What an interface does
+not say is what the operations <em>mean</em>. A <code>sort</code>
+function that returns its input unsorted satisfies the interface
+<code>list → list</code> perfectly. A mathematical structure is the
+missing half — this post is about that missing half, and about a handful
+of structures built from it, each one a little richer than the last.</p>
 <h2 id="structures-are-interfaces-with-laws">Structures are interfaces
 with laws</h2>
-<p>Programmers already know half of the idea. An <em>interface</em> says
-which operations exist: this thing can be compared, that thing can be
-concatenated. What an interface does <strong>not</strong> say is what
-the operations <em>mean</em>. A <code>sort</code> function that returns
-its input unsorted satisfies the interface <code>list → list</code>
-perfectly.</p>
-<p>A mathematical structure is the missing half: a vocabulary of
-operations <strong>plus the laws those operations must obey</strong>.
-Not “there is a <code>+</code>”, but “there is a <code>+</code>, and it
-never matters how you parenthesize it”. The laws are the meaning. Two
-structures with the same operations but different laws are different
-worlds.</p>
+<p>The missing half is a vocabulary of operations <strong>plus the laws
+those operations must obey</strong>. Not “there is a <code>+</code>”,
+but “there is a <code>+</code>, and it never matters how you
+parenthesize it”. The laws are the meaning. Two structures with the same
+operations but different laws are different worlds.</p>
 <p>The classic first example. Lots of things can be <em>combined</em>:
 numbers add, strings concatenate, program fragments sequence, rotations
 compose. Superficially unrelated — but in each case, combining is
@@ -56,9 +39,7 @@ pair of laws has a name: a <strong>monoid</strong>. The payoff of naming
 it: anything you prove <em>from the two laws alone</em> is instantly
 true for numbers, strings, programs, and rotations — and for every
 combinable thing anyone invents later. Prove once, hold everywhere. That
-is the entire business model of algebra, and it is precisely the “don’t
-re-verify the world after every change” property we want for
-software.</p>
+is the entire business model of algebra.</p>
 <p>Structures then stack, each adding vocabulary and laws to the
 last:</p>
 <table>
@@ -76,16 +57,27 @@ last:</p>
 </thead>
 <tbody>
 <tr>
+<td><strong>Magma</strong></td>
+<td><code>+</code></td>
+<td>none yet — only that <code>==</code> is an equivalence and
+<code>+</code> respects it</td>
+</tr>
+<tr>
+<td><strong>Semigroup</strong></td>
+<td>—</td>
+<td><code>(a + b) + c == a + (b + c)</code> — parenthesisation is
+irrelevant</td>
+</tr>
+<tr>
 <td><strong>Monoid</strong></td>
-<td><code>+</code>, <code>0</code></td>
-<td><code>(a + b) + c == a + (b + c)</code>, <code>0 + a == a</code>,
-<code>a + 0 == a</code></td>
+<td><code>0</code></td>
+<td><code>0 + a == a</code>, <code>a + 0 == a</code></td>
 </tr>
 <tr>
 <td><strong>Group</strong></td>
 <td><code>- a</code></td>
 <td><code>(- a) + a == 0</code>, <code>a + (- a) == 0</code> — every
-action can be undone</td>
+combination can be undone</td>
 </tr>
 <tr>
 <td><strong>Abelian group</strong></td>
@@ -121,22 +113,23 @@ the first by distributivity:
 </tr>
 <tr>
 <td><strong>Geometric algebra</strong></td>
-<td><code>ga_vec</code></td>
+<td><a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.ga_vec"><code>ga_vec</code></a></td>
 <td>vectors become <em>multipliable</em>: embed <code>V</code> in a ring
-where <code>v * v == ⟨v, v⟩ *: 1</code> — a vector squared is its
+where <code>v * v == Q v *: 1</code> — a vector squared is its
 length²</td>
 </tr>
 </tbody>
 </table>
 <p>Read the table top to bottom and you can watch capability accumulate:
-combine → undo → reorder → multiply → divide → scale → measure →
-multiply <em>geometry itself</em>. Each row inherits every law above it.
-(Topology does the same trick with a different vocabulary — instead of
-<code>+</code> and its laws, it is “open sets” and laws about how they
-union and intersect. Same idea: vocabulary plus laws; only the subject
-changes.)</p>
+combine → regroup → do nothing → undo → reorder → multiply → divide →
+scale → measure → multiply <em>geometry itself</em>. Each row inherits
+every law above it. (Topology does the same trick with a different
+vocabulary — instead of <code>+</code> and its laws, it is “open sets”
+and laws about how they union and intersect. Same idea: vocabulary plus
+laws; only the subject changes.)</p>
 <h2 id="how-this-looks-in-coq">How this looks in Coq</h2>
-<p>Our encoding keeps four things in four kinds of files, and the
+<p>The encoding keeps four things in four kinds of files, and the
 separation is the point.</p>
 <p><strong>1. The vocabulary</strong> (<a
 href="coqdoc/Riktig.Ops.html"><code>theories/Ops.v</code></a>) — one
@@ -152,65 +145,121 @@ href="coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a>, the
 literal symbol <code>+</code> works for it.</p>
 <p><strong>2. The single laws</strong> (<a
 href="coqdoc/Riktig.Props.html"><code>theories/Props.v</code></a>) — one
-class per law, so a law is a first-class, nameable thing:</p>
-<pre class="coq"><code>Class Assoc T {e : EqRel T} (op : BinOp T) :=
-  assoc : forall a b c, op (op a b) c == op a (op b c).</code></pre>
+class per law, so a law is a first-class, nameable thing. The laws about
+combining are stated over an <em>action</em>: a function
+<code>A -&gt; B -&gt; B</code> letting an element of one type act on an
+element of another.</p>
+<pre class="coq"><code>Section ActionLaws.
+  Context (A B : Type) {eqB : EqRel B} (action : A -&gt; B -&gt; B) (op : BinOp A).
+  Local Infix &quot;·&quot; := action (at level 40, left associativity).
+  Local Infix &quot;⋆&quot; := op (at level 40, left associativity).
+
+  Class Associative := associative : forall (a b : A) (x : B), (a ⋆ b) · x == a · (b · x).
+End ActionLaws.</code></pre>
+<p>Take <code>B</code> to be <code>A</code> and the action to be the
+operation itself, and this is ordinary associativity,
+<code>(a + b) + c == a + (b + c)</code>. Take <code>A</code> to be a
+type of scalars, <code>B</code> a type of vectors, <code>op</code>
+scalar multiplication and the action scaling, and the very same class
+says <code>(a * b) *: u == a *: (b *: u)</code>. One class, two laws
+that would otherwise have to be stated twice. <a
+href="coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#RightIdentity"><code>RightIdentity</code></a>
+are shaped the same way — a monoid’s <code>0</code> and a scaling’s
+<code>1</code> are the same law at different actions — while <a
+href="coqdoc/Riktig.Props.html#Commutative"><code>Commutative</code></a>,
+<a
+href="coqdoc/Riktig.Props.html#LeftInverse"><code>LeftInverse</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#RightInverse"><code>RightInverse</code></a>
+mention one type only.</p>
 <p><strong>3. The structures</strong> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Interface"><code>theories/Interface/</code></a>)
 — classes stating laws over that vocabulary, <em>axioms only</em>, no
 theorems. The operations arrive as class parameters (the
-<code>{Te : EqRel T}</code> binders below), so a structure assumes the
-vocabulary rather than owning it, and every law is a plain field:</p>
-<pre class="coq"><code>Module Monoid.
-  Class Monoid (T : Type) {Te : EqRel T} {Tz : Zero T} {Ta : HasAdd T} := {
-    equivalence    : Equivalence (@equ T _);
-    associative    : forall x y w : T, (x + y) + w == x + (y + w);
-    left_identity  : forall x     : T, 0 + x == x;
-    right_identity : forall x     : T, x + 0 == x;
-    add_proper     : forall x y : T, x == y -&gt; forall u v : T, u == v -&gt; (x + u) == (y + v)
+<code>{eq : EqRel M}</code> binders below), so a structure assumes the
+vocabulary rather than owning it, and each class holds the structure one
+step below it plus the laws it adds. At the bottom sits a carrier with
+one operation and one obligation:</p>
+<pre class="coq"><code>Module Magma.
+  Class Magma (M : Type) {eq : EqRel M} (op : BinOp M) := {
+    equivalence :: Equivalence eq;
+    op_proper   :: Proper (equ ==&gt; equ ==&gt; equ) op;
   }.
-End Monoid.
-Notation Monoid := Monoid.Monoid.</code></pre>
-<p>The two bookend fields tie the laws to the equality: <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.equivalence"><code>Monoid.equivalence</code></a>
+  Hint Mode Magma ! - - : typeclass_instances.
+End Magma.
+Export Magma.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.equivalence"><code>Magma.equivalence</code></a>
 says <code>==</code> really is an equivalence relation, and <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.add_proper"><code>Monoid.add_proper</code></a>
-says <code>+</code> respects it. The <code>Module</code> wrapper is a
-namespace, so the laws carry plain English names inside and are read
-qualified from outside — <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.associative"><code>Monoid.associative</code></a>,
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+says the operation respects it, in the standard library’s spelling
+<code>Proper (equ ==&gt; equ ==&gt; equ) op</code>: replacing either
+argument by an equal one gives an equal result. Both are declared with
+<code>::</code> rather than <code>:</code>, which makes the field an
+instance in its own right, so a rewrite under <code>+</code> finds it
+without the magma being named. The <code>Hint Mode</code> line stops
+instance search from hunting for a magma before it knows the carrier.
+The <code>Module</code> wrapper is a namespace, so the fields carry
+plain English names inside and are read qualified from outside — <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.equivalence"><code>Magma.equivalence</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.left_identity"><code>Monoid.left_identity</code></a>.
-A group states the same laws again and adds negation’s two undo
-laws:</p>
-<pre class="coq"><code>Module Group.
-  Class Group (G : Type) {Ge : EqRel G} {Gz : Zero G} {Ga : HasAdd G} {Gn : HasNeg G} := {
-    equivalence    : Equivalence (@equ G _);
-    associative    : forall x y w : G, (x + y) + w == x + (y + w);
-    left_identity  : forall x     : G, 0 + x == x;
-    right_identity : forall x     : G, x + 0 == x;
-    left_inverse   : forall x     : G, (- x) + x == 0;
-    right_inverse  : forall x     : G, x + (- x) == 0;
-    add_proper     : forall x y : G, x == y -&gt; forall u v : G, u == v -&gt; (x + u) == (y + v);
-    neg_proper     : forall x y : G, x == y -&gt; (- x) == (- y)
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+— while the closing <code>Export</code> puts the class itself in scope
+under its short name.</p>
+<p>Two more files, three more laws, and the monoid is reached:</p>
+<pre class="coq"><code>Module Semigroup.
+  Class Semigroup (S : Type) {eq : EqRel S} (op : BinOp S) := {
+    magma       :: Magma S op;
+    is_associative :: Associative S S op op;
   }.
+  Hint Mode Semigroup ! - - : typeclass_instances.
+  Hint Rewrite @associative : algebra_db.
+End Semigroup.
+Export Semigroup.</code></pre>
+<pre class="coq"><code>Module Monoid.
+  Class Monoid (M : Type) {eq : EqRel M} {zero : Zero M} {add : HasAdd M} := {
+    semigroup  :: Semigroup M add;
+    is_left_identity  :: LeftIdentity M M add 0;
+    is_right_identity :: RightIdentity M M add 0;
+  }.
+  Hint Mode Monoid ! - - - : typeclass_instances.
+  Hint Rewrite @left_identity @right_identity : algebra_db.
+End Monoid.
+Export Monoid.</code></pre>
+<p>Look at what those fields hold. <a
+href="coqdoc/Riktig.Interface.Semigroup.html#Semigroup.is_associative"><code>Semigroup.is_associative</code></a>
+does not restate associativity: it <em>is</em> an <a
+href="coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
+the law class above, at <code>A = B = S</code> with both the operation
+and the action taken to be <code>op</code>. And <a
+href="coqdoc/Riktig.Interface.Monoid.html#Monoid.semigroup"><code>Monoid.semigroup</code></a>
+is not a copy of the semigroup’s laws but a semigroup itself, held as a
+field. The <code>Hint Rewrite</code> lines file each new law in a
+database, so <code>autorewrite with algebra_db</code> can simplify a
+goal without any law being cited by hand.</p>
+<p>A group is a monoid with a negation and its two undo laws:</p>
+<pre class="coq"><code>Module Group.
+  Class Group (G : Type) {eq : EqRel G} {zero : Zero G} {add : HasAdd G}
+              {neg : HasNeg G} := {
+    monoid    :: Monoid G;
+    neg_proper :: Proper (equ ==&gt; equ) neg;
+    is_left_inverse  :: LeftInverse G add neg 0;
+    is_right_inverse :: RightInverse G add neg 0;
+  }.
+  Hint Mode Group ! - - - - : typeclass_instances.
+  Hint Rewrite @left_inverse @right_inverse : algebra_db.
 End Group.
-Notation Group := Group.Group.</code></pre>
-<p>The table’s “each row inherits every law above it” is then a fact to
-register, once, right below the class: a group’s fields already contain
-a monoid’s, so repackaging them is an <code>Instance</code> with no new
-proofs in it —</p>
-<pre class="coq"><code>#[global] Instance Group_is_Monoid G {Ge : EqRel G} {Gz : Zero G} {Ga : HasAdd G} {Gn : HasNeg G}
-  `{H : Group.Group G} : Monoid G := {|
-    Monoid.equivalence    := Group.equivalence;
-    Monoid.associative    := Group.associative;
-    Monoid.left_identity  := Group.left_identity;
-    Monoid.right_identity := Group.right_identity;
-    Monoid.add_proper     := Group.add_proper
-  |}.</code></pre>
-<p>— and Coq’s inference applies it silently: anything that knows “G is
-a Group” thereby knows “G is a Monoid”, and every theorem proved from
-the monoid laws alone applies to groups unchanged.</p>
+Export Group.</code></pre>
+<p>The table’s “each row inherits every law above it” is therefore
+nothing anyone has to register: <a
+href="coqdoc/Riktig.Interface.Group.html#Group.monoid"><code>Group.monoid</code></a>
+<em>is</em> the inheritance, and because it is declared with
+<code>::</code>, instance search projects it out on its own. Anything
+that knows “G is a group” thereby knows “G is a monoid” — and, one hop
+further down, a semigroup and a magma — so every theorem proved from the
+monoid laws alone applies to a group unchanged.</p>
 <p><strong>4. The consequences</strong> (<a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Theory"><code>theories/Theory/</code></a>)
 — theorems derived from the laws alone, valid for every instance
@@ -221,30 +270,32 @@ In a group, cancelling on the left is legitimate:</p>
 Proof.
   intros a b c Heq.
   calc b
-    == (0 + b)          { idl  }
-    == ((- a + a) + b)  { invl }
-    == (- a + (a + b))  { assoc }
+    == (0 + b)          { left_identity  }
+    == ((- a + a) + b)  { left_inverse }
+    == (- a + (a + b))  { associative }
     == (- a + (a + c))  { Heq  }
-    == ((- a + a) + c)  { assoc }
-    == (0 + c)          { invl }
-    == c                { idl  }.
+    == ((- a + a) + c)  { associative }
+    == (0 + c)          { left_inverse }
+    == c                { left_identity  }.
 Qed.</code></pre>
 <p>The <code>calc</code> block <em>is</em> the calculation, written the
 way you would on paper:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mo>+</mo><mi>b</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mover><mo>=</mo><mtext mathvariant="normal">Heq</mtext></mover><mspace width="0.278em"></mspace><mo>−</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mo>+</mo><mi>c</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>c</mi></mrow><annotation encoding="application/x-tex">b \;=\; 0+b \;=\; (-a+a)+b \;=\; -a+(a+b) \;\overset{\text{Heq}}{=}\; -a+(a+c) \;=\; (-a+a)+c \;=\; 0+c \;=\; c</annotation></semantics></math></p>
 <p>— each <code>==</code> line one step, each <code>{ … }</code> naming
 the single law that justifies it (<a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a>, <a
-href="coqdoc/Riktig.Props.html#invl"><code>invl</code></a>, <a
-href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a> are the
-single laws of <a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>,
+<a
+href="coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+are the methods of the law classes of <a
 href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>, which the
-group’s fields feed). That is the entire proof style of this project:
+group’s fields supply). That is the proof style throughout:
 <strong>every proof is a chain of equalities, each step justified by a
 named law</strong> — the same equational reasoning you did in school
 algebra, machine-checked. No proof scripts full of tactic incantations;
-if a step doesn’t have a name, we factor it out as a lemma and
-<em>give</em> it a name.</p>
+if a step doesn’t have a name, it is factored out as a lemma and
+<em>given</em> one.</p>
 <h2 id="what-is-proved-so-far">What is proved so far</h2>
 <p>So that “consequences derived from the laws alone” is not left
 abstract, here is the actual inventory of the first three theory files —
@@ -278,14 +329,15 @@ and two telescoping facts (<a
 href="coqdoc/Riktig.Theory.Group.html#add_neg_telescope"><code>add_neg_telescope</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Group.html#sub_eq_zero"><code>sub_eq_zero</code></a>);
-it closes with a section showing that any map <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
-preserving <code>+</code> between groups automatically preserves
-<code>0</code> and <code>-</code> (<a
+a section of it shows that any map <code>f</code> preserving
+<code>+</code> between groups automatically preserves <code>0</code> and
+<code>-</code> (<a
 href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Group.html#hom_neg"><code>hom_neg</code></a>).
-<a
+href="coqdoc/Riktig.Theory.Group.html#hom_neg"><code>hom_neg</code></a>),
+and it ends by packaging the identity and inverse laws as a rewrite
+database named <code>grp</code> that closes routine goals in one
+<code>autorewrite</code>. <a
 href="coqdoc/Riktig.Theory.AbGroup.html"><code>Theory/AbGroup.v</code></a>
 adds the reshuffling kit that commutativity makes available: moving a
 summand past a sum (<a
@@ -311,102 +363,139 @@ shape of shuffle, and naming it keeps that proof a one-line rewrite.</p>
 tower</h2>
 <p>The chain culminates (for now) in geometric algebra, where the axiom
 “a vector squares to its length” makes the whole preceding tower earn
-its keep. The interface (<a
+its keep. Length arrives as a <strong>quadratic form</strong>: a
+function <code>Q : V -&gt; F</code> sending a vector to its squared
+length, required to scale by the square of the scalar,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mspace width="0.167em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(a\,u) = a^2\,Q(u)</annotation></semantics></math>,
+and to have a <em>cross term</em></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{polar}_Q(u,v) \;=\; Q(u+v) - Q(u) - Q(v)</annotation></semantics></math></p>
+<p>that is linear in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+for each fixed
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>.
+For the squared length of ordinary geometry the cross term works out to
+twice the inner product. It is a plain definition, from <a
+href="coqdoc/Riktig.Interface.QuadraticForm.html"><code>Interface/QuadraticForm.v</code></a>:</p>
+<pre class="coq"><code>Definition polar {F V : Type} `{VectorSpace F V} (Q : V -&gt; F) (u v : V) : F :=
+  Q (u + v) + - Q u + - Q v.</code></pre>
+<p>The geometric-algebra interface (<a
 href="coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>)
 embeds a vector space <code>V</code> into a ring <code>A</code> by a
-linear map <code>ga_vec</code> with one law beyond linearity, the
-contraction axiom:</p>
-<pre class="coq"><code>GeometricAlgebra.contraction : forall u : V, ga_vec u * ga_vec u == norm2 u *: 1</code></pre>
-<p>— a vector squared is its length². From just that and the bilinearity
-of the inner product, <a
+linear map <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.ga_vec"><code>ga_vec</code></a>,
+and asks for one law beyond linearity:</p>
+<pre class="coq"><code>Module GeometricAlgebra.
+  Class GeometricAlgebra (F V A : Type) `{QuadraticForm F V}
+      {Ae : EqRel A} {Az : Zero A} {Aa : HasAdd A} {An : HasNeg A}
+      {Ao : One A} {Am : HasMult A} {As : HasScale F A} := {
+    ring    :: Ring A;
+    scaling :: ScaleLaws F A;
+
+    mul_linear_l :: forall y : A, Linear F A A (fun x =&gt; x * y);
+    mul_linear_r :: forall x : A, Linear F A A (fun y =&gt; x * y);
+
+    ga_vec     : V -&gt; A;
+    vec_linear :: Linear F V A ga_vec;
+
+    contraction : forall u : V, ga_vec u * ga_vec u == Q u *: 1;
+  }.
+  Hint Mode GeometricAlgebra - - ! - - - - - - - - - - - - - - - - - - - - - - - : typeclass_instances.
+End GeometricAlgebra.
+Export GeometricAlgebra.</code></pre>
+<p>The first two fields are the tower again, held rather than restated:
+<code>A</code> is a ring, and the scalars of <code>V</code> scale it
+too. The next two say multiplication is linear in each argument
+separately. <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.ga_vec"><code>ga_vec</code></a>
+is the embedding, <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.vec_linear"><code>vec_linear</code></a>
+says it is linear, and <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>GeometricAlgebra.contraction</code></a>
+is the axiom — a vector squared is its length². (The long
+<code>Hint Mode</code> line is the same annotation the magma carried,
+one dash per parameter, with <code>!</code> on the one that must be
+known before search may start.) From just that, <a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>
 derives the <strong>polarization identity</strong></p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">uv + vu \;=\; (\langle u,v\rangle + \langle v,u\rangle)\,1</annotation></semantics></math></p>
-<p>— the fact that the <em>symmetric part of the geometric product is
-the inner product</em>, which is the seed of everything geometric
-algebra is good for (rotations, reflections, and eventually the
-matrix-reordering proofs we have planned). Since this is where the tower
-pays off, the proof deserves the same slow walk as <a
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">uv + vu \;=\; \operatorname{polar}_Q(u,v)\,1</annotation></semantics></math></p>
+<p>— the <em>symmetric part of the geometric product is the form’s cross
+term</em>, which is the seed of everything geometric algebra is good for
+(rotations and reflections). It deserves the same slow walk as <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>.</p>
 <p><strong>On paper.</strong> Square the sum
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u + v</annotation></semantics></math>
 two ways. Expanding the product,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>=</mo><msup><mi>u</mi><mn>2</mn></msup><mo>+</mo><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo>+</mo><msup><mi>v</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(u+v)^2 = u^2 + uv + vu + v^2</annotation></semantics></math>,
-and the contraction axiom turns the two squares into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2)\,1</annotation></semantics></math>.
+and contraction turns the two squares into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(Q(u) + Q(v))\,1</annotation></semantics></math>.
 Contracting <em>directly</em>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(u+v)^2 = \|u+v\|^2\,1</annotation></semantics></math>,
-and bilinearity expands
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\|u+v\|^2 = \|u\|^2 + \|v\|^2 + \langle u,v\rangle + \langle v,u\rangle</annotation></semantics></math>.
-Equate the two computations and cancel
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2)\,1</annotation></semantics></math>
-from both sides — with exactly the <a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(u+v)^2 = Q(u+v)\,1</annotation></semantics></math>.
+So, adding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(Q(u)+Q(v))\,1</annotation></semantics></math>
+to the identity we want:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the two squarings equated</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">definition of the cross term</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo>+</mo><msub><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">scaling distributes over scalar sums</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">the same law again</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+(Q(u)\,1 + Q(v)\,1) + (uv + vu)
+  &amp;= Q(u+v)\,1 &amp;&amp;\{\text{the two squarings equated}\}\\
+  &amp;= \big((Q(u) + Q(v)) + \operatorname{polar}_Q(u,v)\big)\,1
+    &amp;&amp;\{\text{definition of the cross term}\}\\
+  &amp;= (Q(u) + Q(v))\,1 + \operatorname{polar}_Q(u,v)\,1
+    &amp;&amp;\{\text{scaling distributes over scalar sums}\}\\
+  &amp;= (Q(u)\,1 + Q(v)\,1) + \operatorname{polar}_Q(u,v)\,1
+    &amp;&amp;\{\text{the same law again}\}
+\end{aligned}</annotation></semantics></math></p>
+<p>Both ends now begin with the summand
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u)\,1 + Q(v)\,1</annotation></semantics></math>;
+cancelling it on the left — with exactly the <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
-proved above.</p>
+proved above — leaves the identity.</p>
 <p><strong>In the repository</strong>, exactly as it appears (a helper
 lemma <a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html#contract_add"><code>contract_add</code></a>
-packages the first computation):</p>
+packages the first step, and <a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polar_recovers"><code>polar_recovers</code></a>
+the second):</p>
 <pre class="coq"><code>Theorem polarization : forall u v : V,
-  ga_vec u * ga_vec v + ga_vec v * ga_vec u
-  == (⟨ u , v ⟩ + ⟨ v , u ⟩) *: (1 : A).
+  ga_vec u * ga_vec v + ga_vec v * ga_vec u == polar Q u v *: (1 : A).
 Proof.
   intros u v.
-  apply (cancel_l (norm2 u *: (1 : A) + norm2 v *: 1)).
-  calc (((norm2 u *: (1 : A) + norm2 v *: (1 : A))
-          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-    == ((norm2 (u + v) *: (1 : A)) : A)
-      { (contract_add u v) }
-    == ((((norm2 u + norm2 v) + (⟨ u , v ⟩ + ⟨ v , u ⟩)) *: (1 : A)) : A)
-      { (norm2_add u v) }
-    == (((norm2 u + norm2 v) *: (1 : A) + (⟨ u , v ⟩ + ⟨ v , u ⟩) *: (1 : A)) : A)
-      { (scale_distributes_over_scalar_add (norm2 u + norm2 v) (⟨ u , v ⟩ + ⟨ v , u ⟩) (1 : A)) }
-    == (((norm2 u *: (1 : A) + norm2 v *: (1 : A)) + (⟨ u , v ⟩ + ⟨ v , u ⟩) *: (1 : A)) : A)
-      { (scale_distributes_over_scalar_add (norm2 u) (norm2 v) (1 : A)) }.
+  apply (cancel_l (Q u *: (1 : A) + Q v *: 1)).
+  transitivity (Q (u + v) *: (1 : A)).
+  { exact (contract_add u v). }
+  transitivity (((Q u + Q v) + polar Q u v) *: (1 : A)).
+  { exact (ScaleLaws.scale_proper _ _ (symmetry (polar_recovers u v))
+             (1 : A) (1 : A) (reflexivity (1 : A))). }
+  transitivity ((Q u + Q v) *: (1 : A) + polar Q u v *: (1 : A)).
+  { exact (right_distributive (Q u + Q v) (polar Q u v) (1 : A)). }
+  exact (Magma.op_proper _ _ (right_distributive (Q u) (Q v) (1 : A))
+           _ _ (reflexivity (polar Q u v *: (1 : A)))).
 Qed.</code></pre>
 <p>Read it step by step. <code>apply (cancel_l …)</code> is the “cancel
 from both sides” move — this post’s own first theorem, already earning
-reuse. The goal is now the two squarings equated, with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2)\,1</annotation></semantics></math>
-added on both sides. <a
+reuse — and it leaves exactly the four-line chain above as the goal, one
+<code>transitivity</code> per line. <a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html#contract_add"><code>contract_add</code></a>
-is the helper: it contracts both squares and collects the cross terms
-(itself a rewrite chain through <a
+closes the first line: it contracts both squares and collects the cross
+terms (itself a <code>calc</code> chain through <a
 href="coqdoc/Riktig.Theory.AbGroup.html#add_rotate"><code>add_rotate</code></a>
-and distributivity — the abelian-group inventory above at work). <a
-href="coqdoc/Riktig.Theory.InnerProduct.html#norm2_add"><code>norm2_add</code></a>
-is the bilinear expansion of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u+v\|^2</annotation></semantics></math>,
-proved one file down in <a
-href="coqdoc/Riktig.Theory.InnerProduct.html"><code>Theory/InnerProduct.v</code></a>.
-The two <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#scale_distributes_over_scalar_add"><code>scale_distributes_over_scalar_add</code></a>
-steps split
+and <a
+href="coqdoc/Riktig.Theory.Ring.html#mul_add_expand"><code>mul_add_expand</code></a>,
+the abelian-group and ring inventories at work). <a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polar_recovers"><code>polar_recovers</code></a>
+is the definition of the cross term read as
+<code>(Q u + Q v) + polar Q u v == Q (u + v)</code>, used backwards; it
+is wrapped in <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.scale_proper"><code>ScaleLaws.scale_proper</code></a>
+because the replacement happens inside a <code>*: 1</code>, and that is
+the field saying scaling respects <code>==</code>. The last two steps
+are the same distributive law twice, splitting
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">(x+y) \mathbin{*:} 1</annotation></semantics></math>
 into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mi>y</mi><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">x \mathbin{*:} 1 + y
-\mathbin{*:} 1</annotation></semantics></math> so both sides have the
-same shape, and the chain closes. One axiom in the interface, a short
-calc chain in the theory file, true in every model anyone ever
-builds.</p>
-<h2 id="why-a-software-project-starts-here">Why a software project
-starts here</h2>
-<p>Because everything upstream <em>is</em> this pattern. “A kernel
-scheduler never runs one process on two CPUs” is a law over a vocabulary
-(processes, CPUs, <code>schedule</code>). “Encoding then decoding a
-protocol message is the identity” is a law over a vocabulary
-(<code>encode</code>, <a
-href="coqdoc/Riktig.Programs.Memprog.X86.html#decode"><code>decode</code></a>).
-The discipline we practiced on monoids — vocabulary in one file, laws in
-another, consequences proved once from laws alone, implementations
-plugged in underneath — is exactly how we will state what a syscall, a
-network layer, or a memory allocator <em>means</em>. The algebra files
-are the training ground where the style is cheap to get right.</p>
-<p><em>Next in the series: we start documenting our little
-operating-system kernel — which will exist in an x86 and a RISC-V
-variant and is therefore, obviously, named <strong>riskabel</strong>
-(Swedish: “risky”). Development proceeds toward the long-awaited stable
-release, <strong>oriskabel</strong>.</em></p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mi>y</mi><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">x \mathbin{*:} 1 + y \mathbin{*:} 1</annotation></semantics></math>;
+the second is wrapped in <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+because it rewrites only the left summand of a sum. One axiom in the
+interface, four steps in the theory file, true in every model anyone
+ever builds.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> (the vocabulary) ·

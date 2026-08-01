@@ -11,157 +11,283 @@
 <main>
 <h1 id="fast-attention-is-one-associativity-away">Fast attention is one
 associativity away</h1>
-<p><em>Thirty-first post in the series documenting the
-<strong>riktig</strong> project.</em></p>
-<blockquote>
-<p><strong>What we are doing, and why.</strong> We are building software
-whose correctness is proved in Coq. <a
-href="s71-a-matrix-is-an-operator.html">The post on a matrix as an
-operator</a> showed that a matrix applied to a coordinate vector is a
-linear operator, and that multiplying matrices is composing operators
-(<a
-href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>)
-— so the <em>order</em> in which a chain of matrix products is evaluated
-is an algorithm choice that cannot change the value. Today that choice
-with money on it: <strong>a linear-attention layer computed left to
-right materializes an n×n matrix and costs 2n²d multiplications;
-computed right to left it materializes only d×d and costs 2nd². The two
-are equal by one application of associativity — and both the equality
-and the costs are machine-checked.</strong></p>
-</blockquote>
-<h2 id="the-layer-honestly-framed">The layer, honestly framed</h2>
-<p>An attention layer in a transformer takes three matrices of shape
-<code>n × d</code> — queries <code>Q</code>, keys <code>K</code>, values
-<code>V</code>, where <code>n</code> is the number of tokens and
-<code>d</code> the head dimension, with <code>d</code> much smaller than
-<code>n</code> — and computes <code>softmax(Q·Kᵀ/√d)·V</code>. What is
-formalized here is <strong>linear attention</strong>: the same shape
-with the softmax dropped, <code>(Q·Kᵀ)·V</code>. That is not a
-simplification made quietly for the proof’s sake; it is the whole point.
-Softmax is not linear, sits between the two products, and makes the
-reassociation below <em>invalid</em> — which is precisely why the
-fast-attention line of work (linear attention and its
-kernel-approximation relatives) removes or linearly approximates it,
-buying the right to reassociate. Nothing about softmax is defined or
-proved in this file; the header of <a
-href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
-says so in as many words.</p>
-<h2 id="two-evaluation-orders-one-value">Two evaluation orders, one
-value</h2>
-<pre class="coq"><code>(* Left-to-right: materializes the n×n score matrix Q·Kᵀ.           *)
-Definition attn_naive : Matrix n d F := mat_mul (mat_mul Q (mat_tr K)) V.
+<p>Three matrices
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>,
+each with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+rows and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+columns, and one product to compute:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mspace width="0.167em"></mspace><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>V</mi></mrow><annotation encoding="application/x-tex">(Q\,K^{\mathsf T})\,V</annotation></semantics></math>.
+In the neural networks behind current language models this is the
+arithmetic core of an <em>attention</em> layer —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+is the number of items in a sequence,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+the number of numbers describing each item, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
+is typically far smaller than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
+The middle factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mspace width="0.167em"></mspace><msup><mi>K</mi><mi>𝖳</mi></msup></mrow><annotation encoding="application/x-tex">Q\,K^{\mathsf T}</annotation></semantics></math>
+is a square of side
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>:
+it scores every pair of items against every other. At a thousand items
+that square has a million entries, and forming it dominates both the
+arithmetic and the memory.</p>
+<p>But matrix multiplication is associative, and the other bracketing,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q\,(K^{\mathsf T}V)</annotation></semantics></math>,
+never builds anything larger than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">d \times d</annotation></semantics></math>.
+The two questions this raises are exactly the two a programmer would ask
+before rewriting the code. Is the reassociated expression the same
+matrix — not approximately, exactly? And is it actually cheaper, by how
+much, under a cost model precise enough to be checked rather than
+estimated?</p>
+<p>Both answers can be made into theorems. The first is one application
+of associativity. The second is an inequality between two counts of
+scalar multiplications, and it holds whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>≤</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">d \le n</annotation></semantics></math>.</p>
+<h2 id="the-two-orders">The two orders</h2>
+<p>Fix a field <code>F</code> for the entries, the two sizes, and the
+three matrices. Then the two bracketings are two definitions (<a
+href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>):</p>
+<pre class="coq"><code>  (* Left-to-right: materializes the n×n score matrix Q·Kᵀ. *)
+  Definition attention_naive : Matrix n d F :=
+    mat_mul (mat_mul Q (mat_transpose K)) V.
 
-(* Right-to-left: materializes only the d×d matrix Kᵀ·V.            *)
-Definition attn_fast : Matrix n d F := mat_mul Q (mat_mul (mat_tr K) V).
+  (* Right-to-left: materializes only the d×d matrix Kᵀ·V. *)
+  Definition attention_fast : Matrix n d F :=
+    mat_mul Q (mat_mul (mat_transpose K) V).</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_transpose"><code>mat_transpose</code></a>
+is the transpose — <code>mat_transpose K</code> is the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">d \times n</annotation></semantics></math>
+matrix whose entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>K</mi><mrow><mi>j</mi><mi>i</mi></mrow></msub><annotation encoding="application/x-tex">K_{ji}</annotation></semantics></math>
+— so the shapes chain as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>×</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mo>×</mo><mi>n</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>×</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(n{\times}d)\cdot(d{\times}n)\cdot(n{\times}d)</annotation></semantics></math>
+and both expressions land in <code>Matrix n d F</code>.</p>
+<p>On the blackboard the equality is the associativity law read
+once:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mspace width="0.167em"></mspace><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>V</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity of matrix multiplication</mtext><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(Q\,K^{\mathsf T})\,V \;=\; Q\,(K^{\mathsf T} V)
+\qquad \{\text{associativity of matrix multiplication}\}.</annotation></semantics></math></p>
+<p>In Coq it is the same single step, with the four size arguments
+supplied:</p>
+<pre class="coq"><code>  Theorem attention_assoc : attention_naive == attention_fast.
+  Proof.
+    exact (mat_mul_assoc n d n d Q (mat_transpose K) V).
+  Qed.</code></pre>
+<p>No tactic is named: <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+— proved once in <a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> by
+exchanging the order of two finite sums — instantiated at the shapes
+<code>n d n d</code> and the three factors <em>is</em> the theorem. The
+<code>==</code> is pointwise equality of matrices: the two sides agree
+entry by entry.</p>
+<h2 id="counting-the-multiplications">Counting the multiplications</h2>
+<p>Cheapness has to be defined before it can be proved. An
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">m \times n</annotation></semantics></math>
+by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>p</mi></mrow><annotation encoding="application/x-tex">n \times p</annotation></semantics></math>
+product has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">m p</annotation></semantics></math>
+entries, each a sum of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+products, so by the definition of <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+it performs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mspace width="0.167em"></mspace><mi>n</mi><mspace width="0.167em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">m\,n\,p</annotation></semantics></math>
+scalar multiplications. That is a statement about the algorithm the
+definition denotes, not a measurement of Coq’s own evaluator:</p>
+<pre class="coq"><code>Definition mulcost (m n p : nat) : nat := (m * n * p)%nat.
 
-Theorem attn_assoc : attn_naive == attn_fast.
-Proof.
-  exact (mat_mul_assoc n d n d Q (mat_tr K) V).
-Qed.</code></pre>
-<p>That is the entire proof: associativity of matrix multiplication,
-proved once by a Fubini argument in <a
-href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>,
-instantiated at the shapes <code>(n×d)·(d×n)·(n×d)</code>. The naive
-order’s intermediate <code>Q·Kᵀ</code> has <code>n²</code> entries; the
-fast order’s <code>Kᵀ·V</code> has <code>d²</code> — and
-<code>d ≤ n</code> gives <code>d² ≤ n²</code> (<a
-href="coqdoc/Riktig.Impl.Attention.html#intermediate_smaller"><code>intermediate_smaller</code></a>).
-At n = 1024 tokens and d = 64 that is a million-entry score matrix
-against four thousand.</p>
-<h2 id="the-costs-machine-checked">The costs, machine-checked</h2>
-<p>Counting is proof too. <code>mulcost m n p := m*n*p</code> counts the
-scalar multiplications the <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
-definition of an <code>m×n</code> by <code>n×p</code> product performs —
-<code>m·p</code> entries, each a sum of <code>n</code> products. (A
-statement about the algorithm the definition <em>denotes</em>; Coq’s own
-evaluator is not being benchmarked.) Then:</p>
-<pre class="coq"><code>Definition cost_naive (n d : nat) : nat :=
-  (mulcost n d n + mulcost n n d)%nat.    (* = 2·n²·d *)
+Definition cost_naive (n d : nat) : nat :=
+  (mulcost n d n + mulcost n n d)%nat.
 
 Definition cost_fast (n d : nat) : nat :=
-  (mulcost d n d + mulcost n d d)%nat.    (* = 2·n·d² *)
-
-Lemma cost_fast_le : forall n d : nat,
-  (d &lt;= n)%nat -&gt; (cost_fast n d &lt;= cost_naive n d)%nat.</code></pre>
-<p>The inequality is nonlinear in <code>n</code> and <code>d</code>, so
-it is assembled from the monotonicity lemmas rather than handed to
-<code>lia</code>. At transformer scale the counts overflow what unary
-<code>nat</code> arithmetic can evaluate in memory, so the concrete
-corollaries go through two proved transfer lemmas into binary
-<code>N</code> — and there the numbers are checked by
-<code>reflexivity</code>:</p>
+  (mulcost d n d + mulcost n d d)%nat.</code></pre>
+<p>Each order performs two products, so each count is a sum of two
+terms:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">v</mi><mi mathvariant="normal">e</mi></mrow></msub><mo>=</mo><mi>n</mi><mi>d</mi><mi>n</mi><mo>+</mo><mi>n</mi><mi>n</mi><mi>d</mi><mo>=</mo><mn>2</mn><msup><mi>n</mi><mn>2</mn></msup><mi>d</mi><mo>,</mo><mspace width="2.0em"></mspace><msub><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow></msub><mo>=</mo><mi>d</mi><mi>n</mi><mi>d</mi><mo>+</mo><mi>n</mi><mi>d</mi><mi>d</mi><mo>=</mo><mn>2</mn><mi>n</mi><msup><mi>d</mi><mn>2</mn></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{cost}_{\mathrm{naive}} = n d n + n n d = 2n^2 d,
+\qquad
+\mathrm{cost}_{\mathrm{fast}} = d n d + n d d = 2n d^2 .</annotation></semantics></math></p>
+<p><strong>Statement.</strong> When
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>≤</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">d \le n</annotation></semantics></math>,
+the reassociated order costs no more.</p>
+<p>On the blackboard, compare the two sums term by term rather than
+multiplying them out —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mspace width="0.167em"></mspace><mi>n</mi><mspace width="0.167em"></mspace><mi>d</mi><mo>≤</mo><mi>n</mi><mspace width="0.167em"></mspace><mi>d</mi><mspace width="0.167em"></mspace><mi>n</mi></mrow><annotation encoding="application/x-tex">d\,n\,d \le n\,d\,n</annotation></semantics></math>
+because
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>≤</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">d \le n</annotation></semantics></math>
+in the last factor after commuting the first two, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.167em"></mspace><mi>d</mi><mspace width="0.167em"></mspace><mi>d</mi><mo>≤</mo><mi>n</mi><mspace width="0.167em"></mspace><mi>n</mi><mspace width="0.167em"></mspace><mi>d</mi></mrow><annotation encoding="application/x-tex">n\,d\,d \le n\,n\,d</annotation></semantics></math>
+because
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>≤</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">d \le n</annotation></semantics></math>
+in the middle factor. Each comparison is one monotonicity step:</p>
+<pre class="coq"><code>Lemma cost_fast_le : forall n d : nat,
+  (d &lt;= n)%nat -&gt; (cost_fast n d &lt;= cost_naive n d)%nat.
+Proof.
+  intros n d Hdn.
+  unfold cost_fast, cost_naive, mulcost.
+  apply Nat.add_le_mono.
+  - rewrite (Nat.mul_comm d n).
+    apply Nat.mul_le_mono_l.
+    exact Hdn.
+  - apply Nat.mul_le_mono_r.
+    apply Nat.mul_le_mono_l.
+    exact Hdn.
+Qed.</code></pre>
+<p>Walking it: <code>unfold</code> turns both counts into their sums of
+products, and <code>Nat.add_le_mono</code> splits the goal into the two
+term-by-term comparisons — first <code>d*n*d &lt;= n*d*n</code>, then
+<code>n*d*d &lt;= n*n*d</code>. In the first, <code>Nat.mul_comm</code>
+rewrites <code>d*n</code> to <code>n*d</code> so that both sides share
+the prefix <code>n*d</code>, after which <code>Nat.mul_le_mono_l</code>
+reduces the goal to <code>d &lt;= n</code>. In the second the two sides
+already share the prefix <code>n</code>, so
+<code>Nat.mul_le_mono_r</code> peels off the trailing factor
+<code>d</code> and <code>Nat.mul_le_mono_l</code> the leading
+<code>n</code>, leaving <code>d &lt;= n</code> again. The inequality is
+nonlinear in <code>n</code> and <code>d</code>, so it is assembled from
+these monotonicity lemmas rather than handed to a linear-arithmetic
+tactic.</p>
+<p>The intermediate matrices compare the same way: the fast order’s is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">d \times d</annotation></semantics></math>
+against the naive order’s
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>.</p>
+<pre class="coq"><code>Lemma intermediate_smaller : forall n d : nat,
+  (d &lt;= n)%nat -&gt; (d * d &lt;= n * n)%nat.
+Proof.
+  intros n d Hdn.
+  exact (Nat.mul_le_mono d n d n Hdn Hdn).
+Qed.</code></pre>
+<p>At a realistic size the ratio is worth seeing as literal numbers.
+With
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">n = 1024</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">d = 64</annotation></semantics></math>
+the counts are in the hundreds of millions — past what Coq’s unary
+natural numbers can hold in memory — so the concrete checks are
+transported into the binary numbers <code>N</code> by a proved transfer
+lemma first, and there <code>reflexivity</code> settles them:</p>
 <pre class="coq"><code>Example cost_naive_1024_64 : N.of_nat (cost_naive 1024 64) = 134217728%N.
-Example cost_fast_1024_64  : N.of_nat (cost_fast 1024 64)  = 8388608%N.</code></pre>
-<p>134 million multiplications against 8 million — a factor of exactly
-<code>n/d = 16</code>.</p>
-<h2 id="for-a-single-vector-no-product-at-all">For a single vector: no
+Proof.
+  rewrite (cost_naive_toN 1024 64).
+  reflexivity.
+Qed.
+
+Example cost_fast_1024_64 : N.of_nat (cost_fast 1024 64) = 8388608%N.
+Proof.
+  rewrite (cost_fast_toN 1024 64).
+  reflexivity.
+Qed.</code></pre>
+<p>134 million multiplications against 8 million: a factor of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>/</mi><mi>d</mi><mo>=</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">n/d = 16</annotation></semantics></math>.</p>
+<h2 id="for-a-single-vector-no-product-at-all">For a single vector, no
 product at all</h2>
-<p>The <a
+<p>There is a stronger version of the same idea. If what you want is not
+the layer’s matrix but its effect on one coordinate vector
+<code>w</code>, then neither product needs forming. A matrix applied to
+a coordinate vector is <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec"><code>mat_vec</code></a>,
+and <a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>
-theorem from the post on a matrix as an operator, applied twice, turns
-the whole layer into a pipeline of three matrix-vector applications:</p>
-<pre class="coq"><code>Theorem attn_pipeline : forall w : Fin.t d -&gt; F,
-  mat_vec attn_naive w == mat_vec Q (mat_vec (mat_tr K) (mat_vec V w)).</code></pre>
-<p>Feed a coordinate vector through <code>V</code>, then
-<code>Kᵀ</code>, then <code>Q</code>: no matrix product is formed
-anywhere — not even the d×d one.</p>
-<h2 id="checked-on-actual-numbers">Checked on actual numbers</h2>
-<p>The file closes with a concrete instance over <code>Q</code> (n = 3,
-d = 2, with small integer matrices). Both association orders are
-evaluated <em>independently</em>, entry by entry, against the
-hand-computed output</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><msup><mi>K</mi><mi>𝖳</mi></msup><mo stretchy="false" form="postfix">)</mo><mi>V</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>K</mi><mi>𝖳</mi></msup><mi>V</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>9</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd><mtd columnalign="center" style="text-align: center"><mi>−</mi><mn>2</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">(Q K^{\mathsf T})V \;=\; Q(K^{\mathsf T}V) \;=\;
-\begin{pmatrix} 9 &amp; 7 \\ 2 &amp; 3 \\ 3 &amp; -2 \end{pmatrix}</annotation></semantics></math></p>
-<p>each closed by <code>reflexivity</code> with no appeal to <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>
-— the theorem is then applied to the same instance as a separate
-resolution check. The pipeline is likewise computed on a concrete
-vector, both ways, meeting at <code>(23, 8, -1)</code>.</p>
-<h2 id="what-was-proved-plainly">What was proved, plainly</h2>
-<ul>
-<li><code>attn_naive == attn_fast</code> for every field, every
-<code>n</code>, <code>d</code>, and every <code>Q</code>,
-<code>K</code>, <code>V</code> (<a
-href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>)
-— the reassociation at the heart of linear attention is exact, not
-approximate.</li>
-<li><code>cost_fast n d &lt;= cost_naive n d</code> whenever
-<code>d &lt;= n</code> (<a
-href="coqdoc/Riktig.Impl.Attention.html#cost_fast_le"><code>cost_fast_le</code></a>),
-with the concrete 16× count at n = 1024, d = 64 verified by computation;
-the fast order’s intermediate is smaller (<a
-href="coqdoc/Riktig.Impl.Attention.html#intermediate_smaller"><code>intermediate_smaller</code></a>).</li>
-<li>Applied to one vector, the layer needs no matrix product at all (<a
-href="coqdoc/Riktig.Impl.Attention.html#attn_pipeline"><code>attn_pipeline</code></a>).</li>
-<li>Not proved, honestly: anything about softmax (its presence breaks
-the reassociation — that is why fast attention drops it), anything about
-memory hierarchies or actual hardware, and the cost model describes the
-denoted algorithm, not Coq’s evaluation.</li>
-</ul>
-<p><em>Next: back to the determinant’s last open ingredient — the
-triangular-decomposition argument for <a
-href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
-— or a correctness proof for one of the <code>Programs/</code>
-algorithms.</em></p>
+says that applying a product is applying the factors in turn; used
+twice, it unwinds the whole layer into a pipeline:</p>
+<pre class="coq"><code>  Theorem attention_pipeline : forall w : Fin.t d -&gt; F,
+    mat_vec attention_naive w == mat_vec Q (mat_vec (mat_transpose K) (mat_vec V w)).
+  Proof.
+    intros w i.
+    calc (mat_vec attention_naive w i)
+      == (mat_vec (mat_mul Q (mat_transpose K)) (mat_vec V w) i)
+      == (mat_vec Q (mat_vec (mat_transpose K) (mat_vec V w)) i).
+    - exact (mat_vec_mul n n d (mat_mul Q (mat_transpose K)) V w i).
+    - exact (mat_vec_mul n d n Q (mat_transpose K) (mat_vec V w) i).
+  Qed.</code></pre>
+<p>Walking it: <code>intros w i</code> fixes an output index, since two
+coordinate vectors are equal when they agree everywhere. The first
+<code>calc</code> step peels <code>V</code> off the outside of <a
+href="coqdoc/Riktig.Impl.Attention.html#attention_naive"><code>attention_naive</code></a>’s
+product with <a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>,
+leaving the score matrix applied to <code>mat_vec V w</code>; the second
+peels <code>mat_transpose K</code> off in the same way. What is left is
+three matrix-vector applications — feed <code>w</code> through
+<code>V</code>, then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>K</mi><mi>𝖳</mi></msup><annotation encoding="application/x-tex">K^{\mathsf T}</annotation></semantics></math>,
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
+— and no matrix-matrix product anywhere, not even the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">d \times d</annotation></semantics></math>
+one.</p>
+<h2 id="what-the-theorem-does-not-cover">What the theorem does not
+cover</h2>
+<p>The layer here is <em>linear</em> attention. A transformer computes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">x</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mspace width="0.167em"></mspace><msup><mi>K</mi><mi>𝖳</mi></msup><mi>/</mi><msqrt><mi>d</mi></msqrt><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">\mathrm{softmax}(Q\,K^{\mathsf T}/\sqrt{d})\cdot V</annotation></semantics></math>,
+with a softmax sitting between the score matrix and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>.
+Softmax is not linear, and with it in place the reassociation is simply
+invalid —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+cannot be slid inside it. Dropping the softmax, or replacing it by a
+linear kernel, is exactly what the linear-attention family of models
+does, and it is that linear core, and only it, that the equality above
+applies to. Nothing about softmax is defined or proved here.</p>
+<p>Two further boundaries are worth naming. The cost model counts scalar
+multiplications performed by the algorithm the definitions denote; it
+says nothing about memory hierarchies, cache behaviour, or what any
+particular machine will do. And it is a count, not a measurement: <a
+href="coqdoc/Riktig.Impl.Attention.html#cost_naive"><code>cost_naive</code></a>
+and <a
+href="coqdoc/Riktig.Impl.Attention.html#cost_fast"><code>cost_fast</code></a>
+are separate definitions that a reader has to agree describe <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
+which is why the reasoning behind them is spelled out above rather than
+asserted.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>
 (<a
-href="coqdoc/Riktig.Impl.Attention.html#attn_naive"><code>attn_naive</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_naive"><code>attention_naive</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_fast"><code>attn_fast</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_fast"><code>attention_fast</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_assoc"><code>attn_assoc</code></a>,
+href="coqdoc/Riktig.Impl.Attention.html#attention_assoc"><code>attention_assoc</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Attention.html#attn_pipeline"><code>attn_pipeline</code></a>,
-the cost model, the Q tests) · <a
+href="coqdoc/Riktig.Impl.Attention.html#attention_pipeline"><code>attention_pipeline</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#mulcost"><code>mulcost</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#cost_naive"><code>cost_naive</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#cost_fast"><code>cost_fast</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#cost_fast_le"><code>cost_fast_le</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Attention.html#intermediate_smaller"><code>intermediate_smaller</code></a>)
+· <a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
+<a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>)
 · <a
+href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec"><code>mat_vec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_transpose"><code>mat_transpose</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_mul"><code>mat_vec_mul</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</code></a>
-(matmul as a bounded bilinear map — the analysis face of the same
-object).</p>
+(the same product as a bounded bilinear map, for differentiating
+it).</p>
 </main>
 </body>
 </html>

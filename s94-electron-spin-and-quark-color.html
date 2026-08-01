@@ -178,22 +178,48 @@ algebra,
 eight generators
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>T</mi><mn>8</mn></msub></mrow><annotation encoding="application/x-tex">T_1,\dots,T_8</annotation></semantics></math>,
 and a bracket fixed by nine numbers, the structure constants:</p>
-<pre class="coq"><code>   THE TABLE.  The nonzero values, one representative per orbit under
-   the S_3 permutation action (all other entries of the same
-   unordered triple follow by the antisymmetry proved below):
-     f_123 = 1
-     f_147 = f_246 = f_257 = f_345 = 1/2
-     f_156 = f_367 = -1/2
-     f_458 = f_678 = sqrt(3)/2
-   This is the standard table (e.g. Georgi, &quot;Lie Algebras in Particle
-   Physics&quot;; Wikipedia&#39;s &quot;Gell-Mann matrices&quot; structure-constant
-   table).</code></pre>
-<p>Every other nonzero value of
+<p>The table is written out as a <code>match</code> on the three
+indices, one line per ordered triple, with everything not listed sent to
+zero. Here are the nine increasing-index representatives, one per
+unordered triple that carries a nonzero value:</p>
+<pre class="coq"><code>  Definition sc (a b c : nat) : F :=
+    match a, b, c with
+  | 1, 2, 3 =&gt; 1
+  …
+  | 1, 4, 7 =&gt; half 1
+  | 1, 5, 6 =&gt; - (half 1)
+  | 2, 4, 6 =&gt; half 1
+  | 2, 5, 7 =&gt; half 1
+  | 3, 4, 5 =&gt; half 1
+  | 3, 6, 7 =&gt; - (half 1)
+  | 4, 5, 8 =&gt; half sqrt3
+  | 6, 7, 8 =&gt; half sqrt3
+  …
+    | _, _, _ =&gt; 0
+    end.</code></pre>
+<p>This is the standard table (Georgi, <em>Lie Algebras in Particle
+Physics</em>):
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>123</mn></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">f_{123}=1</annotation></semantics></math>,
+four entries equal to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>,
+two equal to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">-1/2</annotation></semantics></math>,
+and two equal to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\sqrt3/2</annotation></semantics></math>.
+Every other nonzero value of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
 is one of these nine with its sign changed by however many swaps it
-takes to sort its three indices into increasing order. The bracket
-itself is built directly from the resulting table, as a double sum over
-the eight generators:</p>
+takes to sort its three indices into increasing order, and each of those
+permuted entries is spelled out as its own <code>match</code> line
+rather than derived, so that the table computes. <code>half 1</code> is
+the field’s
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>;
+<code>sqrt3</code> is not a real number here but a section hypothesis,
+an element of the field satisfying
+<code>sqrt3 * sqrt3 == 1 + 1 + 1</code> — any ordered field admitting
+such an element instantiates everything below. The bracket itself is
+built directly from the table, as a double sum over the eight
+generators:</p>
 <pre class="coq"><code>  Definition bracket (x y : Fin.t 8 -&gt; F) : Fin.t 8 -&gt; F :=
     fun c =&gt; bigopF (fun a =&gt; bigopF (fun b =&gt; x a * y b * f a b c)).</code></pre>
 <p>Where does the number three, and
@@ -292,10 +318,12 @@ conjugation rather than an arbitrary sandwich. Call an element a
 <pre class="coq"><code>  Definition c3_rotate (r x : C3 F) : C3 F := r * x * c3_reverse r.</code></pre>
 <p>Sandwiching a vector by an even rotor produces another vector — <a
 href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_vector"><code>c3_rotate_vector</code></a>
-proves this unconditionally, without requiring
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-to be a unit. Read as an action on vectors, that sandwich is a rotation;
-what follows is what it does to
+proves this for every even
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>,
+with no unit hypothesis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r\,\tilde r=1</annotation></semantics></math>
+used anywhere in it. Read as an action on vectors, that sandwich is a
+rotation; what follows is what it does to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
 itself.</p>
 <p><strong>Theorem.</strong> A rotor
@@ -394,24 +422,33 @@ turn,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>720</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">720°</annotation></semantics></math>
 total, is guaranteed to close the loop. <a
 href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_neg"><code>c3_rotate_neg</code></a>
-is that fact, proved for an arbitrary field and an arbitrary even
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>,
-not asserted.</p>
+is that fact, proved over an arbitrary field and for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+— the statement carries no evenness and no unit hypothesis — not
+asserted.</p>
 <h2 id="the-jacobi-identity-checked-one-basis-triple-at-a-time">The
 Jacobi identity, checked one basis triple at a time</h2>
 <p>The bracket above is built directly from nine numbers, with no
 guarantee from that construction alone that it satisfies a Lie algebra’s
-defining laws. Bilinearity and antisymmetry follow from the table’s own
-antisymmetry under swapping its first two indices (<a
+defining laws. Bilinearity is a matter of distributing the double sum
+(<a
 href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_add_l"><code>bracket_add_l</code></a>,
 <a
 href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_add_r"><code>bracket_add_r</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_antisym"><code>bracket_antisym</code></a>)
-for arbitrary elements, not only basis vectors. The Jacobi identity is
-the one law that does not fall out so directly; whether these particular
-nine numbers genuinely combine into a consistent Lie algebra has to be
-checked. Define the Jacobiator of three elements as</p>
+href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_scale_l"><code>bracket_scale_l</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_scale_r"><code>bracket_scale_r</code></a>),
+and antisymmetry follows from the table’s own antisymmetry under
+swapping its first two indices (<a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_antisym"><code>bracket_antisym</code></a>,
+via <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#f_antisym"><code>f_antisym</code></a>);
+both hold for arbitrary elements, not only basis vectors. The Jacobi
+identity is the one law that does not fall out so directly; whether
+these particular nine numbers genuinely combine into a consistent Lie
+algebra has to be checked. Define the Jacobiator of three elements
+as</p>
 <pre class="coq"><code>  Definition jacobiator (x y z : Fin.t 8 -&gt; F) : Fin.t 8 -&gt; F :=
     bracket x (bracket y z) + bracket y (bracket z x) + bracket z (bracket x y).</code></pre>
 <p>and, for basis generators, <a
@@ -479,21 +516,23 @@ href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_678"><code>jacobi_678</code></
 for all
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mfrac linethickness="0"><mn>8</mn><mn>3</mn></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>56</mn></mrow><annotation encoding="application/x-tex">\binom{8}{3}=56</annotation></semantics></math>
 strictly increasing basis triples — every one closed, none
-<code>Admitted</code>. Four of the 56 (mixing
+<code>Admitted</code>. Fifty-two of them close on the table’s zeros and
+ordinary ring rearrangement, as <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_123"><code>jacobi_123</code></a>
+does. The remaining four are the triples drawn from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>4</mn></msub><annotation encoding="application/x-tex">T_4</annotation></semantics></math>
 through
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>7</mn></msub><annotation encoding="application/x-tex">T_7</annotation></semantics></math>
-with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>8</mn></msub><annotation encoding="application/x-tex">T_8</annotation></semantics></math>)
-need one further fact, that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>7</mn></msub><annotation encoding="application/x-tex">T_7</annotation></semantics></math>,
+whose internal sums run through the two irrational entries
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>458</mn></msub><mo>=</mo><msub><mi>f</mi><mn>678</mn></msub><mo>=</mo><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">f_{458}=f_{678}=\sqrt3/2</annotation></semantics></math>;
+they need one fact beyond the zeros, <a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#half_sqrt3_sq"><code>half_sqrt3_sq</code></a>,
+that
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(\sqrt3/2)^2</annotation></semantics></math>
-equals three copies of
+is three copies of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mi>/</mi><mn>2</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(1/2)^2</annotation></semantics></math>,
 since
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><msqrt><mn>3</mn></msqrt><mn>2</mn></msup><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sqrt3^2=3</annotation></semantics></math>;
-every other triple closes exactly like <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_123"><code>jacobi_123</code></a>
-does, on the table’s zeros alone.</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><msqrt><mn>3</mn></msqrt><mn>2</mn></msup><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sqrt3^2=3</annotation></semantics></math>.</p>
 <h2 id="what-this-does-not-explain">What this does not explain</h2>
 <p>Geometric algebra does not explain the Pauli exclusion principle. The
 fact that two electrons cannot occupy the same quantum state — the
@@ -564,8 +603,14 @@ href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_basis_expand"><code>jacobi_bas
 <a
 href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_123"><code>jacobi_123</code></a>)
 · <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>GeometricAlgebra.contraction</code></a>,
+the law that a vector squares to its own norm) · <a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>
-(the contraction axiom).</p>
+(<a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>,
+the symmetric half of a product of two vectors).</p>
 </main>
 </body>
 </html>

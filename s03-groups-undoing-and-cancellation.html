@@ -24,68 +24,79 @@ back to the do-nothing element <code>0</code>. The library names the
 undo operation <code>-</code> (unary negation) and asks for two laws:
 negating and then adding gives <code>0</code>, in either order.</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>a</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mo>,</mo><mspace width="2.0em"></mspace><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">(-a) + a \;=\; 0, \qquad a + (-a) \;=\; 0.</annotation></semantics></math></p>
-<p>Here is the whole structure, from <a
-href="coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>:</p>
+<p>Here is the class — all of <a
+href="coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>
+below its one import:</p>
 <pre class="coq"><code>Module Group.
-  Class Group (G : Type) {Ge : EqRel G} {Gz : Zero G} {Ga : HasAdd G} {Gn : HasNeg G} := {
-    equivalence    : Equivalence (@equ G _);
-    associative    : forall x y w : G, (x + y) + w == x + (y + w);
-    left_identity  : forall x     : G, 0 + x == x;
-    right_identity : forall x     : G, x + 0 == x;
-    left_inverse   : forall x     : G, (- x) + x == 0;
-    right_inverse  : forall x     : G, x + (- x) == 0;
-    add_proper     : forall x y : G, x == y -&gt; forall u v : G, u == v -&gt; (x + u) == (y + v);
-    neg_proper     : forall x y : G, x == y -&gt; (- x) == (- y)
+  Class Group (G : Type) {eq : EqRel G} {zero : Zero G} {add : HasAdd G}
+              {neg : HasNeg G} := {
+    monoid    :: Monoid G;
+    neg_proper :: Proper (equ ==&gt; equ) neg;
+    is_left_inverse  :: LeftInverse G add neg 0;
+    is_right_inverse :: RightInverse G add neg 0;
   }.
+  Hint Mode Group ! - - - - : typeclass_instances.
+  Hint Rewrite @left_inverse @right_inverse : algebra_db.
 End Group.
-Notation Group := Group.Group.</code></pre>
-<p>The operations come in as class parameters — the monoid’s
-<code>==</code>, <code>0</code>, <code>+</code>, and now also a negation
-<code>Gn</code> from the <a
-href="coqdoc/Riktig.Ops.html#HasNeg"><code>HasNeg</code></a> vocabulary
-class. The first six law fields are the monoid’s laws restated, followed
-by the two undo laws <a
-href="coqdoc/Riktig.Interface.Group.html#Group.left_inverse"><code>Group.left_inverse</code></a>
+Export Group.</code></pre>
+<p>The operations come in as class parameters, one tiny vocabulary class
+per symbol: <a
+href="coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a> for the
+equality <code>==</code>, <a
+href="coqdoc/Riktig.Ops.html#Zero"><code>Zero</code></a> for
+<code>0</code>, <a
+href="coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a> for
+<code>+</code>, and now also <a
+href="coqdoc/Riktig.Ops.html#HasNeg"><code>HasNeg</code></a> for the
+negation <code>-</code>. So <code>Group G</code> presupposes the
+operations and contributes only laws.</p>
+<p>Of its four fields, only two are new laws. <a
+href="coqdoc/Riktig.Interface.Group.html#Group.is_left_inverse"><code>Group.is_left_inverse</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Group.html#Group.right_inverse"><code>Group.right_inverse</code></a>,
-and the two respect laws (<a
-href="coqdoc/Riktig.Interface.Group.html#Group.add_proper"><code>Group.add_proper</code></a>,
-<a
-href="coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>Group.neg_proper</code></a>)
-that let <code>==</code> be rewritten under <code>+</code> and
-<code>-</code>. That a group <em>is</em> a monoid is registered once,
-just below the module, as a derived instance:</p>
-<pre class="coq"><code>#[global] Instance Group_is_Monoid G {Ge : EqRel G} {Gz : Zero G} {Ga : HasAdd G} {Gn : HasNeg G}
-  `{H : Group.Group G} : Monoid G := {|
-    Monoid.equivalence    := Group.equivalence;
-    Monoid.associative    := Group.associative;
-    Monoid.left_identity  := Group.left_identity;
-    Monoid.right_identity := Group.right_identity;
-    Monoid.add_proper     := Group.add_proper
-  |}.</code></pre>
-<p>It repackages five of the group’s fields as a monoid — no new proofs
-— and Coq applies it silently, so everything proved about monoids
-(associativity, the identity laws, <a
+href="coqdoc/Riktig.Interface.Group.html#Group.is_right_inverse"><code>Group.is_right_inverse</code></a>
+hold the two undo laws, and neither is a freshly written equation:
+<code>LeftInverse G add neg 0</code> is a class from <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>, stating
+<code>inverse a ⋆ a == unit</code> for the operation, inverse and unit
+it is given, and its method is called <a
+href="coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>
+— which is the name every proof below cites. (The convention runs
+through the tree: a field holding a law is named <code>is_</code> plus
+the law it holds.)</p>
+<p>Everything else a group needs is in its first field. <a
+href="coqdoc/Riktig.Interface.Group.html#Group.monoid"><code>Group.monoid</code></a>
+has type <code>Monoid G</code>: the monoid is not restated, it is
+<em>held</em>. And because the field is declared with <code>::</code>
+rather than <code>:</code>, it is a typeclass instance the moment a
+group is in scope, so a proof about an arbitrary group can use
+associativity, the two identity laws, and every theorem derived from
+them — <a
 href="coqdoc/Riktig.Theory.Monoid.html#id_unique"><code>id_unique</code></a>
-from the previous post) is available for a group with no restatement.
-The two undo laws are additionally registered under the names <a
-href="coqdoc/Riktig.Props.html#invl"><code>invl</code></a> and <a
-href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> (their <a
-href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> single-law
-classes), which is how the proofs below refer to them.</p>
-<p>The class and its own laws live inside <code>Module Group</code>
-rather than carrying a <code>group_</code> prefix on every field: <code
-class="nolink">left_inverse</code> is a name every structure with an
-inverse operation wants (Field’s own inverse law wants it too), so
-writing it out fully as <a
-href="coqdoc/Riktig.Interface.Group.html#Group.left_inverse"><code>Group.left_inverse</code></a>
-says exactly the same thing a prefix would, at the one or two places
-that name it directly, without inventing a new compound word. The final
-<code>Notation Group := Group.Group</code> means every other use of <a
-href="coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>
-in this tree — <code>`{Group G}</code>,
-<code>Instance Z_Group : Group Z</code>, and so on — is completely
-unaffected; only direct references to the law fields change.</p>
+from the previous post, for one — with nothing said and nothing
+repackaged. <a
+href="coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>Group.neg_proper</code></a>
+plays the part for <code>-</code> that the monoid’s own <a
+href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+plays for <code>+</code>: it says negation sends equal arguments to
+equal results, which is what <code>Proper (equ ==&gt; equ) neg</code>
+spells out, and being an instance it lets <code>rewrite</code> fire
+underneath a <code>-</code>.</p>
+<p>The lines after the class body are bookkeeping.
+<code>Hint Mode</code> keeps instance search from hunting for a group
+before the carrier is known; <code>Hint Rewrite</code> files the two new
+laws in a database, so <code>autorewrite with algebra_db</code> can use
+them uncited; and <code>Export Group</code> puts the class in scope
+under its short name, so every other use in the tree —
+<code>`{Group G}</code>, <code>Instance Z_Group : Group Z</code> — reads
+exactly as it would without the module wrapper. The wrapper is what lets
+the fields be called <a
+href="coqdoc/Riktig.Interface.Group.html#Group.monoid"><code>monoid</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>neg_proper</code></a>
+instead of <code>group_monoid</code> and <code>group_neg_proper</code>:
+the prefix lives in the module path, and <a
+href="coqdoc/Riktig.Interface.Group.html#Group.monoid"><code>Group.monoid</code></a>
+says it where it needs saying.</p>
 <h2 id="cancellation-on-the-left">Cancellation on the left</h2>
 <p>The first thing undo buys you is <strong>cancellation</strong>: if
 <code>a + b == a + c</code>, then <code>b == c</code>. In ordinary
@@ -109,13 +120,13 @@ href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>:</p>
 Proof.
   intros a b c Heq.
   calc b
-    == (0 + b)          { idl  }
-    == ((- a + a) + b)  { invl }
-    == (- a + (a + b))  { assoc }
+    == (0 + b)          { left_identity  }
+    == ((- a + a) + b)  { left_inverse }
+    == (- a + (a + b))  { associative }
     == (- a + (a + c))  { Heq  }
-    == ((- a + a) + c)  { assoc }
-    == (0 + c)          { invl }
-    == c                { idl  }.
+    == ((- a + a) + c)  { associative }
+    == (0 + c)          { left_inverse }
+    == c                { left_identity  }.
 Qed.</code></pre>
 <p>The <code>calc</code> block is the blackboard chain above, written
 out and machine-checked: it reads <code>b == (0 + b) == ... == c</code>,
@@ -123,36 +134,30 @@ and each <code>{ ... }</code> names the single law that turns one line
 into the next. Walking it step by step, each step matching one equality
 on the blackboard:</p>
 <ul>
-<li><code>== (0 + b) { idl }</code> — insert a <code>0</code> on the
-left, by the left-identity law <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> read
-backwards.</li>
-<li><code>== ((- a + a) + b) { invl }</code> — expand that
-<code>0</code> into <code>-a + a</code>, the left-undo law <a
-href="coqdoc/Riktig.Props.html#invl"><code>invl</code></a>.</li>
-<li><code>== (- a + (a + b)) { assoc }</code> — reassociate, so
-<code>a + b</code> appears as a block. This is associativity, <a
-href="coqdoc/Riktig.Props.html#assoc"><code>assoc</code></a>.</li>
+<li><code>== (0 + b) { left_identity }</code> — insert a <code>0</code>
+on the left, by the left-identity law read backwards.</li>
+<li><code>== ((- a + a) + b) { left_inverse }</code> — expand that
+<code>0</code> into <code>-a + a</code>, the left-undo law.</li>
+<li><code>== (- a + (a + b)) { associative }</code> — reassociate, so
+<code>a + b</code> appears as a block. This is associativity, inherited
+through <a
+href="coqdoc/Riktig.Interface.Group.html#Group.monoid"><code>Group.monoid</code></a>.</li>
 <li><code>== (- a + (a + c)) { Heq }</code> — replace <code>a + b</code>
 by <code>a + c</code>, the hypothesis <code>Heq</code> we were
 given.</li>
-<li><code>== ((- a + a) + c) { assoc }</code> — reassociate the other
-way, so <code>-a + a</code> is a block again.</li>
-<li><code>== (0 + c) { invl }</code> — collapse <code>-a + a</code> back
-to <code>0</code>.</li>
-<li><code>== c { idl }</code> — drop the <code>0</code>, and the goal
-<code>b == c</code> is reached.</li>
+<li><code>== ((- a + a) + c) { associative }</code> — reassociate the
+other way, so <code>-a + a</code> is a block again.</li>
+<li><code>== (0 + c) { left_inverse }</code> — collapse
+<code>-a + a</code> back to <code>0</code>.</li>
+<li><code>== c { left_identity }</code> — drop the <code>0</code>, and
+the goal <code>b == c</code> is reached.</li>
 </ul>
 <p>The whole proof is the blackboard calculation, one law per line, with
 no appeal to what the elements actually are. Cancelling on the
 <em>right</em> is the mirror image — from <code>b + a == c + a</code>
 conclude <code>b == c</code> — and its proof is the same moves
-reflected, adding <code>-a</code> on the right and using <a
-href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a>/<a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a> where the left
-version used <a
-href="coqdoc/Riktig.Props.html#invl"><code>invl</code></a>/<a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a>:</p>
+reflected, adding <code>-a</code> on the right and using the right-hand
+laws where the left version used the left-hand ones:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mi>b</mi></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>b</mi><mo>+</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right identity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>b</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right undo</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">hypothesis </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mo>+</mo><mi>a</mi><mo>=</mo><mi>c</mi><mo>+</mo><mi>a</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>c</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>c</mi><mo>+</mo><mn>0</mn></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right undo</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>c</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right identity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
 b &amp;= b + 0            &amp;&amp;\{\text{right identity}\}\\
   &amp;= b + (a + (-a))   &amp;&amp;\{\text{right undo}\}\\
@@ -166,13 +171,13 @@ b &amp;= b + 0            &amp;&amp;\{\text{right identity}\}\\
 Proof.
   intros a b c Heq.
   calc b
-    == (b + 0)          { idr  }
-    == (b + (a + - a))  { invr }
-    == ((b + a) + - a)  { assoc }
+    == (b + 0)          { right_identity  }
+    == (b + (a + - a))  { right_inverse }
+    == ((b + a) + - a)  { associative }
     == ((c + a) + - a)  { Heq  }
-    == (c + (a + - a))  { assoc }
-    == (c + 0)          { invr }
-    == c                { idr  }.
+    == (c + (a + - a))  { associative }
+    == (c + 0)          { right_inverse }
+    == c                { right_identity  }.
 Qed.</code></pre>
 <h2 id="double-negation">Double negation</h2>
 <p>A short one that reuses cancellation. Negating twice returns the
@@ -190,21 +195,19 @@ Proof.
   intros g.
   apply (cancel_l (- g)).
   calc ((- g) + - - g)
-    == (0 : G)      { (invr (- g)) }
-    == ((- g) + g)  { (invl g)     }.
+    == (0 : G)      { (right_inverse (- g)) }
+    == ((- g) + g)  { (left_inverse g)     }.
 Qed.</code></pre>
 <ul>
 <li><code>apply (cancel_l (- g))</code> uses the theorem just proved: to
 show <code>- - g == g</code>, it is enough to show
 <code>(- g) + - - g == (- g) + g</code>. That is the new goal.</li>
-<li><code>== (0 : G) { (invr (- g)) }</code> — the left side
+<li><code>== (0 : G) { (right_inverse (- g)) }</code> — the left side
 <code>(- g) + - - g</code> is <code>-g</code> plus its own negation,
-which is <code>0</code> by the right-undo law <a
-href="coqdoc/Riktig.Props.html#invr"><code>invr</code></a> at the
-element <code>-g</code>.</li>
-<li><code>== ((- g) + g) { (invl g) }</code> — and <code>0</code> is
-<code>(- g) + g</code> by the left-undo law <a
-href="coqdoc/Riktig.Props.html#invl"><code>invl</code></a> at
+which is <code>0</code> by the right-undo law at the element
+<code>-g</code>.</li>
+<li><code>== ((- g) + g) { (left_inverse g) }</code> — and
+<code>0</code> is <code>(- g) + g</code> by the left-undo law at
 <code>g</code>. The two sides meet at <code>0</code>, so they are equal
 and <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
@@ -212,42 +215,36 @@ finishes the job.</li>
 </ul>
 <h2 id="any-additive-map-preserves-zero-and-negation-for-free">Any
 additive map preserves zero and negation, for free</h2>
-<p>The last section of <a
+<p>A section of <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
 proves something once that would otherwise be re-proved for every
-operation in the library. Take any map <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> between
-two groups that preserves addition —
-<code>f (a + b) == f a + f b</code>. Such a map automatically preserves
-<code>0</code> and negation as well, with no extra hypotheses. The setup
-fixes <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and its
-two properties:</p>
+operation in the library. Take any map <code>f</code> between two groups
+that preserves addition — <code>f (a + b) == f a + f b</code>. Such a
+map automatically preserves <code>0</code> and negation as well, with no
+extra hypotheses. The setup fixes <code>f</code> and its two
+properties:</p>
 <pre class="coq"><code>  Context (f : G -&gt; K).
   Context `{fp : Proper _ (equ ==&gt; equ) f}.
   Context (fadd : forall a b : G, f (a + b) == f a + f b).</code></pre>
-<p><code>fp</code> says <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>
-respects equality; <code>fadd</code> is the addition-preserving law. The
-backtick before <code>{fp : ...}</code> marks it as a typeclass-style
-argument rather than a plain one: whoever calls <a
+<p><code>fp</code> says <code>f</code> respects equality;
+<code>fadd</code> is the addition-preserving law. The backtick before
+<code>{fp : ...}</code> marks it as a typeclass-style argument rather
+than a plain one: whoever calls <a
 href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
 doesn’t have to supply <code>fp</code> by hand, as long as a matching
 <code>Proper</code> fact is registered as an instance for their
-particular <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>. That
-<code>f 0 == 0</code> then follows. The argument: <code>f 0</code> added
-to itself equals <code>f 0</code>, and the only element that is
-unchanged by adding <code>f 0</code> is <code>0</code>, so cancel one
-copy of <code>f 0</code>:</p>
+particular <code>f</code>. That <code>f 0 == 0</code> then follows. The
+argument: <code>f 0</code> added to itself equals <code>f 0</code>, and
+the only element that is unchanged by adding <code>f 0</code> is
+<code>0</code>, so cancel one copy of <code>f 0</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mo>+</mo><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>f</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> preserves </mtext><mspace width="0.333em"></mspace></mrow><mi>+</mi><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">left identity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mn>0</mn><mo>+</mo><mn>0</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">right identity</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">f\,0 + f\,0 \;=\; f(0 + 0) \quad\{f \text{ preserves } +\}\quad =\; f\,0 \quad\{\text{left identity}\}\quad =\; f\,0 + 0 \quad\{\text{right identity}\}</annotation></semantics></math></p>
 <pre class="coq"><code>  Theorem hom_zero : f 0 == 0.
   Proof.
     apply (cancel_l (f 0)).
     calc (f 0 + f 0)
       == (f (0 + 0)) { (fadd 0 0) }
-      == (f 0)       { idl }
-      == (f 0 + 0)   { idr }.
+      == (f 0)       { left_identity }
+      == (f 0 + 0)   { right_identity }.
   Qed.</code></pre>
 <p>Notice this proof reuses <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>,
@@ -255,12 +252,9 @@ proved two sections up: <code>apply (cancel_l (f 0))</code> reduces the
 goal <code>f 0 == 0</code> to <code>f 0 + f 0 == f 0 + 0</code>. Then
 the chain: <code>f 0 + f 0 == f (0 + 0)</code> by <code>fadd</code>
 (backwards); <code>f (0 + 0) == f 0</code> because
-<code>0 + 0 == 0</code> by the left-identity law <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> inside <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a>; and
-<code>f 0 == f 0 + 0</code> by the right-identity law <a
-href="coqdoc/Riktig.Props.html#idr"><code>idr</code></a>. Cancelling the
-shared <code>f 0</code> leaves <code>f 0 == 0</code>. The companion
+<code>0 + 0 == 0</code> by the left-identity law inside <code>f</code>;
+and <code>f 0 == f 0 + 0</code> by the right-identity law. Cancelling
+the shared <code>f 0</code> leaves <code>f 0 == 0</code>. The companion
 lemma <a
 href="coqdoc/Riktig.Theory.Group.html#hom_neg"><code>hom_neg</code></a>,
 with statement <code>forall a : G, f (- a) == - f a</code>, preserves
@@ -270,19 +264,15 @@ href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>.</p>
 <p>Every theorem above holds for any type the moment it is shown to
 satisfy <a
 href="coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>.
-For the integers that takes one instance declaration, from <a
-href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>, with each
-undo law discharged by a standard-library fact:</p>
-<pre class="coq"><code>#[global] Instance Z_Group : Group Z := {|
-  Group.equivalence    := eq_equivalence;
-  Group.associative    := fun a b c =&gt; eq_sym (Z.add_assoc a b c);
-  Group.left_identity  := Z.add_0_l;
-  Group.right_identity := Z.add_0_r;
-  Group.left_inverse   := Z.add_opp_diag_l;
-  Group.right_inverse  := Z.add_opp_diag_r;
-  Group.add_proper     := ltac:(congruence);
-  Group.neg_proper     := ltac:(congruence)
-|}.</code></pre>
+For the integers that takes one instance per law, each discharged by a
+standard-library fact, from <a
+href="coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>:</p>
+<pre class="coq"><code>#[global] Instance Z_add_associative : Associative Z Z add add :=
+  fun a b c =&gt; eq_sym (Z.add_assoc a b c).
+#[global] Instance Z_add_left_identity : LeftIdentity Z Z add 0 := Z.add_0_l.
+#[global] Instance Z_add_right_identity : RightIdentity Z Z add 0 := Z.add_0_r.
+#[global] Instance Z_add_left_inverse : LeftInverse Z add neg 0 := Z.add_opp_diag_l.
+#[global] Instance Z_add_right_inverse : RightInverse Z add neg 0 := Z.add_opp_diag_r.</code></pre>
 <p>The monoid laws are discharged exactly as in the previous post
 (<code>Z.add_0_l</code>, <code>Z.add_0_r</code>, and
 <code>Z.add_assoc</code> flipped by <code>eq_sym</code>); the negation
@@ -290,9 +280,21 @@ operation was named by <code>Instance Z_Neg : HasNeg Z := Z.opp</code>
 alongside the rest of <code>Z</code>’s vocabulary; and
 <code>Z.add_opp_diag_l</code> and <code>Z.add_opp_diag_r</code> are the
 standard library’s <code>-a + a = 0</code> and <code>a + -a = 0</code>.
-The two respect laws hold for any <code>eq</code>-based equality, which
-is what the <code>congruence</code> tactic discharges. With this in
-scope, <a
+The structures themselves are then declared with no fields written at
+all:</p>
+<pre class="coq"><code>#[global] Instance Z_Magma : Magma Z add := { Magma.equivalence := eq_equivalence }.
+#[global] Instance Z_Semigroup : Semigroup Z add := {}.
+#[global] Instance Z_Monoid : Monoid Z := {}.
+#[global] Instance Z_Group : Group Z := {}.</code></pre>
+<p>An empty <code>{}</code> asks instance search to supply every field,
+and it finds the five laws above, the structure one level down, and the
+two <code>Proper</code> facts registered alongside them — <a
+href="coqdoc/Riktig.Impl.Zr.html#Z_add_proper"><code>Z_add_proper</code></a>
+and <a
+href="coqdoc/Riktig.Impl.Zr.html#Z_neg_proper"><code>Z_neg_proper</code></a>,
+both discharged by <code>congruence</code>, since <code>==</code> at
+<code>Z</code> is Coq’s own equality and every function respects that.
+With this in scope, <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Group.html#neg_involutive"><code>neg_involutive</code></a>,

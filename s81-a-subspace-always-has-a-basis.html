@@ -44,12 +44,18 @@ vectors, a coordinate map sending a vector to its tuple of
 <code>n</code> scalars, and proofs that reconstructing a vector from its
 coordinates and reading off the coordinates of a reconstruction both
 undo each other. Closure under addition and scaling — the property that
-makes a subset a subspace — is likewise a small record,
-<code>SubspacePred F V P</code>: a predicate <code>P</code> on vectors,
-together with proofs that <code>0</code> satisfies it and that it is
-closed under <code>+</code> and scaling. <code>Sub V P</code> is the
-actual subspace as a type — the vectors satisfying <code>P</code>,
-paired with their proof of membership — and it inherits a <a
+makes a subset a subspace — is likewise a small class,
+<code>SubspacePred F V P</code>, carrying three laws about a predicate
+<code>P</code> on vectors: <a
+href="coqdoc/Riktig.Interface.Subspace.html#SubspacePred.zero"><code>SubspacePred.zero</code></a>
+says <code>0</code> satisfies <code>P</code>, <a
+href="coqdoc/Riktig.Interface.Subspace.html#SubspacePred.add_closed"><code>SubspacePred.add_closed</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Subspace.html#SubspacePred.scale_closed"><code>SubspacePred.scale_closed</code></a>
+say <code>P</code> survives <code>+</code> and scaling.
+<code>Sub V P</code> is the actual subspace as a type — the vectors
+satisfying <code>P</code>, paired with their proof of membership — and
+it inherits a <a
 href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
 structure automatically, by nothing more than combining the pieces
 above.</p>
@@ -61,8 +67,7 @@ becomes a precise statement: given <code>Bn : Basis n F V</code> and
 on a blackboard</h2>
 <p>Stated as one theorem: if <code>V</code> has a basis of size
 <code>n</code> and <code>P</code> is a subspace of <code>V</code>, then
-<code>P</code> has a basis of some size <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> with
+<code>P</code> has a basis of some size <code>k</code> with
 <code>k &lt;= n</code>. The proof is induction on <code>n</code>, the
 dimension of the ambient space.</p>
 <p><strong>Base case,
@@ -153,7 +158,7 @@ short fact proved earlier in the file); composing it with
 <code>basis_coords Bn</code> gives the linear map that reads off a
 vector’s first coordinate, and its kernel is the hyperplane:</p>
 <pre class="coq"><code>Section Hyperplane.
-  Context {F V : Type} `{FF : Field.Field F}.
+  Context {F V : Type} `{FF : Field F}.
   Context {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}.
   Context {VV : VectorSpace F V}.
   Context {m : nat} (Bn : Basis (S m) F V).
@@ -163,17 +168,16 @@ vector’s first coordinate, and its kernel is the hyperplane:</p>
   Definition H (v : V) : Prop := ker_pred c1 v.
 
   #[global] Instance H_SubspacePred : SubspacePred F V H := Ker_SubspacePred c1.</code></pre>
-<p><a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>
-being a subspace needs no separate proof: it is literally a kernel, and
-every kernel is a subspace, the fact established for kernels and images
-in general. The file goes on to prove, by the same
-drop-the-first-coordinate idea as the blackboard sketch, that the tail
-basis vectors give an actual <code>Basis m</code> of <a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>:</p>
+<p><code>H</code> being a subspace needs no separate proof: it is
+literally a kernel, and every kernel is a subspace, the fact established
+for kernels and images in general. The file goes on to prove, by the
+same drop-the-first-coordinate idea as the blackboard sketch, that the
+tail basis vectors give an actual <code>Basis m</code> of
+<code>H</code>:</p>
 <pre class="coq"><code>Definition hyperplane_basis : Basis m F (Sub V H) :=
-  @Build_Basis m F (Sub V H) FF (Sub_VectorSpace H)
-    hp_basis_vec hp_coords hp_recon hp_coords_lincomb.</code></pre>
+  {| basis_vec := hp_basis_vec; basis_coords := hp_coords;
+     basis_reconstruction := hp_recon;
+     basis_coords_linear_combination := hp_coords_lincomb |}.</code></pre>
 <p>(<a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_basis_vec"><code>hp_basis_vec</code></a>,
 <a
@@ -195,7 +199,9 @@ the same way, generically, for any linear functional
 few hundred lines of the same delta-collapse bookkeeping), the assembled
 basis:</p>
 <pre class="coq"><code>Definition extend_basis_by_vector : Basis (S k) F W :=
-  @Build_Basis (S k) F W FF VW eb_vec eb_coords eb_recon eb_coords_lincomb.</code></pre>
+  {| basis_vec := eb_vec; basis_coords := eb_coords;
+     basis_reconstruction := eb_recon;
+     basis_coords_linear_combination := eb_coords_lincomb |}.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#eb_vec"><code>eb_vec</code></a>
 is exactly “prepend <code>w1</code>, keep the old basis vectors after
@@ -206,7 +212,7 @@ case.</p>
 <h2 id="the-main-theorem">The main theorem</h2>
 <p>Here is the whole induction, exactly as it appears in the file, proof
 included, nothing elided:</p>
-<pre class="coq"><code>Theorem subspace_basis_exists : forall (n : nat) (F V : Type) `{FF : Field.Field F}
+<pre class="coq"><code>Theorem subspace_basis_exists : forall (n : nat) (F V : Type) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V) (Bn : Basis n F V) (P : V -&gt; Prop)
     (SP : SubspacePred F V P),
@@ -230,7 +236,7 @@ Proof.
       { unfold v1.
         transitivity (inv (c1 Bn v0) * c1 Bn v0).
         - exact (linear_map_scale (c1 Bn) (inv (c1 Bn v0)) v0).
-        - exact (Field.mul_left_inverse (c1 Bn v0) Hv0ne). }
+        - exact ((left_inverse_on (defined_on := nonzero _)) (c1 Bn v0) Hv0ne). }
       pose (w1 := exist P v1 Hv1P : Sub V P).
       pose (phi := linear_map_comp (c1 Bn) (sub_inject P)).
       pose proof Hv1_1 as Hphiw1.
@@ -268,12 +274,10 @@ hypothesis applied not to <code>V</code> but to <code>H Bn</code> (the
 hyperplane), using <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#hyperplane_basis"><code>hyperplane_basis</code></a>
 as its size-<code>m</code> basis, and to <code>Pinner (H Bn) P</code> —
-“<code>P</code>, viewed as a predicate on <a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>” —
-as the subspace. This is
+“<code>P</code>, viewed as a predicate on <code>H</code>” — as the
+subspace. This is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>∩</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">P \cap H</annotation></semantics></math>
-from the sketch, packaged as a subspace <em>of</em> <a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>
+from the sketch, packaged as a subspace <em>of</em> <code>H</code>
 rather than of <code>V</code>, and it hands back <code>Bk0</code>, a
 basis of size <code>k0 &lt;= m</code>.</li>
 <li><a
@@ -298,13 +302,15 @@ href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_
 (pulling the scalar through the linear map <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#c1"><code>c1</code></a>)
 followed by <a
-href="coqdoc/Riktig.Interface.Field.html#Field.mul_left_inverse"><code>Field.mul_left_inverse</code></a>
+href="coqdoc/Riktig.Props.html#left_inverse_on"><code>left_inverse_on</code></a>
 (the field law
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mi>a</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">a^{-1}\cdot a = 1</annotation></semantics></math>
-for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a \neq 0</annotation></semantics></math>).
-<code>w1</code> packages <code>v1</code> together with its proof of
-membership in <code>P</code>, and <code>phi</code> is <a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>⋅</mo><mi>a</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">a^{-1}\cdot a = 1</annotation></semantics></math>,
+guarded by the side condition
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a \neq 0</annotation></semantics></math>,
+which is what <code>defined_on := nonzero _</code> names and
+<code>Hv0ne</code> discharges). <code>w1</code> packages <code>v1</code>
+together with its proof of membership in <code>P</code>, and
+<code>phi</code> is <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#c1"><code>c1</code></a>
 restricted to <code>Sub V P</code>. <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#basis_and_comm"><code>basis_and_comm</code></a>
@@ -323,11 +329,10 @@ and prepend” move, giving a basis of size <code>S k0</code>, bounded by
 <li><strong><code>Hnex</code> branch.</strong> <code>Hiff</code> proves
 <code>P</code> and <code>Pand (H Bn) P</code> agree pointwise: any
 <code>v</code> in <code>P</code> either already has
-<code>c1 v == 0</code> (so it is in <a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#H"><code>H</code></a>
-too), or — since <code>Hnex</code> rules out any counterexample — it
-<em>must</em> have <code>c1 v == 0</code>, again by the classical case
-split, this time on a single equation rather than an existential. <a
+<code>c1 v == 0</code> (so it is in <code>H</code> too), or — since
+<code>Hnex</code> rules out any counterexample — it <em>must</em> have
+<code>c1 v == 0</code>, again by the classical case split, this time on
+a single equation rather than an existential. <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#basis_pred_iff"><code>basis_pred_iff</code></a>
 transports <code>BPw</code> across that pointwise agreement, unchanged
 in size, giving a basis of <code>P</code> directly of size
@@ -385,7 +390,7 @@ the file that defines kernel and image as subspaces — names the theorem
 this post proves before proving it, under the name <a
 href="coqdoc/Riktig.Theory.KerIm.html#subspace_has_basis_statement"><code>subspace_has_basis_statement</code></a>:</p>
 <pre class="coq"><code>Definition subspace_has_basis_statement : Prop :=
-  forall (F V : Type) `{FF : Field.Field F}
+  forall (F V : Type) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V) (n : nat)
     (Bn : Basis n F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
@@ -409,7 +414,7 @@ and <code>Im f</code> until you know those subspaces have bases at all.
 <code>Theory/ KerIm.v</code> states the target one existential level up,
 so it type-checks and names the goal precisely:</p>
 <pre class="coq"><code>Definition rank_nullity_statement : Prop :=
-  forall (F U V : Type) `{FF : Field.Field F}
+  forall (F U V : Type) `{FF : Field F}
     (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
     (sU : HasScale F U) (VU : VectorSpace F U)
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)

@@ -205,12 +205,19 @@ input.</p>
 <h2
 id="the-self-hosting-check-abnf-parsed-by-a-parser-built-from-abnf">The
 self-hosting check: ABNF, parsed by a parser built from ABNF</h2>
-<p>Now put the two programs nose to tail on the one grammar that
-describes themselves. RFC 5234’s Section 4 — the ABNF grammar of ABNF —
-is transcribed into a Coq string, <a
-href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>,
-character for character. The self-hosting check is this pipeline — the
-first arrow is the static parser <a
+<p>Now put the two programs end to end on the one grammar that describes
+them both. RFC 5234’s own text is transcribed into Coq strings,
+character for character, in two pieces. <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>
+is Section 4 alone — the meta-rules <code>rulelist</code>,
+<code>rule</code>, <code>alternation</code> and the rest, which describe
+ABNF’s syntax. <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_grammar"><code>abnf_grammar</code></a>
+is Section 4 together with Appendix B, the <em>core rules</em>
+(<code>ALPHA</code>, <code>DIGIT</code>, <code>CRLF</code> and friends)
+that every ABNF grammar may use without defining them. The self-hosting
+check runs on the first of these, as this pipeline — the first arrow is
+the static parser <a
 href="coqdoc/Riktig.Programs.ABNF.Parser.html#parse_abnf"><code>parse_abnf</code></a>,
 the second the grammar-driven parser-and-printer <a
 href="coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print_with_grammar</code></a>:</p>
@@ -227,14 +234,22 @@ and the interpreter builds a faithful parser from any grammar, then
 feeding ABNF’s own grammar through should reproduce ABNF’s own grammar.
 Any disagreement between the two programs about what “ABNF” means would
 surface as a mismatch here.</p>
-<p>The file records four checks, in order. The first is a plain sanity
-check: the transcribed grammar is the length it should be, so nothing
-was dropped in transcription.</p>
+<p>The file records four checks, in order. The first three are about the
+full transcription, <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_grammar"><code>abnf_grammar</code></a>.
+The first is a plain sanity check: that string is the length it should
+be, so nothing was dropped in transcription.</p>
 <pre class="coq"><code>Example grammar_length :
   String.length abnf_grammar = 3388.
 Proof. vm_compute. reflexivity. Qed.</code></pre>
-<p>The second confirms the static parser accepts the whole grammar text
-— it does not choke partway through:</p>
+<p>The second confirms that a parser accepts the whole grammar text — it
+does not stop partway through. The parser here is <a
+href="coqdoc/Riktig.Programs.ABNF.Pretty.html#parse_abnf_tree"><code>parse_abnf_tree</code></a>,
+a variant of the static parser that keeps every space and comment it
+reads instead of discarding them, so its result is a <a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#ParseTree"><code>ParseTree</code></a>
+rather than an <a
+href="coqdoc/Riktig.Programs.ABNF.Ast.html#ABNFRulelist"><code>ABNFRulelist</code></a>:</p>
 <pre class="coq"><code>Example parse_abnf_grammar_succeeds :
   match parse_abnf_tree abnf_grammar with
   | Some _ =&gt; true
@@ -277,13 +292,14 @@ Proof. vm_compute. reflexivity. Qed.</code></pre>
 <p>The proof is <code>vm_compute</code> followed by
 <code>reflexivity</code>: these are claims about fixed strings and a
 fixed grammar, so the right tool is to <em>run</em> the whole pipeline
-and compare. <code>vm_compute</code> evaluates it — parse the 3388-byte
-grammar, build the interpreter, re-parse, re-print — and
-<code>reflexivity</code> confirms the output string is syntactically
-identical to <a
+and compare. <code>vm_compute</code> evaluates it — parse <a
+href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>
+with the static parser, build a parser from the result, re-parse the
+same text, re-print — and <code>reflexivity</code> confirms the output
+string is syntactically identical to <a
 href="coqdoc/Riktig.Programs.ABNF.Grammar.html#abnf_section4"><code>abnf_section4</code></a>.
-There is no appeal to a lemma, no hand-waving; the equality is decided
-by computation.</p>
+There is no appeal to a lemma and nothing left informal; the equality is
+decided by computation.</p>
 <p>Why is “parses itself, and the round trip matches exactly” a real
 property and not a slogan? Because each arrow is a total program with a
 type, and the endpoints are concrete strings.
@@ -312,10 +328,16 @@ href="coqdoc/Riktig.Programs.ABNF.Parser.html#parse_abnf"><code>parse_abnf</code
 · <a
 href="coqdoc/Riktig.Programs.ABNF.Interp.html"><code>Programs/ABNF/Interp.v</code></a>
 (the generic interpreter, <a
-href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>)
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#make_parser"><code>make_parser</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#print_with_grammar"><code>print_with_grammar</code></a>,
+<a
+href="coqdoc/Riktig.Programs.ABNF.Interp.html#pretty_print"><code>pretty_print</code></a>)
 · <a
 href="coqdoc/Riktig.Programs.ABNF.Pretty.html"><code>Programs/ABNF/Pretty.v</code></a>
-(the whitespace-preserving parser and printer) · <a
+(the whitespace-preserving parser <a
+href="coqdoc/Riktig.Programs.ABNF.Pretty.html#parse_abnf_tree"><code>parse_abnf_tree</code></a>)
+· <a
 href="coqdoc/Riktig.Programs.ABNF.Grammar.html"><code>Programs/ABNF/Grammar.v</code></a>
 (<a
 href="coqdoc/Riktig.Programs.ABNF.Grammar.html#grammar_length"><code>grammar_length</code></a>,

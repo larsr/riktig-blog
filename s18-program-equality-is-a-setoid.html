@@ -126,8 +126,8 @@ and chaining the two with <a
 href="coqdoc/Riktig.Lambda.Conv.html#conv_trans"><code>conv_trans</code></a>.
 With these in place, <code>rewrite</code> on a <a
 href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a> behaves
-exactly as it does on a group element in the algebra files: replace a
-subterm by an equal one, anywhere it sits.</p>
+exactly as it does on a group element: replace a subterm by an equal
+one, anywhere it sits.</p>
 <h2 id="a-boolean-is-the-choice-it-would-make">A boolean is the choice
 it would make</h2>
 <p>The lambda calculus has no built-in booleans, but it does not need
@@ -135,24 +135,21 @@ any. A boolean’s entire job is to choose between two alternatives, so
 encode it <em>as</em> that choice: a function of two arguments that
 returns one of them. True returns the first, false returns the
 second.</p>
-<pre class="coq"><code>Definition TRUE : tm := Abs (Abs (Var 1)).           (* λ.λ.1 *)
-Definition FALSE : tm := Abs (Abs (Var 0)).          (* λ.λ.0 *)</code></pre>
+<pre class="coq"><code>Definition TRUE : tm := Abs (Abs (Var 1)).
+Definition FALSE : tm := Abs (Abs (Var 0)).</code></pre>
 <p>Read <a
 href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> as
 <code>\t. \e. t</code>: given a then-branch <code>t</code> and an
-else-branch <a
-href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>, hand back
-<code>t</code>. In de Bruijn terms the then-branch is index
-<code>1</code> (one lambda further out than <a
-href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a>), so <a
+else-branch <code>e</code>, hand back <code>t</code>. In de Bruijn terms
+the then-branch is index <code>1</code> (one lambda further out than
+<code>e</code>), so <a
 href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> is
 <code>Abs (Abs (Var 1))</code> and <a
 href="coqdoc/Riktig.Lambda.Church.html#FALSE"><code>FALSE</code></a> is
 <code>Abs (Abs (Var 0))</code>. A conditional is then nothing but
 applying the boolean to its two branches:</p>
 <pre class="coq"><code>Definition IFB (b t e : tm) : tm := App (App b t) e.</code></pre>
-<p><code>IFB b t e</code> feeds <code>t</code> and <a
-href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> to
+<p><code>IFB b t e</code> feeds <code>t</code> and <code>e</code> to
 <code>b</code> and lets <code>b</code> pick. There is no <code>if</code>
 primitive and no case analysis — the boolean carries out the selection
 by being applied. And because <a
@@ -163,9 +160,8 @@ we proved <code>Proper</code>, <a
 href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a>
 respects <code>==</code> too (the source registers this as <a
 href="coqdoc/Riktig.Lambda.Church.html#IFB_Proper"><code>IFB_Proper</code></a>):
-a conversion in any of <code>b</code>, <code>t</code>, <a
-href="coqdoc/Riktig.Impl.FinVec.html#e"><code>e</code></a> is a
-conversion of the whole conditional.</p>
+a conversion in any of <code>b</code>, <code>t</code>, <code>e</code> is
+a conversion of the whole conditional.</p>
 <h2 id="branch-selection-is-a-rewrite">Branch selection is a
 rewrite</h2>
 <p>Here is the payoff, and it is the same move as cancelling in a group.
@@ -201,11 +197,16 @@ href="coqdoc/Riktig.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>.
 requirement that the branches be evaluated before selection.)</p>
 <p>This is the identical discipline as the group proof <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>,
-where <code>a + b == a + c</code> becomes <code>b == c</code> by
-rewriting through a chain of named laws and closing with
-<code>reflexivity</code>. Both proofs work because the surrounding
-operations are congruences for <code>==</code> — there, <code>+</code>
-and <code>-</code>; here, <a
+where <code>a + b == a + c</code> becomes <code>b == c</code> through a
+chain of steps justified by the named group laws <a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>,
+<a
+href="coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>,
+with the hypothesis itself supplying one link of the chain. Both proofs
+work because the surrounding operations are congruences for
+<code>==</code> — there, <code>+</code> and <code>-</code>; here, <a
 href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a> — so a
 rewrite of one piece is a rewrite of the whole.</p>
 <p>The lemma <a

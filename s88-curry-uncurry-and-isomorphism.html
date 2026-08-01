@@ -67,11 +67,43 @@ id="formalizing-the-two-argument-function-and-its-round-trip">Formalizing
 the two-argument function, and its round trip</h2>
 <p>A function of two vector arguments with the “linear in each slot
 separately” property above is called a <em>bilinear</em> map. In the
-code, a record <code>BilinearMap F U V W</code> carries the function
-together with proofs of all four half-linearity laws — two for the left
-argument, two for the right — from <a
+code that property is a typeclass <code>Bilinear F U V W b</code>,
+indexed by the function <code>b</code> itself, and it says “linear in
+each slot separately” in those very words, by reusing the one-argument
+<a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+class twice:</p>
+<pre class="coq"><code>Class Bilinear (F U V W : Type)
+    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+    {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
+    {VU : VectorSpace F U}
+    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+    {VV : VectorSpace F V}
+    {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W}
+    {VW : VectorSpace F W}
+    (b : U -&gt; V -&gt; W) := {
+  proper :: Proper (equ ==&gt; equ ==&gt; equ) b;
+
+  linear_l :: forall v : V, Linear F U W (fun u =&gt; b u v);
+  linear_r :: forall u : U, Linear F V W (b u);
+}.</code></pre>
+<p>The long list of implicit parameters is the field and the three
+vector spaces, each with the operations it carries. The three fields are
+the content: <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.linear_l"><code>linear_l</code></a>
+fixes the right argument and demands the remaining function of the left
+one be linear; <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.linear_r"><code>linear_r</code></a>
+does the mirror image; <a
+href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.proper"><code>proper</code></a>
+says <code>b</code> respects the setoid equality in both slots. A
+<em>bilinear map</em> is then a chosen function carrying that property,
+from <a
 href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>:</p>
-<pre class="coq"><code>Record BilinearMap (F U V W : Type) `{FF : Field.Field F}
+<pre class="coq"><code>Record BilinearMap (F U V W : Type)
+    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
     {VU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
@@ -79,16 +111,22 @@ href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></
     {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W}
     {VW : VectorSpace F W} := {
   bm_fun :&gt; U -&gt; V -&gt; W;
-  #[global] bilinear_map_proper :: Proper (equ ==&gt; equ ==&gt; equ) bm_fun;
-  bilinear_left_additive  : forall (u u&#39; : U) (v : V),
-    bm_fun (u + u&#39;) v == bm_fun u v + bm_fun u&#39; v;
-  bilinear_left_scale     : forall (a : F) (u : U) (v : V),
-    bm_fun (a *: u) v == a *: bm_fun u v;
-  bilinear_right_additive : forall (u : U) (v v&#39; : V),
-    bm_fun u (v + v&#39;) == bm_fun u v + bm_fun u v&#39;;
-  bilinear_right_scale    : forall (a : F) (u : U) (v : V),
-    bm_fun u (a *: v) == a *: bm_fun u v
+  bm_bilinear :: Bilinear F U V W bm_fun;
 }.</code></pre>
+<p>The four half-linearity laws are read back off such a record under
+the names <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_scale"><code>bilinear_left_scale</code></a>,
+<a
+href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_additive"><code>bilinear_right_additive</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_scale"><code>bilinear_right_scale</code></a>
+— each one a definition that projects the corresponding half out of the
+appropriate <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+instance, so a proof can name the law it uses without going through the
+nesting.</p>
 <p>The two conversions from the opening question are <a
 href="coqdoc/Riktig.Theory.Hom.html#curry"><code>curry</code></a> and <a
 href="coqdoc/Riktig.Theory.Hom.html#uncurry"><code>uncurry</code></a>,
@@ -103,11 +141,12 @@ and the whole assignment is itself linear in <code>u</code>, landing
 <code>curry b</code> in
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>U</mi><mo>,</mo><mrow><mi mathvariant="normal">H</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>V</mi><mo>,</mo><mi>W</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Hom}(U,
 \mathrm{Hom}(V,W))</annotation></semantics></math>.</p>
-<pre class="coq"><code>Definition curry : LinearMap F U HomVW :=
-  {| lm_fun := (fun u : U =&gt; bilinear_map_appl b u);
-   linear_map_proper := curry_proper;
-   linear_map_additive := curry_add;
-   linear_map_scale := curry_scale |}.</code></pre>
+<pre class="coq"><code>    Definition curry : LinearMap F U HomVW :=
+      linear_map_from_laws
+      (fun u : U =&gt; bilinear_map_appl b u)
+      curry_proper
+      curry_add
+      curry_scale.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.Hom.html#uncurry"><code>uncurry</code></a>
 runs this backward: given a linear map <code>g</code> that already
@@ -115,11 +154,20 @@ returns linear maps, <code>uncurry g</code> is the two-argument function
 <code>(u, v) ↦ g u v</code>, and the four bilinearity laws for it follow
 from <code>g</code>’s own linearity and the linearity of each
 <code>g u</code>.</p>
-<pre class="coq"><code>Definition uncurry : BilinearMap F U V W :=
-  @Build_BilinearMap F U V W FF VU VV VW
-    (fun (u : U) (v : V) =&gt; g u v)
-    uncurry_proper uncurry_add_l uncurry_scale_l
-    uncurry_add_r uncurry_scale_r.</code></pre>
+<pre class="coq"><code>    Definition uncurry : BilinearMap F U V W :=
+      bilinear_map_from_laws
+        (fun (u : U) (v : V) =&gt; g u v)
+        uncurry_proper
+        uncurry_add_l
+        uncurry_scale_l
+        uncurry_add_r
+        uncurry_scale_r.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_map_from_laws"><code>bilinear_map_from_laws</code></a>
+are the builders for the two records: each takes the underlying function
+first, then the proofs of its laws in order.</p>
 <p>And here is the round trip from the opening question — converting one
 way and back, in either order, is the identity:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">y</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">u</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.167em"></mspace><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>g</mi><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><mrow><mi mathvariant="normal">u</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">y</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">y</mi></mrow><mspace width="0.167em"></mspace><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{curry}(\mathrm{uncurry}\,g) = g
@@ -176,21 +224,41 @@ proves yes, by the same recipe as
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(u,v)</annotation></semantics></math>
 instead of at each single input, and check the result is again bilinear.
 The whole structure assembles into one instance:</p>
-<pre class="coq"><code>#[global] Instance Bilin_VectorSpace : VectorSpace F Bilin :=
-  VectorSpace_from_parts F Bilin Bilin_AbGroup Bilin_ScaleLaws.</code></pre>
+<pre class="coq"><code>  #[global] Instance Bilin_VectorSpace : VectorSpace F Bilin :=
+    {| VectorSpace.vectors := Bilin_AbGroup; VectorSpace.scaling := Bilin_ScaleLaws |}.</code></pre>
+<p><a
+href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+has exactly two fields — the abelian-group structure on the vectors, and
+the laws relating scaling to it — so the instance is those two halves
+named side by side, with the carriers implicit.</p>
 <p>The second missing piece is a record for the stronger claim itself —
 not “these two functions cancel,” but “these two vector spaces are the
 same, up to relabeling.” <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>
 calls it <a
-href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>:</p>
-<pre class="coq"><code>Record VSIso (F U V : Type) `{FF : Field.Field F}
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>, and
+builds it in two steps.</p>
+<p>First, “these two functions cancel” is itself a named property of a
+pair of plain functions, so that a pair of lambdas written anywhere can
+be shown mutually inverse without being packaged into anything
+first:</p>
+<pre class="coq"><code>Module Inverse.
+  Class Inverse {U V : Type} {eU : EqRel U} {eV : EqRel V}
+      (f : U -&gt; V) (g : V -&gt; U) := {
+    from_to : forall u : U, g (f u) == u;
+    to_from : forall v : V, f (g v) == v;
+  }.
+End Inverse.</code></pre>
+<p>A <a
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> is
+then two linear maps carrying that property:</p>
+<pre class="coq"><code>Record VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
+    {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
   vsi_to : LinearMap F U V;
   vsi_from : LinearMap F V U;
-  vsi_fromto : forall u : U, vsi_from (vsi_to u) == u;
-  vsi_tofrom : forall v : V, vsi_to (vsi_from v) == v
+  vsi_inverse :: Inverse vsi_to vsi_from;
 }.</code></pre>
 <p>The fields <a
 href="coqdoc/Riktig.Theory.VSIso.html#vsi_to"><code>vsi_to</code></a>
@@ -201,8 +269,12 @@ href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></
 each one already carrying its own proof of respecting addition and
 scaling. A <a
 href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> is a
-pair of mutually inverse <em>linear</em> maps, plus the two round-trip
-proofs. That is exactly what <a
+pair of mutually inverse <em>linear</em> maps, and the two round-trip
+laws, read off it, are <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_fromto"><code>vsi_fromto</code></a>
+and <a
+href="coqdoc/Riktig.Theory.VSIso.html#vsi_tofrom"><code>vsi_tofrom</code></a>.
+That is exactly what <a
 href="coqdoc/Riktig.Theory.Hom.html#curry"><code>curry</code></a> and <a
 href="coqdoc/Riktig.Theory.Hom.html#uncurry"><code>uncurry</code></a>
 were missing: the round trip (<a
@@ -302,44 +374,38 @@ href="coqdoc/Riktig.Theory.Hom.html#uncurry"><code>uncurry</code></a> as
 full <a
 href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>s
 this way:</p>
-<pre class="coq"><code>Definition curry_lm : LinearMap F Bilin (LinearMap F U HomVW) :=
-  {| lm_fun := curry;
-     linear_map_proper := curry_lm_proper;
-     linear_map_additive := curry_lm_add;
-     linear_map_scale := curry_lm_scale |}.</code></pre>
+<pre class="coq"><code>  Definition curry_lm : LinearMap F Bilin (LinearMap F U HomVW) :=
+    linear_map_from_laws
+      curry
+      curry_lm_proper
+      curry_lm_add
+      curry_lm_scale.</code></pre>
 <p>and, after the mirror-image lemmas for <a
 href="coqdoc/Riktig.Theory.Hom.html#uncurry"><code>uncurry</code></a>,</p>
-<pre class="coq"><code>Definition uncurry_lm : LinearMap F (LinearMap F U HomVW) Bilin :=
-  {| lm_fun := uncurry;
-     linear_map_proper := uncurry_lm_proper;
-     linear_map_additive := uncurry_lm_add;
-     linear_map_scale := uncurry_lm_scale |}.</code></pre>
+<pre class="coq"><code>  Definition uncurry_lm : LinearMap F (LinearMap F U HomVW) Bilin :=
+    linear_map_from_laws
+      uncurry
+      uncurry_lm_proper
+      uncurry_lm_add
+      uncurry_lm_scale.</code></pre>
 <p>The isomorphism itself is these two linear maps, plus the round-trip
 theorems already proved earlier — <a
 href="coqdoc/Riktig.Theory.Hom.html#uncurry_curry"><code>uncurry_curry</code></a>
 and <a
 href="coqdoc/Riktig.Theory.Hom.html#curry_uncurry"><code>curry_uncurry</code></a>
 — slotted straight in with no new proof:</p>
-<pre class="coq"><code>Definition vsiso_curry : VSIso F Bilin (LinearMap F U HomVW) :=
-  {| vsi_to := curry_lm; vsi_from := uncurry_lm;
-     vsi_fromto := uncurry_curry; vsi_tofrom := curry_uncurry |}.</code></pre>
-<p>Matching this against the <a
-href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
-record: <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_to"><code>vsi_to</code></a> is
-<a
+<pre class="coq"><code>  Definition vsiso_curry : VSIso F Bilin (LinearMap F U HomVW) :=
+    vsiso_from_laws curry_lm uncurry_lm uncurry_curry curry_uncurry.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_from_laws"><code>vsiso_from_laws</code></a>
+takes the two linear maps and then the two round-trip proofs, in that
+order: the forward map is <a
 href="coqdoc/Riktig.Theory.VSIso.html#curry_lm"><code>curry_lm</code></a>,
-<a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_from"><code>vsi_from</code></a>
-is <a
+the backward map is <a
 href="coqdoc/Riktig.Theory.VSIso.html#uncurry_lm"><code>uncurry_lm</code></a>,
-<a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_fromto"><code>vsi_fromto</code></a>
-is <a
-href="coqdoc/Riktig.Theory.Hom.html#uncurry_curry"><code>uncurry_curry</code></a>,
+and the two laws are <a
+href="coqdoc/Riktig.Theory.Hom.html#uncurry_curry"><code>uncurry_curry</code></a>
 and <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_tofrom"><code>vsi_tofrom</code></a>
-is <a
 href="coqdoc/Riktig.Theory.Hom.html#curry_uncurry"><code>curry_uncurry</code></a>.
 All the work specific to this post was proving <a
 href="coqdoc/Riktig.Theory.Hom.html#curry"><code>curry</code></a> and <a
@@ -375,11 +441,10 @@ into that existence claim, so the proof hands
 <code>vsiso_to_iso i</code> — a helper, defined a few lines earlier in
 the same file, that transcribes a <a
 href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>’s
-four fields directly into an <a
-href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>’s
-four fields, since the two records have the same shape — to that
-constructor. Nothing about <code>Vect</code> or <code>≅</code> needed a
-new proof for <a
+two maps and two round-trip laws into an <a
+href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>’s,
+since the two records have the same shape — to that constructor. Nothing
+about <code>Vect</code> or <code>≅</code> needed a new proof for <a
 href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
 specifically; the <code>Equivalence</code> instance for <a
 href="coqdoc/Riktig.Theory.VSIso.html#VS_Isomorphic"><code>VS_Isomorphic</code></a>
@@ -400,7 +465,7 @@ both assemble for any field and any three component vector spaces, with
 no per-type work. Two smoke tests in the source confirm this by asking
 Coq to fill each definition with <code>_</code> and checking it
 succeeds:</p>
-<pre class="coq"><code>Example bilin_vs_check (F U V W : Type) `{FF : Field.Field F}
+<pre class="coq"><code>Example bilin_vs_check (F U V W : Type) `{FF : Field F}
   {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {HU : VectorSpace F U}
   {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {HV : VectorSpace F V}
   {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W} {HW : VectorSpace F W} :
@@ -445,7 +510,7 @@ another construction”: it produces a checked <code>≅</code> fact between
 the space of bilinear maps and the nested hom-space, using the
 general-purpose category machinery rather than any bespoke argument
 about currying:</p>
-<pre class="coq"><code>Example vsiso_curry_isomorphic (F U V W : Type) `{FF : Field.Field F}
+<pre class="coq"><code>Example vsiso_curry_isomorphic (F U V W : Type) `{FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {HU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {HV : VectorSpace F V}
     {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W} {HW : VectorSpace F W} :

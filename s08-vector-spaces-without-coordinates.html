@@ -52,53 +52,79 @@ scalar
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 scales trivially.</p>
 <p>In the code those four laws are a small mixin, <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws"><code>ScaleLaws</code></a>,
+href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>,
 kept separate from the group so that other structures can reuse it over
 a group they already own:</p>
-<pre class="coq"><code>Class ScaleLaws (F V : Type) `{Field.Field F} `{AbGroup.AbGroup V} `{HasScale F V} := {
-  #[global] scale_proper :: Proper (equ ==&gt; equ ==&gt; equ) (@scale F V _);
-  scale_distributes_over_vector_add  : forall (a : F) (u v : V), a *: (u + v) == a *: u + a *: v;
-  scale_distributes_over_scalar_add  : forall (a b : F) (u : V), (a + b) *: u == a *: u + b *: u;
-  scale_associative                  : forall (a b : F) (u : V), (a * b) *: u == a *: (b *: u);
-  scale_identity                     : forall u : V, 1 *: u == u
-}.</code></pre>
-<p>A <em>vector space</em> then states the abelian-group laws and these
-four scaling laws together, over operations that arrive as class
-parameters (<code>Ve</code> through <code>Vs</code>):</p>
-<pre class="coq"><code>Module VectorSpace.
-  Class VectorSpace (F V : Type) `{Field.Field F}
-      {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V} {Vs : HasScale F V} := {
-    equivalence      : Equivalence (@equ V _);
-    associative      : forall x y w : V, (x + y) + w == x + (y + w);
-    left_identity    : forall x     : V, 0 + x == x;
-    right_identity   : forall x     : V, x + 0 == x;
-    left_inverse     : forall x     : V, (- x) + x == 0;
-    right_inverse    : forall x     : V, x + (- x) == 0;
-    commutative      : forall x y   : V, x + y == y + x;
-    add_proper       : forall x y : V, x == y -&gt; forall u v : V, u == v -&gt; (x + u) == (y + v);
-    neg_proper       : forall x y : V, x == y -&gt; (- x) == (- y);
-    scale_proper     : forall a b : F, a == b -&gt; forall u v : V, u == v -&gt; a *: u == b *: v;
-    scale_vector_add : forall (a : F) (u v : V), a *: (u + v) == a *: u + a *: v;
-    scale_scalar_add : forall (a b : F) (u : V), (a + b) *: u == a *: u + b *: u;
-    scale_assoc      : forall (a b : F) (u : V), (a * b) *: u == a *: (b *: u);
-    scale_identity   : forall u : V, 1 *: u == u
+<pre class="coq"><code>Module ScaleLaws.
+  Class ScaleLaws (F V : Type) `{Field F}
+      {Ve : EqRel V} {Va : HasAdd V} {Vs : HasScale F V} := {
+    scale_proper :: Proper (equ ==&gt; equ ==&gt; equ) Vs;
+    is_left_distributive  :: LeftDistributive F V V Vs;
+    is_right_distributive :: RightDistributive F V V Vs;
+    is_associative        :: Associative F V Vs mult;
+    is_left_identity      :: LeftIdentity F V Vs 1;
   }.
+  Hint Mode ScaleLaws - ! - - - - - - - - - - - : typeclass_instances.
+End ScaleLaws.
+Export ScaleLaws.</code></pre>
+<p>The four laws are the four promised above, and not one of them is
+written out as an equation. Each is a class from <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> — the same
+classes the additive structures are built from — applied to a scalar
+acting on a vector:</p>
+<ul>
+<li><code>LeftDistributive F V V Vs</code> is
+<code>a *: (u + v) == a *: u + a *: v</code>: an operation taking an
+<code>F</code> and a <code>V</code> to a <code>V</code>, distributing
+over a sum on its right.</li>
+<li><code>RightDistributive F V V Vs</code> is
+<code>(a + b) *: u == a *: u + b *: u</code>, where the sum being split
+is a sum of <em>scalars</em>.</li>
+<li><code>Associative F V Vs mult</code> is
+<code>(a * b) *: u == a *: (b *: u)</code>. The associativity class
+takes an action and an operation separately; a monoid uses it with both
+slots filled by the same <code>+</code>, and here the action is scaling
+and the operation is the field’s <code>*</code>.</li>
+<li><code>LeftIdentity F V Vs 1</code> is <code>1 *: u == u</code>, the
+identity law at that same action, with the field’s <code>1</code> as the
+unit.</li>
+</ul>
+<p>The remaining field, <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.scale_proper"><code>ScaleLaws.scale_proper</code></a>,
+is the “every operation is required to respect <code>==</code>” clause:
+scaling an equal vector by an equal scalar gives an equal result. All
+five are declared with <code>::</code> rather than <code>:</code>, so
+each is a typeclass instance as soon as a <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
+is in scope, and a proof cites the law’s own method — <a
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>,
+<a
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+— rather than the field.</p>
+<p>A <em>vector space</em> is then those laws together with an abelian
+group of vectors. Two fields, nothing else:</p>
+<pre class="coq"><code>Module VectorSpace.
+  Class VectorSpace (F V : Type) `{Field F}
+      {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V}
+      {Vs : HasScale F V} := {
+    vectors :: AbGroup V;
+    scaling :: ScaleLaws F V;
+  }.
+  Hint Mode VectorSpace - ! - - - - - - - - - - - - - : typeclass_instances.
 End VectorSpace.
-Notation VectorSpace := VectorSpace.VectorSpace.</code></pre>
+Export VectorSpace.</code></pre>
 <p>No basis, no coordinates, no list of numbers — a vector space is
-these operations and these laws, nothing more. Everything provable about
-vector spaces in general is provable from exactly this. Three derived
-definitions below the module glue the class to its two halves: <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace_is_AbGroup"><code>VectorSpace_is_AbGroup</code></a>
-and <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace_is_ScaleLaws"><code>VectorSpace_is_ScaleLaws</code></a>
-repackage the fields as an abelian group and a <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws"><code>ScaleLaws</code></a>,
-and the converse <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace_from_parts"><code>VectorSpace_from_parts</code></a>
-assembles a vector space from an abelian group and a <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws"><code>ScaleLaws</code></a>
-— we will use it before the post is over.</p>
+those two halves over operations that arrive as class parameters
+(<code>Ve</code> through <code>Vs</code>), and nothing more. Everything
+provable about vector spaces in general is provable from exactly this.
+Because both fields are declared with <code>::</code>, the halves come
+apart again by projection whenever a proof wants one: a theorem about
+abelian groups applies to the vectors with nothing said, and a theorem
+about scaling applies without the group being mentioned. There is no
+separate instance recording that a vector space <em>is</em> an abelian
+group, and no assembly function for building one out of its parts — the
+parts are the fields, so a caller writes the record with its two halves
+in it.</p>
 <h2 id="scaling-commutes-scale_swap">Scaling commutes: <a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a></h2>
 <p>Here is a small consequence of the laws, proved for every vector
@@ -119,33 +145,37 @@ of multiplication. In Coq:</p>
 Proof.
   intros a b u.
   calc (a *: (b *: u))
-    == ((a * b) *: u)  { (scale_associative a b u) }
-    == ((b * a) *: u)  { (comm a b) }
-    == (b *: (a *: u)) { (scale_associative b a u) }.
+    == ((a * b) *: u)  { (associative a b u) }
+    == ((b * a) *: u)  { (commutative a b) }
+    == (b *: (a *: u)) { (associative b a u) }.
 Qed.</code></pre>
 <p>Step by step:</p>
 <ul>
 <li><code>intros a b u</code> fixes two scalars and a vector.</li>
 <li><code>calc</code> opens an equational chain. Each line
-<code>== y { law }</code> claims the current expression equals
-<code>y</code>, justified by the named <code>law</code>, and Coq checks
-that the chain as a whole proves the goal.</li>
-<li><code>scale_associative a b u</code> is the axiom
+<code>== y { … }</code> claims the current expression equals
+<code>y</code>, justified by the one fact named in the brace, and Coq
+checks that the chain as a whole proves the goal.</li>
+<li><code>associative a b u</code> is the scaling law
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mi>u</mi><mo>=</mo><mi>a</mi><mi>*</mi><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>*</mi><mo>:</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a b) *: u = a *: (b *: u)</annotation></semantics></math>,
-used right-to-left to fuse the nested scaling into the single factor
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>b</mi></mrow><annotation encoding="application/x-tex">a b</annotation></semantics></math>.</li>
-<li><code>comm a b</code> is the field’s law
+used here right-to-left to fuse the nested scaling into the single
+factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>b</mi></mrow><annotation encoding="application/x-tex">a b</annotation></semantics></math>.
+The goal is what picks it: the term mentions <code>*:</code>, so the <a
+href="coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>
+instance found is the scaling one and not the field’s or the vectors’
+own.</li>
+<li><code>commutative a b</code> is the field’s law
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>b</mi><mo>=</mo><mi>b</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">a b = b a</annotation></semantics></math>.</li>
-<li><code>scale_associative b a u</code>, this time left-to-right,
-re-splits
+<li>The same scaling law again, this time left-to-right, re-splits
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">(b a) *: u</annotation></semantics></math>
 back into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mi>*</mi><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>*</mi><mo>:</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">b *: (a *: u)</annotation></semantics></math>.</li>
 </ul>
 <p>The one fact doing the real work is <a
-href="coqdoc/Riktig.Props.html#comm"><code>comm</code></a>: scalars
-commute because <em>the field’s multiplication does</em>. Hold on to
-that — a page from now we will meet a multiplication that does not
+href="coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>:
+scalars commute because <em>the field’s multiplication does</em>. Hold
+on to that — a page from now we will meet a multiplication that does not
 commute, and the contrast is the whole point.</p>
 <h2 id="reuse-scaling-preserves-the-zero-vector">Reuse: scaling
 preserves the zero vector</h2>
@@ -153,29 +183,31 @@ preserves the zero vector</h2>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
 and look at the map
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>↦</mo><mi>a</mi><mi>*</mi><mo>:</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">u \mapsto a *: u</annotation></semantics></math>.
-The law <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#scale_distributes_over_vector_add"><code>scale_distributes_over_vector_add</code></a>
-says this map sends a sum to the sum of the images — that is exactly
-what it means to be a homomorphism of the additive group. And back in
-the groups post we proved, once, that <em>any</em> map preserving
-<code>+</code> must send
+The left-distributive law says this map sends a sum to the sum of the
+images — that is exactly what it means to be a homomorphism of the
+additive group. And a general fact about groups, proved once for every
+map that preserves <code>+</code>, is that such a map must send
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-(<a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>).
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>;
+the lemma is called <a
+href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>.
 So scaling a zero vector gives zero, with no new work:</p>
 <pre class="coq"><code>Theorem scale_zero : forall a : F, a *: (0 : V) == 0.
 Proof.
   intros a.
-  exact (hom_zero (scale a) (scale_distributes_over_vector_add a)).
+  exact (hom_zero (scale a) (left_distributive a)).
 Qed.</code></pre>
 <p>The proof is a single <a
 href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>: hand
 <a
 href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
-the map (<code>scale a</code>) and its additivity law, and the
-group-level result applies verbatim — the fact that <code>scale a</code>
+the map (<code>scale a</code>) and its additivity law — which is <a
+href="coqdoc/Riktig.Props.html#left_distributive"><code>left_distributive</code></a>
+at this scalar, the class method resolving to the <a
+href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
+instance because the term is built from <code>*:</code> — and the
+group-level result applies verbatim. The fact that <code>scale a</code>
 respects <code>==</code> isn’t passed by hand at all, it’s found
 automatically (<a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_l_proper"><code>scale_l_proper</code></a>,
@@ -194,20 +226,67 @@ the interesting ones are the <em>linear maps</em>: those that respect
 <code>==</code>, send sums to sums, and commute with scaling. In the
 code a linear map is a record carrying its function together with those
 three guarantees:</p>
-<pre class="coq"><code>Record LinearMap (F U V : Type) `{FF : Field.Field F}
-    {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
-    {VU : VectorSpace F U}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} := {
+<pre class="coq"><code>Record LinearMap (F U V : Type)
+    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
   lm_fun :&gt; U -&gt; V;
-  #[global] linear_map_proper :: Proper (equ ==&gt; equ) lm_fun;
-  linear_map_additive : forall u v : U, lm_fun (u + v) == lm_fun u + lm_fun v;
-  linear_map_scale    : forall (a : F) (u : U), lm_fun (a *: u) == a *: lm_fun u
+  lm_linear :: Linear F U V lm_fun;
 }.</code></pre>
-<p>(The two binder rows spell out each space’s operations by initial —
-<code>eU</code> its equality, <code>zU</code> its zero, and so on —
-before naming the space itself; both spaces share the one field
-<code>F</code>.)</p>
+<p>The record asks for surprisingly little: each carrier needs an
+equality, an addition and a scaling, and nothing in the record’s type
+requires them to be vector spaces — that hypothesis appears only in the
+theorems that actually use it. <a
+href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>
+is declared with <code>:&gt;</code>, which makes it a coercion, so a <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+can be applied to a vector directly and <code>f u</code> means
+<code>lm_fun f u</code>.</p>
+<p>The other field says the function is linear; <em>linearity
+itself</em> is a separate class, stated about a plain function rather
+than about a bundle:</p>
+<pre class="coq"><code>Module Linear.
+  Class Linear (F U V : Type)
+      {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+      {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V}
+      (f : U -&gt; V) := {
+    proper         :: Proper (equ ==&gt; equ) f;
+    is_additive    :: Additive U V add add f;
+    is_homogeneous :: Homogeneous F U V scale (fun a =&gt; a) f;
+  }.
+  Hint Mode Linear - - - - - - - - - ! : typeclass_instances.
+End Linear.
+Export Linear.</code></pre>
+<p><a href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
+are the two halves, each a single law about a map, and both live in <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> beside <a
+href="coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>
+and <a
+href="coqdoc/Riktig.Props.html#Injective"><code>Injective</code></a>.
+<code>Additive U V add add f</code> is
+<code>f (x + y) == f x + f y</code>, and it takes <em>two</em>
+operations because the sum on the left lives in <code>U</code> and the
+sum on the right lives in <code>V</code>.
+<code>Homogeneous F U V scale (fun a =&gt; a) f</code> is
+<code>f (a *: x) == weight a *: f x</code> with the weight taken to be
+the identity function: a linear map scales by exactly the scalar it was
+handed. The weight is a parameter because not every map does — a norm
+satisfies the same law with weight <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>, a
+quadratic form with weight <code>fun a =&gt; a * a</code> — and stating
+it once with a weight is what lets those share the class.</p>
+<p>Splitting them out means a lambda written anywhere can be shown
+additive without first being packaged into a <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+— and a <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>’s
+three laws are still reachable under the names <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
+and <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>.</p>
 <p>Write <code>Hom U V</code> for the collection of these maps. Here is
 the fact: the linear maps between
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>U</mi><annotation encoding="application/x-tex">U</annotation></semantics></math>
@@ -240,15 +319,23 @@ what remains,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>*</mi><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>*</mi><mo>:</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mi>*</mi><mo>:</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>*</mi><mo>:</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a *: (b *: f\,u) = b *: (a *: f\,u)</annotation></semantics></math>,
 is <a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a>.
-Assemble the four such laws and the vector-space structure of
-<code>Hom U V</code> is complete:</p>
-<pre class="coq"><code>#[global] Instance Hom_VectorSpace : VectorSpace F Hom :=
-  VectorSpace_from_parts F Hom Hom_AbGroup Hom_ScaleLaws.</code></pre>
-<p><a
-href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace_from_parts"><code>VectorSpace_from_parts</code></a>
-is the assembly function promised above: the pointwise abelian group and
-the pointwise scale laws are its two inputs, and the vector space of
-maps is its output.</p>
+Four laws like it make up the scaling half of the structure:</p>
+<pre class="coq"><code>  #[global] Instance Hom_ScaleLaws : ScaleLaws F Hom :=
+    {| ScaleLaws.scale_proper := hom_scale_proper;
+       ScaleLaws.is_left_distributive := hom_scale_add;
+       ScaleLaws.is_right_distributive := hom_add_scale;
+       ScaleLaws.is_associative := hom_scale_scale;
+       ScaleLaws.is_left_identity := hom_scale_1 |}.</code></pre>
+<p>and the vector space of maps is that half beside the pointwise
+abelian group, in a record with two fields:</p>
+<pre class="coq"><code>  #[global] Instance Hom_VectorSpace : VectorSpace F Hom :=
+    {| VectorSpace.vectors := Hom_AbGroup; VectorSpace.scaling := Hom_ScaleLaws |}.</code></pre>
+<p>Both records name every field explicitly instead of leaving
+<code>{}</code> for instance search to fill, and the file says why:
+searching for something like <code>Monoid ?T</code> with the carrier
+still unknown sends Coq hunting through every parametric instance in
+scope, including the pointwise ones on function types, and it does not
+come back. Naming the field gives search a carrier to work from.</p>
 <p>A space of transformations has its own vector-space structure, one
 level up — built out of the space it maps into, by lifting each law
 through “evaluate at a point.”</p>
@@ -261,43 +348,63 @@ everything above — they add and scale as a vector space — but they carry
 one operation more: you can <em>compose</em> two of them. Composition
 takes the role of multiplication, with the identity map as the unit
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>:</p>
-<pre class="coq"><code>(* linear_map_comp g f applies g after f, so f * g is f ∘ g. *)
-#[global] Instance End_Mult : HasMult EndV :=
-  fun f g : EndV =&gt; linear_map_comp f g.</code></pre>
+<pre class="coq"><code>  #[global] Instance End_One : One EndV := linear_map_id.
+
+  #[global] Instance End_Mult : HasMult EndV :=
+    fun f g : EndV =&gt; linear_map_comp f g.</code></pre>
+<p><code>linear_map_comp g f</code> is the map applying <code>g</code>
+after <code>f</code>, so <code>f * g</code> means “<code>f</code> after
+<code>g</code>”, and the unit is the identity map.</p>
 <p>With addition from the vector-space structure and composition as the
 product,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.167em"></mspace><mi>V</mi></mrow><annotation encoding="application/x-tex">\mathrm{End}\,V</annotation></semantics></math>
 satisfies the <em>ring</em> laws — composition is associative, the
-identity is a two-sided unit, and composition distributes over addition
-on both sides:</p>
-<pre class="coq"><code>#[global] Instance End_Ring : Ring EndV := {|
-  Ring.equivalence        := Hom_Equivalence;
-  Ring.associative        := hom_assoc;
-  Ring.left_identity      := hom_idl;
-  Ring.right_identity     := hom_idr;
-  Ring.left_inverse       := hom_invl;
-  Ring.right_inverse      := hom_invr;
-  Ring.commutative        := hom_comm;
-  Ring.mul_associative    := end_mul_assoc;
-  Ring.mul_left_identity  := end_mul_1l;
-  Ring.mul_right_identity := end_mul_1r;
-  Ring.left_distributive  := end_distl;
-  Ring.right_distributive := end_distr;
-  Ring.add_proper         := hom_add_proper;
-  Ring.neg_proper         := hom_neg_proper;
-  Ring.mul_proper         := end_mul_proper
-|}.</code></pre>
-<p>The seven additive fields (<code>hom_*</code>) are the pointwise
-abelian-group facts already proved for <a
-href="coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a>; the
-five <code>end_*</code> fields are the new multiplicative laws about
-composition.</p>
-<p>This is the first <em>noncommutative</em> ring in the development,
-and the reason is the one flagged earlier. Scalar multiplication
-commuted because the field’s multiplication did — <a
+identity map is a two-sided unit, and composition distributes over
+addition on both sides:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo>∘</mo><mi>g</mi><mo>+</mo><mi>f</mi><mo>∘</mo><mi>h</mi><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>+</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>h</mi><mo>=</mo><mi>f</mi><mo>∘</mo><mi>h</mi><mo>+</mo><mi>g</mi><mo>∘</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">f\circ(g+h) = f\circ g + f\circ h, \qquad (f+g)\circ h = f\circ h + g\circ h</annotation></semantics></math></p>
+<p>Those two are worth looking at, because they are not symmetric:</p>
+<pre class="coq"><code>  Lemma end_distl : forall f g h : EndV, f * (g + h) == f * g + f * h.
+  Proof.
+    intros f g h u.
+    apply (linear_map_additive f).
+  Qed.
+
+  Lemma end_distr : forall f g h : EndV, (f + g) * h == f * h + g * h.
+  Proof.
+    intros f g h u.
+    reflexivity.
+  Qed.</code></pre>
+<p>Two maps are equal when they agree at every point, so both proofs
+open with <code>intros f g h u</code>, naming a point <code>u</code> at
+which to compare. On the left the two sides are
+<code>f (g u + h u)</code> and <code>f (g u) + f (h u)</code>, which
+differ by whether <code>f</code> is applied before or after the sum — so
+the law <em>is</em> <code>f</code>’s own additivity, and
+<code>linear_map_additive f</code> closes it. On the right both sides
+read <code>f (h u) + g (h u)</code> already, and
+<code>reflexivity</code> is the whole proof: distributing on that side
+is bookkeeping about which map is applied first, not a fact about
+linearity.</p>
+<p>The ring instance itself, <a
+href="coqdoc/Riktig.Theory.HomVS.html#End_Ring"><code>End_Ring</code></a>,
+is one nested record literal: the abelian group is the pointwise one
+proved for <a
+href="coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a>, the
+multiplicative monoid is composition with <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_id"><code>linear_map_id</code></a>
+as its unit, and the last two fields are the pair of lemmas above. That
+the assembly really type-checks as a ring is recorded in the file as a
+one-line check, whose proof is an underscore — “find it”:</p>
+<pre class="coq"><code>Example end_ring_check (F V : Type) `{FF : Field F}
+  {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} :
+  Ring (LinearMap F V V) := _.</code></pre>
+<p>This ring is <em>noncommutative</em>, and the reason is the one noted
+earlier. Scalar multiplication commuted because the field’s
+multiplication did — <a
 href="coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a>
-had <a href="coqdoc/Riktig.Props.html#comm"><code>comm</code></a> at its
-centre. Composition has no such law:
+had <a
+href="coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>
+at its centre. Composition has no such law:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>*</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">f * g</annotation></semantics></math>
 means
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
@@ -313,9 +420,8 @@ so that structures like this one qualify.</p>
 <p>And because
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.167em"></mspace><mi>V</mi></mrow><annotation encoding="application/x-tex">\mathrm{End}\,V</annotation></semantics></math>
 is registered as a ring, every theorem proved once for all rings applies
-to it with no further work. Here is one, quoted from the file as a check
-that the structure is real:</p>
-<pre class="coq"><code>Example end_mul_0_l (F V : Type) `{FF : Field.Field F} `{VV : VectorSpace.VectorSpace F V} :
+to it with no further work. Here is one, quoted from the file:</p>
+<pre class="coq"><code>Example end_mul_0_l (F V : Type) `{FF : Field F} `{VV : VectorSpace F V} :
   forall f : LinearMap F V V, 0 * f == 0.
 Proof.
   intros f.

@@ -28,32 +28,70 @@ of those rectangles, and the correspondence is a bijection that respects
 addition and scaling. That statement is the representation theorem.
 Matrices fall out of it as a consequence; they are not where linear
 algebra begins.</p>
-<p>The formalization makes the priority explicit. A linear map is a
-record carrying the underlying function together with proofs of the two
-preservation laws, <code>f (u + v) = f u + f v</code> and
-<code>f (c *: u) = c *: f u</code> — from <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>:</p>
-<pre class="coq"><code>Record LinearMap (F U V : Type) `{FF : Field.Field F}
-    {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
-    {VU : VectorSpace F U}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} := {
+<p>The formalization makes the priority explicit. Preserving the
+structure is a property of a plain function — respecting the equality
+<code>==</code> chosen for each space, plus
+<code>f (u + v) == f u + f v</code> and
+<code>f (a *: u) == a *: f u</code> — and that property is the class <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>,
+in <a
+href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>:</p>
+<pre class="coq"><code>Module Linear.
+  Class Linear (F U V : Type)
+      {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+      {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V}
+      (f : U -&gt; V) := {
+    proper         :: Proper (equ ==&gt; equ) f;
+    is_additive    :: Additive U V add add f;
+    is_homogeneous :: Homogeneous F U V scale (fun a =&gt; a) f;
+  }.
+End Linear.</code></pre>
+<p>The binder list is short, and deliberately so: a law may only demand
+the vocabulary it actually mentions. Linearity mentions an equality, an
+addition and a scaling on each side, so those six binders are all there
+is. It does <em>not</em> demand that <code>F</code> be a field, or that
+<code>U</code> and <code>V</code> be vector spaces — those hypotheses
+belong to the theorems that use linearity, not to the definition of
+it.</p>
+<p>The two structural laws are not written out either.
+<code>Additive U V add add f</code> is the general “carries an operation
+across” class applied to <a
+href="coqdoc/Riktig.Ops.html#add"><code>add</code></a> on both sides,
+giving <code>f (u + v) == f u + f v</code>;
+<code>Homogeneous F U V scale (fun a =&gt; a) f</code> is the general
+“carries scaling across, up to a reweighting” class with the reweighting
+taken to be the identity, giving <code>f (a *: u) == a *: f u</code>. A
+norm is homogeneous too, with <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> as
+its reweighting — same class, different filling.</p>
+<p>A <strong>linear map</strong> is then the data — the function
+together with a proof that it is linear:</p>
+<pre class="coq"><code>Record LinearMap (F U V : Type)
+    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
   lm_fun :&gt; U -&gt; V;
-  #[global] linear_map_proper :: Proper (equ ==&gt; equ) lm_fun;
-  linear_map_additive : forall u v : U, lm_fun (u + v) == lm_fun u + lm_fun v;
-  linear_map_scale    : forall (a : F) (u : U), lm_fun (a *: u) == a *: lm_fun u
+  lm_linear :: Linear F U V lm_fun;
 }.</code></pre>
-<p>Notice what is <em>not</em> here: no grid of numbers, no rows and
-columns.</p>
+<p>The three laws are read out of a map under the names <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
+<a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
+and <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>,
+each a one-line definition that instantiates the general projection at
+the map’s own function — <code>linear_map_scale f</code> is
+<code>homogeneous (f := lm_fun f)</code> — and it is those readable
+names the proofs below cite. Notice what is <em>not</em> here: no grid
+of numbers, no rows and columns.</p>
 <h2 id="coordinates-a-vector-written-in-a-basis">Coordinates: a vector
 written in a basis</h2>
 <p>A <strong>basis</strong> of an <code>n</code>-dimensional space is a
 choice of <code>n</code> vectors such that every vector is a unique
 combination <code>c_1 *: b_1 + ... + c_n *: b_n</code>. The scalars
-<code>c_i</code> are the vector’s <strong>coordinates</strong>; the
-library’s <code>basis_coords B</code> reads them off (as a linear map
-into the space of coordinate functions <code>Fin.t n -&gt; F</code>),
-and <code>basis_vec B</code> recovers the basis vectors. The one fact we
+<code>c_i</code> are the vector’s <strong>coordinates</strong>;
+<code>basis_coords B</code> reads them off (as a linear map into the
+space of coordinate functions <code>Fin.t n -&gt; F</code>), and
+<code>basis_vec B</code> recovers the basis vectors. The one fact we
 need is that these round-trip: rebuilding a vector from its coordinates
 gives the vector back. With that, a coordinate-free vector and its
 column of scalars carry the same information — the basis is the
@@ -65,11 +103,9 @@ space <code>U</code> and a target basis <code>BV</code> of an
 <code>m</code>-dimensional space <code>V</code>. A matrix here is just a
 rectangle of scalars,
 <code>Matrix m n F := Fin.t m -&gt; Fin.t n -&gt; F</code>. To read a
-linear map <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> as a
-matrix, record in column <code>j</code> the coordinates of what <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> does to
-the <code>j</code>-th source basis vector. From <a
+linear map <code>f</code> as a matrix, record in column <code>j</code>
+the coordinates of what <code>f</code> does to the <code>j</code>-th
+source basis vector. From <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>:</p>
 <pre class="coq"><code>Definition mat_of (f : LinearMap F U V) : Matrix m n F :=
   fun i j =&gt; basis_coords BV (f (basis_vec BU j)) i.</code></pre>
@@ -91,18 +127,22 @@ Definition hom_of_fun (A : Matrix m n F) (u : U) : V :=
 <code>A</code> paired with <code>u</code>’s coordinate column, which is
 exactly one entry of “matrix times vector.” <a
 href="coqdoc/Riktig.Theory.MatRep.html#hom_of_fun"><code>hom_of_fun</code></a>
-then combines the resulting coordinates against the target basis.
-Packaged with proofs that it is linear, this becomes a genuine <a
+then combines the resulting coordinates against the target basis. Handed
+to <a
+href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+with its three linearity proofs, this becomes a genuine <a
 href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>:</p>
 <pre class="coq"><code>Definition hom_of (A : Matrix m n F) : LinearMap F U V :=
-  @Build_LinearMap F U V FF VU VV (hom_of_fun A)
-    (hom_of_fun_proper A) (hom_of_fun_add A) (hom_of_fun_scale A).</code></pre>
+  linear_map_from_laws
+    (hom_of_fun A)
+    (hom_of_fun_proper A)
+    (hom_of_fun_add A)
+    (hom_of_fun_scale A).</code></pre>
 <h2 id="the-computation-rule-applying-the-matrix-computes-the-map">The
 computation rule: applying the matrix computes the map</h2>
 <p>Everything rests on one identity: the coordinates of <code>f u</code>
-are the matrix of <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> applied
-to the coordinates of <code>u</code>. Writing
+are the matrix of <code>f</code> applied to the coordinates of
+<code>u</code>. Writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>v</mi><msub><mo stretchy="false" form="postfix">]</mo><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">[v]_i</annotation></semantics></math>
 for the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
@@ -116,7 +156,7 @@ of the matrix read off from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>u</mi><msub><mo stretchy="false" form="postfix">]</mo><mi>i</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><mi>f</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><munder><mo>∑</mo><mi>j</mi></munder><mo stretchy="false" form="prefix">[</mo><mi>u</mi><msub><mo stretchy="false" form="postfix">]</mo><mi>j</mi></msub><mspace width="0.167em"></mspace><msub><mi>b</mi><mi>j</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">]</mo><mi>i</mi></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">expand </mtext><mspace width="0.333em"></mspace></mrow><mi>u</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> in the source basis</mtext></mrow><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><mo stretchy="false" form="prefix">[</mo><mi>u</mi><msub><mo stretchy="false" form="postfix">]</mo><mi>j</mi></msub><mspace width="0.167em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">]</mo><mi>i</mi></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>f</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is linear</mtext></mrow><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><mo stretchy="false" form="prefix">[</mo><mi>f</mi><msub><mo stretchy="false" form="postfix">]</mo><mrow><mi>i</mi><mi>j</mi></mrow></msub><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mi>u</mi><msub><mo stretchy="false" form="postfix">]</mo><mi>j</mi></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">expand each </mtext><mspace width="0.333em"></mspace></mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>b</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.222em"></mspace><mtext mathvariant="normal">collect</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">[f\,u]_i \;=\; \Bigl[\, f\bigl(\textstyle\sum_j [u]_j\, b_j\bigr) \Bigr]_i \quad\{\text{expand } u \text{ in the source basis}\} \;=\; \Bigl[\, \textstyle\sum_j [u]_j\, f(b_j) \Bigr]_i \quad\{f \text{ is linear}\} \;=\; \textstyle\sum_j [f]_{ij}\,[u]_j \quad\{\text{expand each } f(b_j),\ \text{collect}\}</annotation></semantics></math></p>
 <p>— and the right-hand side is precisely one entry of “matrix times
-column.” The library isolates this as <a
+column.” That identity is <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>:</p>
 <pre class="coq"><code>Theorem mat_of_coords : forall (f : LinearMap F U V) (u : U)
     (i : Fin.t m),
@@ -287,12 +327,12 @@ as the multiplication and <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a> as
 its unit — the <code>:= _</code> asks Coq to find the instance, and it
 does:</p>
-<pre class="coq"><code>Example matrix_ring_check (F : Type) `{FF : Field.Field F} (n : nat) :
+<pre class="coq"><code>Example matrix_ring_check (F : Type) `{FF : Field F} (n : nat) :
   Ring (Matrix n n F) := _.</code></pre>
 <p>And the representation isomorphism itself instantiates at the
 coordinate space <code>Fin.t n -&gt; F</code> with its standard basis on
 both sides:</p>
-<pre class="coq"><code>Example vsiso_matrix_check (F : Type) `{FF : Field.Field F} (m n : nat) :=
+<pre class="coq"><code>Example vsiso_matrix_check (F : Type) `{FF : Field F} (m n : nat) :=
   vsiso_matrix (FinVec_Basis (F := F) n) (FinVec_Basis m).</code></pre>
 <p>By the representation theorem, running a matrix multiplication is the
 same as composing the two linear maps the matrices stand for and reading
@@ -301,6 +341,10 @@ the result off in coordinates.</p>
 factor by which a linear map scales volume.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>
+(the <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+class) · <a
 href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
 (the <a
 href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>

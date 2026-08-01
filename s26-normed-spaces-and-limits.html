@@ -35,29 +35,38 @@ each vector a scalar length, written <code>‖ u ‖</code>, subject to four
 laws. Here is the vocabulary and the structure, from <a
 href="coqdoc/Riktig.Interface.Norm.html"><code>Interface/Norm.v</code></a>:</p>
 <pre class="coq"><code>Class HasNorm F V := vnorm : V -&gt; F.
-(* Level 20 keeps the closed ‖…‖ out of application-argument position:
-   with identical opening and closing tokens, a level-0 notation would
-   let the inner application parser swallow the closing ‖. *)
 Notation &quot;‖ u ‖&quot; := (vnorm u) (at level 20, u at level 200).</code></pre>
+<p>The level <code>20</code> is not cosmetic: the opening and closing
+tokens of <code>‖ u ‖</code> are the same symbol, so a level-0 notation
+would sit in application-argument position and let the inner application
+parser swallow the closing bar.</p>
 <pre class="coq"><code>Module NormedSpace.
-  Class NormedSpace (F V : Type) `{OrderedField.OrderedField F}
-      {nsE : EqRel V} {nsZ : Zero V} {nsA : HasAdd V} {nsN : HasNeg V}
-      {nsS : HasScale F V} {VS : VectorSpace F V} {nsNorm : HasNorm F V} := {
-    proper   : forall u v : V, u == v -&gt; ‖ u ‖ == ‖ v ‖;
+  Class NormedSpace (F V : Type) `{OrderedField F}
+      {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V}
+      {Vs : HasScale F V} {VS : VectorSpace F V} {Vnorm : HasNorm F V} := {
+    proper :: Proper (equ ==&gt; equ) Vnorm;
+
     nonneg   : forall u : V, 0 &lt;= ‖ u ‖;
     definite : forall u : V, ‖ u ‖ == 0 -&gt; u == 0;
-    scale    : forall (a : F) (u : V), ‖ a *: u ‖ == abs a * ‖ u ‖;
-    triangle : forall u v : V, ‖ u + v ‖ &lt;= ‖ u ‖ + ‖ v ‖
+    scale    :: Homogeneous F V F mult abs Vnorm;
+    triangle : forall u v : V, ‖ u + v ‖ &lt;= ‖ u ‖ + ‖ v ‖;
   }.
 End NormedSpace.</code></pre>
 <p>The length lands in the <em>scalar</em> field <code>F</code>, which
 is why <code>F</code> must be an ordered field: a length has to be
 comparable and nonnegative. The norm itself is not a field of the class
-— <code>HasNorm F V</code> arrives as the implicit parameter
-<code>nsNorm</code>, alongside the operations of the vector space — so
+— <code>HasNorm F V</code> arrives as the implicit class parameter
+<code>Vnorm</code>, alongside the operations of the vector space — so
 the class body is laws and nothing else, and the module wrapper lets
-them keep bare English names. The four laws read: every length is
-nonnegative (<a
+them keep bare English names.</p>
+<p>The class opens with <a
+href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.proper"><code>NormedSpace.proper</code></a>:
+the norm respects the vector space’s equality, so equal vectors have
+equal length. It is declared with <code>::</code> rather than
+<code>:</code>, which makes the field itself a typeclass instance as
+soon as a <code>NormedSpace F V</code> is in scope, so
+<code>rewrite</code> can move <code>==</code> inside the bars without
+the law being named. Then the four laws: every length is nonnegative (<a
 href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.nonneg"><code>NormedSpace.nonneg</code></a>);
 only the zero vector has length zero (<a
 href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.definite"><code>NormedSpace.definite</code></a>);
@@ -65,16 +74,30 @@ scaling a vector by <code>a</code> scales its length by
 <code>abs a</code> (<a
 href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.scale"><code>NormedSpace.scale</code></a>);
 and the length of a sum is at most the sum of the lengths (<a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.triangle"><code>NormedSpace.triangle</code></a>).
-The <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.proper"><code>NormedSpace.proper</code></a>
-law says the norm respects the vector space’s equality — equal vectors
-have equal length.</p>
+href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.triangle"><code>NormedSpace.triangle</code></a>).</p>
+<p>The scaling law is the one that is not spelled out, and it is worth
+seeing why. “Carries scaling across, up to a reweighting” is a shape
+that recurs — a linear map does it with the weight left alone, a norm
+does it with the weight replaced by its absolute value — so it is stated
+once, in <a href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>, as
+its own class:</p>
+<pre class="coq"><code>  Class Homogeneous := homogeneous : forall (a : F) (x : A), f (a *: x) == weight a · f x.</code></pre>
+<p><code>Homogeneous F V F mult abs Vnorm</code> fills that template
+with the map <code>Vnorm : V -&gt; F</code>, the reweighting <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>, and
+multiplication in <code>F</code> as the action on the result, which
+reads back as <code>‖ a *: u ‖ == abs a * ‖ u ‖</code>. The projection
+out of the class is called <a
+href="coqdoc/Riktig.Props.html#homogeneous"><code>homogeneous</code></a>,
+and that — not <a
+href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.scale"><code>NormedSpace.scale</code></a>
+— is the name a proof rewrites with.</p>
 <h2 id="the-length-of-a-negated-vector-is-unchanged">The length of a
 negated vector is unchanged</h2>
-<p>A first consequence, and a chance to see the ordered-field law <a
+<p>A first consequence, and a chance to see <a
 href="coqdoc/Riktig.Theory.Order.html#abs_one"><code>abs_one</code></a>
-(that <code>abs 1 == 1</code>) doing real work one layer up. In English:
+— the fact that <code>abs 1 == 1</code>, derived from the ordered-field
+laws — doing real work one layer up. In English:
 <code>‖ - u ‖ == ‖ u ‖</code> — negating a vector does not change its
 length.</p>
 <p>Negation is scaling by <code>-1</code>, so on the blackboard the four
@@ -96,26 +119,30 @@ Proof.
   intros u.
   calc (‖ - u ‖)
     == (‖ (- (1 : F)) *: u ‖)     { neg1_scale }
-    == (abs (- (1 : F)) * ‖ u ‖)  { NormedSpace.scale }
+    == (abs (- (1 : F)) * ‖ u ‖)  { (homogeneous (f := vnorm)) }
     == (abs (1 : F) * ‖ u ‖)      { OrderedField.abs_neg }
     == ((1 : F) * ‖ u ‖)          { abs_one }
-    == (‖ u ‖)                    { idl }.
+    == (‖ u ‖)                    { left_identity }.
 Qed.</code></pre>
 <p>The chain is over <code>==</code>, the vector space’s equality, and
 each step names one law. <a
 href="coqdoc/Riktig.Theory.VectorSpace.html#neg1_scale"><code>neg1_scale</code></a>
-rewrites <code>- u</code> as <code>(-1) *: u</code>; <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.scale"><code>NormedSpace.scale</code></a>
-pulls the scalar out as <code>abs (-1) * ‖ u ‖</code>; <a
+rewrites <code>- u</code> as <code>(-1) *: u</code>;
+<code>homogeneous (f := vnorm)</code> pulls the scalar out as
+<code>abs (-1) * ‖ u ‖</code> — the <code>(f := vnorm)</code> is needed
+because <a
+href="coqdoc/Riktig.Props.html#homogeneous"><code>homogeneous</code></a>
+is a general law and Coq has to be told which map it is being asked
+about; <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_neg"><code>OrderedField.abs_neg</code></a>
 (<code>abs (- a) == abs a</code>) turns <code>abs (-1)</code> into
 <code>abs 1</code>; <a
 href="coqdoc/Riktig.Theory.Order.html#abs_one"><code>abs_one</code></a>
 turns that into <code>1</code>; and <a
-href="coqdoc/Riktig.Props.html#idl"><code>idl</code></a> — the
-left-identity law, resolving here to <code>1 * x == x</code> — drops the
-factor. Five laws, no case split on whether <code>u</code> “points which
-way” — negation is just a scaling, and the norm laws handle it.</p>
+href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>,
+resolving here to <code>1 * x == x</code>, drops the factor. Five laws,
+no case split on whether <code>u</code> “points which way” — negation is
+just a scaling, and the norm laws handle it.</p>
 <h2 id="what-a-limit-is-in-words-before-symbols">What a limit is, in
 words before symbols</h2>
 <p>Now the reason a norm is worth having: it lets us say when a sequence
@@ -265,10 +292,15 @@ and the file assembles the <a
 href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
 instance; resolution then confirms it holds for matrices over any
 ordered field:</p>
-<pre class="coq"><code>Example matrix_ns_check (F : Type) (HFF : Field F) (HF : OrderedField F)
+<pre class="coq"><code>Example matrix_ns_check (F : Type) `{HFF : Field F} {Fl : HasLe F} {Fb : HasAbs F} (HF : OrderedField F)
   (m n : nat) : NormedSpace F (Matrix m n F) := _.</code></pre>
-<p>The <code>:= _</code> leaves the instance for Coq to find, and it
-does. With that in scope, <a
+<p>The binders supply exactly a field, the two symbols an order needs
+(<a
+href="coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>
+and <a
+href="coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>),
+and the ordered-field laws over them; the <code>:= _</code> leaves the
+instance for Coq to find, and it does. With that in scope, <a
 href="coqdoc/Riktig.Theory.Limits.html#seq_lim"><code>seq_lim</code></a>
 and <a
 href="coqdoc/Riktig.Theory.Limits.html#lim_unique"><code>lim_unique</code></a>

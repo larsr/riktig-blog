@@ -70,7 +70,7 @@ href="coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a> be
 an actual definition instead of a bare claim: an ordinary Coq
 <code>exists</code> only asserts that a witness is out there, and
 pulling a concrete value back out of it needs a choice-style axiom,
-which nothing in this codebase relies on. A sigma type carries the
+which none of the development below relies on. A sigma type carries the
 witness directly, so <code>proj1_sig</code> — “take the first component”
 — reads <a
 href="coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a>
@@ -160,9 +160,9 @@ builds a concrete exponential function — a power series over the reals,
 say, with surjectivity established from completeness — gets every lemma
 above for free the moment they supply one proof of
 <code>exp_surj</code>, with none of this reasoning to redo. No such
-construction exists in this codebase yet, so there is no concrete
-<code>log</code> to compute a number with today; what exists is the
-guarantee that whenever one shows up, its logarithm comes for free.</p>
+construction exists yet, so there is no concrete <code>log</code> to
+compute a number with today; what exists is the guarantee that whenever
+one shows up, its logarithm comes for free.</p>
 <h2 id="whats-the-slope-of-a-function-with-a-corner">What’s the slope of
 a function with a corner?</h2>
 <p>Consider the simplest function with a corner in its graph: zero for
@@ -183,23 +183,22 @@ not?</p>
 the answer is exactly what the picture suggests: a definite rate of
 change on each side, the two rates different. Making that precise needs
 the notion of derivative from earlier posts: the derivative of a
-function <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> at a
-point <code>a</code>, written <code>is_deriv f a L</code>, packages the
-rate of change not as a bare number but as a linear map <code>L</code> —
-the best linear approximation of <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> near
-<code>a</code>, in the sense that the gap
-<code>f (a + h) - (f a + L h)</code> shrinks faster than <code>h</code>
-itself as <code>h</code> shrinks toward <code>0</code>. Size here is
-measured by a norm <code>‖ · ‖</code>, which for a field acting on
-itself is just absolute value; <a
+function <code>f</code> at a point <code>a</code>, written
+<code>is_deriv f a L</code>, packages the rate of change not as a bare
+number but as a linear map <code>L</code> — the best linear
+approximation of <code>f</code> near <code>a</code>, in the sense that
+the gap <code>f (a + h) - (f a + L h)</code> shrinks faster than
+<code>h</code> itself as <code>h</code> shrinks toward <code>0</code>.
+Size here is measured by a norm <code>‖ · ‖</code>, which for a field
+acting on itself is just absolute value; <a
 href="coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</code></a>
 opens by building exactly that instance — <code>F</code> normed over
 itself via <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> —
-because nothing in the tree supplied it before, and every derivative
-statement in the rest of the file, ReLU’s included, rests on it.</p>
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>,
+registered as <a
+href="coqdoc/Riktig.Theory.MLDerivatives.html#Field_NormedSpace"><code>Field_NormedSpace</code></a>
+— and every derivative statement in the rest of the file, ReLU’s
+included, rests on it.</p>
 <p>The file never writes down a single total function
 <code>relu : F -&gt; F</code>. Deciding whether a given field element is
 <code>&gt;= 0</code> is exactly the kind of case split a bare ordered
@@ -218,28 +217,23 @@ function’s behavior in a neighborhood of the point in question:</p>
     forall (a : F) (L : LinearMap F F F) (d : F),
     0 &lt; d -&gt; (forall h : F, ‖ h ‖ &lt; d -&gt; f (a + h) == g (a + h)) -&gt;
     is_deriv g a L -&gt; is_deriv f a L.</code></pre>
-<p>If <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and
-<code>g</code> agree everywhere within distance <code>d</code> of
-<code>a</code>, and <code>g</code> is known to have derivative
-<code>L</code> at <code>a</code>, then <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> has
+<p>If <code>f</code> and <code>g</code> agree everywhere within distance
+<code>d</code> of <code>a</code>, and <code>g</code> is known to have
+derivative <code>L</code> at <code>a</code>, then <code>f</code> has
 that same derivative at <code>a</code> — <a
 href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
 cannot distinguish the two functions, since it only ever asks about
 points near <code>a</code>.</p>
-<p>In one sentence, using that tool: any function <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> that
+<p>In one sentence, using that tool: any function <code>f</code> that
 agrees with <code>x</code> itself at every strictly positive
 <code>x</code> has, at every strictly positive point <code>a</code>, the
 identity map <a
 href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_id"><code>linear_map_id</code></a>
 (the linear map sending <code>h</code> to <code>h</code>) as its
-derivative. On the blackboard, the argument is “swap <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> for the
-identity function on a neighborhood of <code>a</code>, then read off the
-identity’s own derivative”:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> for all </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with </mtext><mspace width="0.333em"></mspace></mrow><mo stretchy="false" form="postfix">∥</mo><mi>x</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>a</mi><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mi>D</mi><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">f(x) = x \text{ for all } x \text{ with } \|x - a\| &lt; a \quad\Longrightarrow\quad Df(a) = D(\mathrm{id})(a) = \mathrm{lm\_id}.</annotation></semantics></math></p>
+derivative. On the blackboard, the argument is “swap <code>f</code> for
+the identity function on a neighborhood of <code>a</code>, then read off
+the identity’s own derivative”:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> for all </mtext><mspace width="0.333em"></mspace></mrow><mi>x</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with </mtext><mspace width="0.333em"></mspace></mrow><mo stretchy="false" form="postfix">∥</mo><mi>x</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>a</mi><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mi>D</mi><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">f(x) = x \text{ for all } x \text{ with } \|x - a\| &lt; a \quad\Longrightarrow\quad Df(a) = D(\mathrm{id})(a) = \mathrm{linear\_map\_id}.</annotation></semantics></math></p>
 <p>Here is the theorem and its proof exactly as they stand in the
 file:</p>
 <pre class="coq"><code>Theorem is_deriv_relu_pos : forall (f : F -&gt; F),
@@ -260,25 +254,20 @@ Qed.</code></pre>
 <code>g := fun x =&gt; x</code>, the plain identity function, and radius
 <code>d := a</code> — a deliberate choice, because <code>a</code> is
 exactly how far <code>a</code> sits from <code>0</code>, the one point
-<a href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> must
-stay clear of. That choice creates two obligations. The first,
-discharged by
+<code>f</code> must stay clear of. That choice creates two obligations.
+The first, discharged by
 <code>intros h Hh; apply Hf; exact (pos_add_of_norm_lt a h Ha Hh)</code>,
-is that <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> and the
-identity really do agree throughout the radius-<code>a</code>
-neighborhood: <a
+is that <code>f</code> and the identity really do agree throughout the
+radius-<code>a</code> neighborhood: <a
 href="coqdoc/Riktig.Theory.MLDerivatives.html#pos_add_of_norm_lt"><code>pos_add_of_norm_lt</code></a>
 is the fact that <code>a + h</code> stays positive whenever
 <code>‖h‖ &lt; a</code> and <code>a</code> itself is positive, which is
-precisely what lets <code>Hf</code> — “<a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f"><code>f</code></a> agrees
-with the identity on all positive inputs” — apply at <code>a + h</code>.
-The second,
-<code>exact (deriv_lm linear_map_id a lm_id_bounded_F)</code>, supplies
-the anchor fact: the identity function’s own derivative at any point is
-the identity map itself, since a linear map is its own exact linear
-approximation everywhere, not merely an approximate one.</p>
+precisely what lets <code>Hf</code> — “<code>f</code> agrees with the
+identity on all positive inputs” — apply at <code>a + h</code>. The
+second, <code>exact (deriv_lm linear_map_id a lm_id_bounded_F)</code>,
+supplies the anchor fact: the identity function’s own derivative at any
+point is the identity map itself, since a linear map is its own exact
+linear approximation everywhere, not merely an approximate one.</p>
 <p>The left branch is the mirror image, with the constantly-zero
 function in place of the identity and the zero linear map <a
 href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_const0"><code>linear_map_const0</code></a>
@@ -326,9 +315,10 @@ supplied from outside them.</p>
 four laws don’t supply either. <code>exp_fn : F -&gt; F</code> needs a
 way to measure distance in <code>F</code> itself — the same
 <code>NormedSpace F F</code> instance built for ReLU above — and the
-rate of change, to be stated as a derivative in this codebase’s sense,
-needs to be packaged as a linear map, “multiply by <code>exp a</code>,”
-rather than the bare scalar <code>exp a</code>. <a
+rate of change, to be stated as a derivative in the <a
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+sense, needs to be packaged as a linear map, “multiply by
+<code>exp a</code>,” rather than the bare scalar <code>exp a</code>. <a
 href="coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</code></a>
 builds that scaling linear map generically, for any constant
 <code>c</code>:</p>
@@ -385,20 +375,19 @@ them to <a
 href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>
 or one of its specializations. Nothing here computes a number, because
 <code>exp_is_deriv</code> has no proof supplied for any concrete
-<code>exp</code> in this codebase yet — the theorem is ready the moment
-one is.</p>
+<code>exp</code> yet — the theorem is ready the moment one is.</p>
 <h2 id="two-things-this-file-doesnt-attempt">Two things this file
 doesn’t attempt</h2>
 <p>Softmax and layer normalization are the natural next targets — both
 are built from <code>exp</code> and division — but neither is proved
 differentiable here. Both are functions on a many-coordinate space, and
 stating a derivative for them at all needs a norm on that whole space,
-which doesn’t exist anywhere in the tree yet (only a norm for matrices
-has been built, not for bare coordinate vectors); both also divide by
-something (a sum of exponentials, a standard deviation), and no rule for
-differentiating <code>1/x</code> itself exists yet either. Both are
-separate pieces of work with their own scaffolding to build, not results
-this post glosses over.</p>
+which doesn’t exist yet (only a norm for matrices has been built, not
+for bare coordinate vectors); both also divide by something (a sum of
+exponentials, a standard deviation), and no rule for differentiating
+<code>1/x</code> itself exists yet either. Both are separate pieces of
+work with their own scaffolding to build, not results this post glosses
+over.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>

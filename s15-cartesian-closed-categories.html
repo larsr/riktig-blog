@@ -56,29 +56,26 @@ category as an object of its own, so that “a function from
 project, and pass around like any other object. The universal property
 that makes <code>exp_obj a b</code> deserve the name is currying. Here
 is the class:</p>
-<pre class="coq"><code>(* Exponential objects: exp_obj a b internalises the hom a ~&gt; b, with
-   eval_mor as counit and curry as the transpose across the product
-   adjunction. Uniqueness is stated up to the hom-setoid. *)
-Module HasExponentials.
+<pre class="coq"><code>Module HasExponentials.
   Class HasExponentials {O : Type} (C : Category O) {P : HasProducts C} := {
     exp_obj  : O -&gt; O -&gt; O;
-    eval_mor : forall {a b : O}, prod_obj (exp_obj a b) a ~&gt; b;
+    eval_morphism : forall {a b : O}, prod_obj (exp_obj a b) a ~&gt; b;
     curry    : forall {x a b : O}, (prod_obj x a ~&gt; b) -&gt; (x ~&gt; exp_obj a b);
-    #[global] curry_proper :: forall x a b : O,
+    curry_proper :: forall x a b : O,
         Proper (equ ==&gt; equ) (@curry x a b);
     curry_beta       : forall (x a b : O) (h : prod_obj x a ~&gt; b),
-        eval_mor ∘ (curry h ×× cat_id) == h;
+        eval_morphism ∘ (curry h ×× cat_id) == h;
     curry_uniqueness : forall (x a b : O) (h : prod_obj x a ~&gt; b)
                               (k : x ~&gt; exp_obj a b),
-        eval_mor ∘ (k ×× cat_id) == h -&gt; k == curry h
+        eval_morphism ∘ (k ×× cat_id) == h -&gt; k == curry h
   }.
 End HasExponentials.
-Notation HasExponentials := HasExponentials.HasExponentials.
-Notation exp_obj         := HasExponentials.exp_obj.
-Notation eval_mor        := HasExponentials.eval_mor.
-Notation curry           := HasExponentials.curry.</code></pre>
+Export HasExponentials.
+Notation exp_obj       := HasExponentials.exp_obj.
+Notation eval_morphism := HasExponentials.eval_morphism.
+Notation curry         := HasExponentials.curry.</code></pre>
 <p>Three ingredients carry the meaning. <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_mor"><code>eval_mor</code></a>
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
 is <em>application</em>: an arrow
 <code>prod_obj (exp_obj a b) a ~&gt; b</code> that takes a
 function-object paired with an argument and produces the result —
@@ -87,11 +84,10 @@ href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry"><code>curry</
 transposes an arrow <code>prod_obj x a ~&gt; b</code> (a two-input map)
 into an arrow <code>x ~&gt; exp_obj a b</code> (a one-input map
 returning a function-object). The notation <code>k ×× cat_id</code> is
-the product acting on both coordinates at once, running <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> on the
-first and the identity on the second, so <code>curry h ×× cat_id</code>
-prepares a pair for <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_mor"><code>eval_mor</code></a>
+the product acting on both coordinates at once, running <code>k</code>
+on the first and the identity on the second, so
+<code>curry h ×× cat_id</code> prepares a pair for <a
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
 to consume.</p>
 <p>The two laws are the “exactly one” of currying. <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_beta"><code>HasExponentials.curry_beta</code></a>
@@ -106,7 +102,7 @@ says <code>curry h</code> is the <em>only</em> arrow with that property
 pattern again.</p>
 <p>In Coq’s own category the exponential is nothing but the function
 type, and <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_mor"><code>eval_mor</code></a>
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
 and <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry"><code>curry</code></a>
 are the obvious maps:</p>
@@ -143,11 +139,11 @@ inverse</h2>
 <p>The universal property says currying can be undone. Going back is <a
 href="coqdoc/Riktig.Theory.Exponential.html#uncurry"><code>uncurry</code></a>:
 feed a one-input map to <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_mor"><code>eval_mor</code></a>
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
 after spreading it across the product.</p>
 <pre class="coq"><code>(* The inverse transpose across the product adjunction. *)
 Definition uncurry {x a b : O} (k : x ~&gt; exp_obj a b) : prod_obj x a ~&gt; b :=
-  eval_mor ∘ (k ×× cat_id).</code></pre>
+  eval_morphism ∘ (k ×× cat_id).</code></pre>
 <p>That <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry"><code>curry</code></a>
 and <a
@@ -176,7 +172,7 @@ Qed.</code></pre>
 <p>After <code>intros</code>, the goal
 <code>uncurry (curry h) == h</code> unfolds by the definition of <a
 href="coqdoc/Riktig.Theory.Exponential.html#uncurry"><code>uncurry</code></a>
-to <code>eval_mor ∘ (curry h ×× cat_id) == h</code> — and that
+to <code>eval_morphism ∘ (curry h ×× cat_id) == h</code> — and that
 <em>is</em> the statement of <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_beta"><code>HasExponentials.curry_beta</code></a>,
 so <code>apply HasExponentials.curry_beta</code> finishes it outright.
@@ -199,18 +195,14 @@ Qed.</code></pre>
 <p><code>symmetry</code> turns the goal into
 <code>k == curry (uncurry k)</code>, the exact shape <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_uniqueness"><code>HasExponentials.curry_uniqueness</code></a>
-concludes: “if <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> transposes
-to <code>uncurry k</code> then <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> is its
-currying.” <code>apply HasExponentials.curry_uniqueness</code> leaves
-the single obligation <code>eval_mor ∘ (k ×× cat_id) == uncurry k</code>
-— but the right-hand side is <em>defined</em> to be the left, so
+concludes: “if <code>k</code> transposes to <code>uncurry k</code> then
+<code>k</code> is its currying.”
+<code>apply HasExponentials.curry_uniqueness</code> leaves the single
+obligation <code>eval_morphism ∘ (k ×× cat_id) == uncurry k</code> — but
+the right-hand side is <em>defined</em> to be the left, so
 <code>reflexivity</code> closes it. <code>uncurry k</code> was built to
-be the thing <a
-href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a> transposes
-to, so <a href="coqdoc/Riktig.Lambda.Syntax.html#k"><code>k</code></a>
-is forced to be its currying. The two theorems together: <a
+be the thing <code>k</code> transposes to, so <code>k</code> is forced
+to be its currying. The two theorems together: <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry"><code>curry</code></a>
 and <a
 href="coqdoc/Riktig.Theory.Exponential.html#uncurry"><code>uncurry</code></a>
@@ -221,18 +213,18 @@ named for. A <strong>cartesian closed category</strong> — CCC — is a
 category with a terminal object, binary products, and exponentials:</p>
 <pre class="coq"><code>Module CCC.
   Class CCC {O : Type} (C : Category O) := {
-    #[global] terminal     :: Terminal C;
-    #[global] products     :: HasProducts C;
-    #[global] exponentials :: @HasExponentials O C products
+    terminal     :: Terminal C;
+    products     :: HasProducts C;
+    exponentials :: @HasExponentials O C products
   }.
 End CCC.
-Notation CCC := CCC.CCC.</code></pre>
+Export CCC.</code></pre>
 <p>Read the three fields against a typed lambda calculus and they line
 up one for one. The terminal object is the unit type — the type with a
 single trivial value, the result of a program that returns nothing
 interesting. Products are pair types — forming and taking apart tuples.
 Exponentials are function types, with <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_mor"><code>eval_mor</code></a>
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
 as application and <a
 href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry"><code>curry</code></a>
 as lambda-abstraction. A typed lambda term with free variables of types
@@ -242,7 +234,7 @@ and result type
 becomes an arrow
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mn>1</mn></msub><mo>×</mo><mi>…</mi><mo>×</mo><msub><mi>A</mi><mi>n</mi></msub><mo>→</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A_1 \times \dots \times A_n \to B</annotation></semantics></math>;
 abstracting a variable is currying; applying a function is <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_mor"><code>eval_mor</code></a>.
+href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>.
 Everything a simply-typed lambda calculus can say, a CCC can express as
 arrows. Coq’s own types and functions are the worked example — the
 source assembles them into <a
@@ -254,9 +246,12 @@ href="coqdoc/Riktig.Impl.CoqCat.html#CoqCCC"><code>CoqCCC</code></a>:</p>
     CoqExponentials.</code></pre>
 <p>And the correspondence runs the other way too. In the same source
 tree, the simply-typed lambda calculus is built up as syntax —
-intrinsically typed terms, quotiented by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi><mi>η</mi></mrow><annotation encoding="application/x-tex">\beta\eta</annotation></semantics></math>-conversion
-— and shown to form a category, <a
+intrinsically typed terms, quotiented by a conversion relation whose
+generators are exactly the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>β</mi><annotation encoding="application/x-tex">\beta</annotation></semantics></math>-
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>η</mi><annotation encoding="application/x-tex">\eta</annotation></semantics></math>-steps
+the category laws force — and shown to form a category, <a
 href="coqdoc/Riktig.Impl.StlcCat.html#Stlc_Category"><code>Stlc_Category</code></a>,
 whose objects are types and whose arrows <code>A ~&gt; B</code> are
 closed terms of type <code>A → B</code>. That the category laws hold

@@ -129,12 +129,15 @@ href="coqdoc/Riktig.Channel.Trace.html#lossy_lossy_dup"><code>lossy_lossy_dup</c
 href="coqdoc/Riktig.Channel.Trace.html#dup_lossy_dup"><code>dup_lossy_dup</code></a>
 (duplication is inside lossy+duplication).</p>
 <p>The containments are strict — the bigger classes really can do more.
-A reordering channel can swap two messages, and no amount of dropping
-and duplicating reproduces a swap, because once a message is dropped it
-is gone and duplication never moves a message past another. One such gap
-is pinned down by a concrete counterexample over the naturals — no
-derivation of the dropped-message pair exists in the duplication
-class:</p>
+Each missing arrow is pinned down by a concrete counterexample over the
+naturals. <a
+href="coqdoc/Riktig.Channel.Trace.html#reorder_not_lossy_dup"><code>reorder_not_lossy_dup</code></a>
+rules out one: sending <code>[0; 1]</code> and receiving
+<code>[1; 0]</code> is a swap, and no amount of dropping and duplicating
+reproduces it, because once a message is dropped it is gone and
+duplication never moves a message past another. Here is the other, <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_not_dup"><code>lossy_not_dup</code></a>,
+which rules out dropping in the duplication class:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>¬</mo><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>;</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo><mo>,</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\neg\,\mathrm{dup}\bigl([0;1],\,[0]\bigr).</annotation></semantics></math></p>
 <pre class="coq"><code>Example lossy_not_dup : ~ dup [0; 1] [0].
 Proof.
@@ -157,8 +160,7 @@ assumed derivation <code>dup [0;1] [0]</code>: each
 continues, and after a few layers every branch has hit a contradiction.
 So the classes are genuinely distinct, not just formally different
 names.</p>
-<h2 id="the-payoff-what-a-fault-class-buys-you">The payoff: what a fault
-class buys you</h2>
+<h2 id="what-a-fault-class-buys-you">What a fault class buys you</h2>
 <p>The point of naming these relations is that assuming one of them, as
 a hypothesis, lets you <em>prove</em> things about the received trace
 that would be false for a worse channel. Here is the cleanest example,
