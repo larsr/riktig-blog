@@ -135,12 +135,12 @@ property classes (<a
 href="../coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
 <a
 href="../coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>,
-…). <code>Interface/</code> — structure classes stating laws over the
-Ops vocabulary (the ops are implicit class parameters, not fields),
-axioms only, stated as readable <code>forall</code>s, with
-<code>Instance</code> bindings connecting their axioms to the property
-classes — plus the bundles that state what a map or a choice must
-satisfy (<a
+…). <code>Interface/</code> — structure classes over the Ops vocabulary
+(the ops are implicit class parameters, not fields), each law a
+<code>::</code> field naming the <a
+href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class that
+states it, never a <code>forall</code> written out a second time (rule
+7) — plus the bundles that state what a map or a choice must satisfy (<a
 href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
 <a
 href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>,
@@ -328,7 +328,50 @@ to pairwise <code>Ordered</code>).</p></li>
 <li><p><strong>Import discipline.</strong> Dependencies point one
 direction: implementations import theories, theories import structures,
 never the reverse; an algorithm written against an abstract interface
-must not import a concrete instance’s lemmas.</p></li>
+must not import a concrete instance’s lemmas.</p>
+<p><strong>Require the deepest name, not the chain</strong> (decided
+2026-08-01). Each <code>Interface/</code> file re-exports its parent,
+so</p>
+<pre class="coq"><code>From Riktig.Interface Require Export VectorSpace.</code></pre>
+<p>already carries <a
+href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>,
+<code>Props</code> and <code>Ops</code>. Naming the ancestors as well is
+clutter, and it obscures which structure the file is actually written
+against. <code>Theory/</code> chains the same way —
+<code>Theory.AbGroup</code> carries <code>Theory.Group</code>.
+<code>Require Import S</code> imports everything <code>S</code> exports,
+so an <code>Import</code> of an already-exported name is always
+redundant; an <code>Export</code> is redundant only when the name is
+re-exported by something this file also exports.</p>
+<p>Two things stop a require being redundant, and neither is visible in
+the dependency graph:</p>
+<ul>
+<li><strong>Position.</strong> The implying require must be processed no
+later than the one it would replace. <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
+states its classes above its <code>Impl.OptionMonad</code> require, so
+its <code>Interface.Monad</code> has to stay where it is.</li>
+<li><strong>Deliberate shadowing.</strong> A repeated require can exist
+purely to be imported <em>last</em>, so its names win. <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>
+re-requires <code>Theory.Monad</code> after <code>Ast</code> so that the
+monadic <a
+href="../coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a>
+shadows <code>List.map</code>. Such a line carries a comment saying
+so.</li>
+</ul></li>
 <li><p><strong>Structure classes are assembled from law classes: one
 substructure field, one field per law, no equation written
 twice</strong> (decided 2026-07-31, superseding the 2026-07-25
@@ -557,8 +600,9 @@ href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a
 by <code>Import</code>, and stripping the attribute from <a
 href="../coqdoc/Riktig.Theory.Pointwise.html#PW_EqRel"><code>PW_EqRel</code></a>
 made <code>EqRel (Fin.t 2 -&gt; Q)</code> unresolvable three files away.
-All 392 <code>Instance</code> attributes in <code>theories/</code>
-stay.</p>
+Every <code>Instance</code> in <code>theories/</code> carries the
+attribute, and none may be stripped without a full build to prove
+it.</p>
 <p><code>Hint</code>, <code>Hint Mode</code>, <code>Hint Rewrite</code>,
 <code>Typeclasses Transparent</code> and <code>Arguments</code> at top
 level are already global; 197 redundant attributes were removed from
@@ -648,19 +692,50 @@ structure’s name arrives by qualification
 (<code>Group.left_inverse</code>, <code>Ring.mul_associative</code>),
 never as a <code>group_</code>/<code>ring_</code> prefix baked into the
 field name. Because the module already carries the structure’s name, the
-declarations inside it need no prefix either: the membership instance is
-<code>is_Weaker</code> (<code>Group.is_Monoid</code>,
-<code>Field.is_Ring</code>, <code>VectorSpace.is_ScaleLaws</code>), the
-smart constructor is <code>from_parts</code>, the respect law is a field
-named after its operation (<a
-href="../coqdoc/Riktig.Impl.Cliff2.html#Cl2.add_proper"><code>add_proper</code></a>,
-<code>neg_proper</code>, <code>mul_proper</code>, <a
+declarations inside it need no prefix either:</p>
+<ul>
+<li>The <strong>substructure field is the weaker structure’s name in
+lower case</strong> — <code>monoid :: Monoid G</code> in <a
+href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
+<code>abgroup :: AbGroup R</code> in <a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>,
+<code>ring :: Ring F</code> in <a
+href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.semigroup"><code>semigroup</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.magma"><code>magma</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.group"><code>group</code></a>.
+<a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
+is the exception that proves the rule: it is a mixin rather than a level
+of the tower, so both <a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+and <a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
+name it <code>scaling :: ScaleLaws F V</code>.</li>
+<li>A field naming a <strong>law</strong> is <code>is_</code> plus the
+<a href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class in
+snake case — <code>is_left_inverse :: LeftInverse G add neg 0</code>,
+<code>is_associative</code>, <code>is_left_distributive</code>. The
+<code>is_</code> says the field asserts a property rather than holding
+one.</li>
+<li>The <strong>respect law</strong> is named after its operation:
+<code>neg_proper</code>, <a
 href="../coqdoc/Riktig.Interface.Field.html#Field.inv_proper"><code>inv_proper</code></a>,
 <code>scale_proper</code>, <a
-href="../coqdoc/Riktig.Theory.InnerProductSpace.html#inner_proper"><code>inner_proper</code></a>,
-<code>norm_proper</code>, <a
-href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>),
-and the bridges into <a
+href="../coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>op_proper</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Order.html#OrderedField.abs_proper"><code>abs_proper</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.QuadraticForm.html#QuadraticForm.quad_proper"><code>quad_proper</code></a>,
+<a
+href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>.</li>
+</ul>
+<p>There are no <code>from_parts</code> smart constructors: a structure
+is built by giving its fields, and the fields are law classes that
+instance search already knows how to find. The bridges into <a
 href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> are
 anonymous — an instance nothing ever names does not need a name. None of
 this touches the generic property-class field names themselves (<a
@@ -774,18 +849,23 @@ href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v
 href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
 and <a
 href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
-— <em>is</em> module-wrapped like the rest, but its five fields keep
-<code>scale</code> in the identifier (<code>scale_proper</code>,
-<code>scale_distributes_over_vector_add</code>,
-<code>scale_distributes_over_scalar_add</code>, <a
-href="../coqdoc/Riktig.Impl.Cliff2.html#Cl2.scale_associative"><code>scale_associative</code></a>,
-<a
-href="../coqdoc/Riktig.Impl.Cliff2.html#Cl2.scale_identity"><code>scale_identity</code></a>)
-because the module name says only that these are laws, not which
-operation they are about. Both wrapped classes restate these laws under
-their own module and hand them back through
-<code>VectorSpace.is_ScaleLaws</code> /
-<code>GeometricAlgebra.is_ScaleLaws</code>.</p>
+— <em>is</em> module-wrapped like the rest. Its respect field keeps
+<code>scale</code> in the identifier (<code>scale_proper</code>) because
+the module name says only that these are laws, not which operation they
+are about; its four law fields take the <code>is_</code> form and name
+the <a href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>
+class, with the scaling action supplied as the argument that says which
+operation is meant:</p>
+<pre class="coq"><code>is_left_distributive  :: LeftDistributive F V V Vs;
+is_right_distributive :: RightDistributive F V V Vs;
+is_associative        :: Associative F V Vs mult;
+is_left_identity      :: LeftIdentity F V Vs 1;</code></pre>
+<p>Both <a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+and <a
+href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
+pick the mixin up as a single <code>scaling :: ScaleLaws F V</code>
+field rather than restating it.</p>
 <p><a
 href="../coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
 is wrapped but keeps <a
@@ -1051,14 +1131,16 @@ nothing: the library writes one <code>Impl/</code> file per algebra
 </ul>
 <p>Two things the sandbox and the library agree on, in different
 spellings. The sandbox’s <code>Group.from_Monoid</code> is the same idea
-as the library’s <code>from_parts</code> smart constructors: build the
-stronger structure from a proof of the weaker one plus the new laws,
-rather than restating what the carrier has already proved. And
-<code>VectorOps</code> exists in the sandbox for the reason Rule 7’s
-one-bare-binder paragraph gives, as its own comment says — “the scalar
-appears only as a type, so binding a second carrier over it introduces
-no second field”. The library reaches the same place by writing the
-binders out and generalizing the scalar exactly once.</p>
+as the library’s substructure field: build the stronger structure from a
+proof of the weaker one plus the new laws, rather than restating what
+the carrier has already proved. The library needs no constructor for it
+— <code>monoid :: Monoid G</code> is the proof of the weaker structure,
+and the remaining fields are the new laws. And <code>VectorOps</code>
+exists in the sandbox for the reason Rule 7’s one-bare-binder paragraph
+gives, as its own comment says — “the scalar appears only as a type, so
+binding a second carrier over it introduces no second field”. The
+library reaches the same place by writing the binders out and
+generalizing the scalar exactly once.</p>
 </main>
 </body>
 </html>
