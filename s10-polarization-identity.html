@@ -40,9 +40,9 @@ of scalars, pulls a scalar factor out, and respects the setoid equality
 <code>==</code>. Because it is symmetric, the same holds on the right.
 The class states exactly those two things:</p>
 <pre class="coq"><code>Class InnerProductSpace (F V : Type) `{VectorSpace F V} {Vi : HasInner F V} := {
-  inner_linear :: forall v : V, Linear F V F (fun u =&gt; ⟨ u , v ⟩);
+  inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟨ u , v ⟩);
 
-  symmetric : forall u v : V, ⟨ u , v ⟩ == ⟨ v , u ⟩;
+  is_commutative :: Commutative V F inner;
 }.
 
 Definition norm2 {F V : Type} `{InnerProductSpace F V} (u : V) : F := ⟨ u , u ⟩.</code></pre>
@@ -190,8 +190,8 @@ href="coqdoc/Riktig.Interface.QuadraticForm.html"><code>Interface/QuadraticForm.
   Q (u + v) + - Q u + - Q v.
 
 Class QuadraticForm (F V : Type) `{VectorSpace F V} (Q : V -&gt; F) := {
-  quad_proper :: Proper (equ ==&gt; equ) Q;
-  quad_scale  :: Homogeneous F V F mult (fun a =&gt; a * a) Q;
+  quad_proper  :: Proper (equ ==&gt; equ) Q;
+  quad_scale   :: Homogeneous F V F mult (fun a =&gt; a * a) Q;
   polar_linear :: forall v : V, Linear F V F (fun u =&gt; polar Q u v);
 }.</code></pre>
 <p><a
@@ -211,11 +211,7 @@ href="coqdoc/Riktig.Theory.QuadraticForm.html"><code>Theory/QuadraticForm.v</cod
 <pre class="coq"><code>Lemma polar_norm2 : forall u v : V, polar norm2 u v == ⟨ u , v ⟩ + ⟨ u , v ⟩.
 Proof.
   intros u v. unfold polar.
-  rewrite (norm2_add u v).
-  rewrite &lt;- (InnerProductSpace.symmetric u v).
-  rewrite &lt;- (neg_add_assoc ((norm2 u + norm2 v) + (⟨ u , v ⟩ + ⟨ u , v ⟩))
-               (norm2 u) (norm2 v)).
-  exact (add_neg_cancel_l (norm2 u + norm2 v) (⟨ u , v ⟩ + ⟨ u , v ⟩)).
+  rewrite (norm2_add u v), &lt;- (commutative u v). ring.
 Qed.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a>
@@ -225,19 +221,21 @@ into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2) +
 (\langle u,v\rangle + \langle v,u\rangle)</annotation></semantics></math>;
 <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.symmetric"><code>symmetric</code></a>,
+href="coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>,
 used right-to-left, rewrites the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle v,u\rangle</annotation></semantics></math>
 into a second
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle
-u,v\rangle</annotation></semantics></math>; <a
-href="coqdoc/Riktig.Theory.AbGroup.html#neg_add_assoc"><code>neg_add_assoc</code></a>
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>−</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>−</mi><mi>c</mi></mrow><annotation encoding="application/x-tex">a + -(b+c) = (a + -b) + -c</annotation></semantics></math>)
-merges the two separate subtractions into one; and <a
-href="coqdoc/Riktig.Theory.AbGroup.html#add_neg_cancel_l"><code>add_neg_cancel_l</code></a>
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>−</mi><mi>a</mi><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">(a+b) + -a = b</annotation></semantics></math>)
-throws away the two squared lengths, leaving the doubled cross term.
-That instance is <a
+u,v\rangle</annotation></semantics></math>. What is left is an identity
+in the abelian group with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u\|^2</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|v\|^2</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle</annotation></semantics></math>
+as opaque atoms — the two squared lengths cancel against the two
+subtractions, leaving the doubled cross term — so <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.ring"><code>ring</code></a>
+finishes it without being told which lemma to use. That instance is <a
 href="coqdoc/Riktig.Theory.QuadraticForm.html#Inner_QuadraticForm"><code>Inner_QuadraticForm</code></a>,
 and it is what connects the second half of this post back to the
 first.</p>
@@ -516,8 +514,8 @@ which negates a quadratic form and proves the result is one. Everything
 else the class asks for is a structure proved earlier in the same file,
 so the instance is a literal naming them:</p>
 <pre class="coq"><code>  Definition GA_Cliff1 : GeometricAlgebra F F (C F) (Q := neg_form square_form) :=
-    {| GeometricAlgebra.ring := C_Ring;
-       GeometricAlgebra.scaling := Cliff1_ScaleLaws;
+    {| GeometricAlgebra.ring         := C_Ring;
+       GeometricAlgebra.scaling      := Cliff1_ScaleLaws;
        GeometricAlgebra.mul_linear_l := fun y =&gt;
          {| Linear.proper := fun x x&#39; Hx =&gt; Magma.op_proper x x&#39; Hx y y (reflexivity y);
             Linear.is_additive := fun x x&#39; =&gt; right_distributive x x&#39; y;
@@ -526,12 +524,12 @@ so the instance is a literal naming them:</p>
          {| Linear.proper := fun y y&#39; Hy =&gt; Magma.op_proper x x (reflexivity x) y y&#39; Hy;
             Linear.is_additive := fun y y&#39; =&gt; left_distributive x y y&#39;;
             Linear.is_homogeneous := fun a y =&gt; cliff1_ga_scale_mul_r a x y |};
-       GeometricAlgebra.ga_vec := cliff1_ga_vec;
+       GeometricAlgebra.ga_vec       := cliff1_ga_vec;
        GeometricAlgebra.vec_linear :=
-         {| Linear.proper := cliff1_ga_vec_proper;
-            Linear.is_additive := cliff1_ga_vec_add;
+         {| Linear.proper         := cliff1_ga_vec_proper;
+            Linear.is_additive    := cliff1_ga_vec_add;
             Linear.is_homogeneous := cliff1_ga_vec_scale |};
-       GeometricAlgebra.contraction := cliff1_ga_contract |}.</code></pre>
+       GeometricAlgebra.contraction  := cliff1_ga_contract |}.</code></pre>
 <p>Every entry is either a structure proved once (<a
 href="coqdoc/Riktig.Impl.Complex.html#C_Ring"><code>C_Ring</code></a>,
 the complex numbers are a ring; <a

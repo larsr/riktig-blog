@@ -188,8 +188,7 @@ Proof.
   apply nonneg_below_all_pos_is_zero.
   - apply NormedSpace.nonneg.
   - intros eps Heps.
-    apply (OrderedField.le_trans (‖ L1 u + - L2 u ‖)
-      ((eps * inv (1 + ‖ u ‖)) * ‖ u ‖) eps).
+    transitivity ((eps * inv (1 + ‖ u ‖)) * ‖ u ‖).
     + apply (deriv_diff_bound f a L1 L2 (eps * inv (1 + ‖ u ‖)) u HD1 HD2).
       apply mul_pos.
       * exact Heps.
@@ -321,9 +320,9 @@ Proof.
     + exact HCg.
     + exact HCf.
   - intros u.
-    apply (OrderedField.le_trans _ (Cg * ‖ f u ‖) _).
+    transitivity (Cg * ‖ f u ‖).
     + exact (Hbg (f u)).
-    + apply (OrderedField.le_trans _ (Cg * (Cf * ‖ u ‖)) _).
+    + transitivity (Cg * (Cf * ‖ u ‖)).
       * apply mul_le_mono_l.
         -- exact HCg.
         -- exact (Hbf u).
@@ -390,17 +389,15 @@ Proof.
     split.
     + exact Hd.
     + intros h Hh.
-      apply (OrderedField.le_trans _
-        (‖ g (f a + (f (a + h) + - f a))
+      transitivity (‖ g (f a + (f (a + h) + - f a))
            + - (g (f a) + Lg (f (a + h) + - f a)) ‖
-         + ‖ Lg (f (a + h) + - (f a + Lf h)) ‖) _).
+         + ‖ Lg (f (a + h) + - (f a + Lf h)) ‖).
       * exact (comp_remainder_split g Lg Pg (f a) (f (a + h)) (Lf h)).
-      * apply (OrderedField.le_trans _ (half eps * ‖ h ‖ + half eps * ‖ h ‖) _).
+      * transitivity (half eps * ‖ h ‖ + half eps * ‖ h ‖).
         -- apply add_le_mono.
            (* g&#39;s remainder at the increment k h := f (a+h) - f a. *)
-           ++ apply (OrderedField.le_trans _
-                ((half eps * inv (1 + (1 + Cf)))
-                 * ‖ f (a + h) + - f a ‖) _).
+           ++ transitivity ((half eps * inv (1 + (1 + Cf)))
+                 * ‖ f (a + h) + - f a ‖).
               ** apply HRg.
                  apply (le_lt_trans _ ((1 + Cf) * ‖ h ‖) _).
                  --- exact (deriv_increment_bound f a h Lf e1 Cf HCf HbF
@@ -416,9 +413,8 @@ Proof.
                          apply pos_neq_0.
                          apply one_plus_nonneg_pos.
                          exact HCf.
-              ** apply (OrderedField.le_trans _
-                   ((half eps * inv (1 + (1 + Cf)))
-                    * ((1 + Cf) * ‖ h ‖)) _).
+              ** transitivity ((half eps * inv (1 + (1 + Cf)))
+                    * ((1 + Cf) * ‖ h ‖)).
                  --- apply mul_le_mono_l.
                      +++ apply OrderedField.mul_nonneg_closed.
                          *** apply lt_le. apply half_pos. exact Heps.
@@ -446,9 +442,9 @@ Proof.
                                        apply one_plus_nonneg_pos.
                                        exact HCf.
            (* Lg applied to f&#39;s remainder. *)
-           ++ apply (OrderedField.le_trans _ (Cg * ‖ f (a + h) + - (f a + Lf h) ‖) _).
+           ++ transitivity (Cg * ‖ f (a + h) + - (f a + Lf h) ‖).
               ** exact (HbG (f (a + h) + - (f a + Lf h))).
-              ** apply (OrderedField.le_trans _ (Cg * (e1 * ‖ h ‖)) _).
+              ** transitivity (Cg * (e1 * ‖ h ‖)).
                  --- apply mul_le_mono_l.
                      +++ exact HCg.
                      +++ exact (HRf h (lt_le_trans (‖ h ‖) d df Hh Hd_f)).
@@ -456,8 +452,7 @@ Proof.
                      +++ exact (associative _ _ _).
                      +++ apply mul_le_mono_r.
                          *** apply NormedSpace.nonneg.
-                         *** apply (OrderedField.le_trans _
-                               (Cg * (half eps * inv (1 + Cg))) _).
+                         *** transitivity (Cg * (half eps * inv (1 + Cg))).
                              ---- apply mul_le_mono_l.
                                   ++++ exact HCg.
                                   ++++ exact He1_g.
@@ -485,14 +480,12 @@ is <code>g</code>’s radius, run at tolerance
 <code>d</code> is the smaller of <code>df</code> and
 <code>dg / (1 + Cf)</code>, the second factor accounting for
 <code>f</code>’s own stretch.</li>
-<li><code>intros h Hh</code> and the first <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_trans"><code>OrderedField.le_trans</code></a>
-install <a
+<li><code>intros h Hh</code> and the first <code>transitivity</code>
+installs <a
 href="coqdoc/Riktig.Theory.Derivative.html#comp_remainder_split"><code>comp_remainder_split</code></a>:
 the composite remainder is at most the two-term sum.</li>
-<li>The second <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_trans"><code>OrderedField.le_trans</code></a>
-targets <code>eps/2 * ‖ h ‖ + eps/2 * ‖ h ‖</code>, split by <a
+<li>The second <code>transitivity</code> targets
+<code>eps/2 * ‖ h ‖ + eps/2 * ‖ h ‖</code>, split by <a
 href="coqdoc/Riktig.Theory.Order.html#add_le_mono"><code>add_le_mono</code></a>
 into one bound per term.</li>
 <li>The first term (<code>g</code>’s remainder at the true increment

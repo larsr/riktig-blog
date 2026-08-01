@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The geometric product splits in two, and one half costs you a
+division</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="the-geometric-product-splits-in-two-and-one-half-costs-you-a-division">The
+geometric product splits in two, and one half costs you a division</h1>
+<p>Multiply two vectors in a geometric algebra and you get something
+that is not a vector. The textbook writes the result as a sum of two
+pieces,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>u</mi><mo>⋅</mo><mi>v</mi><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mi>u</mi><mo>∧</mo><mi>v</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">uv \;=\; u\cdot v \;+\; u\wedge v,</annotation></semantics></math></p>
+<p>a scalar and a bivector: how much the two vectors agree, and the
+oriented plane they span. This post is about where that split comes
+from, why the obvious proof produces every term twice, and what the
+factor of one half actually costs — because in Coq you cannot write
+“divide by 2” without first proving that 2 has an inverse, and in some
+fields it does not.</p>
+<h2 id="one-axiom-not-two">One axiom, not two</h2>
+<p>A geometric algebra is a ring <code>A</code> containing a vector
+space <code>V</code>, with a single law tying the two together: a vector
+times itself is a scalar, namely its own square length.</p>
+<pre class="coq"><code>contraction : forall u : V, ga_vec u * ga_vec u == Q u *: 1;</code></pre>
+<p>Nothing here mentions a dot product or a wedge product. Both are
+<em>consequences</em>. Expand <a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>
+at <code>u + v</code> and the cross terms survive:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>u</mi><mi>u</mi><mo>+</mo><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo>+</mo><mi>v</mi><mi>v</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">(u+v)(u+v) = uu + uv + vu + vv,</annotation></semantics></math></p>
+<p>and since the three squares are scalars, so is <code>uv + vu</code>.
+That symmetric combination is the dot product, doubled. Its
+antisymmetric partner <code>uv - vu</code> is the wedge, also doubled.
+Adding the two recovers <code>2uv</code>.</p>
+<p>So the split falls out of the one axiom — but it falls out
+<em>doubled</em>. Every term arrives twice, and undoubling means
+dividing by two.</p>
+<h2 id="the-doubled-form-needs-no-division">The doubled form needs no
+division</h2>
+<p>Stated with the doubling left in, the decomposition holds over any
+field whatsoever, and that is how <a
+href="coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>
+states it. No inverse of 2 appears, so nothing prevents a field where
+<code>1 + 1 == 0</code>.</p>
+<p>That matters more than it sounds. Characteristic 2 is not an exotic
+corner: it is where coding theory and much of computer algebra live. A
+development that divides by 2 early quietly excludes them all.</p>
+<h2 id="the-undoubled-form-needs-an-ordered-field">The undoubled form
+needs an ordered field</h2>
+<p>To get the textbook statement you need <code>half 1</code>, and to
+get <code>half 1</code> you need 2 to be invertible. <a
+href="coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
+supplies exactly that, by an argument that is about order rather than
+about arithmetic: <code>two = 1 + 1</code> is a sum of two strictly
+positive things, so it is strictly positive, so it is not zero, so in a
+field it has an inverse.</p>
+<p>That is why <a
+href="coqdoc/Riktig.Theory.GAWedgeDot.html"><code>Theory/GAWedgeDot.v</code></a>
+asks for an <a
+href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+where <a
+href="coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>
+asks only for a <a
+href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>.
+The extra hypothesis buys one thing: the ability to halve. With it, the
+decomposition takes its familiar shape:</p>
+<pre class="coq"><code>  Theorem ga_product_decompose : forall u v : V,
+    ga_vec u * ga_vec v == ⟨ u , v ⟩ *: (1 : A) + half 1 *: wedge u v.</code></pre>
+<p>Read it as <code>uv = u·v + u∧v</code> with the wedge carrying its
+conventional factor of one half. The proof is a <code>calc</code> chain
+that doubles the product, splits the doubled form into its symmetric and
+antisymmetric halves, and then halves each:</p>
+<pre class="coq"><code>    calc ((ga_vec u * ga_vec v) : A)
+      == ((half 1 *: (ga_vec u * ga_vec v + ga_vec u * ga_vec v)) : A)
+        { (sc_half_double (ga_vec u * ga_vec v)) }</code></pre>
+<p>The first step is the only interesting one: <a
+href="coqdoc/Riktig.Theory.GAWedgeDot.html#sc_half_double"><code>sc_half_double</code></a>
+says <code>half 1 *: (x + x) == x</code>, so multiplying by one is
+really multiplying by <code>half 1 * two</code>, arranged so the
+doubling that the axiom forces on us can be introduced deliberately
+instead of apologised for.</p>
+<h2 id="starting-from-the-other-end">Starting from the other end</h2>
+<p>Textbooks are split on which of the two facts is the definition. The
+other convention takes the dot and wedge as given — a symmetric form and
+an alternating bilinear form — and <em>defines</em> the product as their
+sum. <a
+href="coqdoc/Riktig.Theory.GAWedgeDot.html#WedgeDotPresentation"><code>WedgeDotPresentation</code></a>
+is that convention written as a class:</p>
+<pre class="coq"><code>  wd_w           : V -&gt; V -&gt; A;
+  wd_w_proper    :: Proper (equ ==&gt; equ ==&gt; equ) wd_w;
+  wd_w_add_l     : forall u u&#39; v : V, wd_w (u + u&#39;) v == wd_w u v + wd_w u&#39; v;</code></pre>
+<p>with <a
+href="coqdoc/Riktig.Theory.GAWedgeDot.html#wd_w"><code>wd_w</code></a>
+the wedge and a field saying the product decomposes as
+<code>⟨u,v⟩ *: 1 + wd_w u v</code>.</p>
+<p>The two presentations are inter-derivable, and the pair of theorems
+saying so is the point of the file. But they are not inter-derivable on
+the same terms, and the asymmetry is worth stating plainly.</p>
+<p>Going from wedge-and-dot to contraction is free:</p>
+<pre class="coq"><code>  Theorem wedgedot_to_contract : forall u : V,
+    wd_vec u * wd_vec u == norm2 u *: (1 : A).</code></pre>
+<p>Set <code>v := u</code>; the wedge of a vector with itself is zero
+because the form is alternating, so the decomposition collapses to the
+contraction axiom in three <code>calc</code> steps. No order, no
+halving, no division: this direction holds over any field,
+characteristic 2 included.</p>
+<p>Going the other way is not free. Building a <a
+href="coqdoc/Riktig.Theory.GAWedgeDot.html#WedgeDotPresentation"><code>WedgeDotPresentation</code></a>
+out of a contraction-first algebra means producing the wedge, and the
+wedge you produce is <code>half 1 *: wedge</code> — so this direction
+wants the halving, and with it the ordered field.</p>
+<p>The asymmetry is real rather than an artifact of how the proofs were
+written. One direction discards information (a wedge, when you set both
+arguments equal, tells you nothing); the other must manufacture it, and
+manufacturing it costs a division by two.</p>
+</main>
+</body>
+</html>

@@ -75,13 +75,13 @@ href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:</p
 <pre class="coq"><code>Module Monad.
   Class Monad (M : Type -&gt; Type) {Me : forall A, EqRel (M A)}
               {Mb : HasBind M} {Mr : HasReturn M} := {
-    equivalence :: forall A, Equivalence (@equ (M A) _);
-    bind_proper :: forall A B,
+    equivalence         :: forall A, Equivalence (@equ (M A) _);
+    bind_proper         :: forall A B,
       Proper (equ ==&gt; (fun f g =&gt; forall x, f x == g x) ==&gt; equ) (@bind M _ A B);
 
-    left_identity  : forall A B (x : A) (f : A -&gt; M B), bind (ret x) f == f x;
-    right_identity : forall A (m : M A), bind m ret == m;
-    associative    : forall A B C (m : M A) (f : A -&gt; M B) (g : B -&gt; M C),
+    bind_left_identity  : forall A B (x : A) (f : A -&gt; M B), bind (ret x) f == f x;
+    bind_right_identity : forall A (m : M A), bind m ret == m;
+    bind_associative    : forall A B C (m : M A) (f : A -&gt; M B) (g : B -&gt; M C),
       bind (bind m f) g == bind m (fun x =&gt; bind (f x) g)
   }.
 End Monad.
@@ -113,23 +113,17 @@ for return:</p>
 m \mathbin{&gt;\!\!&gt;\!\!=} \eta \;=\; m, \qquad
 (m \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&gt;\!\!&gt;\!\!=} g \;=\; m \mathbin{&gt;\!\!&gt;\!\!=} \big(\lambda x.\ f(x) \mathbin{&gt;\!\!&gt;\!\!=} g\big).</annotation></semantics></math></p>
 <ul>
-<li><a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.left_identity"><code>Monad.left_identity</code></a>:
-injecting <code>x</code> and then binding into <code>f</code> is just
-<code>f x</code> — <a
+<li><code>Monad.left_identity</code>: injecting <code>x</code> and then
+binding into <code>f</code> is just <code>f x</code> — <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
 the left of a bind does nothing.</li>
-<li><a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.right_identity"><code>Monad.right_identity</code></a>:
-binding a computation into <a
+<li><code>Monad.right_identity</code>: binding a computation into <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> gives
 the computation back — <a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
 the right does nothing either.</li>
-<li><a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.associative"><code>Monad.associative</code></a>:
-two binds in a row can be regrouped, exactly like the associativity of a
-monoid, but for sequencing.</li>
+<li><code>Monad.associative</code>: two binds in a row can be regrouped,
+exactly like the associativity of a monoid, but for sequencing.</li>
 </ul>
 <p>For <code>option</code> each law is proved by taking the value apart
 into <code>Some</code> and <code>None</code> and computing. For
@@ -188,10 +182,10 @@ Class HasAlt (M : Type -&gt; Type) := alt : forall {A}, M A -&gt; M A -&gt; M A.
 <pre class="coq"><code>Module Alternative.
   Class Alternative (M : Type -&gt; Type) {Me : forall A, EqRel (M A)}
                     {Mf : HasFail M} {Ma : HasAlt M} := {
-    equivalence :: forall A, Equivalence (@equ (M A) _);
+    equivalence         :: forall A, Equivalence (@equ (M A) _);
     alt_proper  :: forall A, Proper (equ ==&gt; equ ==&gt; equ) (@alt M _ A);
 
-    associative         :: forall A, Associative (M A) (M A) alt alt;
+    is_associative      :: forall A, Associative (M A) (M A) alt alt;
     fail_left_identity  :: forall A, LeftIdentity (M A) (M A) alt fail;
     fail_right_identity :: forall A, RightIdentity (M A) (M A) alt fail
   }.

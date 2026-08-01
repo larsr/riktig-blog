@@ -170,19 +170,17 @@ Proof.
     == (bind (bind (ki_to codec b) (ki_from codec)) prog2)
     == (bind (ret b) prog2)
     == (prog2 b).
-  - symmetry. apply Monad.associative.
+  - symmetry. apply Monad.bind_associative.
   - apply Monad.bind_proper.
     + exact (ki_fromto codec b).
     + intro x. reflexivity.
-  - apply Monad.left_identity.
+  - apply Monad.bind_left_identity.
 Qed.</code></pre>
 <p>The <code>calc</code> block states the three-line chain; each bullet
 below discharges one step:</p>
 <ul>
 <li><code>symmetry. apply Monad.associative</code> is the reassociation.
-The monad’s associativity law <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.associative"><code>Monad.associative</code></a>
-reads
+The monad’s associativity law <code>Monad.associative</code> reads
 <code>(m &gt;&gt;= f) &gt;&gt;= g == m &gt;&gt;= (fun x =&gt; f x &gt;&gt;= g)</code>;
 the chain uses it right-to-left, so <code>symmetry</code> flips it
 before applying.</li>
@@ -197,9 +195,9 @@ result is unchanged. Here the first argument
 <code>ret b</code> — that is <code>exact (ki_fromto codec b)</code>, the
 codec’s own round-trip law — while the continuation <code>prog2</code>
 is unchanged, so its side is <code>intro x. reflexivity</code>.</li>
-<li><code>apply Monad.left_identity</code> is the last step: <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.left_identity"><code>Monad.left_identity</code></a>
-is the law <code>bind (ret x) f == f x</code>, turning
+<li><code>apply Monad.left_identity</code> is the last step:
+<code>Monad.left_identity</code> is the law
+<code>bind (ret x) f == f x</code>, turning
 <code>bind (ret b) prog2</code> into <code>prog2 b</code>.</li>
 </ul>
 <h3 id="lifting-it-under-prog1">Lifting it under <code>prog1</code></h3>
@@ -323,9 +321,8 @@ href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
 (<a
 href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
 href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, the
-<code>&gt;=&gt;</code> notation, and the monad laws <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.associative"><code>Monad.associative</code></a>/<a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.left_identity"><code>Monad.left_identity</code></a>/<a
+<code>&gt;=&gt;</code> notation, and the monad laws
+<code>Monad.associative</code>/<code>Monad.left_identity</code>/<a
 href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
