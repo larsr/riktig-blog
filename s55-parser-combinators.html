@@ -46,7 +46,7 @@ in a sequence starts exactly where the previous one stopped.</p>
 <p>Two parsers count as equal when they behave identically on every
 possible input — nothing about their internal shape matters, only their
 results:</p>
-<pre class="coq"><code>#[global] Instance Parser_EqRel (S T : Type) : EqRel (Parser S T) :=
+<pre class="coq"><code>Instance Parser_EqRel (S T : Type) : EqRel (Parser S T) :=
   fun p q =&gt; forall s, p s = q s.</code></pre>
 <p>This is the <code>==</code> that appears in every law below:
 <code>p == q</code> unfolds to “for all inputs <code>s</code>,
@@ -67,14 +67,14 @@ threads the leftover input along. Here are the two operations spelled
 out for the <a
 href="coqdoc/Riktig.Impl.Parser.html#Parser"><code>Parser</code></a>
 type:</p>
-<pre class="coq"><code>#[global] Instance Parser_HasBind (S : Type) : HasBind (Parser S) :=
+<pre class="coq"><code>Instance Parser_HasBind (S : Type) : HasBind (Parser S) :=
   fun A B p f =&gt; fun input =&gt;
     match p input with
     | None =&gt; None
     | Some (v, rest) =&gt; f v rest
     end.
 
-#[global] Instance Parser_HasReturn (S : Type) : HasReturn (Parser S) :=
+Instance Parser_HasReturn (S : Type) : HasReturn (Parser S) :=
   fun A x =&gt; fun input =&gt; Some (x, input).</code></pre>
 <p>Read <code>bind p f</code> as: run <code>p</code> on the input; if it
 fails, fail; if it succeeds with value <code>v</code> and leftover
@@ -177,7 +177,7 @@ matching one specific character is a one-liner:</p>
 the character only when it equals <code>c</code>. There is also a choice
 operator, which the repetition combinators lean on — try the first
 parser, and if it fails, try the second on the <em>same</em> input:</p>
-<pre class="coq"><code>#[global] Instance Parser_HasAlt (S : Type) : HasAlt (Parser S) :=
+<pre class="coq"><code>Instance Parser_HasAlt (S : Type) : HasAlt (Parser S) :=
   fun A p q =&gt; fun input =&gt;
     match p input with
     | None =&gt; q input

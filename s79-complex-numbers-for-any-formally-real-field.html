@@ -94,12 +94,12 @@ componentwise — this is why every proof below <a
 href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>s
 a goal about <code>C F</code> into a real-part obligation and an
 imaginary-part obligation:</p>
-<pre class="coq"><code>#[global] Instance C_EqRel : EqRel (C F) :=
+<pre class="coq"><code>#[export] Instance C_EqRel : EqRel (C F) :=
   fun z w =&gt; re z == re w /\ im z == im w.</code></pre>
 <p>Multiplication is the ordinary rule
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>d</mi><mspace width="0.167em"></mspace><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>c</mi><mo>−</mo><mi>b</mi><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>d</mi><mo>+</mo><mi>b</mi><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>i</mi></mrow><annotation encoding="application/x-tex">(a + b\,i)(c + d\,i) = (ac - bd) + (ad + bc)\,i</annotation></semantics></math>,
 written componentwise:</p>
-<pre class="coq"><code>#[global] Instance C_Mult : HasMult (C F) :=
+<pre class="coq"><code>#[export] Instance C_Mult : HasMult (C F) :=
   fun z w =&gt; mkC (re z * re w + - (im z * im w))
                  (re z * im w + im z * re w).</code></pre>
 <p>The quantity
@@ -115,7 +115,7 @@ imaginary part
 
 (* inv 0 is inv 0 in F, i.e. garbage; the field law speaks only for
    z =/= 0, where norm2 z is invertible by formal reality. *)
-#[global] Instance C_Inv : HasInv (C F) :=
+#[export] Instance C_Inv : HasInv (C F) :=
   fun z =&gt; mkC (re z * inv (norm2 z)) (- im z * inv (norm2 z)).</code></pre>
 <p>For <code>z = 0</code> this divides by
 <code>inv (norm2 0) = inv 0</code>, which is garbage — but the field law
@@ -184,7 +184,7 @@ Everything before that step is polynomial rearrangement: reassociating,
 cancelling a double negation, factoring out the shared
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>N</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">N^{-1}</annotation></semantics></math>.
 The Coq proof separates the two exactly along that line:</p>
-<pre class="coq"><code>#[global] Instance C_mul_left_inverse
+<pre class="coq"><code>#[export] Instance C_mul_left_inverse
   : LeftInverseOn (C F) (nonzero (C F)) mult inv 1.
 Proof.
   intros z Hz.
@@ -254,20 +254,20 @@ distributivity, commutativity, the additive group structure — is a
 polynomial identity in the components, so each is one <code
 class="nolink">ring</code> over <code>Field F</code> alone, with no
 mention of order or formal reality:</p>
-<pre class="coq"><code>  #[global] Instance C_add_associative : Associative (C F) (C F) add add.
+<pre class="coq"><code>  #[export] Instance C_add_associative : Associative (C F) (C F) add add.
   Proof. intros z w v. split; simpl; ring. Qed.</code></pre>
 <p>and eleven more of the same shape. Those instances then assemble the
 tower without further proof, each structure asking search for the laws
 it needs:</p>
-<pre class="coq"><code>  #[global] Instance C_Magma : Magma (C F) add := {}.
-  #[global] Instance C_Semigroup : Semigroup (C F) add := {}.
-  #[global] Instance C_Monoid : Monoid (C F) := {}.
-  #[global] Instance C_Group : Group (C F) := {}.
-  #[global] Instance C_AbGroup : AbGroup (C F) := {}.
-  #[global] Instance C_MulMagma : Magma (C F) mult := {}.
-  #[global] Instance C_MulSemigroup : Semigroup (C F) mult := {}.
-  #[global] Instance C_MulMonoid : @Monoid (C F) _ C_One C_Mult := {}.
-  #[global] Instance C_Ring : Ring (C F) := {}.</code></pre>
+<pre class="coq"><code>  #[export] Instance C_Magma : Magma (C F) add := {}.
+  #[export] Instance C_Semigroup : Semigroup (C F) add := {}.
+  #[export] Instance C_Monoid : Monoid (C F) := {}.
+  #[export] Instance C_Group : Group (C F) := {}.
+  #[export] Instance C_AbGroup : AbGroup (C F) := {}.
+  #[export] Instance C_MulMagma : Magma (C F) mult := {}.
+  #[export] Instance C_MulSemigroup : Semigroup (C F) mult := {}.
+  #[export] Instance C_MulMonoid : @Monoid (C F) _ C_One C_Mult := {}.
+  #[export] Instance C_Ring : Ring (C F) := {}.</code></pre>
 <p>The <code>{}</code> is an empty record literal: every field of the
 structure is left for instance search, which finds the law instances
 proved just above. A <a
@@ -286,7 +286,7 @@ formally real. That single instance lives in <a
 href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>, proved
 from <code>Q</code>’s order (a rational square is nonnegative, a sum of
 two nonnegative rationals is zero only when both are):</p>
-<pre class="coq"><code>#[global] Instance Q_FormallyReal : FormallyReal Q := Qfr_sos.</code></pre>
+<pre class="coq"><code>Instance Q_FormallyReal : FormallyReal Q := Qfr_sos.</code></pre>
 <p>And then, in the same file, the complex rationals are a field with no
 further construction — the underscore asks Coq to find the field
 structure, and its instance resolution assembles it, reaching for <a
