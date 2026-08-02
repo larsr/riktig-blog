@@ -193,7 +193,14 @@ href="../coqdoc/Riktig.Theory.Subspace.html"><code>Theory/Subspace.v</code></a>
 moved from <code>Impl/</code> to <code>Theory/</code> under this
 criterion — they are abstract theory, not representations; the test for
 <code>Impl/</code> is “does this file give you something to compute
-with”.)</p>
+with”. The field-as-its-own-vector-space instances live in <a
+href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>
+itself, beside the class: <a
+href="../coqdoc/Riktig.Interface.VectorSpace.html#Field_Scale"><code>Field_Scale</code></a>
+must be visible, definitionally, wherever <code>a *: x</code> is written
+at a field carrier, and <a
+href="../coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>
+keeps the compiled check that the transfer really is an instance.)</p>
 <p><strong>Fourth pattern, blessed 2026-07-08:</strong> a
 <code>Theory/</code> file may define the canonical generic
 <em>algorithm</em> for the construction it studies — <a
@@ -720,7 +727,15 @@ name it <code>scaling :: ScaleLaws F V</code>.</li>
 snake case — <code>is_left_inverse :: LeftInverse G add neg 0</code>,
 <code>is_associative</code>, <code>is_left_distributive</code>. The
 <code>is_</code> says the field asserts a property rather than holding
-one.</li>
+one. Exception (recorded 2026-08-02): when the law class is instantiated
+away from its namesake operations, so that the class name alone would
+misstate the law, the field names what it says instead —
+<code>Exp.add_to_mul :: Additive F F add mult fn</code> (sums to
+products; <code>is_additive</code> would claim the wrong equation) and
+<a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_left_identity"><code>Alternative.fail_left_identity</code></a>/<a
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_right_identity"><code>fail_right_identity</code></a>
+(which element is the identity).</li>
 <li>The <strong>respect law</strong> is named after its operation:
 <code>neg_proper</code>, <a
 href="../coqdoc/Riktig.Interface.Field.html#Field.inv_proper"><code>inv_proper</code></a>,
@@ -791,8 +806,8 @@ href="../coqdoc/Riktig.Interface.Alternative.html#HasFail"><code>HasFail</code><
 <a
 href="../coqdoc/Riktig.Interface.Alternative.html#HasAlt"><code>HasAlt</code></a>).
 Their method name IS the vocabulary (<a
-href="../coqdoc/Riktig.Ops.html#add"><code>add</code></a>,
-<code>scale</code>, <a
+href="../coqdoc/Riktig.Ops.html#add"><code>add</code></a>, <a
+href="../coqdoc/Riktig.Ops.html#scale"><code>scale</code></a>, <a
 href="../coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a>, <a
 href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>),
 so there is nothing to de-prefix.</li>
@@ -853,13 +868,14 @@ href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v
 href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
 and <a
 href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
-— <em>is</em> module-wrapped like the rest. Its respect field keeps
-<code>scale</code> in the identifier (<code>scale_proper</code>) because
-the module name says only that these are laws, not which operation they
-are about; its four law fields take the <code>is_</code> form and name
-the <a href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>
-class, with the scaling action supplied as the argument that says which
-operation is meant:</p>
+— <em>is</em> module-wrapped like the rest. Its respect field keeps <a
+href="../coqdoc/Riktig.Ops.html#scale"><code>scale</code></a> in the
+identifier (<code>scale_proper</code>) because the module name says only
+that these are laws, not which operation they are about; its four law
+fields take the <code>is_</code> form and name the <a
+href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class, with
+the scaling action supplied as the argument that says which operation is
+meant:</p>
 <pre class="coq"><code>is_left_distributive  :: LeftDistributive F V V Vs;
 is_right_distributive :: RightDistributive F V V Vs;
 is_associative        :: Associative F V Vs mult;
@@ -1116,11 +1132,11 @@ Rule 7 documents both. Two patterns remain the sandbox’s alone:</p>
 binder sites.</strong> The sandbox has <code>Module VectorOps</code> — a
 class with fields <code>eq</code>, <code>zero</code>, <a
 href="../coqdoc/Riktig.Ops.html#add"><code>add</code></a>, <a
-href="../coqdoc/Riktig.Ops.html#neg"><code>neg</code></a>,
-<code>scale</code>, followed by one
-<code>#[global] Existing Instances eq zero add neg scale.</code> — and
-binds <code>`{VectorOps.VectorOps F U}</code> where the library writes
-the five binders out.
+href="../coqdoc/Riktig.Ops.html#neg"><code>neg</code></a>, <a
+href="../coqdoc/Riktig.Ops.html#scale"><code>scale</code></a>, followed
+by one <code>#[global] Existing Instances eq zero add neg scale.</code>
+— and binds <code>`{VectorOps.VectorOps F U}</code> where the library
+writes the five binders out.
 <code>grep -rn "Existing Instances" theories/</code> returns
 nothing.</li>
 <li><strong>A <code>Module Type Signature</code> and a functor

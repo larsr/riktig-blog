@@ -39,15 +39,16 @@ href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></
       {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V}
       {Vs : HasScale F V} {VS : VectorSpace F V}
       {Vnorm : HasNorm F V} {NS : NormedSpace F V} := {
-    int    : (F -&gt; V) -&gt; F -&gt; F -&gt; V;
-    proper :: Proper (pointwise_relation F equ ==&gt; equ ==&gt; equ ==&gt; equ) int;
+    int        : (F -&gt; V) -&gt; F -&gt; F -&gt; V;
+    int_proper :: Proper (pointwise_relation F equ ==&gt; equ ==&gt; equ ==&gt; equ) int;
 
     is_additive    :: forall a b : F,
       Additive (F -&gt; V) V (fun f g t =&gt; f t + g t) add (fun f =&gt; int f a b);
-    (* `scale` spelled out: Interface/Norm.v exports a NormedSpace field
-       of that name, which shadows the operation here. *)
+    (* The function space carries no registered HasScale here (that
+       instance is Theory/Pointwise.v&#39;s), so the scaling on F -&gt; V is
+       supplied explicitly. *)
     is_homogeneous :: forall a b : F,
-      @Homogeneous F (F -&gt; V) V Ve (fun c f t =&gt; c *: f t) (@Ops.scale F V Vs)
+      @Homogeneous F (F -&gt; V) V Ve (fun c f t =&gt; c *: f t) scale
                    (fun c =&gt; c) (fun f =&gt; int f a b);
     additivity     : forall (f : F -&gt; V) (a b c : F),
       int f a b + int f b c == int f a c;
@@ -70,7 +71,7 @@ wrapper is what lets them read as plain English; call sites qualify
 them.</p>
 <ul>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.proper"><code>Integral.proper</code></a>
+href="coqdoc/Riktig.Interface.Integral.html#Integral.int_proper"><code>Integral.int_proper</code></a>
 says the integral respects equality: replacing the integrand by a
 pointwise-equal one, or an endpoint by an equal one, gives an equal
 result. (<code>==</code> is the structure’s own equality, <a
