@@ -204,12 +204,13 @@ Proof.
   induction ms as [| m ms&#39; IH]; intros b wire H.
   - simpl in H. rewrite H. reflexivity.
   - simpl in H. destruct H as [w1 [w2 [Hwire [H1 [Hne H2]]]]].
-    rewrite Hwire.
-    rewrite (deliver_app w1 w2 b).
     destruct (burst_delivery_fair b m k w1 H1 Hne) as [Hd Hn].
-    rewrite Hd. rewrite Hn. simpl.
-    rewrite (IH (negb b) w2 H2).
-    reflexivity.
+    calc (deliver b wire)
+      == (deliver b (w1 ++ w2))                       { Hwire }
+      == (deliver b w1 ++ deliver (next_bit b w1) w2) { (deliver_app w1 w2 b) }
+      == ([m] ++ deliver (next_bit b w1) w2)          { Hd }
+      == ([m] ++ deliver (negb b) w2)                 { Hn }
+      == (m :: ms&#39;)                                   { (IH (negb b) w2 H2) }.
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
@@ -273,8 +274,9 @@ least once:</p>
 Proof.
   intros k b0 ms wire Hk Hp.
   unfold perfect in Hp.
-  rewrite Hp.
-  apply (abp_collapse_perfect_gen k ms b0 Hk).
+  calc (deliver b0 wire)
+    == (deliver b0 (sender_stream b0 ms k)) { Hp }
+    == ms                                   { (abp_collapse_perfect_gen k ms b0 Hk) }.
 Qed.</code></pre>
 <p>The <code>k &gt; 0</code> hypothesis earns its place. With
 <code>k = 0</code> the sender emits an empty burst for every message, so

@@ -327,22 +327,21 @@ Proof.
     == (m *: int (fun t : F =&gt; phi (q t) * v t) a b)
     == (int (fun t : F =&gt; m * (phi (q t) * v t)) a b)
     == (int (fun t : F =&gt; m * (v t * v t)) a b).
-  - exact (Integral.linear_scale m phi (q a) (q b)).
+  - exact (linear_scale m phi (q a) (q b)).
   - apply field_scale_proper.
     + reflexivity.
     + symmetry.
       exact (int_substitution phi Phi q v a b
         Phi_proper Phi_antideriv q_deriv).
   - symmetry.
-    exact (Integral.linear_scale m (fun t : F =&gt; phi (q t) * v t) a b).
+    exact (linear_scale m (fun t : F =&gt; phi (q t) * v t) a b).
   - assert (Hpt : pointwise_relation F equ
         (fun t : F =&gt; m * (phi (q t) * v t))
         (fun t : F =&gt; m * (v t * v t))).
     { intros t.
-      apply Magma.op_proper; [ reflexivity | ].
-      apply Magma.op_proper; [ symmetry; exact (speed_of_position t) | ].
+      rewrite (speed_of_position t).
       reflexivity. }
-    exact (Integral.int_proper (fun t : F =&gt; m * (phi (q t) * v t))
+    exact (int_proper (fun t : F =&gt; m * (phi (q t) * v t))
       (fun t : F =&gt; m * (v t * v t)) Hpt
       a a (reflexivity a) b b (reflexivity b)).
 Qed.</code></pre>
@@ -387,10 +386,10 @@ Proof.
         (fun t : F =&gt; (c * m) * (v t * v t))
         (fun t : F =&gt; c *: (m * (v t * v t)))).
     { intros t. exact (associative c m (v t * v t)). }
-    exact (Integral.int_proper (fun t : F =&gt; (c * m) * (v t * v t))
+    exact (int_proper (fun t : F =&gt; (c * m) * (v t * v t))
       (fun t : F =&gt; c *: (m * (v t * v t))) Hpt
       a a (reflexivity a) b b (reflexivity b)).
-  - exact (Integral.linear_scale c (fun t : F =&gt; m * (v t * v t)) a b).
+  - exact (linear_scale c (fun t : F =&gt; m * (v t * v t)) a b).
 Qed.</code></pre>
 <p>Associativity regroups
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mspace width="0.167em"></mspace><mi>m</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><msup><mi>v</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(c\,m) \cdot v^2</annotation></semantics></math>
@@ -407,7 +406,7 @@ pulls the <code>c</code> out.</p>
     == int (fun t : F =&gt; m * (v t * v t)) a c.
 Proof.
   intros a b c.
-  exact (Integral.additivity (fun t : F =&gt; m * (v t * v t)) a b c).
+  exact (additivity (fun t : F =&gt; m * (v t * v t)) a b c).
 Qed.</code></pre>
 <p>This one is the class law <a
 href="coqdoc/Riktig.Interface.Integral.html#Integral.additivity"><code>Integral.additivity</code></a>

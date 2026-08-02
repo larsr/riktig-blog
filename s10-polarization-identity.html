@@ -345,10 +345,10 @@ Proof.
           + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
     == (((ga_vec u * ga_vec u + Q v *: (1 : A))
           + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-      { (GeometricAlgebra.contraction u) }
+      { (contraction u) }
     == (((ga_vec u * ga_vec u + ga_vec v * ga_vec v)
           + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-      { (GeometricAlgebra.contraction v) }
+      { (contraction v) }
     == (((ga_vec u * ga_vec u + ga_vec v * ga_vec u)
           + (ga_vec v * ga_vec v + ga_vec u * ga_vec v)) : A)
       { (add_rotate (ga_vec u * ga_vec u) (ga_vec v * ga_vec v)
@@ -361,15 +361,14 @@ Proof.
     == ((ga_vec (u + v) * ga_vec (u + v)) : A)
       { ((fun x y =&gt; additive (opA := add) (opB := add) (f := ga_vec) x y) u v) }
     == ((Q (u + v) *: (1 : A)) : A)
-      { (GeometricAlgebra.contraction (u + v)) }.
+      { (contraction (u + v)) }.
 Qed.</code></pre>
 <ul>
-<li><code>GeometricAlgebra.contraction u</code>, used right-to-left,
-turns
+<li><code>contraction u</code>, used right-to-left, turns
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u) *: 1</annotation></semantics></math>
 back into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>u</mi></msub></mrow><annotation encoding="application/x-tex">e_u e_u</annotation></semantics></math>;
-<code>GeometricAlgebra.contraction v</code> does the same for
+<code>contraction v</code> does the same for
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(v) *: 1</annotation></semantics></math>.
 Now every term is a product of embedded vectors.</li>
 <li><a
@@ -397,8 +396,7 @@ field, fetched from the instance database by instance search rather than
 named as a field — the <code>opA := add</code> and
 <code>opB := add</code> annotations just tell search which two
 operations are meant.</li>
-<li><code>GeometricAlgebra.contraction (u+v)</code> contracts that
-square to
+<li><code>contraction (u+v)</code> contracts that square to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u+v) *: 1</annotation></semantics></math>.</li>
 </ul>
 <p>The second lemma, <a
@@ -419,15 +417,16 @@ Theorem polarization : forall u v : V,
 Proof.
   intros u v.
   apply (cancel_l (Q u *: (1 : A) + Q v *: 1)).
-  transitivity (Q (u + v) *: (1 : A)).
-  { exact (contract_add u v). }
-  transitivity (((Q u + Q v) + polar Q u v) *: (1 : A)).
-  { exact (ScaleLaws.scale_proper _ _ (symmetry (polar_recovers u v))
-             (1 : A) (1 : A) (reflexivity (1 : A))). }
-  transitivity ((Q u + Q v) *: (1 : A) + polar Q u v *: (1 : A)).
-  { exact (right_distributive (Q u + Q v) (polar Q u v) (1 : A)). }
-  exact (Magma.op_proper _ _ (right_distributive (Q u) (Q v) (1 : A))
-           _ _ (reflexivity (polar Q u v *: (1 : A)))).
+  calc (((Q u *: (1 : A) + Q v *: 1)
+          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
+    == ((Q (u + v) *: (1 : A)) : A)
+      { (contract_add u v) }
+    == ((((Q u + Q v) + polar Q u v) *: (1 : A)) : A)
+      { (polar_recovers u v) }
+    == (((Q u + Q v) *: (1 : A) + polar Q u v *: (1 : A)) : A)
+      { (right_distributive (Q u + Q v) (polar Q u v) (1 : A)) }
+    == (((Q u *: (1 : A) + Q v *: (1 : A)) + polar Q u v *: (1 : A)) : A)
+      { (right_distributive (Q u) (Q v) (1 : A)) }.
 Qed.</code></pre>
 <ul>
 <li><code>apply (cancel_l (Q u *: 1 + Q v *: 1))</code> is the
@@ -517,11 +516,11 @@ so the instance is a literal naming them:</p>
     {| GeometricAlgebra.ring         := C_Ring;
        GeometricAlgebra.scaling      := Cliff1_ScaleLaws;
        GeometricAlgebra.mul_linear_l := fun y =&gt;
-         {| Linear.proper := fun x x&#39; Hx =&gt; Magma.op_proper x x&#39; Hx y y (reflexivity y);
+         {| Linear.proper := fun x x&#39; Hx =&gt; op_proper x x&#39; Hx y y (reflexivity y);
             Linear.is_additive := fun x x&#39; =&gt; right_distributive x x&#39; y;
             Linear.is_homogeneous := fun a x =&gt; cliff1_ga_scale_mul_l a x y |};
        GeometricAlgebra.mul_linear_r := fun x =&gt;
-         {| Linear.proper := fun y y&#39; Hy =&gt; Magma.op_proper x x (reflexivity x) y y&#39; Hy;
+         {| Linear.proper := fun y y&#39; Hy =&gt; op_proper x x (reflexivity x) y y&#39; Hy;
             Linear.is_additive := fun y y&#39; =&gt; left_distributive x y y&#39;;
             Linear.is_homogeneous := fun a y =&gt; cliff1_ga_scale_mul_r a x y |};
        GeometricAlgebra.ga_vec       := cliff1_ga_vec;

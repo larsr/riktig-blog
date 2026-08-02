@@ -459,15 +459,16 @@ the second):</p>
 Proof.
   intros u v.
   apply (cancel_l (Q u *: (1 : A) + Q v *: 1)).
-  transitivity (Q (u + v) *: (1 : A)).
-  { exact (contract_add u v). }
-  transitivity (((Q u + Q v) + polar Q u v) *: (1 : A)).
-  { exact (ScaleLaws.scale_proper _ _ (symmetry (polar_recovers u v))
-             (1 : A) (1 : A) (reflexivity (1 : A))). }
-  transitivity ((Q u + Q v) *: (1 : A) + polar Q u v *: (1 : A)).
-  { exact (right_distributive (Q u + Q v) (polar Q u v) (1 : A)). }
-  exact (Magma.op_proper _ _ (right_distributive (Q u) (Q v) (1 : A))
-           _ _ (reflexivity (polar Q u v *: (1 : A)))).
+  calc (((Q u *: (1 : A) + Q v *: 1)
+          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
+    == ((Q (u + v) *: (1 : A)) : A)
+      { (contract_add u v) }
+    == ((((Q u + Q v) + polar Q u v) *: (1 : A)) : A)
+      { (polar_recovers u v) }
+    == (((Q u + Q v) *: (1 : A) + polar Q u v *: (1 : A)) : A)
+      { (right_distributive (Q u + Q v) (polar Q u v) (1 : A)) }
+    == (((Q u *: (1 : A) + Q v *: (1 : A)) + polar Q u v *: (1 : A)) : A)
+      { (right_distributive (Q u) (Q v) (1 : A)) }.
 Qed.</code></pre>
 <p>Read it step by step. <code>apply (cancel_l …)</code> is the “cancel
 from both sides” move — this post’s own first theorem, already earning
