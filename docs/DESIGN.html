@@ -593,23 +593,31 @@ file activates it. Verified with a two-file test: an unannotated
 <code>::</code> field resolves fine through <code>Require Import</code>,
 and fails only under a bare <code>Require</code>, which the tree never
 does for Riktig modules (all 39 bare requires are Coq stdlib).</p>
-<p>An <code>Instance</code> needs <code>#[global]</code> —
-<strong>both</strong> inside a <code>Section</code> and at top level,
-for two different reasons. In a <code>Section</code> it is otherwise
-section-local and disappears at <code>End</code>. At top level it is
-otherwise <code>#[export]</code>, which survives a direct
-<code>Require Import</code> but <em>not</em> a chain: <a
+<p>An <code>Instance</code> at top level is written bare (decided
+2026-08-02, replacing the earlier blanket <code>#[global]</code>):
+<code>Instance name {binders} : C := …</code>, no attribute, no wrapping
+<code>Section</code> — the default <code>#[export]</code> locality
+survives every <code>Require Export</code> chain, and where every field
+is found by search the body is <code>{}</code> (<a
+href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>’s
+field-over-itself instances are the model: four one-liners). What
+<code>#[export]</code> does not survive is a plain <code>Import</code>
+link in the middle of a chain: <a
 href="../coqdoc/Riktig.Examples.GettingStarted.html"><code>Examples/GettingStarted.v</code></a>
 imports <a
 href="../coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>,
 which reaches <a
 href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>
-by <code>Import</code>, and stripping the attribute from <a
+by <code>Import</code>, and an unattributed <a
 href="../coqdoc/Riktig.Theory.Pointwise.html#PW_EqRel"><code>PW_EqRel</code></a>
 made <code>EqRel (Fin.t 2 -&gt; Q)</code> unresolvable three files away.
-Every <code>Instance</code> in <code>theories/</code> carries the
-attribute, and none may be stripped without a full build to prove
-it.</p>
+<code>#[global]</code> is therefore a per-case exception, like
+<code>#[local]</code>: it stays only where a full build proves the
+default insufficient (the Pointwise instances are the standing example),
+and adding or removing the attribute needs a full build either way.
+Inside a <code>Section</code> an unattributed <code>Instance</code> dies
+at <code>End</code>; prefer hoisting the instance to top level with
+explicit binders over keeping the <code>Section</code>.</p>
 <p><code>Hint</code>, <code>Hint Mode</code>, <code>Hint Rewrite</code>,
 <code>Typeclasses Transparent</code> and <code>Arguments</code> at top
 level are already global; 197 redundant attributes were removed from
