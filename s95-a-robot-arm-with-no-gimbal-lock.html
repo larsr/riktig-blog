@@ -63,13 +63,24 @@ is a single multiplication:
 R)\,\tilde S = (SR)\,v\,\widetilde{SR}</annotation></semantics></math> —
 so “orientation so far” is nothing more exotic than an element of the
 ring, and combining two of them is the ring’s own multiplication.</p>
-<p>In the plane,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>’s
-rotors are <code>rotor c s := c*1 + s*e12</code> for a pair
+<p>The plane algebra’s carrier, <code>Cl F 2</code>, stores one
+coefficient per <em>blade</em> — per subset of the two generators
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_1,e_2</annotation></semantics></math>
+— so an element has four coordinates: scalar,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>,
+and the bivector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>12</mn></msub><annotation encoding="application/x-tex">e_{12}</annotation></semantics></math>.
+A rotor is the even element <code>rotor c s := mk2 c 0 0 s</code> —
+coefficient
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>
+on the scalar,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+on the bivector, zero on both vector slots — for a pair
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>,</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(c,s)</annotation></semantics></math>
 with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>
-— no angle stored, just the pair. A joint of a planar arm records this
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>;
+no angle is stored, just the pair. A joint of a planar arm records this
 pair together with the length of the beam that follows it:</p>
 <pre class="coq"><code>Record Joint2 (F : Type) := mkJoint2 {
   joint2_c      : F;
@@ -82,7 +93,9 @@ pair together with the length of the beam that follows it:</p>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>,</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(c,s)</annotation></semantics></math>
 pair is not enough. A joint of a spatial arm instead records the four
 coefficients of a general even element of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>:</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
+— scalar plus the three bivectors
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>,</mo><msub><mi>e</mi><mn>13</mn></msub><mo>,</mo><msub><mi>e</mi><mn>23</mn></msub></mrow><annotation encoding="application/x-tex">e_{12},e_{13},e_{23}</annotation></semantics></math>:</p>
 <pre class="coq"><code>Record Joint3 (F : Type) := mkJoint3 {
   joint3_c      : F;
   joint3_b12    : F;
@@ -90,14 +103,15 @@ coefficients of a general even element of
   joint3_b23    : F;
   joint3_length : F
 }.</code></pre>
-<p>Its own rotor is
-<code>rotor3 c b12 b13 b23 := mkC3 c 0 0 0 b12 b13 b23 0</code>,
-generalizing <code>rotor c s := mkCl2 c 0 0 s</code> to the
-eight-coordinate carrier of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>:</p>
-<pre class="coq"><code>  Definition rotor3 (c b12 b13 b23 : F) : C3 F := mkC3 c 0 0 0 b12 b13 b23 0.</code></pre>
+<p>Its own rotor is the corresponding even element of the
+eight-coordinate space algebra <code>Cl F 3</code>, built by the same
+recipe as <code>rotor c s</code>:</p>
+<pre class="coq"><code>  Definition spinor (r b12 b13 b23 : F) : Cl F 3 :=
+    mk3 r 0 0 0 b12 b13 b23 0.</code></pre>
+<pre class="coq"><code>  Definition joint3_rotor (j : Joint3 F) : Cl F 3 :=
+    spinor (joint3_c j) (joint3_b12 j) (joint3_b13 j) (joint3_b23 j).</code></pre>
 <p><a
-href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#rotor3"><code>rotor3</code></a>’s
+href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor"><code>spinor</code></a>’s
 zero coefficients on the three vector slots and the trivector slot are
 literal, not merely provable — every <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#Joint3"><code>Joint3</code></a>
@@ -110,12 +124,12 @@ is confined to the one plane spanned by
 <p>A chain’s cumulative rotor can be computed two ways. Declaratively,
 it is the plain algebraic product of every joint’s own rotor, base to
 tip:</p>
-<pre class="coq"><code>  Definition chain_rotor2 (joints : Chain2 F) : Cl2 F :=
+<pre class="coq"><code>  Definition chain_rotor2 (joints : Chain2 F) : Cl F 2 :=
     fold_right (fun j acc =&gt; rotor (joint2_c j) (joint2_s j) * acc) 1 joints.</code></pre>
 <p>Operationally, it is what a controller walking the chain joint by
 joint would actually compute — extend a running rotor by the next
 joint’s own rotor, one at a time:</p>
-<pre class="coq"><code>  Fixpoint chain_orientation_from2 (orientation : Cl2 F) (joints : Chain2 F) : Cl2 F :=
+<pre class="coq"><code>  Fixpoint chain_orientation_from2 (orientation : Cl F 2) (joints : Chain2 F) : Cl F 2 :=
     match joints with
     | [] =&gt; orientation
     | j :: rest =&gt;
@@ -135,34 +149,34 @@ gives exactly
 multiplied by the chain’s own declarative product.</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mn mathvariant="normal">2</mn></mrow><mo stretchy="false" form="prefix">(</mo><mi>R</mi><mo>,</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><msub><mi>j</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>j</mi><mi>n</mi></msub><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>R</mi><mo>⋅</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>j</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>j</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>⋯</mi><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>j</mi><mi>n</mi></msub><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{chain\_orientation\_from2}(R,\,[j_1,\dots,j_n]) \;=\;
 R \cdot \big(\mathrm{rotor}(j_1)\cdot\mathrm{rotor}(j_2)\cdots\mathrm{rotor}(j_n)\big).</annotation></semantics></math></p>
-<pre class="coq"><code>Theorem chain_rotor_is_product2 : forall (joints : Chain2 F) (orientation : Cl2 F),
-  chain_orientation_from2 orientation joints == orientation * chain_rotor2 joints.
-Proof.
-  induction joints as [| j rest IH]; intros orientation.
-  - calc (chain_orientation_from2 orientation [])
-      == orientation
-      == (orientation * 1)
-      == (orientation * chain_rotor2 []).
-    + rewrite (chain_orientation_from2_nil orientation). reflexivity.
-    + symmetry. exact (right_identity orientation).
-    + rewrite chain_rotor2_nil. reflexivity.
-  - calc (chain_orientation_from2 orientation (j :: rest))
-      == (chain_orientation_from2 (orientation * rotor (joint2_c j) (joint2_s j)) rest)
-      == ((orientation * rotor (joint2_c j) (joint2_s j)) * chain_rotor2 rest)
-      == (orientation * (rotor (joint2_c j) (joint2_s j) * chain_rotor2 rest))
-      == (orientation * chain_rotor2 (j :: rest)).
-    + rewrite (chain_orientation_from2_cons orientation j rest). reflexivity.
-    + exact (IH (orientation * rotor (joint2_c j) (joint2_s j))).
-    + exact (associative orientation (rotor (joint2_c j) (joint2_s j))
-               (chain_rotor2 rest)).
-    + rewrite chain_rotor2_cons. reflexivity.
-Qed.</code></pre>
+<pre class="coq"><code>  Theorem chain_rotor_is_product2 : forall (joints : Chain2 F) (orientation : Cl F 2),
+    chain_orientation_from2 orientation joints == orientation * chain_rotor2 joints.
+  Proof.
+    induction joints as [| j rest IH]; intros orientation.
+    - calc (chain_orientation_from2 orientation [])
+        == (orientation : Cl F 2)
+           { (chain_orientation_from2_nil orientation) }
+        == (orientation * 1 : Cl F 2)
+           { (right_identity orientation) }
+        == (orientation * chain_rotor2 [] : Cl F 2)
+           { chain_rotor2_nil }.
+    - calc (chain_orientation_from2 orientation (j :: rest))
+        == (chain_orientation_from2
+              (orientation * rotor (joint2_c j) (joint2_s j)) rest : Cl F 2)
+           { (chain_orientation_from2_cons orientation j rest) }
+        == ((orientation * rotor (joint2_c j) (joint2_s j)) * chain_rotor2 rest : Cl F 2)
+           { (IH (orientation * rotor (joint2_c j) (joint2_s j))) }
+        == (orientation * (rotor (joint2_c j) (joint2_s j) * chain_rotor2 rest) : Cl F 2)
+           { (associative orientation (rotor (joint2_c j) (joint2_s j))
+                (chain_rotor2 rest)) }
+        == (orientation * chain_rotor2 (j :: rest) : Cl F 2)
+           { (chain_rotor2_cons j rest) }.
+  Qed.</code></pre>
 <p>The proof is an induction on the joint list, matching the two
 definitions’ own recursion. <code>calc</code> opens the equational chain
 shown above it, machine-checked: each <code>==</code> line names the
-next expression, and the justification below (a <code>rewrite</code>, or
-an <a href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>
-of the supporting fact) closes that one step. Write
+next expression, and the justification in braces after it (the equation
+being rewritten with) closes that one step. Write
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
 for the rotor the statement calls <code>orientation</code>. The base
 case, an empty chain, needs only that multiplying by the ring’s own unit
@@ -175,8 +189,9 @@ chain leaves
 untouched, so the two sides meet once
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
 is rewritten as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>⋅</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">R\cdot 1</annotation></semantics></math>.
-The inductive step is one application of the equally generic <a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>⋅</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">R\cdot
+1</annotation></semantics></math>. The inductive step is one application
+of the equally generic <a
 href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
 law, here at the multiplication of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>.
@@ -201,9 +216,9 @@ theorem holds for every steering value, because it only ever uses that
 <code>*</code> is total and associative.</p>
 <p>The identical statement, <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor_is_product3"><code>chain_rotor_is_product3</code></a>,
-holds for the spatial arm with <code>C3 F</code>’s ring standing in for
-<code>Cl2 F</code>’s:</p>
-<pre class="coq"><code>  Theorem chain_rotor_is_product3 : forall (joints : Chain3 F) (orientation : C3 F),
+holds for the spatial arm with <code>Cl F 3</code>’s ring standing in
+for <code>Cl F 2</code>’s:</p>
+<pre class="coq"><code>  Theorem chain_rotor_is_product3 : forall (joints : Chain3 F) (orientation : Cl F 3),
     chain_orientation_from3 orientation joints == orientation * chain_rotor3 joints.</code></pre>
 <p>and its proof is the same induction, unchanged step for step —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>’s
@@ -220,16 +235,17 @@ chain by one more joint is, by <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor_is_product2"><code>chain_rotor_is_product2</code></a>/<a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor_is_product3"><code>chain_rotor_is_product3</code></a>,
 always the <em>same</em> operation: multiply the running rotor by the
-new joint’s rotor on the right. Multiplication in <code>Cl2 F</code> or
-<code>C3 F</code> is total — an ordinary function defined on every pair
-of elements, with no configuration of steering values it fails to handle
-— and it is associative because that is one of the laws every <a
+new joint’s rotor on the right. Multiplication in <code>Cl F 2</code> or
+<code>Cl F 3</code> is total — an ordinary function defined on every
+pair of elements, with no configuration of steering values it fails to
+handle — and it is associative because that is one of the laws every <a
 href="coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
-instance is required to satisfy, checked once for the whole algebra when
-<a
-href="coqdoc/Riktig.Impl.Cliff2.html#Cl2_Ring"><code>Cl2_Ring</code></a>/<a
-href="coqdoc/Riktig.Impl.Cliff3.html#C3_Ring"><code>C3_Ring</code></a>
-were built, not re-derived at each joint. A companion fact, <a
+instance is required to satisfy, checked once for the whole family of
+algebras when <a
+href="coqdoc/Riktig.Impl.Clifford.html#Cl_Ring"><code>Cl_Ring</code></a>
+was built — one ring per signature, <code>Cl_Ring sig2</code> for the
+plane and <code>Cl_Ring sig3</code> for space — not re-derived at each
+joint. A companion fact, <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor2_is_rotor"><code>chain_rotor2_is_rotor</code></a>,
 sharpens the planar case further: the declarative product of any chain’s
 joints is always again of the exact shape <code>rotor c s</code> for
@@ -241,7 +257,7 @@ orientation to position: sandwiching, twice, is one sandwich</h2>
 <p>Knowing a joint’s cumulative rotor is only half the job — the arm’s
 geometry needs the <em>direction</em> that rotor points a beam in, which
 is the sandwich, not the bare rotor.
-<code>chain_direction2 R := cl2_sandwich R beam_rest_direction2</code>
+<code>chain_direction2 R := sandwich R beam_rest_direction2</code>
 applies the cumulative rotor <code>R</code> to a fixed local rest
 direction (<a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#beam_rest_direction2"><code>beam_rest_direction2</code></a>,
@@ -258,7 +274,7 @@ sandwiching twice in a row is itself a single sandwich by the product of
 the two rotors — otherwise “accumulate the rotor, then sandwich once at
 the end” and “sandwich, then sandwich again” could disagree.</p>
 <p><strong>Lemma</strong> (<a
-href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#cl2_sandwich_compose"><code>cl2_sandwich_compose</code></a>).
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_compose"><code>sandwich_compose</code></a>).
 Sandwiching by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
 and then by
@@ -266,39 +282,39 @@ and then by
 is the same as sandwiching once by the product
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">AB</annotation></semantics></math>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>B</mi><mo accent="true">̃</mo></mover><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mover><mi>A</mi><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mrow><mi>A</mi><mi>B</mi></mrow><mo accent="true">̃</mo></mover><mi>.</mi></mrow><annotation encoding="application/x-tex">A\,(B\,x\,\tilde B)\,\tilde A \;=\; (AB)\,x\,\widetilde{AB}.</annotation></semantics></math></p>
-<pre class="coq"><code>Lemma cl2_sandwich_compose : forall A B x : Cl2 F,
-  cl2_sandwich A (cl2_sandwich B x) == cl2_sandwich (A * B) x.
-Proof.
-  intros A B x. unfold cl2_sandwich.
-  calc (A * (B * x * cl2_reverse B) * cl2_reverse A)
-    == (A * (B * x) * cl2_reverse B * cl2_reverse A)
-      { (Cl2.mult_associative A (B * x) (cl2_reverse B)) }
-    == (A * B * x * cl2_reverse B * cl2_reverse A)
-      { (Cl2.mult_associative A B x) }
-    == (A * B * x * (cl2_reverse B * cl2_reverse A))
-      { (Cl2.mult_associative (A * B * x) (cl2_reverse B) (cl2_reverse A)) }
-    == (A * B * x * cl2_reverse (A * B))
-      { (cl2_reverse_anti A B) }.
-Qed.</code></pre>
-<p>Unfolding <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich"><code>cl2_sandwich</code></a>
-on both sides turns the goal into a chain of three associativity
-regroupings (<a
-href="coqdoc/Riktig.Impl.Cliff2.html#Cl2.mult_associative"><code>Cl2.mult_associative</code></a>,
-sliding the parentheses until <code>cl2_reverse B</code> and
-<code>cl2_reverse A</code> sit next to each other), followed by one
-genuinely geometric fact reused from <a
-href="s92-symmetry-groups-in-geometric-algebras.html">the earlier
-post</a>: reversal is an anti-automorphism,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>A</mi><mi>B</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mover><mi>B</mi><mo accent="true">̃</mo></mover><mover><mi>A</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{AB} = \tilde B\tilde A</annotation></semantics></math>
-(<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_reverse_anti"><code>cl2_reverse_anti</code></a>),
-which turns the trailing <code>cl2_reverse B * cl2_reverse A</code> into
-<code>cl2_reverse (A * B)</code> and closes the chain. The spatial
-version, <a
-href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#c3_rotate_compose"><code>c3_rotate_compose</code></a>,
-is the same four-step argument through <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse_anti"><code>c3_reverse_anti</code></a>.</p>
+<p>On the blackboard this is two regroupings and one genuinely geometric
+fact: associativity slides the parentheses until
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>B</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde B</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>A</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde A</annotation></semantics></math>
+sit next to each other, and reversal being an <em>anti-automorphism</em>
+— it turns a product around,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>A</mi><mi>B</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mover><mi>B</mi><mo accent="true">̃</mo></mover><mover><mi>A</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{AB} =
+\tilde B\tilde A</annotation></semantics></math> — fuses them into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mrow><mi>A</mi><mi>B</mi></mrow><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\widetilde{AB}</annotation></semantics></math>.
+Both facts are in the file; the anti-automorphism law first:</p>
+<pre class="coq"><code>  Lemma reverse_anti2 : forall x y : Cl F 2,
+    cl_reverse (x * y) == cl_reverse y * cl_reverse x.
+  Proof. intros x y. apply cl2_ext; by_blade. Qed.</code></pre>
+<pre class="coq"><code>  Lemma sandwich_compose : forall A B x : Cl F 2,
+    sandwich A (sandwich B x) == sandwich (A * B) x.
+  Proof. intros A B x. apply cl2_ext; by_blade. Qed.</code></pre>
+<p>Both proofs run through the same two steps. <a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#cl2_ext"><code>cl2_ext</code></a>
+says two elements of <code>Cl F 2</code> agreeing on all four blades are
+equal, so it reduces the goal to four coefficient equations;
+<code>by_blade</code> unfolds the sandwich, the product, and the
+reversal over each concrete blade — turning every side into an explicit
+polynomial in the eight input coefficients — and <code
+class="nolink">ring</code> closes each of the four polynomial
+identities. The spatial version, <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_compose"><code>rotate_compose</code></a>,
+is the same statement about <code>Cl F 3</code>’s sandwich <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+proved the same way over its eight blades:</p>
+<pre class="coq"><code>  Lemma rotate_compose : forall A B x : Cl F 3,
+    rotate A (rotate B x) == rotate (A * B) x.
+  Proof. intros A B x. apply cl3_ext; by_blade. Qed.</code></pre>
 <h2
 id="using-it-two-arms-each-folded-through-a-full-turn-checked-by-computation">Using
 it: two arms, each folded through a full turn, checked by
@@ -314,7 +330,7 @@ since a rotor
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>+</mo><mi>s</mi><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">c+se_{12}</annotation></semantics></math>
 sandwiches a vector at <em>twice</em> the angle it names (the earlier
 post’s <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich_rotor_vec"><code>cl2_sandwich_rotor_vec</code></a>),
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>),
 this is a full
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>180</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">180°</annotation></semantics></math>
 turn, and the arm folds straight back on itself:</p>
@@ -323,16 +339,21 @@ turn, and the arm folds straight back on itself:</p>
     mkJoint2 (0#1)%Q (1#1)%Q (1#1)%Q ].
 
 Example planar_arm_positions :
-  chain_positions2 (0 : Cl2 Q) planar_arm_example
-  = [ Cl2.vec (plane_vector (1#1)%Q (0#1)%Q); Cl2.vec (plane_vector (0#1)%Q (0#1)%Q) ].
-Proof. vm_compute. reflexivity. Qed.</code></pre>
+  Forall2 equ (chain_positions2 (0 : Cl Q 2) planar_arm_example)
+    [ ga_vec (plane_vector (1#1)%Q (0#1)%Q); ga_vec (plane_vector (0#1)%Q (0#1)%Q) ].
+Proof. repeat constructor; apply cl2_ext; vm_compute; reflexivity. Qed.</code></pre>
 <p><code>Q</code>, the rationals, is an ordinary <a
 href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>,
-so every definition above specializes to it directly with no extra work;
-<code>vm_compute</code> fully evaluates both sides — running the fold,
-the sandwiches, the accumulated positions — down to two literal
-coordinate pairs, and <code>reflexivity</code> confirms they match: the
-first beam’s tip at
+so every definition above specializes to it directly with no extra work.
+Because an element of <code>Cl Q 2</code> is a <em>function</em> from
+blades to coefficients, the expected positions are stated coefficient by
+coefficient rather than as Coq’s raw equality of terms:
+<code>Forall2 equ</code> compares the two lists elementwise, <a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#cl2_ext"><code>cl2_ext</code></a>
+reduces each element comparison to the four blade coefficients, and
+<code>vm_compute</code> fully evaluates each one — running the fold, the
+sandwiches, the accumulated positions — down to literal rationals that
+<code>reflexivity</code> confirms: the first beam’s tip at
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1,0)</annotation></semantics></math>,
 the second folding all the way back to the origin.</p>
 <p>The spatial arm has the same two-joint shape: an unsteered first
@@ -348,10 +369,10 @@ turn about the axis perpendicular to it — again of length 1:</p>
     mkJoint3 (0#1)%Q (1#1)%Q (0#1)%Q (0#1)%Q (1#1)%Q ].
 
 Example spatial_arm_positions :
-  chain_positions3 (0 : C3 Q) spatial_arm_example
-  = [ c3_vec (space_vector (1#1)%Q (0#1)%Q (0#1)%Q);
-      c3_vec (space_vector (0#1)%Q (0#1)%Q (0#1)%Q) ].
-Proof. vm_compute. reflexivity. Qed.</code></pre>
+  Forall2 equ (chain_positions3 (0 : Cl Q 3) spatial_arm_example)
+    [ ga_vec (space_vector (1#1)%Q (0#1)%Q (0#1)%Q);
+      ga_vec (space_vector (0#1)%Q (0#1)%Q (0#1)%Q) ].
+Proof. repeat constructor; apply cl3_ext; vm_compute; reflexivity. Qed.</code></pre>
 <p>The result is the three-dimensional analogue of the planar one — the
 tip returns to the origin — reached by the identical machinery: no Euler
 angles, no case split on which axis anything happened to align with,
@@ -373,11 +394,9 @@ href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor_is_product2"><co
 <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor2_is_rotor"><code>chain_rotor2_is_rotor</code></a>,
 <a
-href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#cl2_sandwich_compose"><code>cl2_sandwich_compose</code></a>,
-<a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#Joint3"><code>Joint3</code></a>,
 <a
-href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#rotor3"><code>rotor3</code></a>,
+href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#joint3_rotor"><code>joint3_rotor</code></a>,
 <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#chain_rotor_is_product3"><code>chain_rotor_is_product3</code></a>,
 <a
@@ -385,18 +404,25 @@ href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#planar_arm_positions"><code>
 <a
 href="coqdoc/Riktig.Programs.RobotArm.RobotArm.html#spatial_arm_positions"><code>spatial_arm_positions</code></a>)
 · <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html"><code>Theory/Cliff2Rotor.v</code></a>
+href="coqdoc/Riktig.Theory.PlaneRotor.html"><code>Theory/PlaneRotor.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor"><code>rotor</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor"><code>rotor</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich"><code>cl2_sandwich</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich"><code>sandwich</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_reverse_anti"><code>cl2_reverse_anti</code></a>)
+href="coqdoc/Riktig.Theory.PlaneRotor.html#reverse_anti2"><code>reverse_anti2</code></a>,
+<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_compose"><code>sandwich_compose</code></a>,
+<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>)
 · <a
-href="coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a> (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>,
+href="coqdoc/Riktig.Theory.SpaceRotor.html"><code>Theory/SpaceRotor.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor"><code>spinor</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse_anti"><code>c3_reverse_anti</code></a>).</p>
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_compose"><code>rotate_compose</code></a>).</p>
 </main>
 </body>
 </html>

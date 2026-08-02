@@ -85,9 +85,9 @@ on the raw identity function, because in a monad the identity for <a
 href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> is
 <a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>,
 not <code>fun x =&gt; x</code>.)</p>
-<p>A codec is then a record holding the two arrows plus one instance of
+<p>A codec is then a bundle holding the two arrows plus one instance of
 that class about them:</p>
-<pre class="coq"><code>Record KleisliIso (M : Type -&gt; Type) `{Monad M} (A B : Type) := {
+<pre class="coq"><code>Class KleisliIso (M : Type -&gt; Type) `{Monad M} (A B : Type) := {
   ki_to : A -&gt; M B;
   ki_from : B -&gt; M A;
   ki_inverse :: KleisliInverse ki_to ki_from;
@@ -100,9 +100,9 @@ the backward one. The <code>::</code> on the third field declares it as
 a typeclass instance rather than a plain projection, so from any <a
 href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
 in scope Coq can find the round-trip laws for its two arrows by instance
-search, without being handed the record by name.</p>
+search, without being handed the bundle by name.</p>
 <p>The two laws also get direct names, so that a caller who does hold
-the record can apply either one to a value:</p>
+the bundle can apply either one to a value:</p>
 <pre class="coq"><code>Definition ki_fromto (k : KleisliIso M A B)
   : forall a : A, bind (ki_to k a) (ki_from k) == ret a :=
   KleisliInverse.from_to (f := ki_to k) (g := ki_from k).

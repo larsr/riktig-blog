@@ -78,182 +78,112 @@ up a four-dimensional ring — 1,
 and the bivector
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>:=</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_{12} := e_1e_2</annotation></semantics></math>
 — called
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>
-(<a
-href="coqdoc/Riktig.Impl.Cliff2.html"><code>Impl/Cliff2.v</code></a>).
-Its carrier, <code>Cl2 F</code>, is a four-field record whose fields
-<code>scalar_part, e1_part, e2_part, e12_part</code> are the
-coefficients of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">1, e_1, e_2, e_{12}</annotation></semantics></math>.
-Half of those four dimensions — 1 and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>.
+The implementation (<a
+href="coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>)
+builds every such algebra at once: a <em>blade</em> is a subset of the
+generators, recorded as one bit per generator, and an element is one
+coefficient per blade —</p>
+<pre class="coq"><code>Definition Cl (F : Type) (n : nat) : Type := Blade n -&gt; F.</code></pre>
+<p>— with the multiplication fixed by a <em>signature</em> giving each
+generator’s square. The plane is the instance
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n=2</annotation></semantics></math>
+at the signature
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1,1)</annotation></semantics></math>:</p>
+<pre class="coq"><code>  Definition sig2 : Signature F 2 :=
+    Vector.cons F 1 1 (Vector.cons F 1 0 (Vector.nil F)).</code></pre>
+<p>A blade with an even number of generators has even <em>parity</em>,
+and the even part of the algebra — here spanned by 1 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>12</mn></msub><annotation encoding="application/x-tex">e_{12}</annotation></semantics></math>
-alone, the <em>even</em> part, built from an even number of vector
-factors — is closed under multiplication (the definition sits inside
-<code>Module Cl2</code>, so from outside it reads <a
-href="coqdoc/Riktig.Impl.Cliff2.html#Cl2.is_even"><code>Cl2.is_even</code></a>):</p>
-<pre class="coq"><code>    Definition is_even (x : Cl2 F) : Prop := e1_part x == 0 /\ e2_part x == 0.</code></pre>
-<p>and that even part turns out to match the complex numbers
-exactly.</p>
+alone, built from an even number of vector factors — is the elements
+supported on the even blades:</p>
+<pre class="coq"><code>  Definition cl_even {n : nat} (x : Cl F n) : Prop :=
+    forall D : Blade n, bparity D = true -&gt; x D == 0.</code></pre>
+<p>(<code>bparity D = true</code> says the blade
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>
+holds an odd number of generators; an even element carries 0 on every
+such blade.) That even part is closed under multiplication, and in the
+plane it turns out to match the complex numbers exactly.</p>
 <h2 id="the-planes-even-part-is-the-complex-numbers">The plane’s even
 part is the complex numbers</h2>
-<p>The two directions of the correspondence read off, or rebuild, the
-even part’s two surviving coordinates against a complex number’s real
-and imaginary parts:</p>
-<pre class="coq"><code>  Definition even_to_complex (x : Cl2 F) : C F := mkC (scalar_part x) (e12_part x).
-  Definition complex_to_even (z : C F) : Cl2 F := mkCl2 (re z) 0 0 (im z).</code></pre>
+<p>The four blades of the plane algebra are named by their two bits, and
+a concrete element is written by listing its four coefficients — scalar,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>12</mn></msub><annotation encoding="application/x-tex">e_{12}</annotation></semantics></math>:</p>
+<pre class="coq"><code>  Definition pb (b1 b2 : bool) : Blade 2 := bcons b1 (bcons b2 bnil).</code></pre>
+<pre class="coq"><code>  Definition mk2 (c a b p : F) : Cl F 2 :=
+    fun D =&gt;
+      if bhead D
+      then if bhead (btail D) then p else a
+      else if bhead (btail D) then b else c.</code></pre>
+<p>The two directions of the correspondence with the complex numbers
+read off, or rebuild, the even part’s two surviving coordinates — the
+scalar blade <code>pb false false</code> and the bivector blade
+<code>pb true true</code> — against a complex number’s real and
+imaginary parts:</p>
+<pre class="coq"><code>  Definition even_to_complex (x : Cl F 2) : C F :=
+    mkC (x (pb false false)) (x (pb true true)).
+
+  Definition complex_to_even (z : C F) : Cl F 2 := mk2 (re z) 0 0 (im z).</code></pre>
 <p>They are mutually inverse exactly on the even part. Round-tripping a
-general element of <code>Cl2 F</code> through <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#complex_to_even"><code>complex_to_even</code></a>
+general element of <code>Cl F 2</code> through <a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>
 forgets its vector coordinates, so that direction only holds under <a
-href="coqdoc/Riktig.Impl.Cliff2.html#Cl2.is_even"><code>Cl2.is_even</code></a>;
+href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>;
 the other direction needs no hypothesis at all, because <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#complex_to_even"><code>complex_to_even</code></a>’s
+href="coqdoc/Riktig.Theory.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>’s
 image is always even:</p>
-<pre class="coq"><code>  Lemma even_round_trip : forall x : Cl2 F,
-    Cl2.is_even x -&gt; complex_to_even (even_to_complex x) == x.
-  Lemma complex_round_trip : forall z : C F, even_to_complex (complex_to_even z) == z.</code></pre>
+<pre class="coq"><code>  Lemma even_round_trip : forall x : Cl F 2,
+    cl_even x -&gt; complex_to_even (even_to_complex x) == x.</code></pre>
+<pre class="coq"><code>  Lemma complex_round_trip : forall z : C F,
+    even_to_complex (complex_to_even z) == z.</code></pre>
 <p>A bijection between two four- and two-dimensional carriers is cheap;
 what makes this a ring isomorphism rather than a relabeling is that
 <em>multiplication</em> matches too, and multiplication is where the two
-constructions could have disagreed. <code>Cl2 F</code> was built
-entirely from the relations
+constructions could have disagreed. The plane algebra was built entirely
+from the relations
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>1</mn></msub><mo>=</mo><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">e_1e_1=e_2e_2=1</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo>=</mo><mi>−</mi><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">e_1e_2=-e_2e_1</annotation></semantics></math>
 — nothing in its definition mentions complex numbers. Checking that its
 multiplication, restricted to even elements, reproduces the complex
-numbers’ product is a real theorem, verified directly against
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>’s
-own multiplication table:</p>
-<pre class="coq"><code>  Lemma even_to_complex_mul : forall x y : Cl2 F,
-    Cl2.is_even x -&gt; Cl2.is_even y -&gt;
+numbers’ product is a real theorem, verified directly against the
+geometric product:</p>
+<pre class="coq"><code>  Lemma even_to_complex_mul : forall x y : Cl F 2,
+    cl_even x -&gt; cl_even y -&gt;
     even_to_complex (x * y) == even_to_complex x * even_to_complex y.</code></pre>
-<p>(0, 1, addition, and negation match unconditionally — <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_zero"><code>even_to_complex_zero</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_one"><code>even_to_complex_one</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_add"><code>even_to_complex_add</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_neg"><code>even_to_complex_neg</code></a>
-— because those operations only ever touch the scalar and bivector
-coordinates, whether or not the vector coordinates happen to be zero.)
-Contrast this with the smaller algebra
+<p>Contrast this with the smaller algebra
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(0,1)</annotation></semantics></math>:
 there, a one-dimensional space is embedded directly <em>into</em> the
 complex numbers, which are the carrier by definition — the match is
 built in from the start, a coincidence of carriers. Here
-<code>Cl2 F</code> is an independent four-dimensional ring, built from
+<code>Cl F 2</code> is an independent four-dimensional ring, built from
 the geometric relations alone, and its agreement with the complex
 numbers under multiplication had to be checked, and could in principle
 have failed.</p>
-<h2 id="spaces-even-part-is-the-quaternions">Space’s even part is the
-quaternions</h2>
-<p>Space needs one more vector,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>3</mn></msub><annotation encoding="application/x-tex">e_3</annotation></semantics></math>,
-still squaring to 1 and anticommuting with the other two. Multiplying
-triples of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>e</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">e_1, e_2,
-e_3</annotation></semantics></math> out closes up an eight-dimensional
-ring,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
-(<a
-href="coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a>):
-the scalar, three vectors, three bivectors
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>,</mo><msub><mi>e</mi><mn>13</mn></msub><mo>,</mo><msub><mi>e</mi><mn>23</mn></msub></mrow><annotation encoding="application/x-tex">e_{12},
-e_{13}, e_{23}</annotation></semantics></math>, and one trivector
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>123</mn></msub><annotation encoding="application/x-tex">e_{123}</annotation></semantics></math>,
-the <em>pseudoscalar</em>. Its record has one field per blade, in that
-order:</p>
-<pre class="coq"><code>Record C3 (F : Type) := mkC3 {
-  c3_s   : F;
-  c3_1   : F;
-  c3_2   : F;
-  c3_3   : F;
-  c3_12  : F;
-  c3_13  : F;
-  c3_23  : F;
-  c3_123 : F
-}.</code></pre>
-<p>and the seven nonzero basis elements are just this record with a
-single 1 in the matching slot:</p>
-<pre class="coq"><code>  Definition c3_e1 : C3 F := mkC3 0 1 0 0 0 0 0 0.
-  Definition c3_e2 : C3 F := mkC3 0 0 1 0 0 0 0 0.
-  Definition c3_e3 : C3 F := mkC3 0 0 0 1 0 0 0 0.
-  Definition c3_e12 : C3 F := mkC3 0 0 0 0 1 0 0 0.
-  Definition c3_e13 : C3 F := mkC3 0 0 0 0 0 1 0 0.
-  Definition c3_e23 : C3 F := mkC3 0 0 0 0 0 0 1 0.
-  Definition c3_I3 : C3 F := mkC3 0 0 0 0 0 0 0 1.</code></pre>
-<p>The even part — scalar plus the three bivectors, four dimensions —
-is</p>
-<pre class="coq"><code>  Definition c3_even (x : C3 F) : Prop :=
-    c3_1 x == 0 /\ c3_2 x == 0 /\ c3_3 x == 0 /\ c3_123 x == 0.</code></pre>
-<p>Call the pseudoscalar
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>I</mi><mn>3</mn></msub><mo>:=</mo><msub><mi>e</mi><mn>123</mn></msub></mrow><annotation encoding="application/x-tex">I_3 := e_{123}</annotation></semantics></math>.
-In
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>’s
-two dimensions, the bivector
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>12</mn></msub><annotation encoding="application/x-tex">e_{12}</annotation></semantics></math>
-<em>anticommutes</em> with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>:
-moving it past a single vector costs one transposition, an odd number.
-In three dimensions the same kind of move costs
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>−</mo><mn>1</mn><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">3-1=2</annotation></semantics></math>
-transpositions, an even number, so
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-<em>commutes</em> with every vector instead — a fact about odd
-dimension, checked here for each of the three generators rather than
-assumed:</p>
-<pre class="coq"><code>  Lemma c3_e1_I3_comm : c3_e1 * c3_I3 == c3_I3 * c3_e1.
-  Lemma c3_e2_I3_comm : c3_e2 * c3_I3 == c3_I3 * c3_e2.
-  Lemma c3_e3_I3_comm : c3_e3 * c3_I3 == c3_I3 * c3_e3.</code></pre>
-<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-itself squares to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
-arrived at from three real, anticommuting generators rather than
-postulated. And the three bivectors, taken in the cyclic order
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>,</mo><msub><mi>e</mi><mn>23</mn></msub><mo>,</mo><msub><mi>e</mi><mn>13</mn></msub></mrow><annotation encoding="application/x-tex">e_{12}, e_{23}, e_{13}</annotation></semantics></math>
-— not the differently-signed guess
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>,</mo><msub><mi>e</mi><mn>23</mn></msub><mo>,</mo><msub><mi>e</mi><mn>3</mn></msub><msub><mi>e</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">e_{12}, e_{23}, e_3e_1</annotation></semantics></math>,
-which would need an extra sign correction the actual record does not
-carry — satisfy exactly the defining relations of the quaternions, each
-cyclic product landing on the next:</p>
-<pre class="coq"><code>  Lemma c3_e12_e23 : c3_e12 * c3_e23 == c3_e13.
-  Lemma c3_e23_e13 : c3_e23 * c3_e13 == c3_e12.
-  Lemma c3_e13_e12 : c3_e13 * c3_e12 == c3_e23.
-
-  Lemma c3_ijk : c3_e12 * c3_e23 * c3_e13 == - (1 : C3 F).</code></pre>
-<p>With
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>:=</mo><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">i := e_{12}</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>:=</mo><msub><mi>e</mi><mn>23</mn></msub></mrow><annotation encoding="application/x-tex">j := e_{23}</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>:=</mo><msub><mi>e</mi><mn>13</mn></msub></mrow><annotation encoding="application/x-tex">k := e_{13}</annotation></semantics></math>,
-these read
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mi>j</mi><mo>=</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">ij=k</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mi>k</mi><mo>=</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">jk=i</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mi>i</mi><mo>=</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">ki=j</annotation></semantics></math>,
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mi>j</mi><mi>k</mi><mo>=</mo><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">ijk=-1</annotation></semantics></math>
-(together with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>i</mi><mn>2</mn></msup><mo>=</mo><msup><mi>j</mi><mn>2</mn></msup><mo>=</mo><msup><mi>k</mi><mn>2</mn></msup><mo>=</mo><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">i^2=j^2=k^2=-1</annotation></semantics></math>,
-each proved the same way): the even part of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
-<em>is</em> the quaternions, the same way the even part of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>
-<em>is</em> the complex numbers.</p>
 <h2 id="composing-rotors-is-complex-multiplication">Composing rotors is
 complex multiplication</h2>
 <p>A rotor is an even element, written directly by its two coordinates,
 with no angle mentioned:</p>
-<pre class="coq"><code>  Definition rotor (c s : F) : Cl2 F := mkCl2 c 0 0 s.</code></pre>
+<pre class="coq"><code>  Definition rotor (c s : F) : Cl F 2 := mk2 c 0 0 s.</code></pre>
 <p>and reversal — the operation that will let a rotor act correctly on a
-vector — fixes the scalar coordinate and flips the sign of the bivector
-one, since reversing the order of the two vectors inside
+vector — flips the sign of each blade’s coefficient according to how
+many transpositions it takes to reverse that blade’s generators,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">k(k-1)/2</annotation></semantics></math>
+for a
+grade-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+blade, defined once for every dimension:</p>
+<pre class="coq"><code>  Definition cl_reverse {n : nat} (x : Cl F n) : Cl F n :=
+    fun D =&gt; parity_sign (rev_parity (bcount D)) * x D.</code></pre>
+<p>At
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n=2</annotation></semantics></math>
+this fixes the scalar and vector coordinates and negates exactly the
+bivector one — reversing the order of the two vectors inside
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>=</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_{12}=e_1e_2</annotation></semantics></math>
 gives
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub><mo>=</mo><mi>−</mi><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">e_2e_1=-e_{12}</annotation></semantics></math>:</p>
-<pre class="coq"><code>  Definition cl2_reverse (x : Cl2 F) : Cl2 F :=
-    mkCl2 (scalar_part x) (e1_part x) (e2_part x) (- e12_part x).</code></pre>
+<pre class="coq"><code>  Lemma reverse_mk2 : forall c a b p : F,
+    cl_reverse (mk2 c a b p) == mk2 c a b (- p).</code></pre>
 <p>Composing two rotors — multiplying them as elements of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(2,0)</annotation></semantics></math>
 — gives back a rotor, at the ordinary angle-addition pair:</p>
@@ -265,153 +195,171 @@ angle:
 are just field elements, constrained to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>
 only once a rotor is required to preserve length. The Coq statement is
-exactly this equation, checked against the multiplication table:</p>
+exactly this equation, checked against the geometric product:</p>
 <pre class="coq"><code>  Lemma rotor_mul : forall c1 s1 c2 s2 : F,
-    rotor c1 s1 * rotor c2 s2 == rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2).
-  Proof.
-    intros c1 s1 c2 s2.
-    unfold rotor.
-    repeat split; simpl; ring.
-  Qed.</code></pre>
-<p><code>unfold rotor</code> exposes both sides as explicit
-four-coordinate records, and <code>repeat split; simpl</code> turns the
-goal into four field-level equations, one per coordinate of the result.
-Each of the four is a polynomial identity in
+    rotor c1 s1 * rotor c2 s2
+    == rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2).
+  Proof. intros. apply cl2_ext; by_blade. Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#cl2_ext"><code>cl2_ext</code></a>
+is the extensionality lemma of the plane algebra: two elements agreeing
+on the four blades are equal, so applying it turns the goal into four
+coefficient equations, one per blade of the result.
+<code>by_blade</code> then unfolds <a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor"><code>rotor</code></a>,
+the geometric product, and the unit over each concrete blade, leaving a
+polynomial identity in
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>c</mi><mn>2</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">c_1,s_1,c_2,s_2</annotation></semantics></math>
-and the two zeros a rotor carries in its vector coordinates, so <code
-class="nolink">ring</code> discharges all four at once — the section
-declares <code>Add Ring</code> over the coefficient field, which is what
-makes the tactic available on a setoid equality rather than Coq’s
-built-in <code>eq</code>.</p>
+and the two zeros a rotor carries in its vector coordinates, which <code
+class="nolink">ring</code> discharges — the section declares
+<code>Add Ring</code> over the coefficient field, which is what makes
+the tactic available on a setoid equality rather than Coq’s built-in
+<code>eq</code>.</p>
 <p>That this matches complex multiplication is not a second coincidence
 — it is one instance of the homomorphism theorem above, since a rotor is
 always even (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_even"><code>rotor_even</code></a>):</p>
-<pre class="coq"><code>  Lemma rotor_mul_to_complex : forall c1 s1 c2 s2 : F,
-    even_to_complex (rotor c1 s1 * rotor c2 s2)
-    == even_to_complex (rotor c1 s1) * even_to_complex (rotor c2 s2).
-  Proof.
-    intros c1 s1 c2 s2.
-    exact (even_to_complex_mul (rotor c1 s1) (rotor c2 s2)
-             (rotor_even c1 s1) (rotor_even c2 s2)).
-  Qed.</code></pre>
-<p>Putting the two together — the image of a product of rotors equals
-the product of images, and the product of rotors is itself the
-angle-added rotor — gives the statement that composing rotors literally
-is multiplying complex numbers:</p>
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_even"><code>rotor_even</code></a>).
+Putting the two together — the image of a product of rotors equals the
+product of images, and the product of rotors is itself the angle-added
+rotor — gives the statement that composing rotors literally is
+multiplying complex numbers:</p>
 <pre class="coq"><code>  Theorem rotor_composition_is_u1 : forall c1 s1 c2 s2 : F,
     even_to_complex (rotor c1 s1) * even_to_complex (rotor c2 s2)
     == even_to_complex (rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)).
   Proof.
     intros c1 s1 c2 s2.
-    rewrite &lt;- (rotor_mul_to_complex c1 s1 c2 s2).
-    rewrite (rotor_mul c1 s1 c2 s2).
-    reflexivity.
+    calc (even_to_complex (rotor c1 s1) * even_to_complex (rotor c2 s2))
+      == (even_to_complex (rotor c1 s1 * rotor c2 s2))
+         { (symmetry (even_to_complex_mul (rotor c1 s1) (rotor c2 s2)
+              (rotor_even c1 s1) (rotor_even c2 s2))) }
+      == (even_to_complex (rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)))
+         { (rotor_mul c1 s1 c2 s2) }.
   Qed.</code></pre>
-<p>The first rewrite turns the left side, a product of two complex
-images, back into the image of a single product of rotors (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul_to_complex"><code>rotor_mul_to_complex</code></a>,
-read right to left); the second replaces that product of rotors with the
-already-computed angle-added rotor (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul"><code>rotor_mul</code></a>);
-the two sides are now the same expression, and <code>reflexivity</code>
-closes the goal. The unit-length elements of the complex numbers form a
-group under multiplication by definition — that group is what “U(1)”
-names — and this theorem says that group’s operation is exactly what
-composing two rotors already does.</p>
-<h2 id="a-rotor-and-its-negation-the-double-cover">A rotor and its
-negation: the double cover</h2>
-<p>Space’s version of a rotor sandwiches instead of merely multiplying.
-Reversal at this level fixes the scalar and the three vector coordinates
-and flips the sign of the three bivector coordinates and the trivector
-one — reversing the order of the vectors inside a blade costs
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">k(k-1)/2</annotation></semantics></math>
-transpositions, odd exactly when the blade has grade 2 or 3:</p>
-<pre class="coq"><code>  Definition c3_reverse (x : C3 F) : C3 F :=
-    mkC3 (c3_s x) (c3_1 x) (c3_2 x) (c3_3 x)
-      (- c3_12 x) (- c3_13 x) (- c3_23 x) (- c3_123 x).</code></pre>
-<p>For any element
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
-at all — not yet required to be even, or of unit length — define</p>
-<pre class="coq"><code>  Definition c3_rotate (r x : C3 F) : C3 F := r * x * c3_reverse r.</code></pre>
+<p>The <code>calc</code> chain has two steps, each justified in braces.
+The first turns the left side, a product of two complex images, back
+into the image of a single product of rotors (<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
+read right to left via <code>symmetry</code>, with <a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_even"><code>rotor_even</code></a>
+supplying the two evenness hypotheses); the second replaces that product
+of rotors with the already-computed angle-added rotor (<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>),
+landing on the right side exactly. The unit-length elements of the
+complex numbers form a group under multiplication by definition — that
+group is what “U(1)” names — and this theorem says that group’s
+operation is exactly what composing two rotors already does. Unit length
+itself is the condition
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>,
+and it is precisely what makes a rotor invert by its own reversal (<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_unit"><code>rotor_unit</code></a>):</p>
+<pre class="coq"><code>  Lemma rotor_unit : forall c s : F,
+    c*c + s*s == 1 -&gt; rotor c s * cl_reverse (rotor c s) == 1.</code></pre>
+<h2 id="space-spinors-and-the-double-cover">Space, spinors, and the
+double cover</h2>
+<p>Space needs one more generator,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>3</mn></msub><annotation encoding="application/x-tex">e_3</annotation></semantics></math>,
+still squaring to 1 and anticommuting with the other two: the instance
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">n=3</annotation></semantics></math>
+at the signature
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1,1,1)</annotation></semantics></math>,
+an eight-dimensional ring — scalar, three vectors, three bivectors
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>12</mn></msub><mo>,</mo><msub><mi>e</mi><mn>13</mn></msub><mo>,</mo><msub><mi>e</mi><mn>23</mn></msub></mrow><annotation encoding="application/x-tex">e_{12}, e_{13}, e_{23}</annotation></semantics></math>,
+and one trivector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>123</mn></msub><annotation encoding="application/x-tex">e_{123}</annotation></semantics></math>.
+A concrete element lists its eight coefficients:</p>
+<pre class="coq"><code>  Definition mk3 (c a1 a2 a3 p12 p13 p23 t : F) : Cl F 3 :=
+    fun D =&gt;
+      if bhead D
+      then if bhead (btail D)
+           then if bhead (btail (btail D)) then t   else p12
+           else if bhead (btail (btail D)) then p13 else a1
+      else if bhead (btail D)
+           then if bhead (btail (btail D)) then p23 else a2
+           else if bhead (btail (btail D)) then a3  else c.</code></pre>
+<p>The even part is four-dimensional — the scalar and the three
+bivectors — and its general element is called a <em>spinor</em>:</p>
+<pre class="coq"><code>  Definition spinor (r b12 b13 b23 : F) : Cl F 3 :=
+    mk3 r 0 0 0 b12 b13 b23 0.</code></pre>
+<pre class="coq"><code>  Lemma spinor_even : forall r b12 b13 b23 : F,
+    cl_even (spinor r b12 b13 b23).</code></pre>
+<p>Just as in the plane, the even part is closed under the geometric
+product — the product of two even elements is even, checked over the
+eight blades:</p>
+<pre class="coq"><code>  Lemma even_mul_closed : forall x y : Cl F 3,
+    cl_even x -&gt; cl_even y -&gt; cl_even (x * y).</code></pre>
+<p>so spinors multiply to spinors, and “orientation composed so far”
+never leaves the four even coordinates. (This four-dimensional even
+subalgebra is, classically, the quaternions — the same way the plane’s
+two-dimensional even part is the complex numbers; the identification is
+not re-proved here.)</p>
+<p>A spinor acts on a vector the way the plane’s rotor will act below:
+by the sandwich</p>
+<pre class="coq"><code>  Definition rotate (R x : Cl F 3) : Cl F 3 := R * x * cl_reverse R.</code></pre>
 <p>so
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ρ</mi><mi>r</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\rho_r(x) = r\,x\,\tilde r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ρ</mi><mi>R</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>R</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>R</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\rho_R(x) = R\,x\,\tilde R</annotation></semantics></math>
 with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>r</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>R</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde R</annotation></semantics></math>
 the reversal. When
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+is even, the sandwich sends every vector to another vector — proved with
+no unit hypothesis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mover><mi>R</mi><mo accent="true">̃</mo></mover><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">R\tilde R = 1</annotation></semantics></math>
+anywhere in it:</p>
+<pre class="coq"><code>  Lemma rotate_coordinates_correct : forall (R : Cl F 3) (v : Fin.t 3 -&gt; F),
+    cl_even R -&gt; rotate R (ga_vec v) == ga_vec (rotate_coordinates R v).</code></pre>
+<p>(<code>ga_vec v</code> embeds the coordinate triple
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+as a grade-1 element; <code>rotate_coordinates R v</code> names the
+three coefficients the sandwich produces.) For a spinor, those three
+coefficients are computed out in full:</p>
+<pre class="coq"><code>  Lemma rotate_spinor_vec : forall r b12 b13 b23 v1 v2 v3 : F,
+    rotate (spinor r b12 b13 b23) (ga_vec (space_vector v1 v2 v3))
+    == ga_vec (space_vector
+         ((r*r + - (b12*b12) + - (b13*b13) + b23*b23) * v1
+          + (r*b12 + r*b12 + - (b13*b23 + b13*b23)) * v2
+          + (r*b13 + r*b13 + b12*b23 + b12*b23) * v3)
+         ((- (r*b12 + r*b12) + - (b13*b23 + b13*b23)) * v1
+          + (r*r + - (b12*b12) + b13*b13 + - (b23*b23)) * v2
+          + (r*b23 + r*b23 + - (b12*b13 + b12*b13)) * v3)
+         ((b12*b23 + b12*b23 + - (r*b13 + r*b13)) * v1
+          + (- (r*b23 + r*b23) + - (b12*b13 + b12*b13)) * v2
+          + (r*r + b12*b12 + - (b13*b13) + - (b23*b23)) * v3)).</code></pre>
+<p>This statement is a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
+rotation matrix written out entry by entry, and one structural feature
+of it carries the fact promised in the opening section. Look at any
+entry: every summand is a product of exactly <em>two</em> of the
+spinor’s four coefficients —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><mi>r</mi></mrow><annotation encoding="application/x-tex">r\,r</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><msub><mi>b</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">r\,b_{12}</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>13</mn></msub><msub><mi>b</mi><mn>23</mn></msub></mrow><annotation encoding="application/x-tex">b_{13}b_{23}</annotation></semantics></math>,
+never a bare
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-is even, a separate theorem (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_vector"><code>c3_rotate_vector</code></a>)
-shows
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ρ</mi><mi>r</mi></msub><annotation encoding="application/x-tex">\rho_r</annotation></semantics></math>
-sends every vector to another vector, with no unit hypothesis needed for
-that part. The question this section is built around is different: what
-happens to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ρ</mi><mi>r</mi></msub><annotation encoding="application/x-tex">\rho_r</annotation></semantics></math>
-when
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-is replaced by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>?
-In one sentence: nothing.</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ρ</mi><mrow><mi>−</mi><mi>r</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>ρ</mi><mi>r</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mrow><mtext mathvariant="normal">for every </mtext><mspace width="0.333em"></mspace></mrow><mi>r</mi><mo>,</mo><mi>x</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\rho_{-r}(x) \;=\; \rho_r(x) \qquad\text{for every } r, x.</annotation></semantics></math></p>
-<p>A rotor and its negation act identically, on every element, not only
-on vectors. This is the algebraic fact behind the physical claim that
-something built the way a rotor is built must be turned by
+or a triple product. Now replace the spinor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mo>,</mo><msub><mi>b</mi><mn>12</mn></msub><mo>,</mo><msub><mi>b</mi><mn>13</mn></msub><mo>,</mo><msub><mi>b</mi><mn>23</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">R = (r, b_{12}, b_{13}, b_{23})</annotation></semantics></math>
+by its negation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>R</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo>,</mo><mi>−</mi><msub><mi>b</mi><mn>12</mn></msub><mo>,</mo><mi>−</mi><msub><mi>b</mi><mn>13</mn></msub><mo>,</mo><mi>−</mi><msub><mi>b</mi><mn>23</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">-R = (-r, -b_{12}, -b_{13}, -b_{23})</annotation></semantics></math>:
+each summand picks up two minus signs, which cancel, so every entry of
+the matrix — and therefore the rotated vector itself — is unchanged:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ρ</mi><mrow><mi>−</mi><mi>R</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>R</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mover><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>R</mi><mo stretchy="false" form="postfix">)</mo></mrow><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>R</mi><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mover><mi>R</mi><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>ρ</mi><mi>R</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\rho_{-R}(v) \;=\; (-R)\,v\,\widetilde{(-R)} \;=\; (-1)(-1)\cdot
+R\,v\,\tilde R \;=\; \rho_R(v).</annotation></semantics></math></p>
+<p>(The middle step is the same cancellation stated abstractly: reversal
+only ever rescales coefficients, so it is linear,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>−</mi><mi>R</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mi>−</mi><mover><mi>R</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{-R} =
+-\tilde R</annotation></semantics></math>, and the two minus signs meet
+and cancel.) A spinor and its negation act identically on every vector —
+that is what the quoted theorem shows on its face, once the substitution
+is made. This is the algebraic fact behind the physical claim that
+something built the way a spinor is built must be turned by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>720</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">720°</annotation></semantics></math>,
 not
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>360</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">360°</annotation></semantics></math>,
-to return to where it started: a continuous family of rotors tracing out
-a full circle of actual rotations brings the rotations themselves back
-to “no rotation,” but need not bring the rotor itself back to where it
-began — it may instead land on the negation, and the theorem below says
-that negation produces exactly the same rotations, indistinguishable by
-anything built out of vectors alone.</p>
-<pre class="coq"><code>  Theorem c3_rotate_neg : forall r x : C3 F, c3_rotate (- r) x == c3_rotate r x.
-  Proof.
-    intros r x. unfold c3_rotate.
-    assert (Hrev : c3_reverse (- r) == - c3_reverse r).
-    { apply c3_eq_intro. intros A.
-      rewrite (c3_proj_neg (c3_reverse r) A), (c3_proj_reverse (- r) A),
-        (c3_proj_reverse r A), (c3_proj_neg r A).
-      exact (mul_neg_r (c3_rsign A) (c3_proj r A)). }
-    calc ((- r) * x * c3_reverse (- r))
-      == ((- r) * x * (- c3_reverse r))     { Hrev }
-      == ((- (r * x)) * (- c3_reverse r))   { (c3_neg_mul_l r x) }
-      == (- ((- (r * x)) * c3_reverse r))   { (c3_neg_mul_r (- (r * x)) (c3_reverse r)) }
-      == (- (- (r * x * c3_reverse r)))     { (c3_neg_mul_l (r * x) (c3_reverse r)) }
-      == (r * x * c3_reverse r)             { (c3_neg_involutive (r * x * c3_reverse r)) }.
-  Qed.</code></pre>
-<p>Walk it against the sentence above. Reversal multiplies every
-coordinate by a fixed sign (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rsign"><code>c3_rsign</code></a>,
-the same sign regardless of whether the input was negated), so it is
-linear, and <code>Hrev</code> proves
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>−</mi><mi>r</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{-r} = -\tilde r</annotation></semantics></math>
-coordinate by coordinate. The calculation chain starts from
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mrow><mi>−</mi><mi>r</mi></mrow><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">(-r)\,x\,\widetilde{-r}</annotation></semantics></math>
-and rewrites by <code>Hrev</code> to reach
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(-r)\,x\,(-\tilde r)</annotation></semantics></math>.
-Three applications of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>b</mi><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(-a)b = -(ab)</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">a(-b) = -(ab)</annotation></semantics></math>
-(<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_neg_mul_l"><code>c3_neg_mul_l</code></a>,
-<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_neg_mul_r"><code>c3_neg_mul_r</code></a>)
-then pull both minus signs out to the front, one at a time, leaving
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">-(-(r\,x\,\tilde r))</annotation></semantics></math>;
-double negation (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_neg_involutive"><code>c3_neg_involutive</code></a>)
-closes the chain at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">r\,x\,\tilde r</annotation></semantics></math>.
-The sign introduced by negating
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-on the left and the sign <code>Hrev</code> introduces on the right are
-two separate minus signs that cancel exactly against each other, with
-nothing left over.</p>
+to return to where it started: a continuous family of spinors tracing
+out a full circle of actual rotations brings the rotations themselves
+back to “no rotation,” but need not bring the spinor itself back to
+where it began — it may instead land on the negation, which produces
+exactly the same rotations, indistinguishable by anything built out of
+vectors alone.</p>
 <p>Getting the full Standard Model group
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mi>U</mi><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mi>S</mi><mi>U</mi><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo stretchy="false" form="postfix">)</mo><mo>×</mo><mi>U</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">SU(3)\times SU(2)\times U(1)</annotation></semantics></math>
 out of one Clifford algebra is not settled the way the results above are
@@ -429,27 +377,26 @@ fixing one chosen unit imaginary octonion is exactly
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mi>U</mi><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">SU(3)</annotation></semantics></math>
 (Günaydin &amp; Gürsey, <em>J. Math. Phys.</em> 14 (1973) 1651;
 canonical write-up: Baez, <em>Bull. Amer. Math. Soc.</em> 39 (2002) 145)
-— real, checkable, and a separate piece of mathematics from the two
-theorems proved above, not a third instance of the same argument.</p>
+— real, checkable, and a separate piece of mathematics from the theorems
+proved above, not another instance of the same argument.</p>
 <h2 id="using-it-a-rotation-matrix-with-no-trigonometry">Using it: a
 rotation matrix, with no trigonometry</h2>
 <p>Back in the plane, wrap a rotor around a vector the way <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>
-above wrapped one around any element of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>:</p>
-<pre class="coq"><code>  Definition cl2_sandwich (R x : Cl2 F) : Cl2 F := R * x * cl2_reverse R.</code></pre>
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>
+above wrapped a spinor around one of space’s:</p>
+<pre class="coq"><code>  Definition sandwich (R x : Cl F 2) : Cl F 2 := R * x * cl_reverse R.</code></pre>
 <p>Feed it a pure vector — an element with only its
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_1, e_2</annotation></semantics></math>
-coordinates set, <code>Cl2.vec (plane_vector v1 v2)</code> where
+coordinates set, <code>ga_vec (plane_vector v1 v2)</code> where
 <code>plane_vector a b</code> is just the pair
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a,b)</annotation></semantics></math>
-read as a function on two indices. Computed directly from the
-multiplication table, with no hypothesis on
+read as a function on two indices. Computed directly from the geometric
+product, with no hypothesis on
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>,</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">c,s</annotation></semantics></math>
 anywhere:</p>
-<pre class="coq"><code>  Lemma cl2_sandwich_rotor_vec : forall c s v1 v2 : F,
-    cl2_sandwich (rotor c s) (Cl2.vec (plane_vector v1 v2))
-    == Cl2.vec (plane_vector
+<pre class="coq"><code>  Lemma sandwich_rotor_vec : forall c s v1 v2 : F,
+    sandwich (rotor c s) (ga_vec (plane_vector v1 v2))
+    == ga_vec (plane_vector
          ((c*c + - (s*s)) * v1 + (c*s + c*s) * v2)
          (- ((c*s + c*s) * v1) + (c*c + - (s*s)) * v2)).</code></pre>
 <p>Wrapping
@@ -475,7 +422,7 @@ invoked
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>cos</mi><annotation encoding="application/x-tex">\cos</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>sin</mi><annotation encoding="application/x-tex">\sin</annotation></semantics></math>,
 or a trigonometric identity; the whole computation is multiplying out
-the sandwich against the multiplication table and regrouping terms. (The
+the sandwich against the geometric product and regrouping terms. (The
 matrix is rotation by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>2</mn><mi>θ</mi></mrow><annotation encoding="application/x-tex">-2\theta</annotation></semantics></math>
 in the usual counterclockwise-positive convention rather than
@@ -484,47 +431,71 @@ in the usual counterclockwise-positive convention rather than
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_1e_2</annotation></semantics></math>
 rather than
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">e_2e_1</annotation></semantics></math>,
-not an error.) A further theorem, proved the same way from
+not an error.) A further theorem, proved from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>
-alone (<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich_rotor_preserves_dot"><code>cl2_sandwich_rotor_preserves_dot</code></a>),
-checks that the squared length
+alone, checks that the squared length is exactly preserved — the
+sandwich is a genuine rotation, not merely some linear map that happens
+to look like one:</p>
+<pre class="coq"><code>  Lemma rotation_preserves_qform : forall c s v1 v2 : F,
+    c*c + s*s == 1 -&gt;
+    qform sig2 (plane_vector
+        ((c*c + - (s*s)) * v1 + (c*s + c*s) * v2)
+        (- ((c*s + c*s) * v1) + (c*c + - (s*s)) * v2))
+    == qform sig2 (plane_vector v1 v2).</code></pre>
+<p><code>qform sig2</code> is the squared length the signature
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1,1)</annotation></semantics></math>
+induces,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>v</mi><mn>1</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>v</mi><mn>2</mn><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">v_1^2+v_2^2</annotation></semantics></math>
-is exactly preserved: the sandwich is a genuine rotation, not merely
-some linear map that happens to look like one.</p>
+(<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#qform_plane"><code>qform_plane</code></a>),
+so the statement reads: the rotated vector is exactly as long as the
+original.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html"><code>Theory/Cliff2Rotor.v</code></a>
-(<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex"><code>even_to_complex</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>
+(<a href="coqdoc/Riktig.Impl.Clifford.html#Cl"><code>Cl</code></a>, <a
+href="coqdoc/Riktig.Impl.Clifford.html#sig2"><code>sig2</code></a>, <a
+href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#complex_to_even"><code>complex_to_even</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_reverse"><code>cl2_reverse</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor"><code>rotor</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_mul"><code>rotor_mul</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#rotor_composition_is_u1"><code>rotor_composition_is_u1</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Cliff2Rotor.html#cl2_sandwich_rotor_vec"><code>cl2_sandwich_rotor_vec</code></a>)
+href="coqdoc/Riktig.Impl.Clifford.html#cl_reverse"><code>cl_reverse</code></a>,
+the geometric product <a
+href="coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>)
 · <a
-href="coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a> (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_even"><code>c3_even</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html"><code>Theory/PlaneRotor.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#even_to_complex"><code>even_to_complex</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_e1_I3_comm"><code>c3_e1_I3_comm</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_e12_e23"><code>c3_e12_e23</code></a>,
-<a href="coqdoc/Riktig.Impl.Cliff3.html#c3_ijk"><code>c3_ijk</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse"><code>c3_reverse</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor"><code>rotor</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>,
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_neg"><code>c3_rotate_neg</code></a>).</p>
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_unit"><code>rotor_unit</code></a>,
+<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_composition_is_u1"><code>rotor_composition_is_u1</code></a>,
+<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich"><code>sandwich</code></a>,
+<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>,
+<a
+href="coqdoc/Riktig.Theory.PlaneRotor.html#rotation_preserves_qform"><code>rotation_preserves_qform</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html"><code>Theory/SpaceRotor.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor"><code>spinor</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor_even"><code>spinor_even</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#even_mul_closed"><code>even_mul_closed</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_coordinates_correct"><code>rotate_coordinates_correct</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_spinor_vec"><code>rotate_spinor_vec</code></a>).</p>
 </main>
 </body>
 </html>

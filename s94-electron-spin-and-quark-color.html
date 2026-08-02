@@ -53,10 +53,8 @@ organizes color charge, written
 have to have the particular structure it has?</p>
 <p>Both questions have partial answers once vectors are allowed to
 multiply.</p>
-<h2
-id="multiplying-vectors-and-an-odd-dimensional-stand-in-for-i">Multiplying
-vectors, and an odd-dimensional stand-in for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math></h2>
+<h2 id="multiplying-vectors-and-a-real-square-root-of-1">Multiplying
+vectors, and a real square root of −1</h2>
 <p>A geometric algebra multiplies vectors, distributing over addition
 but not assumed to commute, subject to one governing law: a vector’s
 square is a plain scalar, its own squared length,
@@ -91,77 +89,126 @@ factors, spanned by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">{</mo><mn>1</mn><mo>,</mo><msub><mi>e</mi><mn>12</mn></msub><mo>,</mo><msub><mi>e</mi><mn>13</mn></msub><mo>,</mo><msub><mi>e</mi><mn>23</mn></msub><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\{1,e_{12},e_{13},e_{23}\}</annotation></semantics></math>
 — is closed under multiplication on its own: multiplying two even
 elements always produces another even element.</p>
-<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>123</mn></msub><annotation encoding="application/x-tex">e_{123}</annotation></semantics></math>,
-usually called the pseudoscalar and written
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>,
-plays the algebraic role usually assigned to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>.
-Unlike
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
-it is not postulated: it is an ordinary product of three real, mutually
-perpendicular unit vectors, an oriented unit of three-dimensional
-volume. It squares to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>:</p>
-<pre class="coq"><code>  Lemma c3_I3_sq : c3_I3 * c3_I3 == - (1 : C3 F).
-  Proof. c3_compute_mul. Qed.</code></pre>
-<p>and it commutes with every one of the three generators — checked
-directly for each, not assumed:</p>
-<pre class="coq"><code>  Lemma c3_e1_I3_comm : c3_e1 * c3_I3 == c3_I3 * c3_e1.
-  Proof. c3_compute_mul. Qed.
-
-  Lemma c3_e2_I3_comm : c3_e2 * c3_I3 == c3_I3 * c3_e2.
-  Proof. c3_compute_mul. Qed.
-
-  Lemma c3_e3_I3_comm : c3_e3 * c3_I3 == c3_I3 * c3_e3.
-  Proof. c3_compute_mul. Qed.</code></pre>
-<p>Commuting with everything is what a stand-in for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
-needs, and it holds here for a reason about dimension, not a coincidence
-about these three lemmas: to move a generator
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mi>i</mi></msub><annotation encoding="application/x-tex">e_i</annotation></semantics></math>
-across
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>I</mi><mn>3</mn></msub><mo>=</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">I_3=e_1e_2e_3</annotation></semantics></math>,
-it has to be walked past the <em>other two</em> generators sharing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-— two anticommuting swaps, an even number, so the two sign flips cancel
+<p>The governing law itself is a proved theorem, not an axiom of one
+hand-built multiplication table: the implementation (<a
+href="coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>)
+constructs the Clifford algebra of any number of generators from a
+<em>signature</em> listing each generator’s square, and proves once, for
+every dimension and every signature, that an embedded vector squares to
+its own quadratic form on the unit (<a
+href="coqdoc/Riktig.Impl.Clifford.html#gv_square"><code>gv_square</code></a>).
+At three generators of square
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+— the signature <a
+href="coqdoc/Riktig.Impl.Clifford.html#sig3"><code>sig3</code></a> —
+that instance reads:</p>
+<pre class="coq"><code>  Example cl3_contraction : forall v : Fin.t 3 -&gt; F,
+    cl_mul sig3 (ga_vec v) (ga_vec v) == qform sig3 v *: cl_one.
+  Proof. exact (gv_square 3 sig3). Qed.</code></pre>
+<p><code>ga_vec v</code> embeds the coordinate triple
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+as a grade-1 element, <code>cl_mul sig3</code> is the geometric product,
+and <code>qform sig3 v</code> is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>v</mi><mn>1</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>v</mi><mn>2</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>v</mi><mn>3</mn><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">v_1^2+v_2^2+v_3^2</annotation></semantics></math>
+— the vector’s squared length, sitting as a plain number on the unit <a
+href="coqdoc/Riktig.Impl.Clifford.html#cl_one"><code>cl_one</code></a>.</p>
+<p>Where, in all this real geometry, is a square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>?
+On the bivectors. Take two orthonormal generators
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_1, e_2</annotation></semantics></math>
+and square their bivector:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>e</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mspace width="0.167em"></mspace><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><msub><mi>e</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo>−</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">(e_1e_2)(e_1e_2) \;=\; e_1(e_2e_1)e_2 \;=\; -\,e_1(e_1e_2)e_2
+\;=\; -\,(e_1e_1)(e_2e_2) \;=\; -1,</annotation></semantics></math></p>
+<p>using only associativity, the anticommutation of two orthogonal
+vectors, and each vector’s own square. Every step of that chain is
+mechanized in the two-generator instance of the same construction, where
+<code>e1</code> and <code>e2</code> abbreviate the two embedded basis
+vectors. The ingredients first — each derived from the contraction law,
+not read off a table: <code>e1 * e1 == 1</code> comes from the
+contraction at the first basis vector, and anticommutation comes from
+<em>polarization</em>, the symmetric half of the product of two vectors,
+which vanishes here because the two directions are orthogonal:</p>
+<pre class="coq"><code>  Example e1_squared : e1 * e1 == 1.</code></pre>
+<pre class="coq"><code>  Example e1_e2_anticommute : e1 * e2 == - (e2 * e1).</code></pre>
+<p>Then the square itself, the blackboard chain above verbatim:</p>
+<pre class="coq"><code>  Example e12_squared : (e1 * e2) * (e1 * e2) == - (1).
+  Proof.
+    transitivity ((e1 * (- e1)) : Cl F 2).
+    - calc ((e1 * e2) * (e1 * e2))
+        == ((e1 * (e2 * (e1 * e2))) : Cl F 2)
+           { (associative e1 e2 (e1 * e2)) }
+        == ((e1 * ((e2 * e1) * e2)) : Cl F 2)
+           { (associative e2 e1 e2) }
+        == ((e1 * ((- (e1 * e2)) * e2)) : Cl F 2)
+           { e2_e1_anticommute }
+        == ((e1 * (- ((e1 * e2) * e2))) : Cl F 2)
+           { (mul_neg_l (e1 * e2) e2) }
+        == ((e1 * (- (e1 * (e2 * e2)))) : Cl F 2)
+           { (associative e1 e2 e2) }
+        == ((e1 * (- (e1 * (1 : Cl F 2)))) : Cl F 2)
+           { e2_squared }
+        == ((e1 * (- e1)) : Cl F 2)
+           { (right_identity e1) }.
+    - calc ((e1 * (- e1)) : Cl F 2)
+        == ((- (e1 * e1)) : Cl F 2)
+           { (mul_neg_r e1 e1) }
+        == ((- (1)) : Cl F 2)
+           { e1_squared }.
+  Qed.</code></pre>
+<p>The <code>calc</code> chain is the blackboard proof step for step,
+each equation justified in braces: two regroupings by <a
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+bring
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mi>i</mi></msub><annotation encoding="application/x-tex">e_i</annotation></semantics></math>
-commutes with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-after all. Had the ambient space been even-dimensional instead (two
-generators, not three), the analogous pseudoscalar would only have one
-other generator to cross — an odd number of swaps — and would
-anticommute rather than commute. Three is odd; that parity is what makes
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-central, not an accident specific to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>.</p>
-<p>With
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-available as a real, central square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>
+together; <a
+href="coqdoc/Riktig.Impl.Clifford.html#e2_e1_anticommute"><code>e2_e1_anticommute</code></a>
+swaps them at the cost of one minus sign; the sign is pulled out (<a
+href="coqdoc/Riktig.Theory.Ring.html#mul_neg_l"><code>mul_neg_l</code></a>),
+one more regrouping exposes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_2e_2</annotation></semantics></math>,
+which <a
+href="coqdoc/Riktig.Impl.Clifford.html#e2_squared"><code>e2_squared</code></a>
+collapses to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>;
+what remains is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>−</mi><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">e_1(-e_1)</annotation></semantics></math>,
+and the second chain pulls the sign out (<a
+href="coqdoc/Riktig.Theory.Ring.html#mul_neg_r"><code>mul_neg_r</code></a>)
+and closes with <a
+href="coqdoc/Riktig.Impl.Clifford.html#e1_squared"><code>e1_squared</code></a>.
+A square root of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
-a spin state can be represented without complex numbers at all.
-Following Hestenes (1967; <em>Am. J. Phys.</em>, 1984) — a genuinely
-published account, textbook-adjacent even though most physicists still
-learn the complex-matrix version — the nonrelativistic electron’s spin
-state is a real even multivector,
+built out of two real, perpendicular unit directions and nothing
+else.</p>
+<p>With a real, geometric square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+available, a spin state can be represented without complex numbers at
+all. Following Hestenes (1967; <em>Am. J. Phys.</em>, 1984) — a
+genuinely published account, textbook-adjacent even though most
+physicists still learn the complex-matrix version — the nonrelativistic
+electron’s spin state is a real even multivector,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ψ</mi><mo>=</mo><msqrt><mi>ρ</mi></msqrt><mspace width="0.167em"></mspace><mi>R</mi></mrow><annotation encoding="application/x-tex">\psi=\sqrt\rho\,R</annotation></semantics></math>,
 where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ρ</mi><annotation encoding="application/x-tex">\rho</annotation></semantics></math>
 is a nonnegative scalar (a probability density) and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
-is a unit even element, with multiplication by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>
-standing wherever the standard Pauli equation multiplies by
+is a unit even element, with multiplication by a fixed bivector standing
+wherever the standard Pauli equation multiplies by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>.
-Reproducing the Pauli equation’s actual dynamics from this substitution
-is Hestenes’s result, not something derived from scratch below; what the
-algebra above supplies is the fact that makes the substitution
-legitimate in the first place — a real object,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>I</mi><mn>3</mn></msub><annotation encoding="application/x-tex">I_3</annotation></semantics></math>,
-that squares to
+(Hestenes’s own bookkeeping routes this through the trivector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>123</mn></msub><annotation encoding="application/x-tex">e_{123}</annotation></semantics></math>,
+which also squares to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
-and commutes with every vector, built from three real, geometric
-directions rather than postulated.</p>
+and commutes with everything — a classical fact about odd dimension, not
+re-proved here.) Reproducing the Pauli equation’s actual dynamics from
+this substitution is Hestenes’s result, not something derived from
+scratch below; what the algebra above supplies is the fact that makes
+the substitution legitimate in the first place — a real object that
+squares to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
+built from perpendicular directions rather than postulated.</p>
 <h2 id="color-charge-as-an-abstract-lie-algebra-and-why-rank-two">Color
 charge as an abstract Lie algebra, and why rank two</h2>
 <p>A Lie algebra is a vector space with an extra operation, a bracket
@@ -288,8 +335,8 @@ contains
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝔰</mi><mi>𝔲</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathfrak{su}(3)</annotation></semantics></math>
 here is built and checked on its own terms, as an abstract Lie algebra,
 with no embedding into any geometric algebra claimed.</p>
-<h2 id="the-double-cover-a-rotor-and-its-negation-act-identically">The
-double cover: a rotor and its negation act identically</h2>
+<h2 id="the-double-cover-a-spinor-and-its-negation-act-identically">The
+double cover: a spinor and its negation act identically</h2>
 <p>Producing a rotation from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
 needs one more operation: <em>reversal</em>, which reverses the order of
@@ -301,114 +348,98 @@ transpositions of adjacent anticommuting factors, and that count is odd
 exactly when
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>∈</mo><mo stretchy="false" form="prefix">{</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">k\in\{2,3\}</annotation></semantics></math>
 — so reversal negates exactly the bivector and trivector coefficients,
-and leaves the scalar and vector parts alone:</p>
-<pre class="coq"><code>  Definition c3_reverse (x : C3 F) : C3 F :=
-    mkC3 (c3_s x) (c3_1 x) (c3_2 x) (c3_3 x)
-      (- c3_12 x) (- c3_13 x) (- c3_23 x) (- c3_123 x).</code></pre>
+and leaves the scalar and vector parts alone. The general definition
+applies that sign blade by blade, and at three generators it does
+exactly what the transposition count says, writing <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#mk3"><code>mk3</code></a> for
+the element with the eight listed coefficients:</p>
+<pre class="coq"><code>  Lemma reverse_mk3 : forall c a1 a2 a3 p12 p13 p23 t : F,
+    cl_reverse (mk3 c a1 a2 a3 p12 p13 p23 t)
+    == mk3 c a1 a2 a3 (- p12) (- p13) (- p23) (- t).</code></pre>
 <p>Reversal turns a product around,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>x</mi><mi>y</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mover><mi>y</mi><mo accent="true">̃</mo></mover><mspace width="0.167em"></mspace><mover><mi>x</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{xy}=\tilde y\,\tilde x</annotation></semantics></math>
 (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse_anti"><code>c3_reverse_anti</code></a>)
+href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>)
 — the one property that makes the next definition behave like a
-conjugation rather than an arbitrary sandwich. Call an element a
-<em>rotor</em> when it lies in the even subalgebra,</p>
-<pre class="coq"><code>  Definition c3_even (x : C3 F) : Prop :=
-    c3_1 x == 0 /\ c3_2 x == 0 /\ c3_3 x == 0 /\ c3_123 x == 0.</code></pre>
-<p>and define the sandwich:</p>
-<pre class="coq"><code>  Definition c3_rotate (r x : C3 F) : C3 F := r * x * c3_reverse r.</code></pre>
-<p>Sandwiching a vector by an even rotor produces another vector — <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_vector"><code>c3_rotate_vector</code></a>
-proves this for every even
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>,
+conjugation rather than an arbitrary sandwich. An element of the even
+subalgebra — scalar plus the three bivectors — is called a
+<em>spinor</em>:</p>
+<pre class="coq"><code>  Definition spinor (r b12 b13 b23 : F) : Cl F 3 :=
+    mk3 r 0 0 0 b12 b13 b23 0.</code></pre>
+<p>and the sandwich is:</p>
+<pre class="coq"><code>  Definition rotate (R x : Cl F 3) : Cl F 3 := R * x * cl_reverse R.</code></pre>
+<p>Sandwiching a vector by an even element produces another vector —
+proved for every even
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>,
 with no unit hypothesis
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r\,\tilde r=1</annotation></semantics></math>
-used anywhere in it. Read as an action on vectors, that sandwich is a
-rotation; what follows is what it does to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-itself.</p>
-<p><strong>Theorem.</strong> A rotor
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mspace width="0.167em"></mspace><mover><mi>R</mi><mo accent="true">̃</mo></mover><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">R\,\tilde R=1</annotation></semantics></math>
+used anywhere in it:</p>
+<pre class="coq"><code>  Lemma rotate_coordinates_correct : forall (R : Cl F 3) (v : Fin.t 3 -&gt; F),
+    cl_even R -&gt; rotate R (ga_vec v) == ga_vec (rotate_coordinates R v).</code></pre>
+<p>Read as an action on vectors, that sandwich is a rotation; what
+follows is what it does when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+itself is negated.</p>
+<p><strong>Theorem.</strong> A spinor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
 and its negation
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>
-sandwich every multivector
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
-to the identical result.</p>
-<p>Reversal only ever negates coefficients — it is linear — so reversing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">-R</annotation></semantics></math>
+sandwich every vector to the identical result.</p>
+<p>Reversal only ever rescales coefficients — it is linear — so
+reversing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">-R</annotation></semantics></math>
 negates
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>r</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>R</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde R</annotation></semantics></math>
 a second time on top of the first:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>−</mi><mi>r</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{-r}=-\tilde r</annotation></semantics></math>.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>−</mi><mi>R</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mi>−</mi><mover><mi>R</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{-R}=-\tilde R</annotation></semantics></math>.
 Substituting that into the sandwich,</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo></mrow><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo>,</mo></mrow><annotation encoding="application/x-tex">(-r)\,x\,\widetilde{(-r)} \;=\; (-r)\,x\,(-\tilde r) \;=\; (-1)(-1)\cdot r\,x\,\tilde r \;=\; r\,x\,\tilde r,</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>R</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mover><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>R</mi><mo stretchy="false" form="postfix">)</mo></mrow><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>R</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mover><mi>R</mi><mo accent="true">̃</mo></mover><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>R</mi><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mover><mi>R</mi><mo accent="true">̃</mo></mover><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>R</mi><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mover><mi>R</mi><mo accent="true">̃</mo></mover><mo>,</mo></mrow><annotation encoding="application/x-tex">(-R)\,v\,\widetilde{(-R)} \;=\; (-R)\,v\,(-\tilde R) \;=\; (-1)(-1)\cdot R\,v\,\tilde R \;=\; R\,v\,\tilde R,</annotation></semantics></math></p>
 <p>the two minus signs produced by negating
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-meet the two minus signs produced by negating
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>r</mi><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\tilde r</annotation></semantics></math>
-and cancel outright. The Coq proof, verbatim:</p>
-<pre class="coq"><code>  Theorem c3_rotate_neg : forall r x : C3 F, c3_rotate (- r) x == c3_rotate r x.
-  Proof.
-    intros r x. unfold c3_rotate.
-    assert (Hrev : c3_reverse (- r) == - c3_reverse r).
-    { apply c3_eq_intro. intros A.
-      rewrite (c3_proj_neg (c3_reverse r) A), (c3_proj_reverse (- r) A),
-        (c3_proj_reverse r A), (c3_proj_neg r A).
-      exact (mul_neg_r (c3_rsign A) (c3_proj r A)). }
-    calc ((- r) * x * c3_reverse (- r))
-      == ((- r) * x * (- c3_reverse r))     { Hrev }
-      == ((- (r * x)) * (- c3_reverse r))   { (c3_neg_mul_l r x) }
-      == (- ((- (r * x)) * c3_reverse r))   { (c3_neg_mul_r (- (r * x)) (c3_reverse r)) }
-      == (- (- (r * x * c3_reverse r)))     { (c3_neg_mul_l (r * x) (c3_reverse r)) }
-      == (r * x * c3_reverse r)             { (c3_neg_involutive (r * x * c3_reverse r)) }.
-  Qed.</code></pre>
-<p><code>Hrev</code> proves
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>−</mi><mi>r</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{-r}=-\tilde r</annotation></semantics></math>
-coefficient by coefficient: <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_proj_neg"><code>c3_proj_neg</code></a>
-and <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_proj_reverse"><code>c3_proj_reverse</code></a>
-unfold both sides at an arbitrary blade
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-to the same product of signs, closed by one field fact, <a
-href="coqdoc/Riktig.Theory.Ring.html#mul_neg_r"><code>mul_neg_r</code></a>.
-The calculation chain starts from
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mrow><mi>−</mi><mi>r</mi></mrow><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">(-r)\,x\,\widetilde{-r}</annotation></semantics></math>;
-rewriting by <code>Hrev</code> replaces
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mrow><mi>−</mi><mi>r</mi></mrow><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\widetilde{-r}</annotation></semantics></math>
-with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">-\tilde r</annotation></semantics></math>,
-giving the second line above. <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_neg_mul_l"><code>c3_neg_mul_l</code></a>
-pulls the minus sign on
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>
-out of the product
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">(-r)\,x</annotation></semantics></math>;
-<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_neg_mul_r"><code>c3_neg_mul_r</code></a>
-then pulls the remaining minus sign (on
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">-\tilde r</annotation></semantics></math>)
-out of the outer product, leaving
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">-(-(r\,x\,\tilde r))</annotation></semantics></math>;
-<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_neg_involutive"><code>c3_neg_involutive</code></a>
-cancels the double negation — the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+meet and cancel outright. The mechanized form of this fact is the
+sandwich’s coordinate formula, computed out in full for an arbitrary
+spinor and an arbitrary vector:</p>
+<pre class="coq"><code>  Lemma rotate_spinor_vec : forall r b12 b13 b23 v1 v2 v3 : F,
+    rotate (spinor r b12 b13 b23) (ga_vec (space_vector v1 v2 v3))
+    == ga_vec (space_vector
+         ((r*r + - (b12*b12) + - (b13*b13) + b23*b23) * v1
+          + (r*b12 + r*b12 + - (b13*b23 + b13*b23)) * v2
+          + (r*b13 + r*b13 + b12*b23 + b12*b23) * v3)
+         ((- (r*b12 + r*b12) + - (b13*b23 + b13*b23)) * v1
+          + (r*r + - (b12*b12) + b13*b13 + - (b23*b23)) * v2
+          + (r*b23 + r*b23 + - (b12*b13 + b12*b13)) * v3)
+         ((b12*b23 + b12*b23 + - (r*b13 + r*b13)) * v1
+          + (- (r*b23 + r*b23) + - (b12*b13 + b12*b13)) * v2
+          + (r*r + b12*b12 + - (b13*b13) + - (b23*b23)) * v3)).</code></pre>
+<p>The right-hand side is a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">3\times 3</annotation></semantics></math>
+rotation matrix written out entry by entry, and the double cover can be
+read directly off its shape: every summand in every entry is a product
+of exactly <em>two</em> of the spinor’s four coefficients —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><mi>r</mi></mrow><annotation encoding="application/x-tex">r\,r</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><msub><mi>b</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">r\,b_{12}</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>13</mn></msub><msub><mi>b</mi><mn>23</mn></msub></mrow><annotation encoding="application/x-tex">b_{13}b_{23}</annotation></semantics></math>,
+never a bare coefficient or a triple. Substituting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>r</mi><mo>,</mo><mi>−</mi><msub><mi>b</mi><mn>12</mn></msub><mo>,</mo><mi>−</mi><msub><mi>b</mi><mn>13</mn></msub><mo>,</mo><mi>−</mi><msub><mi>b</mi><mn>23</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(-r,-b_{12},-b_{13},-b_{23})</annotation></semantics></math>
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mo>,</mo><msub><mi>b</mi><mn>12</mn></msub><mo>,</mo><msub><mi>b</mi><mn>13</mn></msub><mo>,</mo><msub><mi>b</mi><mn>23</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(r,b_{12},b_{13},b_{23})</annotation></semantics></math>
+puts two minus signs into each summand, which cancel — every entry, and
+therefore the rotated vector, is unchanged. That is the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">(-1)(-1)=1</annotation></semantics></math>
-step made explicit — and closes the chain at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mover><mi>r</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">r\,x\,\tilde r</annotation></semantics></math>.</p>
+step of the blackboard argument, made visible in the theorem’s own
+statement.</p>
 <p>Sandwiching by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
 and by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>
-therefore act on every
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
-completely indistinguishably. Read as a statement about rotating
-three-dimensional vectors, this is the fact behind the rule stated
-without derivation in the opening section: the rotor generating a given
-spatial rotation is not unique,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">-R</annotation></semantics></math>
+therefore act on every vector completely indistinguishably. Read as a
+statement about rotating three-dimensional vectors, this is the fact
+behind the rule stated without derivation in the opening section: the
+spinor generating a given spatial rotation is not unique,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>
-both do it, so a continuous path of rotors from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">-R</annotation></semantics></math>
+both do it, so a continuous path of spinors from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 back to a
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>360</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">360°</annotation></semantics></math>
@@ -420,12 +451,7 @@ instead, and only a second
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>360</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">360°</annotation></semantics></math>
 turn,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>720</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">720°</annotation></semantics></math>
-total, is guaranteed to close the loop. <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_neg"><code>c3_rotate_neg</code></a>
-is that fact, proved over an arbitrary field and for every
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-— the statement carries no evenness and no unit hypothesis — not
-asserted.</p>
+total, is guaranteed to close the loop.</p>
 <h2 id="the-jacobi-identity-checked-one-basis-triple-at-a-time">The
 Jacobi identity, checked one basis triple at a time</h2>
 <p>The bracket above is built directly from nine numbers, with no
@@ -542,14 +568,13 @@ is a separate result, the spin-statistics theorem (Fierz 1939; Pauli,
 field theory from locality, Lorentz invariance, and a positive-definite
 energy spectrum. It has nothing to do with
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>’s
-rotor structure. What this post’s algebra explains is spin’s
-<em>geometry</em>: the pseudoscalar’s role as a real, central square
-root of
+spinor structure. What this post’s algebra explains is spin’s
+<em>geometry</em>: a bivector’s role as a real, geometric square root of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
 and the double cover,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>r</mi></mrow><annotation encoding="application/x-tex">-r</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>R</mi></mrow><annotation encoding="application/x-tex">-R</annotation></semantics></math>
 producing the identical rotation. It does not explain, and does not
 attempt to explain, why electrons exclude one another.</p>
 <h2 id="using-the-two-algebras">Using the two algebras</h2>
@@ -559,9 +584,9 @@ state built as
 is arithmetic in the eight real coordinates of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
 — no complex matrices, and every operation above (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>,
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse"><code>c3_reverse</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html#cl_reverse"><code>cl_reverse</code></a>,
 the double cover) computes the same way for any field, not only the
 reals. A color-charge computation is arithmetic in the eight real
 coordinates of
@@ -574,22 +599,33 @@ structure constants — a Lie bracket checked against its own defining
 laws, not assumed to satisfy them.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a> (<a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_e1_I3_comm"><code>c3_e1_I3_comm</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.Clifford.html#cl3_contraction"><code>cl3_contraction</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_e2_I3_comm"><code>c3_e2_I3_comm</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html#e1_squared"><code>e1_squared</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_e3_I3_comm"><code>c3_e3_I3_comm</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html#e1_e2_anticommute"><code>e1_e2_anticommute</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse"><code>c3_reverse</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html#e12_squared"><code>e12_squared</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_reverse_anti"><code>c3_reverse_anti</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html#cl_reverse"><code>cl_reverse</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate"><code>c3_rotate</code></a>,
+href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html"><code>Theory/SpaceRotor.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_mk3"><code>reverse_mk3</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_vector"><code>c3_rotate_vector</code></a>,
+href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Cliff3.html#c3_rotate_neg"><code>c3_rotate_neg</code></a>)
+href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor"><code>spinor</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_coordinates_correct"><code>rotate_coordinates_correct</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_spinor_vec"><code>rotate_spinor_vec</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>
 (<a

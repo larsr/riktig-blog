@@ -3,1180 +3,238 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Design &amp; style</title>
+<title>Design rules</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
-<h1 id="design--style">Design &amp; style</h1>
-<p><em>How code and proofs are written in this repo (riktig). What we
-aim for is in VISION.md; this document is the style contract.</em></p>
+<h1 id="design-rules">Design rules</h1>
+<p>Numbered rules; a violation is a bug. Where prose is unclear, the
+named exemplar file is the authority. Decisions are stated, not
+narrated.</p>
 <h2 id="program-style">Program style</h2>
 <ol type="1">
-<li><p><strong>Top level reads in the domain’s language.</strong> A
-program is a pipeline of named stages
-(<code>fetch url &gt;&gt;= decodeJson &gt;&gt;= traverse_ process</code>)
-readable as a description of what it does.</p></li>
-<li><p><strong>Program-as-data.</strong> Arg parsing produces one value
-— a <code>Plan</code> — that <em>defines</em> what the program does; a
-small interpreter executes it. No behavior decided by scattered
-if-statements mid-flow. (The free-monad DSLs are the formalized version
-of this same pattern.)</p></li>
-<li><p><strong>Errors are values; policy floats to the top.</strong>
-Lower layers never fudge (no <code>""</code> for a missing file). They
-return explicit failures; what to do about them (skip / retry / abort /
-default) is a field of the Plan, set at the top. Parse, don’t
-validate.</p></li>
-<li><p><strong>No layer leakage.</strong> Lower layers are named in
-their own vocabulary and stay parametrically polymorphic: a fetcher maps
-URL → bytes and cannot know upper datatypes — parametricity as
-architectural enforcement (the same trick that stops MemProg programs
-from forging addresses).</p></li>
-<li><p><strong>Short and clear; find the abstraction line.</strong>
-Every component is the <em>most general</em> program of its kind — a
-cache knows nothing about auth, an auth fetcher nothing about LLMs;
-expiry is part of what “cache” means, not a special case above it.
-Use-case knowledge exists only at the composition point, which then
-reads as one sentence (“get the cookie from the cache at xyz or else
-request-and-cache it; invoke the llm”). Boilerplate is a smell that a
-concept wasn’t factored out — refactor the concept, don’t elaborate the
-handler.</p></li>
-<li><p><strong>Recursive Coq programs: code once, as a plain lambda
-term; obligations after.</strong> (Adopted 2026-07-15; the model is <a
-href="../coqdoc/Riktig.Programs.Merge.html"><code>theories/Programs/Merge.v</code></a>.)
-The governing principle: do not stray from lambda calculus. A program is
-a plain CIC term — <code>fun</code>, <code>match</code>,
-<code>Fix</code>, application — that you could print and recognize as
-what you wrote; machinery that elaborates the source into something else
-(<code>Program Fixpoint</code>’s sigma-packed <code>_func</code>
-wrappers and subset types, the Equations plugin’s clause compilation) is
-out, however convenient. Concretely: a recursive program that is not
-structurally recursive is one <code>refine</code> whose body is a single
-ordinary ML-looking term:
-<code>uncurry ∘ Fix (well_founded_ltof _ &lt;measure&gt;)</code> turns
-the curried arguments into the one tuple the measure needs, the tuple is
-matched ONCE with flat, first-match clauses under a single
-<code>p = x</code> convoy, conditions are written
-<code>if dec (..) then .. else ..</code>, and every termination hole is
-discharged by one combined tactic line after the term
-(<code>(subst p; unfold ltof; simpl; abstract lia)</code>) —
-<code>abstract</code>, because lia’s generated proof terms get very
-large, and in a <code>Defined</code> (transparent) definition they would
-otherwise sit inside the program term itself and be re-typechecked at
-every unfolding; <code>abstract</code> hides them behind an opaque
-constant and keeps the lambda term small. The clause equations are then
-<em>derived</em> from the definition via <code>Fix_eq</code>, in the
-model file’s four-line shape:</p>
-<pre class="coq"><code>rewrite Fix_eq.
-- destruct dec; f_equal.
-- intros [[|x x&#39;] [|y y&#39;]] f g H; auto.
-  destruct dec; rewrite !H; f_equal.</code></pre>
-<p>— the equation branch is <code>destruct dec; f_equal</code>, and the
-extensionality premise closes by the pointwise <code>rewrite !H</code>,
-so no functional_extensionality: the model file’s
-<code>Print Assumptions</code> is closed under the global context. The
-<a
-href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>-vs-boolean
-bridge is a general lemma (<code>lem1</code> there), not per-proof
-gymnastics. Reasoning about the program goes through the derived
-equations, never by unfolding the fixpoint — the same rule as 3’s “never
-<code>unfold interp</code>”. (<code>Program Fixpoint</code> achieves
-code-once too but its generated obligations capture the recursive
-function inside subset proofs, making the derived equations need a
-<code>le_unique</code> detour — the <code>Fix</code> form above is both
-shorter and cleaner.)</p>
-<p>Two further rules, made explicit 2026-07-16. <strong>No auxiliary
-function that is the function</strong>: defining <code>f_aux</code> that
-differs from <code>f</code> only in argument order (to put the
-decreasing argument where <code>Fix</code> wants it) and then wrapping
-<code>f a b := f_aux b a</code> states the program twice and doubles the
-derived equations; the tupled <code>uncurry ∘ Fix</code> form with the
-right measure (<code>snd</code> for gcd) writes the program once in its
-conventional argument order. A worker with a genuinely different
-signature (a reparameterization the recursion needs, not a shuffle) is
-not covered by this rule, but prefer recursing on the caller’s own
-arguments with a measure when possible. <strong>No fuel</strong>:
-termination is always by a well-founded measure, never by a
-<code>fuel : nat</code> argument threaded through the recursion — fuel
-changes the function’s type, pollutes every equation with “enough fuel”
-side conditions, and proves nothing about the algorithm. Never use fuel
-for a computation we know terminates — sorting a list, manipulating a
-tree, structural compilation. Fuel has exactly one legitimate home: an
-interpreter or evaluator running <em>arbitrary</em> code that might
-genuinely loop forever, where the point is to run for a while and see
-whether an answer or an error comes back (<code>Lambda/</code>’s
-step-bounded runners, the Memprog machine interpreters). There the
-partiality is a fact about the language being interpreted, not about our
-algorithm — and a per-program “this much fuel suffices” lemma is what
-restores the honest statement for programs that do terminate. The older
-<code>refine (Fix ...)</code> files (<a
+<li><strong>Top level reads in the domain’s language</strong> — a
+pipeline of named stages, readable as a description of what the program
+does.</li>
+<li><strong>Program-as-data.</strong> Argument parsing produces one
+<code>Plan</code> value; a small interpreter executes it. No behavior
+from scattered ifs.</li>
+<li><strong>Errors are values; policy floats to the top.</strong> Lower
+layers never fudge; skip/retry/abort is a Plan field. Parse, don’t
+validate.</li>
+<li><strong>No layer leakage.</strong> Lower layers stay parametrically
+polymorphic in their own vocabulary (a fetcher cannot know upper
+datatypes).</li>
+<li><strong>Most general component wins.</strong> Use-case knowledge
+exists only at the composition point. Boilerplate means a concept is
+missing — factor the concept, don’t elaborate the handler.</li>
+<li><strong>Recursive programs are one plain lambda term</strong> —
+<code>fun</code>, <code>match</code>, <code>Fix</code>, application —
+with obligations after: one <code>refine</code>, tuple matched once
+under a single convoy, <code>if dec (..)</code> conditions, all
+termination holes closed by one <code>abstract lia</code> line
+(<code>abstract</code> keeps lia’s large proof terms out of transparent
+definitions). Clause equations are derived via <code>Fix_eq</code>,
+without functional extensionality. No <code>Program Fixpoint</code>, no
+Equations plugin. Fuel only for interpreters of possibly-non-terminating
+input, never for structural recursion. Model: <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>.
+Grandfathered until their rewrite: <a
 href="../coqdoc/Riktig.Programs.BinarySearch.html"><code>Programs/BinarySearch.v</code></a>,
-<a
-href="../coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>,
-<a
-href="../coqdoc/Riktig.Programs.MergeSort.html"><code>Programs/MergeSort.v</code></a>)
-predate the tupled form and stand as written until their scheduled
-rewrite; <a
-href="../coqdoc/Riktig.Programs.Gcd.html"><code>Programs/Gcd.v</code></a>
-was converted 2026-07-16 (aux eliminated, and with it the file’s
-functional_extensionality import — the flat motive closes
-<code>Fix_eq</code>’s premise pointwise).</p></li>
+<code>Quicksort.v</code>, <code>MergeSort.v</code>.</li>
 </ol>
-<h2 id="proof-style">Proof style</h2>
-<p>(The worked-out model is <code>enter-docker/math</code>; the
-discipline mirrors <code>lean-test/DESIGN.md</code>.)</p>
+<h2 id="structure-and-proof-style">Structure and proof style</h2>
 <ol type="1">
-<li><p><strong>Four layers.</strong> <a
-href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> — operational
-typeclasses, one per symbol, no laws. <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> — single-law
-property classes (<a
-href="../coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>,
-…). <code>Interface/</code> — structure classes over the Ops vocabulary
-(the ops are implicit class parameters, not fields), each law a
-<code>::</code> field naming the <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class that
-states it, never a <code>forall</code> written out a second time (rule
-7) — plus the bundles that state what a map or a choice must satisfy (<a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>),
-which are specs too, just ones carrying a value. Rules 7–9 below say how
-all of these are written.</p>
-<p><strong>A property is a class; a <code>Record</code> is
-data.</strong> The dividing line is whether instance search should ever
-go looking. A property that a proof might need supplied — a map is
-additive, homogeneous, linear, bilinear, alternating; a pair of maps is
-a two-sided inverse — is a <code>Class</code> over a <strong>plain
-function</strong>, so a lambda written at a use site can be shown to
-have it without being packaged into anything first. A
-<code>Record</code> survives only where a map is an
-<strong>element</strong> of something: the hom space <a
-href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
-builds, the category <a
-href="../coqdoc/Riktig.Impl.VectCat.html"><code>Impl/VectCat.v</code></a>
-builds, the witness an isomorphism carries, a chosen basis. Search must
-never hunt for one of those, so they get no <code>Hint Mode</code> and
-no module. Each such record is then the function (or the pair of maps)
-plus <strong>one</strong> <code>::</code> field holding its property,
-and a <code>*_from_laws</code> constructor takes the law proofs
-positionally. The old field names come back as plain definitions, so a
-spelling the tree already used keeps working. <code>Theory/</code> —
-lemmas derived generically via
-<code>Section</code>/<code>Context</code>, including the abstract
-structure-transfer constructions (a function space, product, Hom-space,
-or subspace inherits structure — instances with no data structure of
-their own). <code>Impl/</code> — data-structure realizations of the
-abstract structures, so one can compute with them: <code>Z</code>,
-<code>Q</code>, matrices as <code>Fin m -&gt; Fin n -&gt; F</code>,
-coefficient lists, the complex record — the mathematical analogue of
-<code>Programs/</code>, and usable by programs. A file does exactly one
-of these jobs. (Refined 2026-07-16: the transfer constructions <a
+<li><strong>Four layers plus implementations.</strong> <a
+href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a>: one operational
+class per symbol. <a
+href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>: one law per
+class. <code>Interface/</code>: one structure per file, assembled from
+laws. <code>Theory/</code>: everything proved, including transfer
+constructions (<a
 href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>,
 <a
-href="../coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.Subspace.html"><code>Theory/Subspace.v</code></a>
-moved from <code>Impl/</code> to <code>Theory/</code> under this
-criterion — they are abstract theory, not representations; the test for
-<code>Impl/</code> is “does this file give you something to compute
-with”. The field-as-its-own-vector-space instances live in <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>
-itself, beside the class: <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#Field_Scale"><code>Field_Scale</code></a>
-must be visible, definitionally, wherever <code>a *: x</code> is written
-at a field carrier, and <a
-href="../coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>
-keeps the compiled check that the transfer really is an instance.)</p>
-<p><strong>Fourth pattern, blessed 2026-07-08:</strong> a
-<code>Theory/</code> file may define the canonical generic
-<em>algorithm</em> for the construction it studies — <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigop"><code>bigop</code></a>/<a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
-in <a
+href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>)
+and canonical generic algorithms (<a
 href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>,
-Gram-Schmidt’s <a
-href="../coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>/<a
-href="../coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>
-in <a
-href="../coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
-— when the algorithm has no separate abstract spec worth writing (there
-is no “Summation” or “Orthogonalization” Interface for it to satisfy)
-and is itself generic over an existing Interface (<a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>),
-not tied to one concrete carrier. The algorithm <em>is</em> the theory
-being studied. New operational vocabulary still belongs in
-<code>Interface/</code>; concrete data-structure representations still
-belong in <code>Impl/</code>. (The 2026-07-08 wording also excluded
-instance-minting from <code>Theory/</code>; the 2026-07-16 refinement
-above supersedes that — abstract structure-transfer instances are Theory
-content, and only computable representations are Impl content.)</p>
-<p><strong>Fifth pattern, blessed 2026-07-08, narrowed
-2026-07-16:</strong> a <code>Theory/</code> file may import a specific
-<code>Impl/</code> file when its content is <em>theory about that named
-representation itself</em>. The original motivating cases (<a
-href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>
-over <a
-href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>/<a
-href="../coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>
-over <a
-href="../coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>/<a
-href="../coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>/<a
-href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>)
-dissolved when those constructions moved to <code>Theory/</code> — they
-are now ordinary Theory-imports-Theory. What remains under this pattern:
-theory about a genuine representation, e.g. <a
-href="../coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.Trace.html"><code>Theory/Trace.v</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</code></a>,
-and <a
-href="../coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
-importing <a
-href="../coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>
-(their theorems are ABOUT the matrix representation), and <a
-href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
-importing <a
-href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
-(properties of a named program). The test is unchanged: could the file’s
-theorems be stated without naming that specific representation? Rule 6
-still forbids the OTHER direction and the accidental case — a generic
-algorithm over an abstract <code>Interface</code> must still not import
-a concrete representation’s lemmas it doesn’t need to name.</p>
-<p><strong>Standing exception, recorded 2026-07-13:</strong> three
-directories sit deliberately <em>outside</em> the four-layer split
-altogether — <code>theories/Channel/</code>,
-<code>theories/Lambda/</code>, and <code>theories/Programs/</code>. Each
-is a self-contained track about concrete objects-of-study (traces and
-protocols; a calculus; executable example programs) rather than abstract
-structures-with-many-instances, so the Ops/Props/Interface/Theory/Impl
-decomposition would add layers without adding instances; internally each
-file keeps spec, theory and implementation content in clearly ordered,
-usually explicitly numbered sections. The Channel/ and Lambda/ exemption
-was examined and recorded in <code>docs/LINALG-ROADMAP.md</code>’s Wave
-L8 section (the 2026-07-08 audit); Programs/’s is that decidability
-reaches the programs as plain Coq <code>=</code> and stdlib
-<code>sumbool</code> — nothing from the algebra tower touches the code
-itself. Decidable itself is a full Interface/Theory/Impl family as of
-2026-07-16: <a
-href="../coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>
-(the <a
-href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
-href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
-classes and the <a
-href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
-vocabulary), <a
-href="../coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>
-(closure under the connectives, equality transported to lists and pairs,
-<a
-href="../coqdoc/Riktig.Theory.Decidable.html#dec_if_bool"><code>dec_if_bool</code></a>),
-<a
-href="../coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>
-(nat and bool). <code>theories/Examples/</code> is a fourth such track —
-compiled usage examples pinned from the blog, depending on everything,
-depended on by nothing. Two clarifications recorded 2026-07-16:
-<code>theories/Programs/</code> holds the <em>implementations</em> of
-algorithms and their derived clause equations; properties proved ABOUT a
-program (permutation, sortedness, correctness) go in
-<code>theories/Theory/</code> next to the rest of the proved mathematics
-(<a
-href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
-about <a
-href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
-is the model). And <code>theories/Lib/</code> holds plain Coq
-conveniences that are part of no mathematical structure — the calc
-chains (<a
-href="../coqdoc/Riktig.Lib.Calc.html"><code>Lib/Calc.v</code></a>) and
-measure induction (<a
-href="../coqdoc/Riktig.Lib.MeasureInd.html"><code>Lib/MeasureInd.v</code></a>,
-a placeholder until a proper theory of induction replaces it); they may
-be used by any track and depend on nothing.</p></li>
-<li><p><strong>Operational typeclasses carry notation.</strong> <a
+href="../coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>).
+<code>Impl/</code>: something to compute with (<code>Z</code>,
+<code>Q</code>, matrices, records). One file, one job.
+<code>Programs/</code>, <code>Channel/</code>, <code>Lambda/</code>,
+<code>Examples/</code> are self-contained tracks; decidability reaches
+programs as plain <code>=</code> and stdlib <code>sumbool</code>,
+nothing from the algebra tower. Properties proved about a program go in
+<code>Theory/</code> (<a
+href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>),
+except a track’s own example file
+(<code>Programs/RobotArm/</code>).</li>
+<li><strong>Operational classes carry notation.</strong> <a
 href="../coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a>/<a
 href="../coqdoc/Riktig.Ops.html#Zero"><code>Zero</code></a>/<a
 href="../coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a> give
-<code>+</code>, <code>0</code>, <code>==</code> for any instance; proofs
-read like textbook derivations
-(<code>rewrite &lt;- associative; rewrite right_inverse; rewrite right_identity; reflexivity</code>).</p></li>
-<li><p><strong>Setoid discipline.</strong> Work over an equivalence
-<code>==</code> with <code>Equivalence</code> and <code>Proper</code>
-instances so <code>rewrite</code> works everywhere — including under
-binds, once program equivalence <code>===</code> exists for the memory
-DSL. Never prove a program property by
-<code>unfold interp; simpl</code>; if you are unfolding an interpreter,
-the missing piece is an equivalence lemma.</p></li>
-<li><p><strong>Each lemma is the most general statement of its
-fact</strong> (rule 5 above, applied to proofs). Arithmetic
-side-conditions get factored into named reusable lemmas rather than
-inline <code>lia</code> everywhere.</p></li>
-<li><p><strong>Honest incompleteness.</strong> No <code>Axiom</code>. An
-<code>Admitted</code> must carry a comment with a proof sketch — a
-roadmap, not a shrug. Specs owe an equivalence proof to a canonical
-formulation (a structural <code>Sorted</code> must be proven equivalent
-to pairwise <code>Ordered</code>).</p></li>
-<li><p><strong>Import discipline.</strong> Dependencies point one
-direction: implementations import theories, theories import structures,
-never the reverse; an algorithm written against an abstract interface
-must not import a concrete instance’s lemmas.</p>
-<p><strong>Require the deepest name, not the chain</strong> (decided
-2026-08-01). Each <code>Interface/</code> file re-exports its parent,
-so</p>
-<pre class="coq"><code>From Riktig.Interface Require Export VectorSpace.</code></pre>
-<p>already carries <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+<code>+</code>, <code>0</code>, <code>==</code>; proofs read like
+textbook derivations.</li>
+<li><strong>Setoid discipline.</strong> Everything respects
+<code>==</code> via <code>Equivalence</code> and <code>Proper</code>.
+Never prove a program property by unfolding an interpreter — the missing
+piece is an equivalence lemma.</li>
+<li><strong>Each lemma is the most general statement of its
+fact.</strong> Side conditions become named lemmas, not inline
+<code>lia</code>.</li>
+<li><strong>Honest incompleteness.</strong> No <code>Axiom</code> (the
+tree has zero). An <code>Admitted</code> carries a proof sketch (the
+tree has zero). Stdlib axiom imports are disclosed in the file header
+(<a
+href="../coqdoc/Riktig.Theory.SubspaceBasis.html"><code>Theory/SubspaceBasis.v</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>,
-<code>Props</code> and <code>Ops</code>. Naming the ancestors as well is
-clutter, and it obscures which structure the file is actually written
-against. <code>Theory/</code> chains the same way —
-<code>Theory.AbGroup</code> carries <code>Theory.Group</code>.
-<code>Require Import S</code> imports everything <code>S</code> exports,
-so an <code>Import</code> of an already-exported name is always
-redundant; an <code>Export</code> is redundant only when the name is
-re-exported by something this file also exports.</p>
-<p>Two things stop a require being redundant, and neither is visible in
-the dependency graph:</p>
+href="../coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>).
+Specs owe an equivalence proof to a canonical formulation.</li>
+<li><strong>Imports point one way</strong>: implementations import
+theories, theories import interfaces, never the reverse. Require the
+deepest name, not the chain — every <code>Interface/</code> file
+re-exports its parents. Chains are <code>Require Export</code>; a file
+whose exported vocabulary needs instances re-exports their provider (<a
+href="../coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
+exports <code>Theory.Pointwise</code>: its carrier is a function type).
+When resolution fails downstream, fix the missing <code>Export</code>,
+never a locality attribute. A require kept for position or deliberate
+shadowing carries a comment saying so (<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>).
+A vocabulary dependency of a specification is allowed downward and
+documented (<a
+href="../coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+on <a
+href="../coqdoc/Riktig.Theory.Basis.html#lincomb"><code>lincomb</code></a>).</li>
+<li><strong>Structure classes are assembled from law classes.</strong>
+The shape, with <a
+href="../coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>
+as exemplar:
 <ul>
-<li><strong>Position.</strong> The implying require must be processed no
-later than the one it would replace. <a
-href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
-states its classes above its <code>Impl.OptionMonad</code> require, so
-its <code>Interface.Monad</code> has to stay where it is.</li>
-<li><strong>Deliberate shadowing.</strong> A repeated require can exist
-purely to be imported <em>last</em>, so its names win. <a
-href="../coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>
-re-requires <code>Theory.Monad</code> after <code>Ast</code> so that the
-monadic <a
-href="../coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a>
-shadows <code>List.map</code>. Such a line carries a comment saying
-so.</li>
+<li>Module-wrapped <code>Class</code>; <code>Export M.</code> after;
+qualification carries the structure name.</li>
+<li>Operations are implicit op-class binders
+(<code>{eq : EqRel G}</code>), not fields. Measured reason: fields make
+the operations projections, and <code>ring</code>,
+<code>Hint Rewrite</code> and unification all degrade.</li>
+<li>Substructure = first <code>::</code> field
+(<code>monoid :: Monoid G</code>); law field = a <a
+href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class;
+respect law = a <code>Proper</code> field.</li>
+<li><code>Hint Mode &lt;C&gt; ! - … : typeclass_instances</code>,
+<code>!</code> on the carrier only, written inside the module.
+<code>!</code> anywhere else was measured to make instances
+unreachable.</li>
+<li><strong>A property is a class; a <code>Record</code> is
+data.</strong> Abstract structure is never a <code>Record</code>; plain
+records are concrete carriers in implementations (<a
+href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>,
+the <code>C3</code> record).</li>
+<li>Guarded laws take a named domain predicate (<a
+href="../coqdoc/Riktig.Props.html#nonzero"><code>nonzero</code></a>),
+never an unfolded description.</li>
+<li><code>Export</code>, not <code>Notation</code>, out of the module.
+Documented exception for field shadowing: <a
+href="../coqdoc/Riktig.Interface.Subspace.html"><code>Interface/Subspace.v</code></a>.</li>
+<li>Field lists are column-aligned per class.</li>
+<li>Instance bodies: <code>:= {}</code> when every field is found by
+search (<a
+href="../coqdoc/Riktig.Theory.Pointwise.html#PW_VectorSpace"><code>PW_VectorSpace</code></a>);
+a spelled-out literal stays when its fields name plain lemmas (<a
+href="../coqdoc/Riktig.Theory.HomVS.html#Hom_ScaleLaws"><code>Hom_ScaleLaws</code></a>)
+— it carries information.</li>
+<li>Locality: bare <code>Instance</code> at top level,
+<code>#[export]</code> inside a <code>Section</code>,
+<code>#[global]</code> nowhere (see rule 6). <code>#[local]</code> is
+deliberate and commented where it appears. A <code>Section</code> kept
+only to hold <code>Context</code> for one instance is hoisted; a
+<code>Context</code> shared by several declarations earns its keep.</li>
+<li><code>Hint Rewrite</code> on a law projection needs a monomorphic
+wrapper (<a
+href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>’s
+<code>grp</code> database: <a
+href="../coqdoc/Riktig.Theory.Group.html#add_left_identity"><code>add_left_identity</code></a>
+etc.).</li>
 </ul></li>
-<li><p><strong>Structure classes are assembled from law classes: one
-substructure field, one field per law, no equation written
-twice</strong> (decided 2026-07-31, superseding the 2026-07-25
-flat-field design and its <code>Section Laws</code> membership
-instances). Every law in the tree is a class in <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> stated over
-a plain operation. A structure class <em>names</em> those laws; it does
-not restate them. The whole of <a
-href="../coqdoc/Riktig.Interface.Group.html"><code>Interface/Group.v</code></a>,
-minus its <code>Require Export</code> line:</p>
-<pre class="coq"><code>Module Group.
-  Class Group (G : Type) {eq : EqRel G} {zero : Zero G}
-              {add : HasAdd G} {neg : HasNeg G} := {
-    monoid    :: Monoid G;
-    neg_proper :: Proper (equ ==&gt; equ) neg;
-    is_left_inverse  :: LeftInverse G add neg 0;
-    is_right_inverse :: RightInverse G add neg 0;
-  }.
-  Hint Mode Group ! - - - - : typeclass_instances.
-  Hint Rewrite @left_inverse @right_inverse : algebra_db.
-End Group.
-Export Group.</code></pre>
-<p>That is the entire file. There is no <code>Section Laws</code>, no
-<code>is_Monoid</code>, no <code>from_laws</code>, and no
-<code>forall x y z : G, …</code> anywhere: <code>monoid ::</code>
-<em>is</em> the membership, and <code>LeftInverse G add neg 0</code>
-<em>is</em> the law. A structure gets longer only by acquiring more
-laws, never by copying its parent’s.</p>
-<p><strong>Operations are implicit op-class binders.</strong>
-<code>{eq : EqRel G}</code>, <code>{add : HasAdd G}</code> and friends
-come from <a href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a>, so
-a use site writes <code>`{Group G}</code> and the operations arrive with
-it. The two exceptions are <a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>
-and <a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>,
-whose <code>op</code> is an explicit <code>(op : BinOp M)</code>
-parameter because one carrier has several — a ring is a <a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>
-twice over, once at each operation — and search cannot pick for you.</p>
-<p><strong><code>Export</code>, not <code>Notation</code>.</strong> The
-module wrapper keeps the law names (<a
-href="../coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>,
-<code>left_distributive</code>) from colliding as <em>definitions</em>;
-<code>Export Group.</code> immediately after <code>End Group.</code>
-makes the class reachable as bare <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>.
-No file anywhere writes <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group.Group</code></a>,
-and an interface that <code>Require Export</code>s its parent hands the
-whole chain onward: a file that wants rings writes
-<code>From Riktig.Interface Require Import Ring.</code> and has
-<code>Ops</code>, <code>Props</code>, <a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>,
+<li><strong>Naming: full descriptive words, no abbreviations.</strong>
+The module path carries the structure name
+(<code>Group.left_inverse</code>, never <code>grp_invl</code>).
+Substructure field = weaker structure’s lowercase name. Law field =
+<code>is_</code> + the Props class (<a
+href="../coqdoc/Riktig.Interface.Group.html#Group.is_left_inverse"><code>is_left_inverse</code></a>).
+Respect law = <code>&lt;op&gt;_proper</code> (<a
+href="../coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>neg_proper</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>
-and <a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
-in scope with it. Each Interface file therefore
-<code>Require Export</code>s exactly its immediate parent and nothing
-else.</p>
-<p><strong>Laws are heterogeneous where the mathematics is.</strong> <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> states
-associativity and the two identities about an <em>action</em>
-<code>act : A -&gt; B -&gt; B</code>, so
-<code>Associative M M add add</code> is a monoid law and
-<code>Associative F V smul mult</code> is the scalar-action law — the
-same class, and <code>rewrite associative</code> closes both. <a
-href="../coqdoc/Riktig.Props.html#LeftDistributive"><code>LeftDistributive</code></a>/<a
-href="../coqdoc/Riktig.Props.html#RightDistributive"><code>RightDistributive</code></a>
-are heterogeneous the same way. A monoid is a monoid acting on itself;
-the code says so rather than a comment. <a
-href="../coqdoc/Riktig.Props.html#Commutative"><code>Commutative</code></a>
-is the one law that cannot be heterogenized
-(<code>op a b == op b a</code> needs one type) and stays
-single-carrier.</p>
-<p><strong>Guarded laws take the domain as a predicate.</strong> An
-inverse need not invert everything:
-<code>LeftInverseOn T P op inv unit</code> requires <code>P a</code>
-before <code>op (inv a) a == unit</code>. <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-uses it at the guard <code>nonzero F</code>, which is what lets a
-division ring be a <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-minus <code>mul_commutes</code> rather than a separate development. <a
-href="../coqdoc/Riktig.Props.html#LeftInverse"><code>LeftInverse</code></a>
-is the total case, and <a
-href="../coqdoc/Riktig.Props.html#left_inverse_defined_everywhere"><code>left_inverse_defined_everywhere</code></a>
-presents every total inverse as a guarded one, so a theorem proved about
-<a
-href="../coqdoc/Riktig.Props.html#LeftInverseOn"><code>LeftInverseOn</code></a>
-also holds of every group. <a
-href="../coqdoc/Riktig.Props.html#invertible"><code>invertible</code></a>
-is the other stock guard, for a monoid whose inverse is only defined on
-its invertible elements.</p>
-<p>Guarded laws stay out of <code>algebra_db</code>:
-<code>autorewrite</code> has no way to discharge the <code>P a</code>
-side condition.</p>
-<p><strong>Respect laws are <code>Proper</code> fields.</strong> <a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>
-carries <code>Equivalence eq</code> and
-<code>Proper (equ ==&gt; equ ==&gt; equ) op</code>, so every structure
-above it has both by inheritance and only the <em>new</em> operations
-need a <code>Proper</code> field of their own (<code>neg_proper</code>
-in <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Field.html#Field.inv_proper"><code>inv_proper</code></a>
-in <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>).
-Because these are stated over the raw binder rather than a projection,
-<a href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> marks its
-operation classes <code>Typeclasses Transparent</code>, and each
-Interface file that introduces one of its own repeats the line (<a
-href="../coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>
-in <code>Order.v</code>; <a
-href="../coqdoc/Riktig.Interface.Norm.html#HasNorm"><code>HasNorm</code></a>
-in <code>Norm.v</code>; <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#HasOlt"><code>HasOlt</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#HasOle"><code>HasOle</code></a>
-in <code>DecTotalOrder.v</code>). Without it <code>Equivalence eq</code>
-never matches a goal spelled <code>Equivalence (@equ T Te)</code> and
-rewriting fails with “<a
-href="../coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is not a
-declared transitive relation”.</p>
-<p><strong><code>Hint Mode</code> forces the carrier and nothing
-else.</strong> Write
-<code>Hint Mode Group ! - - - - : typeclass_instances.</code> inside the
-module. The <code>!</code> on the carrier is what stops search unifying
-<code>?M := ?X -&gt; ?M'</code> against a pointwise instance and
-recursing until coqc runs out of memory. A <code>!</code> anywhere
-<em>else</em> is a bug: reaching a substructure means solving
-<code>Field F … ?inv</code> with the operation still an evar, and a mode
-that refuses it makes every inherited instance unreachable — measured
-2026-07-31, when `Hint Mode Field ! - - - - -</p>
-<ul>
-<li>!<code>left</code>Ring F<code>,</code>Associative F
-add<code>and</code>Commutative F
-add<code>all unresolvable from ``</code>{Field F}
-`<code>, while</code>Field F recip` itself resolved fine.</li>
-</ul>
-<p>Two positions deserve <code>-</code> on purpose beyond that rule. The
-<strong>unit</strong> of an identity or inverse law (<a
-href="../coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#RightIdentity"><code>RightIdentity</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#LeftInverse"><code>LeftInverse</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#LeftInverseOn"><code>LeftInverseOn</code></a>,
-…): a use site’s left-hand side pins the carrier and the operation, and
-<em>which</em> element is the unit is what the instance answers. Forcing
-it also trips a Coq 8.20 bug — a <code>!</code> in that position makes a
-plain <code>rewrite (left_inverse_on a Ha)</code> raise
-<code>Anomaly "Uncaught exception Not_found"</code>. And the
-<strong>operation</strong> of <a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>/<a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>,
-because an <code>Equivalence eq</code> lookup carries no operation to
-unify against; every Magma on a carrier answers it identically, and <a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>op_proper</code></a>
-lookups pin <code>op</code> from the goal.</p>
-<p><strong>A guard predicate must be named, not unfolded.</strong> A
-caller holding <code>Ha : a =/= 0</code> cannot write
-<code>left_inverse_on a Ha</code>: elaboration solves <code>?P a</code>
-to an anonymous lambda, convertible with <code>nonzero F</code> but not
-equal to it, and instance search matches heads rather than converting.
-Either state the hypothesis as <code>nonzero F a</code>, or pass the
-guard — <code>left_inverse_on (P := nonzero F) a Ha</code>.</p>
-<p><strong>Why the operations are parameters and not fields</strong>
-(measured 2026-07-30). Take a bundled <a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
-carrying <code>m_equ</code>, <code>m_zero</code>, <code>m_add</code> as
-record fields, a bundled <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>
-carrying its own <code>g_equ</code>, <code>g_zero</code>,
-<code>g_add</code>, <code>g_neg</code>, and a
-<code>Group_is_Monoid</code> instance that repackages the Group’s
-fields. In a goal written in the Group’s operations, the Monoid theorem
-<code>shunt : forall a b c, m_equ (m_add (m_add (m_add a m_zero) b) c) (m_add a (m_add b c))</code>
-is unusable by any matching tactic: <code>apply shunt</code>,
-<code>rewrite shunt</code>, <code>rewrite m_idr</code>, and even
-<code>rewrite (m_idr (Monoid := Group_is_Monoid G _) a)</code> all fail,
-because matching must line <code>m_add ?inst a m_zero</code> up with
-<code>g_add a g_zero</code> and the two agree only after the instance is
-unfolded and the projection reduced. <code>exact (shunt G a b c)</code>
-<em>does</em> succeed — <a
-href="../coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>
-type-checks up to conversion — so the statements are the same
-proposition and only matching is lost. Nothing repairs the matching:
-<code>Typeclasses Transparent</code> on all six operation projections,
-<code>Hint Unfold</code> for them in both <code>core</code> and
-<code>typeclass_instances</code>, a priority-0 duplicate of the
-membership instance, and <code>unfold Group_is_Monoid in *</code> before
-the rewrite each leave all three tactics failing. With the operations as
-shared parameters the same rewrites go through first-order at any
-distance in the tower.</p>
-<p><strong>What needs a locality attribute, and what does not</strong>
-(measured 2026-07-31, then corrected 2026-08-01 after a first answer
-proved wrong).</p>
-<p>A <code>::</code> class field needs <strong>nothing</strong>. It
-defaults to <code>#[export]</code>, and since every structure module
-ends with <code>Export X.</code>, a <code>Require Import</code> of the
-file activates it. Verified with a two-file test: an unannotated
-<code>::</code> field resolves fine through <code>Require Import</code>,
-and fails only under a bare <code>Require</code>, which the tree never
-does for Riktig modules (all 39 bare requires are Coq stdlib).</p>
-<p>An <code>Instance</code> at top level is written bare (decided
-2026-08-02, replacing the earlier blanket <code>#[global]</code>):
-<code>Instance name {binders} : C := …</code>, no attribute, no wrapping
-<code>Section</code> — the default <code>#[export]</code> locality
-survives every <code>Require Export</code> chain, and where every field
-is found by search the body is <code>{}</code> (<a
-href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>’s
-field-over-itself instances are the model: four one-liners). What
-<code>#[export]</code> does not survive is a plain <code>Import</code>
-link in the middle of a chain: <a
-href="../coqdoc/Riktig.Examples.GettingStarted.html"><code>Examples/GettingStarted.v</code></a>
-imports <a
-href="../coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>,
-which reaches <a
-href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>
-by <code>Import</code>, and an unattributed <a
-href="../coqdoc/Riktig.Theory.Pointwise.html#PW_EqRel"><code>PW_EqRel</code></a>
-made <code>EqRel (Fin.t 2 -&gt; Q)</code> unresolvable three files away.
-<code>#[global]</code> is therefore a per-case exception, like
-<code>#[local]</code>: it stays only where a full build proves the
-default insufficient (the Pointwise instances are the standing example),
-and adding or removing the attribute needs a full build either way.
-Inside a <code>Section</code> an unattributed <code>Instance</code> dies
-at <code>End</code>; the narrowest surviving form is
-<code>#[export]</code>. Prefer hoisting to top level with explicit
-binders when the <code>Section</code> holds nothing else; a
-<code>Section</code> whose <code>Context</code> is shared by several
-declarations earns its keep. A spelled-out record literal stays where
-its fields name plain lemmas that search cannot find — the <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
-bundles built from a file’s own lemmas are the standing example;
-<code>{}</code> is for instances whose every field is itself an
-instance, like the two-field <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
-bundles.</p>
-<p><code>Hint</code>, <code>Hint Mode</code>, <code>Hint Rewrite</code>,
-<code>Typeclasses Transparent</code> and <code>Arguments</code> at top
-level are already global; 197 redundant attributes were removed from
-those.</p>
-<p><code>#[local] Instance</code> is the deliberate exception, and it is
-not an oversight where it appears. <a
-href="../coqdoc/Riktig.Programs.Memprog.Quicksort.html"><code>Programs/Memprog/Quicksort.v</code></a>’s
-<a
-href="../coqdoc/Riktig.Programs.Memprog.Quicksort.html#Z_lt_decidable"><code>Z_lt_decidable</code></a>/<a
-href="../coqdoc/Riktig.Programs.Memprog.Quicksort.html#Z_le_decidable"><code>Z_le_decidable</code></a>
-would shadow what <a
-href="../coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>
-owns if they escaped the file, and <a
-href="../coqdoc/Riktig.Lambda.CalcExamples.html"><code>Lambda/CalcExamples.v</code></a>’s
-<a
-href="../coqdoc/Riktig.Lambda.CalcExamples.html#cstar_Transitive"><code>cstar_Transitive</code></a>
-exists only so <code>calc</code> can chain <a
-href="../coqdoc/Riktig.Lambda.SKI.html#cstar"><code>cstar</code></a> in
-that one file. An instance that would be wrong to export is declared
-<code>#[local]</code> and says why.</p>
-<p>The trap worth naming: <strong>a file compiling after the attribute
-is removed proves nothing.</strong> Locality governs what downstream
-files see, so only a full build tests it. The first version of this rule
-claimed top-level <code>Instance</code> was redundant on exactly that
-bad evidence.</p>
-<p>Coq’s <code>::</code> syntax deliberately does not default to global:
-the older <code>:&gt;</code> auto-registered every such field, and the
-Coq team removed that default because it let instances leak into every
-importing file silently. There is no setting that restores it.
-(<code>:&gt;</code> still appears where it is a coercion on a data
-record’s underlying function — <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#bm_fun"><code>bm_fun</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#mf_fun"><code>mf_fun</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Determinant.html#determinant_form"><code>determinant_form</code></a>
-— not an instance declaration.)</p>
-<p><strong><code>Hint Rewrite</code> on a law projection needs a
-monomorphic wrapper.</strong> Because the identity and associativity
-laws are stated over an action, their projections carry two type
-parameters that <code>autorewrite</code> cannot discharge, so
-registering <code>@left_identity</code> directly makes the database
-silently fail to fire. <a
-href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
-and <a
-href="../coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>
-therefore export <code>add_left_identity</code>,
-<code>add_right_identity</code>, <code>add_left_inverse</code>,
-<code>add_right_inverse</code>, <a
-href="../coqdoc/Riktig.Theory.Ring.html#mul_left_identity"><code>mul_left_identity</code></a>
-and <a
-href="../coqdoc/Riktig.Theory.Ring.html#mul_right_identity"><code>mul_right_identity</code></a>,
-and the <code>grp</code>, <code>su3</code> and <code>su3fin</code>
-databases register those. Skipping this is not a compile error — it
-leaves goals open wherever the tactic was relied on.</p>
-<p><strong>Binders.</strong> Law fields need no <code>forall</code> at
-all now, but a <code>Section</code> that opens a structure still
-annotates its carriers, and <strong>exactly one bare generalizing binder
-per shared scalar</strong>: writing <code>`{Field F}</code> twice puts
-two independent copies of <code>EqRel F</code>, <code>Zero F</code>,
-<code>HasAdd F</code>, … in scope, and a hypothesis about the first
-neither <a
-href="../coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>s
-nor <code>rewrite</code>s into a goal about the second (checked
-2026-07-30). A section over several carriers opens with one generalizing
-binder for the scalar and then writes each further carrier’s operations
-out, named by initial, followed by its structure hypothesis as a plain
-binder. <a
-href="../coqdoc/Riktig.Theory.Bilinear.html"><code>Theory/Bilinear.v</code></a>
-is the model:</p>
-<pre class="coq"><code>Context {F U V W : Type} `{FF : Field F}.
-Context {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}.
-Context {VU : VectorSpace F U}.</code></pre></li>
-<li><p><strong>Naming: full descriptive words, no abbreviations</strong>
-(decided 2026-07-20, superseding the abbreviated style —
-<code>mon_idl</code>, <code>grp_invl</code>, <code>ip_add_l</code> —
-used before that date; since 2026-07-25 the structure-name prefix lives
-in the module path, not the identifier). A structure’s law fields read
-as English inside the module — <a
-href="../coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>,
-not <a
-href="../coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>;
-<code>mul_associative</code>, not <code>mulA</code> — and the
-structure’s name arrives by qualification
-(<code>Group.left_inverse</code>, <code>Ring.mul_associative</code>),
-never as a <code>group_</code>/<code>ring_</code> prefix baked into the
-field name. Because the module already carries the structure’s name, the
-declarations inside it need no prefix either:</p>
-<ul>
-<li>The <strong>substructure field is the weaker structure’s name in
-lower case</strong> — <code>monoid :: Monoid G</code> in <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
-<code>abgroup :: AbGroup R</code> in <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>,
-<code>ring :: Ring F</code> in <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.semigroup"><code>semigroup</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.magma"><code>magma</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.group"><code>group</code></a>.
-<a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
-is the exception that proves the rule: it is a mixin rather than a level
-of the tower, so both <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
-and <a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
-name it <code>scaling :: ScaleLaws F V</code>.</li>
-<li>A field naming a <strong>law</strong> is <code>is_</code> plus the
-<a href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class in
-snake case — <code>is_left_inverse :: LeftInverse G add neg 0</code>,
-<code>is_associative</code>, <code>is_left_distributive</code>. The
-<code>is_</code> says the field asserts a property rather than holding
-one. Exception (recorded 2026-08-02): when the law class is instantiated
-away from its namesake operations, so that the class name alone would
-misstate the law, the field names what it says instead —
-<code>Exp.add_to_mul :: Additive F F add mult fn</code> (sums to
-products; <code>is_additive</code> would claim the wrong equation) and
-<a
-href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_left_identity"><code>Alternative.fail_left_identity</code></a>/<a
-href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_right_identity"><code>fail_right_identity</code></a>
-(which element is the identity).</li>
-<li>The <strong>respect law</strong> is named after its operation:
-<code>neg_proper</code>, <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.inv_proper"><code>inv_proper</code></a>,
-<code>scale_proper</code>, <a
-href="../coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>op_proper</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.abs_proper"><code>abs_proper</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.QuadraticForm.html#QuadraticForm.quad_proper"><code>quad_proper</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>.</li>
-</ul>
-<p>There are no <code>from_parts</code> smart constructors: a structure
-is built by giving its fields, and the fields are law classes that
-instance search already knows how to find. The bridges into <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> are
-anonymous — an instance nothing ever names does not need a name. None of
-this touches the generic property-class field names themselves (<a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>’s <a
+href="../coqdoc/Riktig.Interface.QuadraticForm.html#QuadraticForm.quad_proper"><code>quad_proper</code></a>).
+Props’ own projections (<a
 href="../coqdoc/Riktig.Props.html#associative"><code>associative</code></a>,
 <a
 href="../coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>,
+…) stay short — they are the vocabulary calc steps use. Exceptions, when
+a law class is instantiated away from its namesake operations and the
+class name alone would misstate the law: <a
+href="../coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>,
 <a
-href="../coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>,
+href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.fail_left_identity"><code>Alternative.fail_left_identity</code></a>.
 <a
-href="../coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#right_inverse"><code>right_inverse</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>,
-<code>left_distributive</code>, <code>right_distributive</code>, … stay
-as they are — those are the short, uniform vocabulary every structure’s
-laws resolve through inside a <code>calc</code> step’s brace, by
-design).</p>
-<p>Since 2026-07-25 every <em>module-wrapped</em> structure class in
-<code>Interface/</code> carries no prefix — the last of them lost theirs
-the way <a
-href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
-did, <code>ordered_field_le_total</code> becoming <a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>.
-Three kinds of declaration are deliberately not wrapped:</p>
-<ul>
-<li><strong>Operational and definitional classes</strong> — <a
-href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>,
-and the <code>Has…</code> family (<a
-href="../coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a>, <a
-href="../coqdoc/Riktig.Ops.html#HasScale"><code>HasScale</code></a>, <a
-href="../coqdoc/Riktig.Ops.html#HasInner"><code>HasInner</code></a>, <a
-href="../coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#HasOlt"><code>HasOlt</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#HasOle"><code>HasOle</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Norm.html#HasNorm"><code>HasNorm</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Monad.html#HasBind"><code>HasBind</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Monad.html#HasReturn"><code>HasReturn</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Alternative.html#HasFail"><code>HasFail</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Alternative.html#HasAlt"><code>HasAlt</code></a>).
-Their method name IS the vocabulary (<a
-href="../coqdoc/Riktig.Ops.html#add"><code>add</code></a>, <a
-href="../coqdoc/Riktig.Ops.html#scale"><code>scale</code></a>, <a
-href="../coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a>, <a
-href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>),
-so there is nothing to de-prefix.</li>
-<li><strong>The property classes of <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a></strong> —
-<a
-href="../coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#Commutative"><code>Commutative</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#RightIdentity"><code>RightIdentity</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#LeftInverse"><code>LeftInverse</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#RightInverse"><code>RightInverse</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#LeftDistributive"><code>LeftDistributive</code></a>,
-<a
-href="../coqdoc/Riktig.Props.html#RightDistributive"><code>RightDistributive</code></a>,
-<a href="../coqdoc/Riktig.Props.html#Unique"><code>Unique</code></a>, <a
-href="../coqdoc/Riktig.Props.html#Injective"><code>Injective</code></a>.
-Each is a single law about an operation or a map, and its one field is
-the short uniform word the <code>calc</code> braces resolve through, so
-there is no structure name to strip.</li>
-<li><strong>The thin bundles</strong> <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>,
-and the three isomorphism records — they carry a value rather than laws
-about a carrier, so instance search must never hunt for one (no module,
-no <code>Hint Mode</code> on the record). Their compatibility
-projections keep the record’s name as a prefix, since nothing qualifies
-them: <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_scale"><code>multilinear_form_scale</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Determinant.html#determinant_basis_normalization"><code>determinant_basis_normalization</code></a>.
-Because a record’s parameters are not class parameters, each of these
-files follows the record with one <code>Arguments</code> line per field,
-listing the whole operation chain as implicit, so downstream code writes
-<code>basis_vec B</code> and <code>lm_fun f</code> rather than the
-twenty-argument form.</li>
-</ul>
-<p><a
 href="../coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
-(<a
-href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>)
-— the scaling mixin shared by <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
-and <a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
-— <em>is</em> module-wrapped like the rest. Its respect field keeps <a
-href="../coqdoc/Riktig.Ops.html#scale"><code>scale</code></a> in the
-identifier (<code>scale_proper</code>) because the module name says only
-that these are laws, not which operation they are about; its four law
-fields take the <code>is_</code> form and name the <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class, with
-the scaling action supplied as the argument that says which operation is
-meant:</p>
-<pre class="coq"><code>is_left_distributive  :: LeftDistributive F V V Vs;
-is_right_distributive :: RightDistributive F V V Vs;
-is_associative        :: Associative F V Vs mult;
-is_left_identity      :: LeftIdentity F V Vs 1;</code></pre>
-<p>Both <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
-and <a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
-pick the mixin up as a single <code>scaling :: ScaleLaws F V</code>
-field rather than restating it.</p>
-<p><a
-href="../coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
-is wrapped but keeps <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.hom"><code>hom</code></a>,
-<a
-href="../coqdoc/Riktig.Interface.Category.html#Category.id"><code>id</code></a>
-and <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.comp"><code>comp</code></a>
-as fields — it is parameterised over the object type, not over operation
-classes — and exposes them through
-<code>Notation hom := Category.hom</code>, <code>cat_id</code>, <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.comp"><code>comp</code></a>,
-so call sites read unqualified. <a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>
-uses the same device for its one operational field,
-<code>Notation ga_vec := GeometricAlgebra.vec</code>.</p></li>
-<li><p><strong>A class states only the laws it adds</strong> (decided
-2026-07-31, reversing the 2026-07-20 restate-everything rule). Where a
-class strengthens a structure on the same carrier, it carries the weaker
-structure as its first <code>::</code> field and states nothing that
-field already implies. Counted in <code>Interface/</code>: <a
+is a mixin, named <code>scaling</code> wherever it appears.</li>
+<li><strong>A class states only the laws it adds.</strong> The weaker
+structure is its first <code>::</code> field; nothing that field implies
+is restated (<a
 href="../coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>
-2 fields, <a
-href="../coqdoc/Riktig.Interface.Semigroup.html#Semigroup.Semigroup"><code>Semigroup</code></a>
-2, <a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
-3, <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>
-4, <a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
-2, <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
-4, <a
+2 fields … <a
 href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-5. A reader who wants the full law set of a <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-follows four one-screen files, each of which says exactly what that
-level contributes; nobody maintains a fifteen-line copy of the ring
-axioms in three places, and a concrete instance proves each law once as
-an instance of the corresponding <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> class rather
-than supplying a field per level.</p>
-<p><strong>What is required ambiently rather than inherited.</strong> A
-class whose own laws are about a <em>different</em> vocabulary layered
-on top takes the structure as a generalizing binder in the class header
-instead of a substructure field, and states only its own laws. <a
+5). Structure over a different vocabulary is required ambiently instead:
+<a
 href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
-requires <code>`{Field F}</code>; <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.FormallyReal"><code>FormallyReal</code></a>
-requires the same; <a
-href="../coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
-requires <code>`{VectorSpace F V}</code>; <a
+takes <code>`{Field F}</code>; <a
 href="../coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
-requires <code>`{OrderedField F}</code> and a plain
-<code>{VS : VectorSpace F V}</code> binder — plain, because generalizing
-it would insert a second <code>Field F</code> beside the one
-<code>OrderedField F</code> already supplies.</p>
-<p>Class field lists are column-aligned (the <code>::</code> and the
-type lined up down the block) so the field names read as a table, not a
-ladder of different-length lines — matched to whatever the longest name
-in that particular class requires, not a fixed column across the
-tree.</p></li>
-<li><p><strong>Equational proofs are <code>calc</code> chains, not raw
-<code>rewrite</code> scripts</strong> (standing rule, restated
-2026-07-20 after an audit found real gaps — <a
-href="../coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>’s
-<a
-href="../coqdoc/Riktig.Theory.Log.html#log_mono"><code>log_mono</code></a>
-among them). A proof whose content is “a chain of equal or related
-terms, each justified by one law” is written with <a
-href="../coqdoc/Riktig.Lib.Calc.html"><code>Lib/Calc.v</code></a>’s
-<code>calc</code> notation (or one of its
-named/mixed/<code>calcrw</code> forms, per that file’s header), never as
-a bare sequence of three or more <code>rewrite</code>s that leave the
-intermediate terms invisible. A 1–2 step rewrite, a case split, or a
-decision procedure is not required to become a <code>calc</code> chain —
-the rule targets exactly the shape Rule 2 above already describes
-(<code>rewrite &lt;- associative; rewrite right_inverse; rewrite right_identity; reflexivity</code>,
-which itself should now be read as the <em>desugared</em> form a
-<code>calc</code> chain compiles to, not the form to write by hand).
-<code>docs/TODO.md</code> tracks any file found still using the raw
-form.</p></li>
-<li><p><strong>Plain commutative-ring identities go to
-<code>ring</code>, not to a <code>calc</code> chain</strong> (recorded
-2026-07-30). <a
-href="../coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>’s
-<a
-href="../coqdoc/Riktig.Theory.Ring.html#ring_theory_of_Ring"><code>ring_theory_of_Ring</code></a>
-builds the <code>ring_theory</code> record that Coq’s setoid-ring plugin
-wants out of any <code>Ring R</code>, given one extra fact —
-commutativity of multiplication, which <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
-does not require in general (<code>End V</code> in <a
-href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
-is noncommutative) and which a <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
-supplies unconditionally as <a
-href="../coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>.
-So over an <em>abstract</em> field, one line inside a
-<code>Section</code> registers the tactic on the tower’s own
-<code>+</code>/<code>*</code>/<code>-</code>/<code>0</code>/<code>1</code>/<code>==</code>:</p>
-<pre class="coq"><code>Section AbstractFieldRing.
-  Context {F : Type} `{Field.Field F}.
-  Add Ring F_ring : (ring_theory_of_Ring (R := F) commutative).
-
-  Lemma binomial : forall a b : F,
-    (a + b) * (a + b) == a * a + (1 + 1) * (a * b) + b * b.
-  Proof. intros a b. ring. Qed.
-End AbstractFieldRing.</code></pre>
-<p>The registration is per-<code>Section</code>: <code>Add Ring</code>
-captures the exact operation terms in scope, and a section-local
-<code>F</code> does not survive <code>End</code>, so <a
-href="../coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>
-deliberately does not register the record itself and each section that
-wants the tactic re-registers it under its own name — <a
-href="../coqdoc/Riktig.Impl.Cliff2.html"><code>Impl/Cliff2.v</code></a>
-six times, <a
-href="../coqdoc/Riktig.Impl.Cliff13.html"><code>Impl/Cliff13.v</code></a>
-four, <a
-href="../coqdoc/Riktig.Theory.Maxwell.html"><code>Theory/Maxwell.v</code></a>
-once. <a
-href="../coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>’s
-<a
+takes <code>`{OrderedField F}</code> and a plain
+<code>{VS : VectorSpace F V}</code> binder — plain, because a second
+generalizing binder would insert a second <code>Field F</code>. Exactly
+one bare generalizing binder per shared scalar.</li>
+<li><strong>Equational proofs are <code>calc</code> chains</strong> (<a
+href="../coqdoc/Riktig.Lib.Calc.html"><code>Lib/Calc.v</code></a>), one
+justification per step, not raw rewrite scripts. The braced form stops
+at seven steps by design: name the intermediate object and split the
+chain. Step targets carry their carrier ascription
+(<code>(… : Cl F 2)</code>).</li>
+<li><strong>Ring identities go to <code>ring</code>.</strong> Each
+section that needs it runs
+<code>Add Ring &lt;name&gt; : (ring_theory_of_Ring (R := F) commutative)</code>
+— section-local by necessity, and impossible on an abstract (possibly
+non-commutative) <a
+href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>.
+<code>field</code> likewise via <a
 href="../coqdoc/Riktig.Theory.Field.html#field_theory_of_Field"><code>field_theory_of_Field</code></a>
-is the same construction one level up (its extra fields are exactly <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
-and <code>Field.mul_left_inverse</code>); <a
-href="../coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a> runs
-<code>Add Field Q_field</code> from it and <a
-href="../coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a> runs
-<code>Add Ring Z_ring</code> from <a
-href="../coqdoc/Riktig.Theory.Ring.html#ring_theory_of_Ring"><code>ring_theory_of_Ring</code></a>,
-so <code>ring</code> and <code>field</code> work on goals stated in the
-tower’s notation, not only on raw
-<code>Qplus</code>/<code>Z.add</code>.</p>
-<p>What this buys, and what it costs to miss: in <a
-href="../coqdoc/Riktig.Impl.Cliff13.html"><code>Impl/Cliff13.v</code></a>
-the two distributivity laws of a 16-dimensional Clifford algebra are
-<code>repeat split</code> followed by <code>simpl; ring</code> on each
-of the 16 component goals, where the alternative is a hand-written
-16-term shuffle lemma per law. <a
-href="../coqdoc/Riktig.Impl.Cliff3.html"><code>Impl/Cliff3.v</code></a>
-registers <code>Add Ring</code> in each of its ten sections, one
-registration per section because the command is section-local. Rule 10
-therefore does not ask for a chain where <code>ring</code> is the single
-justification; a chain is for steps where <em>naming</em> the law is
-what makes the proof readable.</p></li>
-<li><p><strong>Comments explain Coq; the mathematics goes in a blog
-post</strong> (decided 2026-07-31). A <code>.v</code> file carries only
-what a reader cannot get from the code itself: a Coq-ism, a workaround
-for a tool limitation, or why an absence is deliberate. It does
-<strong>not</strong> carry a header explaining what the theory is, what
-it is for, how its pieces behave, or what was decided and when. That
-material is a <strong>blog post per file</strong> — tutorial language,
-pretty notation, linking into the coqdoc so the source reads as trivial
-once the post has been read. <code>docs/BLOG-SYLLABUS.md</code> tracks
-which file has which post.</p>
-<p>The lever that makes this possible is rule 8: when names are full
-descriptive words, most comments become unnecessary because the code
-already says what they said. <a
-href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a> carries zero
-comments and is readable, because
-<code>LeftInverseOn T defined_on op inverse unit</code> needs no
-paragraph explaining that the inverse is guarded.</p>
-<p>Measured on 2026-07-31: <code>Interface/</code> went from 848 comment
-lines in 1953 (43%) to 3 in 1112. The three survivors are the model for
-what earns a comment —</p>
-<ul>
-<li><code>Decidable.v</code>: why no <code>Hint Mode</code> is declared
-(<a
-href="../coqdoc/Riktig.Impl.Orders.html"><code>Impl/Orders.v</code></a>
-resolves <code>dec _</code> with the proposition still undetermined,
-which a strict mode would forbid);</li>
-<li><code>AbGroup.v</code>: why <a
-href="../coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>
-is in <code>comm_db</code> and not <code>algebra_db</code> (no
-terminating orientation, so <code>autorewrite</code> loops);</li>
-<li><code>Magma.v</code>: why its operation is an explicit parameter
-(one carrier has several).</li>
-</ul>
-<p>Each states a fact about the <em>system</em>, not about the
-mathematics. <a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>,
-at 242 comment lines in 919, is the next file to bring into line.</p>
-<p>A comment never says what changed, what it used to be, or what the
-author just did — that is what git is for.</p></li>
-<li><p><strong>A lemma lives in the theory of the weakest structure that
-states it</strong> (decided 2026-07-31; the placement half of rule 4,
-which already requires the most general <em>statement</em>). A fact
-whose statement mentions only <code>+</code>, <code>-</code> and
-<code>0</code> is a group fact and belongs in <a
-href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>,
-however it was first needed. Writing it inside the specialised file that
-wanted it hides it from every other caller and inflates that file with
-material nobody would look for there.</p>
-<p><a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>
-is the cautionary example: of its 93 lemmas at least ten mention no
-su(3) vocabulary at all — <code>negAA_plus_A_plus_A</code>,
-<code>AA_plus_negA_plus_negA</code> and <code>negA_plus_3A</code> are
-group facts; <a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#neg_add_rev"><code>neg_add_rev</code></a>
-is <a
-href="../coqdoc/Riktig.Theory.AbGroup.html#neg_add"><code>neg_add</code></a>
-reversed; <a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#distr3_l"><code>distr3_l</code></a>/<a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#distr3_r"><code>distr3_r</code></a>/<a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#scale3_l"><code>scale3_l</code></a>/<a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#scale3_r"><code>scale3_r</code></a>
-are ring facts; <a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#mul3_comm12"><code>mul3_comm12</code></a>
-and <a
-href="../coqdoc/Riktig.Theory.SU3Algebra.html#field_self_neg_zero"><code>field_self_neg_zero</code></a>
-are field facts.</p>
-<p>Before writing such a lemma at all, try the general tactic: rule 11’s
-<code>Add Ring</code> is available over any abstract field, and a plain
-commutative-ring identity should be discharged by <code>ring</code>
-rather than named, proved and carried.</p></li>
+(<a href="../coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>).
+Rule 10 never spends a calc step on what <code>ring</code> closes.</li>
+<li><strong>Comments explain Coq; the mathematics goes in a blog
+post.</strong> A comment states the one fact the code cannot show — a
+Coq-ism, a workaround, a deliberate absence. Never a header essay, never
+what changed, never a restatement of the next line.</li>
+<li><strong>A lemma lives in the theory of the weakest structure that
+states it.</strong> Before writing it, check <code>ring</code> doesn’t
+close it.</li>
+<li><strong>The source reads like mathematics.</strong> Definitions are
+equational where an equational form exists; a forced dependent
+<code>match … in … return</code> appears once, and siblings are defined
+through it, never by repeating the annotation. Coq idiosyncrasies
+(convoy pattern, conversions the elaborator cannot see through) are
+isolated behind small named rewriting lemmas. A proof body needing
+<code>change … with</code>, <code>cbn beta</code>, or
+<code>rewrite … at k</code> means a supporting lemma is missing — add
+the lemma. No component-wise <code>repeat split; simpl</code> walls, no
+destruct case blowups.</li>
 </ol>
-<h2 id="the-designexamplev-sandbox">The DesignExample.v sandbox</h2>
-<p><code>DesignExample.v</code> sits at the repository root. It is
-untracked, absent from <code>_CoqProject</code> and from the
-<code>Makefile</code>, and is built by hand with
-<code>coqc -Q theories Riktig DesignExample.v</code>. <strong>Nothing in
-it is a statement about <code>theories/</code>.</strong> It is a place
-to try structure-class shapes end to end — operations, laws, a concrete
-carrier, and a Clifford algebra on top — before any of it is proposed
-for the library.</p>
-<p>It is under active edit — it changed three times in the ten minutes
-this section took to write (2026-07-30) — so line references into it go
-stale immediately, and its build state is a thing to check rather than
-assume: the 09:30 version stopped with
-<code>No applicable tactic</code>, the 09:41 version compiled clean.
-Nothing in it counts as demonstrated on a version that does not
-build.</p>
-<p>Two of its patterns became the library’s, on 2026-07-30: the
-<code>Section Laws</code> inside each module, opened with a bare
-generalizing binder (<code>grep -rn "Section Laws" theories/</code> now
-returns 8), and respect laws as <code>::</code> <code>Proper</code>
-fields inside the class (31 such fields across <code>Interface/</code>).
-Rule 7 documents both. Two patterns remain the sandbox’s alone:</p>
-<ul>
-<li><strong>A module-wrapped bundle of a carrier’s operations, used at
-binder sites.</strong> The sandbox has <code>Module VectorOps</code> — a
-class with fields <code>eq</code>, <code>zero</code>, <a
-href="../coqdoc/Riktig.Ops.html#add"><code>add</code></a>, <a
-href="../coqdoc/Riktig.Ops.html#neg"><code>neg</code></a>, <a
-href="../coqdoc/Riktig.Ops.html#scale"><code>scale</code></a>, followed
-by one <code>#[global] Existing Instances eq zero add neg scale.</code>
-— and binds <code>`{VectorOps.VectorOps F U}</code> where the library
-writes the five binders out.
-<code>grep -rn "Existing Instances" theories/</code> returns
-nothing.</li>
-<li><strong>A <code>Module Type Signature</code> and a functor
-<code>Clifford.Algebra (Sig : Signature)</code>,</strong> so one
-construction yields Cl(2,0), Cl(3,0), Cl(1,3) and Cl(0,1) at different
-signatures. <code>grep -rn "Module Type" theories/</code> returns
-nothing: the library writes one <code>Impl/</code> file per algebra
-(<code>Cliff2.v</code>, <code>Cliff3.v</code>, <code>Cliff13.v</code>,
-<code>CliffordFin.v</code>).</li>
-</ul>
-<p>Two things the sandbox and the library agree on, in different
-spellings. The sandbox’s <code>Group.from_Monoid</code> is the same idea
-as the library’s substructure field: build the stronger structure from a
-proof of the weaker one plus the new laws, rather than restating what
-the carrier has already proved. The library needs no constructor for it
-— <code>monoid :: Monoid G</code> is the proof of the weaker structure,
-and the remaining fields are the new laws. And <code>VectorOps</code>
-exists in the sandbox for the reason Rule 7’s one-bare-binder paragraph
-gives, as its own comment says — “the scalar appears only as a type, so
-binding a second carrier over it introduces no second field”. The
-library reaches the same place by writing the binders out and
-generalizing the scalar exactly once.</p>
+<h2 id="the-sandbox">The sandbox</h2>
+<p><code>DesignExample.v</code> at the repository root is untracked,
+hand-compiled (<code>coqc -Q theories Riktig DesignExample.v</code>),
+and binding on nothing: a place to try structure shapes end to end
+before proposing them.</p>
 </main>
 </body>
 </html>

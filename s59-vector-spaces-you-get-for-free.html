@@ -41,19 +41,19 @@ pointwise</h2>
 functions <code>X -&gt; V</code> form a vector space. There is nothing
 to invent: the operations act at each argument, and equality is
 agreement at every argument.</p>
-<pre class="coq"><code>#[global] Instance PW_EqRel {X M : Type} `{EqRel M} : EqRel (X -&gt; M) :=
+<pre class="coq"><code>Instance PW_EqRel {X M : Type} `{EqRel M} : EqRel (X -&gt; M) :=
   fun f g =&gt; forall x, f x == g x.
 
-#[global] Instance PW_Zero {X M : Type} `{Zero M} : Zero (X -&gt; M) :=
+Instance PW_Zero {X M : Type} `{Zero M} : Zero (X -&gt; M) :=
   fun _ =&gt; 0.
 
-#[global] Instance PW_Add {X M : Type} `{HasAdd M} : HasAdd (X -&gt; M) :=
+Instance PW_Add {X M : Type} `{HasAdd M} : HasAdd (X -&gt; M) :=
   fun f g x =&gt; f x + g x.
 
-#[global] Instance PW_Neg {X M : Type} `{HasNeg M} : HasNeg (X -&gt; M) :=
+Instance PW_Neg {X M : Type} `{HasNeg M} : HasNeg (X -&gt; M) :=
   fun f x =&gt; - f x.
 
-#[global] Instance PW_Scale {X F V : Type} `{HasScale F V} : HasScale F (X -&gt; V) :=
+Instance PW_Scale {X F V : Type} `{HasScale F V} : HasScale F (X -&gt; V) :=
   fun a f x =&gt; a *: f x.</code></pre>
 <p>The zero function returns <code>V</code>’s zero everywhere; the sum
 <code>f + g</code> is the function
@@ -100,7 +100,7 @@ line, because the work was already done in <code>V</code>.</p>
 the abelian-group one is already a whole vector space, because those two
 <em>are</em> the two fields of <a
 href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>:</p>
-<pre class="coq"><code>#[global] Instance PW_VectorSpace : VectorSpace F (X -&gt; V) := {}.</code></pre>
+<pre class="coq"><code>#[export] Instance PW_VectorSpace : VectorSpace F (X -&gt; V) := {}.</code></pre>
 <p>Because the construction is itself generic, it <em>iterates</em>:
 functions into functions into <code>V</code> are a vector space too,
 found by instance search with no extra code, which the file records as a
@@ -193,7 +193,7 @@ the functions:</p>
   }.
 End Inverse.</code></pre>
 <p>An isomorphism is then two linear maps carrying that property:</p>
-<pre class="coq"><code>Record VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
+<pre class="coq"><code>Class VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
     {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {

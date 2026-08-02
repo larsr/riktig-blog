@@ -226,18 +226,19 @@ the interesting ones are the <em>linear maps</em>: those that respect
 <code>==</code>, send sums to sums, and commute with scaling. In the
 code a linear map is a record carrying its function together with those
 three guarantees:</p>
-<pre class="coq"><code>Record LinearMap (F U V : Type)
+<pre class="coq"><code>Class LinearMap (F U V : Type)
     {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
     {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
-  lm_fun :&gt; U -&gt; V;
+  lm_fun : U -&gt; V;
   lm_linear :: Linear F U V lm_fun;
 }.</code></pre>
 <p>The record asks for surprisingly little: each carrier needs an
 equality, an addition and a scaling, and nothing in the record’s type
 requires them to be vector spaces — that hypothesis appears only in the
-theorems that actually use it. <a
+theorems that actually use it. A separate <code>Coercion</code>
+declaration makes <a
 href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>
-is declared with <code>:&gt;</code>, which makes it a coercion, so a <a
+a coercion, so a <a
 href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
 can be applied to a vector directly and <code>f u</code> means
 <code>lm_fun f u</code>.</p>
