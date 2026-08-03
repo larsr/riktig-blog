@@ -13,16 +13,18 @@ division</title>
 <h1
 id="the-geometric-product-splits-in-two-and-one-half-costs-you-a-division">The
 geometric product splits in two, and one half costs you a division</h1>
-<p>Multiply two vectors in a geometric algebra and you get something
-that is not a vector. The textbook writes the result as a sum of two
-pieces,</p>
+<p>Multiply two vectors in a <a
+href="https://en.wikipedia.org/wiki/Geometric_algebra">geometric
+algebra</a> and you get something that is not a vector. The textbook
+writes the result as a sum of two pieces,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>u</mi><mo>⋅</mo><mi>v</mi><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mi>u</mi><mo>∧</mo><mi>v</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">uv \;=\; u\cdot v \;+\; u\wedge v,</annotation></semantics></math></p>
-<p>a scalar and a bivector: how much the two vectors agree, and the
-oriented plane they span. This post is about where that split comes
-from, why the obvious proof produces every term twice, and what the
-factor of one half actually costs — because in Coq you cannot write
-“divide by 2” without first proving that 2 has an inverse, and in some
-fields it does not.</p>
+<p>a scalar and a <a
+href="https://en.wikipedia.org/wiki/Bivector">bivector</a>: how much the
+two vectors agree, and the oriented plane they span. This post is about
+where that split comes from, why the obvious proof produces every term
+twice, and what the factor of one half actually costs — because in Coq
+you cannot write “divide by 2” without first proving that 2 has an
+inverse, and in some fields it does not.</p>
 <h2 id="one-axiom-not-two">One axiom, not two</h2>
 <p>A geometric algebra is a ring <code>A</code> containing a vector
 space <code>V</code>, with a single law tying the two together: a vector
@@ -47,9 +49,11 @@ field whatsoever, and that is how <a
 href="coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>
 states it. No inverse of 2 appears, so nothing prevents a field where
 <code>1 + 1 == 0</code>.</p>
-<p>That matters more than it sounds. Characteristic 2 is not an exotic
-corner: it is where coding theory and much of computer algebra live. A
-development that divides by 2 early quietly excludes them all.</p>
+<p>That matters more than it sounds. <a
+href="https://en.wikipedia.org/wiki/Characteristic_(algebra)">Characteristic
+2</a> is not an exotic corner: it is where coding theory and much of
+computer algebra live. A development that divides by 2 early quietly
+excludes them all.</p>
 <h2 id="the-undoubled-form-needs-an-ordered-field">The undoubled form
 needs an ordered field</h2>
 <p>To get the textbook statement you need <code>half 1</code>, and to
@@ -84,6 +88,26 @@ says <code>half 1 *: (x + x) == x</code>, so multiplying by one is
 really multiplying by <code>half 1 * two</code>, arranged so the
 doubling that the axiom forces on us can be introduced deliberately
 instead of apologised for.</p>
+<p>The step after it is the split itself, and it is written
+unusually:</p>
+<pre class="coq"><code>      ==[hard] ((half 1 *: ((ga_vec u * ga_vec v + ga_vec v * ga_vec u)
+            + (ga_vec u * ga_vec v + - (ga_vec v * ga_vec u)))) : A)</code></pre>
+<p><code>[hard]</code> names the step and defers its justification to
+the end of the proof, where it is discharged by a chain of its own. The
+rearrangement being justified is entirely about the sum <em>inside</em>
+the scaling: add a zero, write that zero as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mi>u</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>v</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">vu + (-vu)</annotation></semantics></math>,
+then interchange the middle two summands so the symmetric and
+antisymmetric pairs sit together.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mi>x</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>x</mi><mi>x</mi><mo>+</mo><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>x</mi><mi>x</mi><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>v</mi><mi>u</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>v</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>x</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>v</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">xx \;=\; xx + 0 \;=\; xx + \big(vu + (-vu)\big) \;=\; (x + vu) + \big(x + (-vu)\big)</annotation></semantics></math></p>
+<p>Written as an ordinary chain, every line would have to carry the
+<code>half 1 *: ( … )</code> wrapper along for the ride. The
+<code>calcrw</code> form proves the inner rewrite on its own and then
+rewrites it into place, so the wrapper is written once, in the step’s
+target. Both the naming of a step and this form come from <a
+href="coqdoc/Riktig.Lib.Calc.html"><code>Lib/Calc.v</code></a>; they
+exist so that a proof can be shaped like the argument rather than like
+the term.</p>
 <h2 id="starting-from-the-other-end">Starting from the other end</h2>
 <p>Textbooks are split on which of the two facts is the definition. The
 other convention takes the dot and wedge as given — a symmetric form and
