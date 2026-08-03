@@ -63,72 +63,27 @@ Module Group.
   Hint Rewrite @left_inverse @right_inverse : algebra_db.
 End Group.
 Export Group.</code></pre>
-<p>Reading the transcription against the mathematics:</p>
-<ul>
-<li>The carrier
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math>
-and the three symbols arrive as <em>parameters</em> — <code>G</code> in
-the open, and <a
-href="coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a>, <a
-href="coqdoc/Riktig.Ops.html#Zero"><code>Zero</code></a>, <a
-href="coqdoc/Riktig.Ops.html#HasAdd"><code>HasAdd</code></a>, <a
-href="coqdoc/Riktig.Ops.html#HasNeg"><code>HasNeg</code></a> in braces,
-filled in by search. They are not fields, so the <code>+</code> of a
-group is literally the <code>+</code> of the monoid underneath rather
-than a projection out of a record that rewriting would have to be taught
-to identify.</li>
-<li>The first two displayed lines are the monoid’s laws, and they are
-<em>held</em>, not restated: <code>monoid :: Monoid G</code>. The
-<code>::</code> declares the field an instance as well, so with a
-<code>Group G</code> in scope every monoid theorem applies to
-<code>G</code> with nothing repeated.</li>
-<li>The third line is <a
+<p>Reading the transcription against the mathematics: the first two
+displayed lines are the monoid’s laws, and the class does not restate
+them — it <em>holds</em> a monoid, in the field <a
+href="coqdoc/Riktig.Interface.Group.html#Group.monoid"><code>monoid</code></a>.
+The third line is the two new fields, <a
 href="coqdoc/Riktig.Interface.Group.html#Group.is_left_inverse"><code>is_left_inverse</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Group.html#Group.is_right_inverse"><code>is_right_inverse</code></a>.</li>
-<li><a
+href="coqdoc/Riktig.Interface.Group.html#Group.is_right_inverse"><code>is_right_inverse</code></a>,
+filled from the law catalogue as <code>LeftInverse G add neg 0</code>,
+which unfolds to exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>a</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">(-a) + a = 0</annotation></semantics></math>.</p>
+<p>The other two lines have no counterpart on the blackboard. <a
 href="coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>neg_proper</code></a>
-has no counterpart on the blackboard. In this library <code>==</code> is
-not Coq’s built-in equality but a chosen <a
-href="https://en.wikipedia.org/wiki/Equivalence_relation">equivalence
-relation</a>, which makes each carrier a <a
-href="https://en.wikipedia.org/wiki/Setoid">setoid</a>; the price is
-that rewriting under an operation must be licensed by a proof that it
-sends <code>==</code>-equal inputs to <code>==</code>-equal outputs. <a
-href="coqdoc/Riktig.Interface.Group.html#Group.neg_proper"><code>neg_proper</code></a>
-is that licence for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>−</mi><annotation encoding="application/x-tex">-</annotation></semantics></math>.
-The matching one for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>+</mi><annotation encoding="application/x-tex">+</annotation></semantics></math>
-is <a
-href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>op_proper</code></a>,
-down in <a
-href="coqdoc/Riktig.Interface.Magma.html#Magma.Magma"><code>Magma</code></a>.</li>
-</ul>
-<p>The two inverse fields do not spell their equations out, because
-those already exist as one-law classes in the catalogue <a
-href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>:</p>
-<pre class="coq"><code>Section InverseLaws.
-  Context (T : Type) {eqT : EqRel T} (op : BinOp T) (inverse : T -&gt; T) (unit : T).
-  Local Infix &quot;⋆&quot; := op (at level 40, left associativity).
-
-  Class LeftInverse  := left_inverse  : forall a, inverse a ⋆ a == unit.
-  Class RightInverse := right_inverse : forall a, a ⋆ inverse a == unit.
-End InverseLaws.</code></pre>
-<p>Filling the slots as <code>LeftInverse G add neg 0</code> gives
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>a</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">(-a) + a = 0</annotation></semantics></math>.
-Stating it over an arbitrary operation, inverse map and unit means the
-same class serves anywhere something cancels something, and it gives the
-law a stable name — <a
-href="coqdoc/Riktig.Props.html#left_inverse"><code>left_inverse</code></a>
-— which is what every proof below cites.</p>
-<p><code>Hint Mode Group ! - - - -</code> restricts when search may look
-for a group: the <code>!</code> marks the carrier, which must be a known
-type before the search starts, or a search for <code>Group ?G</code>
-could wander into the parametric instances (the pointwise ones at
-function types, say) and not come back. The <code>-</code> positions say
-the operations may still be unknown — finding those is the search’s
-job.</p>
+is the licence to rewrite under
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>−</mi><annotation encoding="application/x-tex">-</annotation></semantics></math>,
+needed because <code>==</code> here is a chosen equality rather than
+Coq’s built-in one; <code>Hint Mode</code> restricts when instance
+search may go looking for a group. Both devices, and the <code>::</code>
+that makes a field an instance, are explained in <a
+href="s02a-the-coq-underneath.html">the Coq underneath</a>; from here on
+they are plumbing to read past.</p>
 <h2 id="cancellation">Cancellation</h2>
 <p><strong>If
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mo>=</mo><mi>a</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">a + b = a + c</annotation></semantics></math>

@@ -310,11 +310,37 @@ class="nolink">ring</code> closes each of the four polynomial
 identities. The spatial version, <a
 href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_compose"><code>rotate_compose</code></a>,
 is the same statement about <code>Cl F 3</code>’s sandwich <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
-proved the same way over its eight blades:</p>
+href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>
+— but there the blade-by-blade route is a bad idea, and the file takes
+the blackboard argument instead:</p>
 <pre class="coq"><code>  Lemma rotate_compose : forall A B x : Cl F 3,
     rotate A (rotate B x) == rotate (A * B) x.
-  Proof. intros A B x. apply cl3_ext; by_blade. Qed.</code></pre>
+  Proof.
+    intros A B x. unfold rotate.
+    rewrite (reverse_anti3 A B).
+    rewrite !associative.
+    reflexivity.
+  Qed.</code></pre>
+<p>Three unconstrained elements over eight blades means a polynomial in
+twenty-four unknown coefficients on each side, and expanding it needed
+nine gigabytes — enough to have the build killed. The proof above is the
+two regroupings and the anti-automorphism law named directly: <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>
+turns
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mrow><mi>A</mi><mi>B</mi></mrow><mo accent="true">̃</mo></mover><annotation encoding="application/x-tex">\widetilde{AB}</annotation></semantics></math>
+into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi>B</mi><mo accent="true">̃</mo></mover><mover><mi>A</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\tilde B\tilde A</annotation></semantics></math>,
+and <a
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+re-brackets both sides until they are the same five factors in the same
+order. It compiles in a fraction of a second.</p>
+<p>Rewriting inside a product needs the ring for the signature, which <a
+href="coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>
+keeps deliberately local so that a carrier bearing several signatures
+never leaves instance search a choice between them. <a
+href="coqdoc/Riktig.Theory.SpaceRotor.html"><code>Theory/SpaceRotor.v</code></a>
+names it — <code>Space_Ring := Cl_Ring sig3</code> — and that is what
+makes the algebraic proof available at all.</p>
 <h2
 id="using-it-two-arms-each-folded-through-a-full-turn-checked-by-computation">Using
 it: two arms, each folded through a full turn, checked by
