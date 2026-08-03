@@ -11,230 +11,198 @@
 <main>
 <h1 id="the-derivative-is-a-linear-map">The derivative is a linear
 map</h1>
-<p>The derivative of a function of one variable is usually introduced as
-a number: the slope of the tangent line. That description does not
-survive the move to several variables, where the answer is a Jacobian
-matrix, and it does not survive the move to infinite dimensions at all.
-There is one description that survives every move, and it is the one
-worth taking as the definition: the derivative of
+<p>School calculus presents the <a
+href="https://en.wikipedia.org/wiki/Fr%C3%A9chet_derivative">derivative</a>
+as a number: the slope. That reading does not survive contact with
+functions of several variables, where the answer has to record how the
+output moves for a push in <em>any</em> input direction. The definition
+that does survive is older and simpler than the slope, and it says: near
+a point,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is a linear map plus an error that vanishes faster than the step.</p>
+<h2 id="the-definition">The definition</h2>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is the derivative of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
 at
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
-is <em>the linear map that best approximates
+when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is linear and</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mi>ε</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|f(a + h) - \big(f(a) + L(h)\big)\| \leq \varepsilon\,\|h\|</annotation></semantics></math></p>
+<p>for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\varepsilon &gt; 0</annotation></semantics></math>,
+once
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>
+is small enough. Read the left-hand side as <em>the error</em>: what
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
-near
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math></em>.
-This post writes that definition down precisely, proves it picks out at
-most one map, and proves the chain rule from it — where the composition
-of derivatives is literally the composition of two linear maps.</p>
-<p>Two ingredients are assumed. A <strong>vector space</strong> over a
-field is a carrier whose elements add and scale, with the usual laws; a
-<strong>normed space</strong> adds a length
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|u\|</annotation></semantics></math>
-with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|u+v\| \le \|u\| + \|v\|</annotation></semantics></math>
+actually does, minus what the linear approximation predicted.</p>
+<pre class="coq"><code>  Definition is_deriv (f : U -&gt; V) (a : U) (L : LinearMap F U V) : Prop :=
+    linear_map_bounded L /\
+    forall eps : F, 0 &lt; eps -&gt;
+      exists delta : F, 0 &lt; delta /\
+        forall h : U, ‖ h ‖ &lt; delta -&gt;
+          ‖ f (a + h) + - (f a + L h) ‖ &lt;= eps * ‖ h ‖.</code></pre>
+<p>Three things about this. The derivative is a <a
+href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+— the object from the linear-algebra posts, carrying its own proof of
+linearity — rather than a number. It is required to be <em>bounded</em>,
+the condition the continuity post introduced, so that the approximation
+is a well-behaved map and not merely a linear one. And the error is
+compared to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\varepsilon\|h\|</annotation></semantics></math>
+rather than to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>:
+what makes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+the derivative is not that the error is small, but that it is small
+<em>relative to the step</em>.</p>
+<p>No dimension is mentioned.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>U</mi><annotation encoding="application/x-tex">U</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\|u\| = 0</annotation></semantics></math>
-only for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">u = 0</annotation></semantics></math>.
-A <strong>linear map</strong> is a function <code>L</code> between two
-vector spaces with <code>L (u + v) == L u + L v</code> and
-<code>L (a *: u) == a *: L u</code>, respecting the equality
-<code>==</code> on each space; the linear maps from <code>U</code> to
-<code>V</code> themselves form a vector space, so <code>Lf + Lg</code>
-and <code>linear_map_comp Lg Lf</code> are ordinary expressions.</p>
-<h2 id="what-differentiable-says">What “differentiable” says</h2>
-<p>The derivative answers: <em>which linear map best approximates
-<code>f</code> near <code>a</code>?</em> In <a
-href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>:</p>
-<pre class="coq"><code>Definition is_deriv (f : U -&gt; V) (a : U) (L : LinearMap F U V) : Prop :=
-  linear_map_bounded L /\
-  forall eps : F, 0 &lt; eps -&gt;
-    exists delta : F, 0 &lt; delta /\
-      forall h : U, ‖ h ‖ &lt; delta -&gt;
-        ‖ f (a + h) + - (f a + L h) ‖ &lt;= eps * ‖ h ‖.</code></pre>
-<p>Three deliberate choices, each with a story:</p>
-<p><strong>No division.</strong> The textbook says
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>L</mi><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mi>/</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>→</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\|f(a+h) - f(a) - Lh\| / \|h\|
-\to 0</annotation></semantics></math>, which forces the annoying side
-condition
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">h \neq 0</annotation></semantics></math>.
-The equivalent form
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>r</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|r(h)\| \le \varepsilon \|h\|</annotation></semantics></math>
-is division-free and at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">h = 0</annotation></semantics></math>
-is simply true. Fewer side conditions, shorter rewrites.</p>
-<p><strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
-is a <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a></strong>,
-an element of the vector space of linear maps <code>U -&gt; V</code>. So
-“the derivative of a sum is the sum of the derivatives” can be stated
-with that space’s own addition, and is:</p>
-<pre class="coq"><code>Theorem deriv_add : forall (f g : U -&gt; V) (a : U)
-    (Lf Lg : LinearMap F U V),
-  is_deriv f a Lf -&gt; is_deriv g a Lg -&gt;
-  is_deriv (fun u : U =&gt; f u + g u) a (Lf + Lg).</code></pre>
-<p><strong><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
-is bounded</strong>
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∃</mo><mi>C</mi><mo>,</mo><mspace width="0.222em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>L</mi><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mi>C</mi><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\exists C,\ \|Lu\| \le C\|u\|</annotation></semantics></math>).
-In finite dimension every linear map is bounded, so courses never
-mention it — but the chain rule <em>uses</em> it, silently. Watch it
-appear below.</p>
-<h2 id="uniqueness">Uniqueness</h2>
-<p><strong>Blackboard.</strong> If
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mo>,</mo><msub><mi>L</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">L_1, L_2</annotation></semantics></math>
-both approximate
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
-at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,
-then for small
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mn>2</mn><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|(L_1 - L_2)h\| \le 2\varepsilon\|h\|</annotation></semantics></math>.
-Take
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mi>t</mi><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">h = t\,u</annotation></semantics></math>
-with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">t &gt; 0</annotation></semantics></math>
-tiny:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mn>2</mn><mi>ε</mi><mspace width="0.167em"></mspace><mi>t</mi><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">t\|(L_1-L_2)u\| \le 2\varepsilon\, t\|u\|</annotation></semantics></math>,
-cancel
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>,
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|(L_1-L_2)u\|</annotation></semantics></math>
-is below
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">2\varepsilon\|u\|</annotation></semantics></math>
-for every ε — hence zero, hence
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mi>u</mi><mo>=</mo><msub><mi>L</mi><mn>2</mn></msub><mi>u</mi></mrow><annotation encoding="application/x-tex">L_1 u = L_2 u</annotation></semantics></math>
-for every
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.
-∎</p>
-<p>The Coq statement says the same thing, with “equal” meaning equal as
-elements of the space of linear maps — that is, agreeing at every
-point:</p>
-<pre class="coq"><code>Theorem deriv_unique : forall (f : U -&gt; V) (a : U)
-    (L1 L2 : LinearMap F U V),
-  is_deriv f a L1 -&gt; is_deriv f a L2 -&gt; L1 == L2.</code></pre>
-<p>The proof follows the blackboard shape, and the “take
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
-tiny” step is a lemma of its own,
-<code>small_scale_exists : forall d c : F, 0 &lt; d -&gt; 0 &lt;= c -&gt; exists t : F, 0 &lt; t /\ t * c &lt; d</code>
-in <a
-href="coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a> —
-no Archimedean axiom needed, just halving. The final squeeze is <a
-href="coqdoc/Riktig.Theory.Order.html#nonneg_below_all_pos_is_zero"><code>nonneg_below_all_pos_is_zero</code></a>
-(“a non-negative quantity below every positive quantity is zero”), and
-the cancellation of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
-is <a
-href="coqdoc/Riktig.Theory.Order.html#mul_le_cancel_l"><code>mul_le_cancel_l</code></a>.</p>
-<h2 id="the-chain-rule">The chain rule</h2>
-<p><strong>Blackboard.</strong> Let
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">k(h) = f(a+h) - f(a)</annotation></semantics></math>,
-the increment. Then</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mi>g</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>L</mi><mi>f</mi></msub><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><munder><munder><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>L</mi><mi>g</mi></msub><mi>k</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo></mrow><mo accent="true">⏟</mo></munder><mrow><mrow><mtext mathvariant="normal">g’s remainder at </mtext><mspace width="0.333em"></mspace></mrow><mi>k</mi></mrow></munder><mo>+</mo><munder><munder><mrow><msub><mi>L</mi><mi>g</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">[</mo><mi>k</mi><mo>−</mo><msub><mi>L</mi><mi>f</mi></msub><mi>h</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">]</mo></mrow><mo accent="true">⏟</mo></munder><mrow><msub><mi>L</mi><mi>g</mi></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> of f’s remainder</mtext></mrow></mrow></munder><mi>.</mi></mrow><annotation encoding="application/x-tex">g(f(a+h)) - g(f(a)) - L_g(L_f h)
-  = \underbrace{\big[g(f(a)+k) - g(f(a)) - L_g k\big]}_{\text{g&#39;s remainder at } k}
-  + \underbrace{L_g\big[k - L_f h\big]}_{L_g \text{ of f&#39;s remainder}}.</annotation></semantics></math></p>
-<p>Bound the two pieces: the second is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><msub><mi>C</mi><mi>g</mi></msub><mo>⋅</mo><msub><mi>ε</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\le C_g \cdot \varepsilon_1\|h\|</annotation></semantics></math>
-— <strong>there is the boundedness of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mi>g</mi></msub><annotation encoding="application/x-tex">L_g</annotation></semantics></math></strong>,
-doing the work your lecturer waved through. The first is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><msub><mi>ε</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">∥</mo><mi>k</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\le \varepsilon_2 \|k\|</annotation></semantics></math>,
-and the increment itself satisfies
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>k</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>C</mi><mi>f</mi></msub><mo>+</mo><msub><mi>ε</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|k\| \le (C_f + \varepsilon_1)\|h\|</annotation></semantics></math>
-—
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
-is locally Lipschitz-ish <em>because</em> it is differentiable,
-boundedness of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>L</mi><mi>f</mi></msub><annotation encoding="application/x-tex">L_f</annotation></semantics></math>
-again. Add up, choose the ε’s to share the budget. ∎</p>
-<pre class="coq"><code>Theorem deriv_comp : forall (f : U -&gt; V) (g : V -&gt; W) (a : U)
-    (Lf : LinearMap F U V) (Lg : LinearMap F V W),
-  Proper (equ ==&gt; equ) g -&gt;
-  is_deriv f a Lf -&gt; is_deriv g (f a) Lg -&gt;
-  is_deriv (fun u : U =&gt; g (f u)) a (linear_map_comp Lg Lf).</code></pre>
-<p>The Coq proof is the blackboard split, factored into named pieces.
-The algebraic identity — that the composite’s remainder really is those
-two terms — is <a
-href="coqdoc/Riktig.Theory.Derivative.html#comp_remainder_split"><code>comp_remainder_split</code></a>,
-whose last step is the abelian-group telescope
-<code>sub_mid_cancel : (p + - (q + x)) + (x + - y) == p + - (q + y)</code>;
-the increment estimate
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>k</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>C</mi><mi>f</mi></msub><mo>+</mo><msub><mi>ε</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|k\| \le (C_f + \varepsilon_1)\|h\|</annotation></semantics></math>
-is <a
-href="coqdoc/Riktig.Theory.Derivative.html#deriv_increment_bound"><code>deriv_increment_bound</code></a>.
-One deviation from the classical statement: <code>g</code> must respect
-equality, the hypothesis <code>Proper (equ ==&gt; equ) g</code>. It is
-needed because <a
-href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
-constrains <code>g</code> only at the points written in its own
-statement, and the split above moves <code>g</code> across
-<code>b + (y + - b) == y</code>; every function anyone writes has this
-property, but it does not follow from <a
-href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
-itself.</p>
-<p>And the derivative <em>of the composition</em> is
-<code>linear_map_comp Lg Lf</code> — composition in the space of linear
-maps. That is what makes the Jacobian version free: a Jacobian is <a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
-applied to a derivative, and <a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>
-already says that reading a composite off in bases gives the product of
-the two matrices read off separately. The Jacobian of a composition is
-the product of the Jacobians, with no new analysis.</p>
-<h2 id="using-the-definition">Using the definition</h2>
-<p>The base cases of any differentiation are the two facts a course
-states without much comment: a constant function has derivative zero,
-and a linear map is its own derivative. Both are theorems here, and the
-second is the one that shows the definition doing what it promised —</p>
-<pre class="coq"><code>Theorem deriv_lm : forall (g : LinearMap F U V) (a : U),
-  linear_map_bounded g -&gt; is_deriv (lm_fun g) a g.</code></pre>
-<p>read: at any point <code>a</code>, the best linear approximation to a
-bounded linear map <code>g</code> is <code>g</code> itself. Its proof
-supplies <code>delta := 1</code> and then appeals to <a
-href="coqdoc/Riktig.Theory.Derivative.html#lm_remainder_zero"><code>lm_remainder_zero</code></a>,
-which says <code>‖ g (a + h) + - (g a + g h) ‖ == 0</code>: by
-<code>g</code>’s own additivity the remainder is a quantity subtracted
-from itself, so the estimate <code>0 &lt;= eps * ‖ h ‖</code> holds for
-every <code>eps</code> with nothing to choose. Together with <a
-href="coqdoc/Riktig.Theory.Derivative.html#deriv_const"><code>deriv_const</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Derivative.html#deriv_add"><code>deriv_add</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Derivative.html#deriv_scale"><code>deriv_scale</code></a>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+are any normed spaces over the same ordered field, so this covers the
+school case
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mi>V</mi><mo>=</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">U = V = F</annotation></semantics></math>),
+vector-valued functions, functions on function spaces, and everything
+between.</p>
+<h2 id="what-is-a-derivative-of-what">What is a derivative of what</h2>
+<p>Two base cases, and both are as short as they should be. A constant
+function is approximated by the zero map, with <em>no</em> error at
+all:</p>
+<pre class="coq"><code>  Theorem deriv_const : forall (v : V) (a : U),
+    is_deriv (fun _ : U =&gt; v) a linear_map_const0.</code></pre>
+<p>and a linear map is its own derivative — the approximation is exact,
+so again the error is zero:</p>
+<pre class="coq"><code>  Theorem deriv_lm : forall (g : LinearMap F U V) (a : U),
+    linear_map_bounded g -&gt; is_deriv (lm_fun g) a g.</code></pre>
+<p>In both proofs the <code>exists 1</code> supplies a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
+that never has to be small, because the error is identically zero for
+every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>;
+the rest is the observation that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\varepsilon \|h\| \geq 0</annotation></semantics></math>.</p>
+<p>The two closure theorems, <a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_add"><code>deriv_add</code></a>
 and <a
-href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>,
-that is enough to differentiate any expression built from linear maps by
-sums, scalings and composition, with the chain rule doing the
-composing.</p>
-<p><em>Next: determinants — how a map scales alternating
-volume.</em></p>
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_scale"><code>deriv_scale</code></a>,
+say differentiation respects the vector-space operations. Together with
+the previous post’s <a
+href="coqdoc/Riktig.Theory.HomVS.html#Hom_VectorSpace"><code>Hom_VectorSpace</code></a>,
+that is the sentence “differentiable functions form a vector space and
+differentiation is linear on it”, proved rather than asserted.</p>
+<h2 id="the-derivative-is-unique-and-forces-continuity">The derivative
+is unique, and forces continuity</h2>
+<p>Two candidate derivatives at the same point agree — not just as
+approximations, but as maps:</p>
+<pre class="coq"><code>  Theorem deriv_unique : forall (f : U -&gt; V) (a : U)</code></pre>
+<p>which is what makes “the” derivative legitimate and, later, what
+makes a Jacobian matrix well defined. And differentiability is strictly
+stronger than continuity:</p>
+<pre class="coq"><code>  Theorem deriv_continuous : forall (f : U -&gt; V) (a : U)</code></pre>
+<p>If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
+is within
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo stretchy="false" form="postfix">∥</mo><mi>h</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\varepsilon\|h\|</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>L</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a) + L(h)</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+is bounded, then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a+h)</annotation></semantics></math>
+cannot escape far from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a)</annotation></semantics></math>
+when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>
+is small. The converse fails — the absolute value is continuous at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+and has no derivative there — which is why these are two definitions
+rather than one.</p>
+<h2 id="the-chain-rule">The chain rule</h2>
+<p>The theorem that makes the linear-map view worth adopting — the <a
+href="https://en.wikipedia.org/wiki/Chain_rule">chain rule</a>:</p>
+<pre class="coq"><code>  Theorem deriv_comp : forall (f : U -&gt; V) (g : V -&gt; W) (a : U)
+      (Lf : LinearMap F U V) (Lg : LinearMap F V W),
+    Proper (equ ==&gt; equ) g -&gt;
+    is_deriv f a Lf -&gt; is_deriv g (f a) Lg -&gt;
+    is_deriv (fun u : U =&gt; g (f u)) a (linear_map_comp Lg Lf).</code></pre>
+<p>Read the conclusion: the derivative of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">g \circ f</annotation></semantics></math>
+is <code>linear_map_comp Lg Lf</code>, the <em>composition of the two
+derivative maps</em>. In one dimension composition of linear maps is
+multiplication of the numbers representing them, which is why the school
+rule says “multiply the derivatives”. The general statement is that you
+compose them, and the school rule is its one-dimensional shadow.</p>
+<p>The proof is the longest in the file, and the reason is worth
+stating. The error of the composite has to be split into a part coming
+from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>’s
+error at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a)</annotation></semantics></math>
+and a part coming from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>’s
+error at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+pushed through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>’s
+bound, and each has to be held below half the target — so the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>
+device from the limits post appears again, this time with both a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
+and a bound
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mi>g</mi></msub><annotation encoding="application/x-tex">C_g</annotation></semantics></math>
+to juggle.</p>
+<h2 id="where-coordinates-finally-appear">Where coordinates finally
+appear</h2>
+<p>Everything above is coordinate-free. Partial derivatives are what you
+get when you <em>choose</em> a basis and feed the derivative one basis
+vector at a time:</p>
+<pre class="coq"><code>  Definition partial_at {n : nat} (L : LinearMap F U V) (B : Basis n F U)
+      (i : Fin.t n) : V :=
+    L (basis_vec B i).</code></pre>
+<p>That is the entire definition — the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
+partial derivative is the derivative map applied to the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
+basis vector. It follows immediately that partials do not depend on
+which derivative map you picked, since there is only one:</p>
+<pre class="coq"><code>  Lemma partial_at_welldef : forall (n : nat) (f : U -&gt; V) (a : U)
+      (L1 L2 : LinearMap F U V) (B : Basis n F U) (i : Fin.t n),
+    is_deriv f a L1 -&gt; is_deriv f a L2 -&gt;
+    partial_at L1 B i == partial_at L2 B i.
+  Proof.
+    intros n f a L1 L2 B i HD1 HD2.
+    exact (deriv_unique f a L1 L2 HD1 HD2 (basis_vec B i)).
+  Qed.</code></pre>
+<p>One line, because uniqueness of the derivative was proved first. The
+comment above this section in the source reads <em>“Coordinates enter
+here and nowhere above”</em>, and that ordering is the point of the
+whole development: the analysis is done without a basis, and a basis is
+introduced only when someone wants numbers.</p>
+<p><em>Next: those numbers, arranged in a matrix — the
+Jacobian.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>,
-uniqueness, chain rule) · <a
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#deriv_comp"><code>deriv_comp</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.Continuity.html"><code>Theory/Continuity.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Continuity.html#limit_at"><code>limit_at</code></a>,
-continuity, bounded ⇒ continuous) · <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
-(<a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
-<a
-href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_comp"><code>linear_map_comp</code></a>)
+href="coqdoc/Riktig.Theory.Continuity.html#linear_map_bounded"><code>linear_map_bounded</code></a>)
 · <a
-href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
+(composition of linear maps) · <a
+href="coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
-<a
-href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>)
-· <a
-href="coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
-(<a
-href="coqdoc/Riktig.Theory.Order.html#small_scale_exists"><code>small_scale_exists</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Order.html#mul_le_cancel_l"><code>mul_le_cancel_l</code></a>).</p>
+href="coqdoc/Riktig.Interface.Basis.html#basis_vec"><code>basis_vec</code></a>).</p>
 </main>
 </body>
 </html>

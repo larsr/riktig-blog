@@ -3,45 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Normed spaces, and what a limit is</title>
+<title>Normed spaces, and what it takes to say "tends to"</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
-<h1 id="normed-spaces-and-what-a-limit-is">Normed spaces, and what a
-limit is</h1>
-<p>An <em>ordered field</em> is a field — the rationals, say — carrying
-two extra operations: a comparison <code>&lt;=</code> and an absolute
-value <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>, each
-fixed by laws rather than by any formula (<code>&lt;=</code> is a total
-order compatible with addition and multiplication; <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> is
-nonnegative, multiplicative, and obeys the triangle inequality
-<code>abs (a + b) &lt;= abs a + abs b</code>). From those laws one
-derives the ordinary facts of ordering — that <code>0 &lt;= 1</code>,
-that halving a positive quantity leaves it positive and strictly
-smaller. This post puts a <em>length</em> on the vectors of a vector
-space, measured in such a field, and uses it to make precise what it
-means for a sequence of vectors to converge.</p>
-<h2 id="a-norm-length-measured-in-the-scalar-field">A norm: length
-measured in the scalar field</h2>
-<p>A vector space over a field <code>F</code> is an abelian group
-<code>V</code> — its elements add and negate — together with a scaling
-operation <code>a *: u</code> that multiplies a vector <code>u</code> by
-a scalar <code>a</code> from <code>F</code>. A <em>norm</em> assigns to
-each vector a scalar length, written <code>‖ u ‖</code>, subject to four
-laws. Here is the vocabulary and the structure, from <a
-href="coqdoc/Riktig.Interface.Norm.html"><code>Interface/Norm.v</code></a>:</p>
-<pre class="coq"><code>Class HasNorm F V := vnorm : V -&gt; F.
-Notation &quot;‖ u ‖&quot; := (vnorm u) (at level 20, u at level 200).</code></pre>
-<p>The level <code>20</code> is not cosmetic: the opening and closing
-tokens of <code>‖ u ‖</code> are the same symbol, so a level-0 notation
-would sit in application-argument position and let the inner application
-parser swallow the closing bar.</p>
-<pre class="coq"><code>Module NormedSpace.
-  Class NormedSpace (F V : Type) `{OrderedField F}
+<h1 id="normed-spaces-and-what-it-takes-to-say-tends-to">Normed spaces,
+and what it takes to say “tends to”</h1>
+<p>A vector space has no notion of size, so it has no notion of
+<em>close</em>, and without that there is no analysis. One function
+supplies both: a length for each vector, from which “close” means “the
+difference is short”. This post gives that structure and then the first
+thing built on it — the limit of a sequence — with the two proofs that
+make the definition worth having.</p>
+<h2 id="length-by-four-laws">Length, by four laws</h2>
+<p>A <a
+href="https://en.wikipedia.org/wiki/Normed_vector_space">norm</a> on a
+vector space
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+over an ordered field
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
+assigns to each vector a scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|u\|</annotation></semantics></math>
+such that</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>≥</mo><mn>0</mn><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mn>0</mn><mo>⇒</mo><mi>u</mi><mo>=</mo><mn>0</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">\|u\| \geq 0, \qquad \|u\| = 0 \Rightarrow u = 0,</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>a</mi><mi>*</mi><mo>:</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>=</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\|a *: u\| = |a|\,\|u\|, \qquad \|u + v\| \leq \|u\| + \|v\|.</annotation></semantics></math></p>
+<p>The last is the <a
+href="https://en.wikipedia.org/wiki/Triangle_inequality">triangle
+inequality</a>: a detour is never shorter than going direct.</p>
+<pre class="coq"><code>  Class NormedSpace (F V : Type) `{OrderedField F}
       {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V}
       {Vs : HasScale F V} {VS : VectorSpace F V} {Vnorm : HasNorm F V} := {
     vnorm_proper :: Proper (equ ==&gt; equ) Vnorm;
@@ -50,283 +41,141 @@ parser swallow the closing bar.</p>
     definite : forall u : V, ‖ u ‖ == 0 -&gt; u == 0;
     is_homogeneous :: Homogeneous F V F mult abs Vnorm;
     triangle : forall u v : V, ‖ u + v ‖ &lt;= ‖ u ‖ + ‖ v ‖;
-  }.
-End NormedSpace.</code></pre>
-<p>The length lands in the <em>scalar</em> field <code>F</code>, which
-is why <code>F</code> must be an ordered field: a length has to be
-comparable and nonnegative. The norm itself is not a field of the class
-— <code>HasNorm F V</code> arrives as the implicit class parameter
-<code>Vnorm</code>, alongside the operations of the vector space — so
-the class body is laws and nothing else, and the module wrapper lets
-them keep bare English names.</p>
-<p>The class opens with <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.vnorm_proper"><code>NormedSpace.vnorm_proper</code></a>:
-the norm respects the vector space’s equality, so equal vectors have
-equal length. It is declared with <code>::</code> rather than
-<code>:</code>, which makes the field itself a typeclass instance as
-soon as a <code>NormedSpace F V</code> is in scope, so
-<code>rewrite</code> can move <code>==</code> inside the bars without
-the law being named. Then the four laws: every length is nonnegative (<a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.nonneg"><code>NormedSpace.nonneg</code></a>);
-only the zero vector has length zero (<a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.definite"><code>NormedSpace.definite</code></a>);
-scaling a vector by <code>a</code> scales its length by
-<code>abs a</code> (<a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.is_homogeneous"><code>NormedSpace.is_homogeneous</code></a>);
-and the length of a sum is at most the sum of the lengths (<a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.triangle"><code>NormedSpace.triangle</code></a>).</p>
-<p>The scaling law is the one that is not spelled out, and it is worth
-seeing why. “Carries scaling across, up to a reweighting” is a shape
-that recurs — a linear map does it with the weight left alone, a norm
-does it with the weight replaced by its absolute value — so it is stated
-once, in <a href="coqdoc/Riktig.Props.html"><code>Props.v</code></a>, as
-its own class:</p>
-<pre class="coq"><code>  Class Homogeneous := homogeneous : forall (a : F) (x : A), f (a *: x) == weight a · f x.</code></pre>
-<p><code>Homogeneous F V F mult abs Vnorm</code> fills that template
-with the map <code>Vnorm : V -&gt; F</code>, the reweighting <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>, and
-multiplication in <code>F</code> as the action on the result, which
-reads back as <code>‖ a *: u ‖ == abs a * ‖ u ‖</code>. The projection
-out of the class is called <a
-href="coqdoc/Riktig.Props.html#homogeneous"><code>homogeneous</code></a>,
-and that — not the field name <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.is_homogeneous"><code>NormedSpace.is_homogeneous</code></a>
-— is the name a proof rewrites with.</p>
-<h2 id="the-length-of-a-negated-vector-is-unchanged">The length of a
-negated vector is unchanged</h2>
-<p>A first consequence, and a chance to see <a
-href="coqdoc/Riktig.Theory.Order.html#abs_one"><code>abs_one</code></a>
-— the fact that <code>abs 1 == 1</code>, derived from the ordered-field
-laws — doing real work one layer up. In English:
-<code>‖ - u ‖ == ‖ u ‖</code> — negating a vector does not change its
-length.</p>
-<p>Negation is scaling by <code>-1</code>, so on the blackboard the four
-norm-and-abs facts fall in a row:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mi>−</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>−</mi><mi>u</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">|</mo><mo>⋅</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">scaling law</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
-\lVert -u\rVert
-\;=\; \lVert (-1)\cdot u\rVert \quad\{-u = (-1)\cdot u\}
-\;=\; \lvert -1\rvert\cdot\lVert u\rVert \quad\{\text{scaling law}\}
-</annotation></semantics></math>
-<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="postfix">|</mo><mo>⋅</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mo stretchy="false" form="prefix">|</mo><mi>−</mi><mi>a</mi><mo stretchy="false" form="postfix">|</mo><mo>=</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="postfix">|</mo><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mo>⋅</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="postfix">|</mo><mo>=</mo><mn>1</mn><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mn>1</mn><mo>⋅</mo><mi>x</mi><mo>=</mo><mi>x</mi><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
-\;=\; \lvert 1\rvert\cdot\lVert u\rVert \quad\{\lvert -a\rvert = \lvert a\rvert\}
-\;=\; 1\cdot\lVert u\rVert \quad\{\lvert 1\rvert = 1\}
-\;=\; \lVert u\rVert \quad\{1 \cdot x = x\}.
-</annotation></semantics></math></p>
-<p>Here it is verbatim from <a
-href="coqdoc/Riktig.Theory.Norm.html"><code>Theory/Norm.v</code></a>:</p>
-<pre class="coq"><code>Theorem norm_neg : forall u : V, ‖ - u ‖ == ‖ u ‖.
-Proof.
-  intros u.
-  calc (‖ - u ‖)
-    == (‖ (- (1 : F)) *: u ‖)     { neg1_scale }
-    == (abs (- (1 : F)) * ‖ u ‖)  { (homogeneous (f := vnorm)) }
-    == (abs (1 : F) * ‖ u ‖)      { abs_neg }
-    == ((1 : F) * ‖ u ‖)          { abs_one }
-    == (‖ u ‖)                    { left_identity }.
-Qed.</code></pre>
-<p>The chain is over <code>==</code>, the vector space’s equality, and
-each step names one law. <a
-href="coqdoc/Riktig.Theory.VectorSpace.html#neg1_scale"><code>neg1_scale</code></a>
-rewrites <code>- u</code> as <code>(-1) *: u</code>;
-<code>homogeneous (f := vnorm)</code> pulls the scalar out as
-<code>abs (-1) * ‖ u ‖</code> — the <code>(f := vnorm)</code> is needed
-because <a
-href="coqdoc/Riktig.Props.html#homogeneous"><code>homogeneous</code></a>
-is a general law and Coq has to be told which map it is being asked
-about; <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_neg"><code>OrderedField.abs_neg</code></a>
-(<code>abs (- a) == abs a</code>) turns <code>abs (-1)</code> into
-<code>abs 1</code>; <a
-href="coqdoc/Riktig.Theory.Order.html#abs_one"><code>abs_one</code></a>
-turns that into <code>1</code>; and <a
-href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>,
-resolving here to <code>1 * x == x</code>, drops the factor. Five laws,
-no case split on whether <code>u</code> “points which way” — negation is
-just a scaling, and the norm laws handle it.</p>
-<h2 id="what-a-limit-is-in-words-before-symbols">What a limit is, in
-words before symbols</h2>
-<p>Now the reason a norm is worth having: it lets us say when a sequence
-<code>x 0, x 1, x 2, ...</code> of vectors <em>converges</em> to a
-vector <code>L</code>. The intuition is that the terms get and stay
-arbitrarily close to <code>L</code>. To make “arbitrarily close” precise
-without any appeal to infinity, turn it around: name a tolerance first.
-Convergence to <code>L</code> means that <em>for every positive
-tolerance <code>eps</code>, however small, there is a cut-off index
-<code>N</code> beyond which every term is within <code>eps</code> of
-<code>L</code></em> — the distance <code>‖ x n + - L ‖</code> drops
-below <code>eps</code> and stays below it. Choosing a smaller
-<code>eps</code> may force a later cut-off, but a cut-off always exists.
-That is the whole ε–N idea. Here is the definition, from <a
-href="coqdoc/Riktig.Theory.Limits.html"><code>Theory/Limits.v</code></a>:</p>
-<pre class="coq"><code>Definition seq_lim (x : nat -&gt; V) (L : V) : Prop :=
-  forall eps : F, 0 &lt; eps -&gt;
-    exists N : nat, forall n : nat, (N &lt;= n)%nat -&gt; ‖ x n + - L ‖ &lt; eps.</code></pre>
-<p>Read literally: for all <code>eps</code>, if <code>0 &lt; eps</code>,
-then there exists an index <code>N</code> such that for all
-<code>n</code> with <code>N &lt;= n</code>, the distance
-<code>‖ x n + - L ‖</code> from the <code>n</code>-th term to
-<code>L</code> is strictly below <code>eps</code>. The distance is
-measured with the norm; <code>x n + - L</code> is “the <code>n</code>-th
-term minus <code>L</code>.”</p>
-<h2 id="the-payoff-a-sequence-has-at-most-one-limit">The payoff: a
-sequence has at most one limit</h2>
-<p>The theorem that makes <a
-href="coqdoc/Riktig.Theory.Limits.html#seq_lim"><code>seq_lim</code></a>
-a good definition: a sequence cannot converge to two different points.
-In English: if <code>x</code> tends to <code>L1</code> and also to
-<code>L2</code>, then <code>L1 == L2</code>.</p>
-<p>The argument is the classic ε/2. Suppose both limits hold, and fix
-any <code>eps &gt; 0</code>. Feed <code>eps/2</code> to each hypothesis:
-past some <code>N1</code> every term is within <code>eps/2</code> of
-<code>L1</code>, and past some <code>N2</code> within <code>eps/2</code>
-of <code>L2</code>. Pick an index <code>n</code> at least as large as
-both — <code>max N1 N2</code> serves. At that one index the triangle
-inequality routes the distance from <code>L1</code> to <code>L2</code>
-through <code>x n</code>:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>x</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">‖</mo><msub><mi>x</mi><mi>n</mi></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="true" form="postfix">‖</mo></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">triangle inequality</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>&lt;</mo><mspace width="0.278em"></mspace><mstyle displaystyle="false"><mfrac><mi>ε</mi><mn>2</mn></mfrac></mstyle><mo>+</mo><mstyle displaystyle="false"><mfrac><mi>ε</mi><mn>2</mn></mfrac></mstyle><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the two limit bounds at </mtext><mspace width="0.333em"></mspace></mrow><mi>n</mi><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>ε</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
-\lVert L_1 - L_2\rVert
-\;\le\; \lVert L_1 - x_n\rVert + \lVert x_n - L_2\rVert \quad\{\text{triangle inequality}\}
-\;&lt;\; \tfrac{\varepsilon}{2} + \tfrac{\varepsilon}{2} \quad\{\text{the two limit bounds at } n\}
-\;=\; \varepsilon.
-</annotation></semantics></math></p>
-<p>So the fixed distance <code>‖ L1 + - L2 ‖</code> is below
-<em>every</em> positive <code>eps</code>. A quantity that is nonnegative
-(a norm always is) and below every positive bound can only be zero; and
-a vector of length zero is the zero vector. Hence
-<code>L1 - L2 == 0</code>, that is, <code>L1 == L2</code>. Here is the
-proof verbatim from <a
-href="coqdoc/Riktig.Theory.Limits.html"><code>Theory/Limits.v</code></a>:</p>
-<pre class="coq"><code>Theorem lim_unique : forall (x : nat -&gt; V) (L1 L2 : V),
-  seq_lim x L1 -&gt; seq_lim x L2 -&gt; L1 == L2.
-Proof.
-  intros x L1 L2 Hx1 Hx2.
-  apply sub_eq_zero.
-  apply definite.
-  apply nonneg_below_all_pos_is_zero.
-  - apply nonneg.
-  - intros eps Heps.
-    destruct (Hx1 (half eps) (half_pos eps Heps)) as [N1 HN1].
-    destruct (Hx2 (half eps) (half_pos eps Heps)) as [N2 HN2].
-    apply lt_le.
-    apply (le_lt_trans (‖ L1 + - L2 ‖)
-      (‖ L1 + - x (Nat.max N1 N2) ‖ + ‖ x (Nat.max N1 N2) + - L2 ‖) eps).
-    + apply norm_sub_triangle.
-    + apply (lt_le_trans _ (half eps + half eps) eps).
-      * apply add_lt_mono.
-        -- rewrite (norm_sub_swap L1 (x (Nat.max N1 N2))).
-           apply HN1.
-           apply Nat.le_max_l.
-        -- apply HN2.
-           apply Nat.le_max_r.
-      * apply eq_le. apply half_sum.
-Qed.</code></pre>
-<p>Walking it, top to bottom:</p>
-<ul>
-<li><code>apply sub_eq_zero</code> reduces the goal
-<code>L1 == L2</code> to <code>L1 + - L2 == 0</code> — the group fact
-that two elements are equal exactly when their difference is zero.</li>
-<li><code>apply NormedSpace.definite</code> reduces <em>that</em> to
-<code>‖ L1 + - L2 ‖ == 0</code>: by definiteness, showing the difference
-is zero is enough to show its length is zero.</li>
-<li><code>apply nonneg_below_all_pos_is_zero</code> is the “below every
-positive bound” lemma. It splits the goal
-<code>‖ L1 + - L2 ‖ == 0</code> into two: the length is nonnegative, and
-it lies below every positive <code>eps</code>.</li>
-<li>The first bullet, <code>apply NormedSpace.nonneg</code>, is exactly
-nonnegativity of the norm.</li>
-<li>The second bullet opens with <code>intros eps Heps</code>, fixing a
-positive <code>eps</code>, and must show
-<code>‖ L1 + - L2 ‖ &lt;= eps</code>.</li>
-<li><code>destruct (Hx1 (half eps) ...)</code> feeds <code>eps/2</code>
-— positive by <a
-href="coqdoc/Riktig.Theory.Order.html#half_pos"><code>half_pos</code></a>
-— to the first limit, naming its cut-off <code>N1</code> and the bound
-<code>HN1</code>; the next line does the same for the second limit,
-giving <code>N2</code> and <code>HN2</code>.</li>
-<li><code>apply lt_le</code> weakens the goal from <code>&lt;=</code> to
-a strict <code>&lt;</code>: it suffices to get
-<code>‖ L1 + - L2 ‖ &lt; eps</code>, which is what the ε/2 split
-delivers.</li>
-<li><code>apply (le_lt_trans ...)</code> is the triangle step. It routes
-<code>‖ L1 + - L2 ‖</code> through the term <code>x (max N1 N2)</code>,
-bounding it by <code>‖ L1 + - x_n ‖ + ‖ x_n + - L2 ‖</code>; the bound
-itself is <a
-href="coqdoc/Riktig.Theory.Norm.html#norm_sub_triangle"><code>norm_sub_triangle</code></a>,
-the difference form of the triangle inequality.</li>
-<li><code>apply (lt_le_trans _ (half eps + half eps) eps)</code> says
-that sum is below <code>eps/2 + eps/2</code>, which is at most
-<code>eps</code>. The <a
-href="coqdoc/Riktig.Theory.Order.html#add_lt_mono"><code>add_lt_mono</code></a>
-step bounds each summand by <code>eps/2</code> separately: for the
-first, <a
-href="coqdoc/Riktig.Theory.Norm.html#norm_sub_swap"><code>norm_sub_swap</code></a>
-swaps <code>‖ L1 + - x_n ‖</code> to <code>‖ x_n + - L1 ‖</code> so
-<code>HN1</code> applies (at index <code>max N1 N2</code>, which is
-<code>&gt;= N1</code> by <code>Nat.le_max_l</code>); the second is
-<code>HN2</code> directly (<code>&gt;= N2</code> by
-<code>Nat.le_max_r</code>).</li>
-<li><code>apply eq_le. apply half_sum</code> closes the last step: <a
-href="coqdoc/Riktig.Theory.Order.html#half_sum"><code>half_sum</code></a>
-is the fact <code>eps/2 + eps/2 == eps</code>, and <a
-href="coqdoc/Riktig.Theory.Order.html#eq_le"><code>eq_le</code></a>
-turns that equation into the <code>&lt;=</code> the chain needs.</li>
-</ul>
-<p>That is the ε/2 argument in full: two half-bounds, summed at a shared
-index, squeeze the distance between the two candidate limits below every
-positive number, and a nonnegative such quantity is zero.</p>
-<h2 id="a-space-where-this-all-runs-matrices">A space where this all
-runs: matrices</h2>
-<p>The theorems apply to any normed space. Matrices give a concrete one,
-in <a
-href="coqdoc/Riktig.Impl.MatrixNorm.html"><code>Impl/MatrixNorm.v</code></a>,
-with the entrywise L1 norm — the sum of the absolute values of all the
-entries:</p>
-<pre class="coq"><code>Definition mat_norm (A : Matrix m n F) : F :=
-  bigopF (fun i : Fin.t m =&gt; bigopF (fun j : Fin.t n =&gt; abs (A i j))).</code></pre>
-<p>This needs only <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>,
-which every ordered field already carries — no square root, so no L2
-norm, is required. The four norm laws are checked for <a
-href="coqdoc/Riktig.Impl.MatrixNorm.html#mat_norm"><code>mat_norm</code></a>,
-and the file assembles the <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
-instance; resolution then confirms it holds for matrices over any
-ordered field:</p>
-<pre class="coq"><code>Example matrix_ns_check (F : Type) `{HFF : Field F} {Fl : HasLe F} {Fb : HasAbs F} (HF : OrderedField F)
-  (m n : nat) : NormedSpace F (Matrix m n F) := _.</code></pre>
-<p>The binders supply exactly a field, the two symbols an order needs
-(<a
-href="coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>
+  }.</code></pre>
+<p>Two details reward a slow reading. The scalars are an
+<em>ordered</em> field, not merely a field: comparing lengths needs
+<code>&lt;=</code>, which is structure in its own right, so this cannot
+be stated with the complex numbers as scalars without saying where the
+sizes live.</p>
+<p>And the homogeneity law is not written fresh. It is the catalogue’s
+<a
+href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
+entry with the <em>weight</em> slot filled by <a
+href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> — a
+scalar pulled out of a norm comes out as its absolute value, not itself.
+The same entry with the weight left as the identity is what makes a map
+linear. One law shape, two readings, as in the earlier posts.</p>
+<p>Nothing here says the field is the real numbers, and nothing below
+needs it to be. Over the rationals every statement in this post still
+holds; what fails without completeness is the <em>existence</em> of
+limits, not their theory.</p>
+<h2 id="what-tends-to-means">What “tends to” means</h2>
+<p>A sequence
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mn>0</mn></msub><mo>,</mo><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><msub><mi>x</mi><mn>2</mn></msub><mo>,</mo><mi>…</mi></mrow><annotation encoding="application/x-tex">x_0, x_1, x_2, \dots</annotation></semantics></math>
+of vectors converges to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
+when its terms eventually stay within any tolerance you name:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∀</mo><mi>ε</mi><mo>&gt;</mo><mn>0</mn><mo>,</mo><mspace width="0.222em"></mspace><mo>∃</mo><mi>N</mi><mo>,</mo><mspace width="0.222em"></mspace><mo>∀</mo><mi>n</mi><mo>≥</mo><mi>N</mi><mo>:</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="postfix">∥</mo><msub><mi>x</mi><mi>n</mi></msub><mo>−</mo><mi>L</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>ε</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\forall \varepsilon &gt; 0,\ \exists N,\ \forall n \geq N: \quad \|x_n - L\| &lt; \varepsilon.</annotation></semantics></math></p>
+<pre class="coq"><code>  Definition seq_lim (x : nat -&gt; V) (L : V) : Prop :=
+    forall eps : F, 0 &lt; eps -&gt;
+      exists N : nat, forall n : nat, (N &lt;= n)%nat -&gt; ‖ x n + - L ‖ &lt; eps.</code></pre>
+<p>The transcription is the mathematics with <code>x n + - L</code> for
+the difference, since subtraction is addition of the negative. The order
+of the quantifiers carries the whole content:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>
+is chosen <em>after</em>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>
+and may depend on it, and that dependency is what makes the definition
+say anything at all.</p>
+<h2 id="a-sequence-cannot-go-to-two-places">A sequence cannot go to two
+places</h2>
+<p>The first theorem licenses the phrase “<em>the</em> limit”: if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mi>n</mi></msub><mo>→</mo><msub><mi>L</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">x_n \to L_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mi>n</mi></msub><mo>→</mo><msub><mi>L</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">x_n \to L_2</annotation></semantics></math>
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mo>=</mo><msub><mi>L</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">L_1 = L_2</annotation></semantics></math>.</p>
+<p>On the blackboard: given
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>,
+go far enough out that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mi>n</mi></msub><annotation encoding="application/x-tex">x_n</annotation></semantics></math>
+is within
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>
+of <em>both</em> limits — possible because far enough for one and far
+enough for the other is just the larger of the two indices. Then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="postfix">∥</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>x</mi><mi>n</mi></msub><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><msub><mi>x</mi><mi>n</mi></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mstyle displaystyle="false"><mfrac><mi>ε</mi><mn>2</mn></mfrac></mstyle><mo>+</mo><mstyle displaystyle="false"><mfrac><mi>ε</mi><mn>2</mn></mfrac></mstyle><mo>=</mo><mi>ε</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\|L_1 - L_2\| \leq \|L_1 - x_n\| + \|x_n - L_2\| &lt; \tfrac{\varepsilon}{2} + \tfrac{\varepsilon}{2} = \varepsilon.</annotation></semantics></math></p>
+<p>So
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">∥</mo></mrow><annotation encoding="application/x-tex">\|L_1 - L_2\|</annotation></semantics></math>
+is below every positive number. A non-negative quantity below every
+positive number is zero, and a vector of length zero is the zero vector,
+so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mn>1</mn></msub><mo>−</mo><msub><mi>L</mi><mn>2</mn></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">L_1 - L_2 = 0</annotation></semantics></math>.</p>
+<pre class="coq"><code>  Theorem lim_unique : forall (x : nat -&gt; V) (L1 L2 : V),
+    seq_lim x L1 -&gt; seq_lim x L2 -&gt; L1 == L2.
+  Proof.
+    intros x L1 L2 Hx1 Hx2.
+    apply sub_eq_zero.
+    apply definite.
+    apply nonneg_below_all_pos_is_zero.</code></pre>
+<p>Those three lines are the last three sentences of the argument, in
+reverse: <a
+href="coqdoc/Riktig.Theory.Group.html#sub_eq_zero"><code>sub_eq_zero</code></a>
+from the group post (a vanishing difference is an equality), then the
+norm axiom <a
+href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.definite"><code>definite</code></a>,
+then <a
+href="coqdoc/Riktig.Theory.Order.html#nonneg_below_all_pos_is_zero"><code>nonneg_below_all_pos_is_zero</code></a>.
+What remains is the estimate, which uses <code>Nat.max N1 N2</code> for
+“far enough for both” exactly as the blackboard does.</p>
+<p>The halving is real work, incidentally. <code>half eps</code> exists
+because the scalars form an ordered field, where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>
+is positive and therefore invertible — the same halving the
+geometric-algebra post had to pay for, and the reason so much of
+analysis quietly assumes you can divide by two.</p>
+<h2 id="limits-respect-the-operations">Limits respect the
+operations</h2>
+<p>The remaining theorems say the limit of a sum is the sum of the
+limits, and likewise for scaling and negation:</p>
+<pre class="coq"><code>  Theorem lim_add : forall (x y : nat -&gt; V) (L M : V),
+    seq_lim x L -&gt; seq_lim y M -&gt; seq_lim (fun n =&gt; x n + y n) (L + M).</code></pre>
+<p>The proof is the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>
+argument again: to hold the sum within
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>,
+hold each part within
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>
+and take the later of the two indices. The estimate that assembles
+it,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>+</mo><msub><mi>y</mi><mi>n</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>L</mi><mo>+</mo><mi>M</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">∥</mo><mo>≤</mo><mo stretchy="false" form="postfix">∥</mo><msub><mi>x</mi><mi>n</mi></msub><mo>−</mo><mi>L</mi><mo stretchy="false" form="postfix">∥</mo><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><msub><mi>y</mi><mi>n</mi></msub><mo>−</mo><mi>M</mi><mo stretchy="false" form="postfix">∥</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\|(x_n + y_n) - (L + M)\| \leq \|x_n - L\| + \|y_n - M\|,</annotation></semantics></math></p>
+<p>is <a
+href="coqdoc/Riktig.Theory.Norm.html#norm_sub_pair"><code>norm_sub_pair</code></a>,
+one of a small family of rearrangement lemmas in <a
+href="coqdoc/Riktig.Theory.Norm.html"><code>Theory/Norm.v</code></a>
+that exist so analysis proofs can cite a named fact rather than
+re-derive it. <a
+href="coqdoc/Riktig.Theory.Limits.html#lim_scale"><code>lim_scale</code></a>
+is the same shape with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>c</mi><mo stretchy="false" form="prefix">|</mo><mspace width="0.167em"></mspace><mi>ε</mi></mrow><annotation encoding="application/x-tex">|c|\,\varepsilon</annotation></semantics></math>
+in place of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>,
 and <a
-href="coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>),
-and the ordered-field laws over them; the <code>:= _</code> leaves the
-instance for Coq to find, and it does. With that in scope, <a
-href="coqdoc/Riktig.Theory.Limits.html#seq_lim"><code>seq_lim</code></a>
-and <a
-href="coqdoc/Riktig.Theory.Limits.html#lim_unique"><code>lim_unique</code></a>
-are immediately available for sequences of matrices: a convergent
-sequence of <code>m</code>-by-<code>n</code> matrices over the rationals
-has exactly one limit matrix, by the ε/2 proof above, with nothing
-further to prove.</p>
-<p><em>Next: continuity, and the derivative recast as the linear map
-that best approximates a function near a point.</em></p>
+href="coqdoc/Riktig.Theory.Limits.html#lim_neg"><code>lim_neg</code></a>
+follows from <a
+href="coqdoc/Riktig.Theory.Limits.html#lim_scale"><code>lim_scale</code></a>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+— as the vector-space post showed, scaling by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+is negation.</p>
+<p><em>Next: the same apparatus applied to functions, giving
+continuity.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Interface.Norm.html"><code>Interface/Norm.v</code></a>
-(the <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
-class) · <a
-href="coqdoc/Riktig.Theory.Norm.html"><code>Theory/Norm.v</code></a> (<a
-href="coqdoc/Riktig.Theory.Norm.html#norm_neg"><code>norm_neg</code></a>)
-· <a
+(the structure) · <a
+href="coqdoc/Riktig.Theory.Norm.html"><code>Theory/Norm.v</code></a>
+(the estimates the proofs cite) · <a
 href="coqdoc/Riktig.Theory.Limits.html"><code>Theory/Limits.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Limits.html#seq_lim"><code>seq_lim</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Limits.html#lim_unique"><code>lim_unique</code></a>)
+href="coqdoc/Riktig.Theory.Limits.html#lim_unique"><code>lim_unique</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Limits.html#lim_add"><code>lim_add</code></a>)
 · <a
-href="coqdoc/Riktig.Impl.MatrixNorm.html"><code>Impl/MatrixNorm.v</code></a>
-(matrices as a normed space).</p>
+href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+(ordered fields).</p>
 </main>
 </body>
 </html>
