@@ -168,19 +168,19 @@ f \circ (g \circ h) = (f \circ g) \circ h,</annotation></semantics></math></p>
 <p>each up to pointwise equality, and each proof is a single
 <code>reflexivity</code>, because at any input both sides compute to the
 same value:</p>
-<pre class="coq"><code>Lemma fn_idl (X Y : Type) (f : X -&gt; Y) :
+<pre class="coq"><code>Lemma fn_left_identity (X Y : Type) (f : X -&gt; Y) :
   fn_equ X Y (fn_comp X Y Y (fn_id Y) f) f.
 Proof.
   intros x. reflexivity.
 Qed.
 
-Lemma fn_idr (X Y : Type) (f : X -&gt; Y) :
+Lemma fn_right_identity (X Y : Type) (f : X -&gt; Y) :
   fn_equ X Y (fn_comp X X Y f (fn_id X)) f.
 Proof.
   intros x. reflexivity.
 Qed.
 
-Lemma fn_assoc (W X Y Z : Type) (f : Y -&gt; Z) (g : X -&gt; Y) (h : W -&gt; X) :
+Lemma fn_associative (W X Y Z : Type) (f : Y -&gt; Z) (g : X -&gt; Y) (h : W -&gt; X) :
   fn_equ W Z (fn_comp W Y Z f (fn_comp W X Y g h))
              (fn_comp W X Z (fn_comp X Y Z f g) h).
 Proof.
@@ -198,9 +198,9 @@ instance:</p>
   Category.id                := fn_id;
   Category.comp              := fn_comp;
   Category.comp_proper       := fn_comp_proper;
-  Category.is_left_identity  := fn_idl;
-  Category.is_right_identity := fn_idr;
-  Category.comp_associative  := fn_assoc
+  Category.is_left_identity  := fn_left_identity;
+  Category.is_right_identity := fn_right_identity;
+  Category.comp_associative  := fn_associative
 |}.</code></pre>
 <p>The two identity fields expect <a
 href="coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>
@@ -210,8 +210,8 @@ instances, yet plain lemmas fill them. That works because those classes
 are single-field classes: <a
 href="coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>
 <em>is</em> the statement <code>forall x, unit · x == x</code>, so <a
-href="coqdoc/Riktig.Impl.CoqCat.html#fn_idl"><code>fn_idl</code></a> —
-which says exactly that for <a
+href="coqdoc/Riktig.Impl.CoqCat.html#fn_left_identity"><code>fn_left_identity</code></a>
+— which says exactly that for <a
 href="coqdoc/Riktig.Impl.CoqCat.html#fn_comp"><code>fn_comp</code></a>
 and <a
 href="coqdoc/Riktig.Impl.CoqCat.html#fn_id"><code>fn_id</code></a> — is

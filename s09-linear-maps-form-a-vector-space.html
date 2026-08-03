@@ -93,17 +93,21 @@ and cancel on the left. ∎</p>
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a> —
 note it’s proved for <em>any</em> additive map between groups; vector
 spaces inherit it):</p>
-<pre class="coq"><code>Theorem hom_zero : f 0 == 0.
-Proof.
-  apply (cancel_l (f 0)).
-  calc (f 0 + f 0)
-    == (f (0 + 0)) { (fadd 0 0) }
-    == (f 0)       { left_identity }
-    == (f 0 + 0)   { right_identity }.
-Qed.</code></pre>
+<pre class="coq"><code>  Theorem additive_zero : f 0 == 0.
+  Proof.
+    apply (cancel_l (f 0)).
+    calc (f 0 + f 0)
+      == (f (0 + 0)) { (additive 0 0) }
+      == (f 0)       { left_identity }
+      == (f 0 + 0)   { right_identity }.
+  Qed.</code></pre>
 <p>To check the Coq proof against the blackboard, you need the types of
 the pieces:</p>
 <table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
 <thead>
 <tr>
 <th>name</th>
@@ -117,9 +121,12 @@ href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a></td>
 <td><code>forall a b c, a + b == a + c -&gt; b == c</code></td>
 </tr>
 <tr>
-<td><code>fadd</code></td>
+<td><a
+href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a></td>
 <td><code>forall a b, f (a + b) == f a + f b</code> (the map’s
-additivity)</td>
+additivity, from the <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
+class)</td>
 </tr>
 <tr>
 <td><a
@@ -135,8 +142,10 @@ href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a></
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
 it suffices to show <code>f 0 + f 0 == f 0 + 0</code>. The
 <code>calc</code> block is that chain written out, each step naming the
-law that licenses it: <code>fadd</code> read right to left folds
-<code>f 0 + f 0</code> into <code>f (0 + 0)</code>; <a
+law that licenses it: <a
+href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a> read
+right to left folds <code>f 0 + f 0</code> into <code>f (0 + 0)</code>;
+<a
 href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
 collapses the inner <code>0 + 0</code> to <code>0</code>; <a
 href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
@@ -197,7 +206,7 @@ so</p>
 own left-identity law at the point
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>.
 In Coq:</p>
-<pre class="coq"><code>Lemma hom_idl : forall f : Hom, 0 + f == f.
+<pre class="coq"><code>Lemma hom_left_identity : forall f : Hom, 0 + f == f.
 Proof.
   intros f u.
   exact (left_identity _).
@@ -291,7 +300,7 @@ don’t.</p>
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>,
+href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>)
 · <a

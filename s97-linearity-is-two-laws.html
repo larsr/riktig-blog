@@ -220,49 +220,48 @@ on the left leaves
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f(0) = 0</annotation></semantics></math>.
 In <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>,
-with <code>f</code> any map between two groups satisfying
-<code>fadd : forall a b : G, f (a + b) == f a + f b</code>:</p>
-<pre class="coq"><code>Theorem hom_zero : f 0 == 0.
-Proof.
-  apply (cancel_l (f 0)).
-  calc (f 0 + f 0)
-    == (f (0 + 0)) { (fadd 0 0) }
-    == (f 0)       { left_identity }
-    == (f 0 + 0)   { right_identity }.
-Qed.</code></pre>
+with <code>f</code> any map between two groups carrying the constraint
+<code>fa : Additive G K add add f</code>:</p>
+<pre class="coq"><code>  Theorem additive_zero : f 0 == 0.
+  Proof.
+    apply (cancel_l (f 0)).
+    calc (f 0 + f 0)
+      == (f (0 + 0)) { (additive 0 0) }
+      == (f 0)       { left_identity }
+      == (f 0 + 0)   { right_identity }.
+  Qed.</code></pre>
 <p><code>cancel_l (f 0)</code> is the group cancellation law from early
 in this series, turning the goal <code>f 0 == 0</code> into
 <code>f 0 + f 0 == f 0 + 0</code>; the <code>calc</code> chain is then
-the displayed equation read left to right, one law per step: additivity
-folds the sum inside <code>f</code>, <a
+the displayed equation read left to right, one law per step: <a
+href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a> — the
+class field, so the additivity comes from whatever instance is in scope
+— folds the sum inside <code>f</code>, <a
 href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
 collapses <code>0 + 0</code>, and <a
 href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
 re-expands <code>f 0</code> to <code>f 0 + 0</code> to meet the goal’s
 right-hand side.</p>
-<p>The same file restates the result with the hypothesis supplied by
-instance search instead of by hand, so any map already registered as <a
-href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> gets
-it without naming its own law:</p>
-<pre class="coq"><code>Context {fa : Additive G K add add f}.
-
-Theorem additive_zero : f 0 == 0.
-Proof. exact (hom_zero f additive). Qed.
-
-Theorem additive_negation : forall a : G, f (- a) == - f a.
-Proof. exact (hom_neg f additive). Qed.</code></pre>
-<p>And linear maps inherit both for free — <a
+<p>Taking the hypothesis as a class constraint rather than an ordinary
+argument costs nothing and buys the common case. <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> has a
+single field which <em>is</em> the equation, so a caller with no
+registered instance still hands the proof over directly, as
+<code>additive_zero f (fa := my_proof)</code>. There is therefore just
+one theorem, not one convenient version and one general version.</p>
+<p>Linear maps are the case where nothing needs handing over at all. <a
 href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
 packages a function with its <a
 href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
-proof as a record called <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
-and its zero law is one line, the group-homomorphism theorem applied to
-the record’s additivity field:</p>
-<pre class="coq"><code>Theorem linear_map_zero : f 0 == 0.
-Proof.
-  exact (hom_zero (lm_fun f) (linear_map_additive f)).
-Qed.</code></pre>
+proof, whose <a
+href="coqdoc/Riktig.Interface.Linear.html#Linear.is_additive"><code>is_additive</code></a>
+field is an <a
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
+instance, so the zero law is one line naming only the map:</p>
+<pre class="coq"><code>  Theorem linear_map_zero : f 0 == 0.
+  Proof.
+    exact (additive_zero (lm_fun f)).
+  Qed.</code></pre>
 <p>Had additivity been fused into a monolithic “linearity” axiom, this
 reuse would need glue at every step. Stated as its own class, the
 group-level theorem applies directly.</p>
@@ -270,9 +269,9 @@ group-level theorem applies directly.</p>
 <code>Additive F F add mult fn</code>, so one might hope
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\exp(0)=1</annotation></semantics></math>
 falls out of <a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
+href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>
 the same way. It does not: <a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
+href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>
 needs both sides to be groups, and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mo>,</mo><mi>⋅</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(F, \cdot)</annotation></semantics></math>
 is not one —
@@ -345,7 +344,7 @@ Proof.
     == (bigopF (fun j =&gt; a * (A i j * v j)))
     == ((a *: mat_vec A v) i).
   - apply bigopF_ext. intros j.
-    exact (mul_comm_swap (A i j) a (v j)).
+    exact (mul_left_commutative (A i j) a (v j)).
   - exact (bigopF_mul_l n a (fun j =&gt; A i j * v j)).
 Qed.</code></pre>
 <p>The two laws plus a <code>Proper</code> proof assemble into the
@@ -466,8 +465,6 @@ href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>add_to_mul</code></
 · <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>,
-<a
 href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Group.html#additive_negation"><code>additive_negation</code></a>)

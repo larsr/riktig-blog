@@ -311,7 +311,7 @@ Proof.
       == (m vs) { (right_identity (m vs)) }. }
   assert (HP1val : m (upd VS&#39; j a) == m (fswap vs i j)).
   { assert (Hreorder : forall k, upd VS&#39; j a k == upd (upd vs j a) i (a + b) k).
-    { intros k. unfold VS&#39;. exact (u_comm vs i j (a+b) a Hij k). }
+    { intros k. unfold VS&#39;. exact (upd_upd_commutes vs i j (a+b) a Hij k). }
     assert (Hm_P1 : m (upd VS&#39; j a) == m (upd (upd vs j a) i (a + b)))
       by (apply (multilinear_form_proper m); exact Hreorder).
     assert (Hexp3 : m (upd (upd vs j a) i (a + b))
@@ -489,7 +489,7 @@ Proof.
       exact (left_identity (g A)). }
   assert (Hright : g (upd_row N1 i v) == g (row_swap A i j)).
   { assert (Hcomm : upd_row N1 i v == upd_row (upd_row A i v) j (fun k=&gt;u k+v k)).
-    { unfold N1. exact (upd_row_comm n A j i (fun k=&gt;u k+v k) v Hji). }
+    { unfold N1. exact (upd_row_commutes n A j i (fun k=&gt;u k+v k) v Hji). }
     rewrite Hcomm.
     set (A2 := upd_row A i v).
     transitivity (g (upd_row A2 j u) + g (upd_row A2 j v)).
@@ -603,7 +603,7 @@ Proof.
            { (associative (prodF (fun i =&gt; A i (f i))) (g mat_id)
                 (detM (basis_rowsP f))) }
       == ((g mat_id * prodF (fun i =&gt; A i (f i))) * detM (basis_rowsP f))
-           { (mul_comm (prodF (fun i =&gt; A i (f i))) (g mat_id)) }
+           { (mul_commutative (prodF (fun i =&gt; A i (f i))) (g mat_id)) }
       == (g mat_id * (prodF (fun i =&gt; A i (f i)) * detM (basis_rowsP f)))
            { (associative (g mat_id) (prodF (fun i =&gt; A i (f i)))
                 (detM (basis_rowsP f))) }. }
@@ -737,7 +737,7 @@ Proof.
       == (detM A * detM (mat_mul mat_id B))
       == (detM A * detM B).
     + exact Hg.
-    + exact (mul_comm (detM (mat_mul mat_id B)) (detM A)).
+    + exact (mul_commutative (detM (mat_mul mat_id B)) (detM A)).
     + apply op_proper; [reflexivity |].
       apply detM_proper. exact (mat_mul_left_identity (S p0) (S p0) B).
 Qed.</code></pre>
@@ -755,7 +755,7 @@ read at <code>g_mulB B</code>: it says
 directly. <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
 erases the leftover identity, and <a
-href="coqdoc/Riktig.Theory.Field.html#mul_comm"><code>mul_comm</code></a>
+href="coqdoc/Riktig.Theory.Field.html#mul_commutative"><code>mul_commutative</code></a>
 puts the two factors in the expected order. No decidable equality
 anywhere — the whole route runs on <code>Fin.t</code>’s equality, which
 is always decidable regardless of what the field

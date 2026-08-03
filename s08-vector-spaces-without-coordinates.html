@@ -191,28 +191,25 @@ map that preserves <code>+</code>, is that such a map must send
 to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>;
 the lemma is called <a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>.
+href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>.
 So scaling a zero vector gives zero, with no new work:</p>
-<pre class="coq"><code>Theorem scale_zero : forall a : F, a *: (0 : V) == 0.
-Proof.
-  intros a.
-  exact (hom_zero (scale a) (left_distributive a)).
-Qed.</code></pre>
+<pre class="coq"><code>  Theorem scale_zero : forall a : F, a *: (0 : V) == 0.
+  Proof.
+    intros a.
+    exact (additive_zero (scale a)).
+  Qed.</code></pre>
 <p>The proof is a single <a
-href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>: hand
-<a
-href="coqdoc/Riktig.Theory.Group.html#hom_zero"><code>hom_zero</code></a>
-the map (<code>scale a</code>) and its additivity law — which is <a
-href="coqdoc/Riktig.Props.html#left_distributive"><code>left_distributive</code></a>
-at this scalar, the class method resolving to the <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
-instance because the term is built from <code>*:</code> — and the
-group-level result applies verbatim. The fact that <code>scale a</code>
-respects <code>==</code> isn’t passed by hand at all, it’s found
-automatically (<a
-href="coqdoc/Riktig.Theory.VectorSpace.html#scale_l_proper"><code>scale_l_proper</code></a>,
-registered as an instance right above this theorem in the source, is
-exactly that fact). This is the payoff of proving things about
+href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>, and
+the only thing it says is which map is meant: <code>scale a</code>. Both
+hypotheses the group lemma needs are found without being written. That
+<code>scale a</code> preserves <code>+</code> is registered as <a
+href="coqdoc/Riktig.Theory.VectorSpace.html#scale_l_additive"><code>scale_l_additive</code></a>,
+whose proof is <code>left_distributive a</code> — the left-distributive
+law <em>is</em> the additivity of scaling, once you fix the scalar. That
+<code>scale a</code> respects <code>==</code> is registered as <a
+href="coqdoc/Riktig.Theory.VectorSpace.html#scale_l_proper"><code>scale_l_proper</code></a>.
+Each sits beside this theorem in the source, so the call site names the
+map and nothing else. This is the payoff of proving things about
 structures rather than about particular types: a lemma about groups is
 already a lemma about the additive part of every vector space.</p>
 <h2 id="a-space-of-transformations-one-level-up">A space of
@@ -363,13 +360,13 @@ identity map is a two-sided unit, and composition distributes over
 addition on both sides:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>+</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo>∘</mo><mi>g</mi><mo>+</mo><mi>f</mi><mo>∘</mo><mi>h</mi><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>+</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>h</mi><mo>=</mo><mi>f</mi><mo>∘</mo><mi>h</mi><mo>+</mo><mi>g</mi><mo>∘</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">f\circ(g+h) = f\circ g + f\circ h, \qquad (f+g)\circ h = f\circ h + g\circ h</annotation></semantics></math></p>
 <p>Those two are worth looking at, because they are not symmetric:</p>
-<pre class="coq"><code>  Lemma end_distl : forall f g h : EndV, f * (g + h) == f * g + f * h.
+<pre class="coq"><code>  Lemma end_left_distributive : forall f g h : EndV, f * (g + h) == f * g + f * h.
   Proof.
     intros f g h u.
     apply (linear_map_additive f).
   Qed.
 
-  Lemma end_distr : forall f g h : EndV, (f + g) * h == f * h + g * h.
+  Lemma end_right_distributive : forall f g h : EndV, (f + g) * h == f * h + g * h.
   Proof.
     intros f g h u.
     reflexivity.
