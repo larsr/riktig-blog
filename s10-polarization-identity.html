@@ -3,587 +3,177 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inner products and geometric algebra: the polarization
-identity</title>
+<title>Inner products, lengths, and the polarization identity</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
-<h1
-id="inner-products-and-geometric-algebra-the-polarization-identity">Inner
-products and geometric algebra: the polarization identity</h1>
-<p>A <em>vector space</em> over a field
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
-is a set of vectors that add — forming an abelian group — together with
-a scaling action
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>*</mi><mo>:</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">a *: v</annotation></semantics></math>
-of scalars on vectors: scaling distributes over both kinds of sum, two
-scalings compose by multiplying the scalars, and the scalar
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
-scales trivially. No coordinates appear anywhere. As before,
-<code>==</code> is a setoid equality: a chosen equivalence relation
-every operation must respect, not Coq’s equality of raw terms.</p>
-<p>A bare vector space has no notion of length or angle. This post adds
-one, and then shows a single clean identity relating it to
-multiplication.</p>
-<h2 id="an-inner-product-is-a-symmetric-bilinear-pairing">An inner
-product is a symmetric bilinear pairing</h2>
-<p>An <em>inner product</em> pairs two vectors and returns a scalar,
-written
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u , v\rangle</annotation></semantics></math>.
-It is <em>symmetric</em>
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle =
-\langle v,u\rangle</annotation></semantics></math>), and it is
-<em>linear in its left slot</em>: it carries a sum of vectors to a sum
-of scalars, pulls a scalar factor out, and respects the setoid equality
-<code>==</code>. Because it is symmetric, the same holds on the right.
-The class states exactly those two things:</p>
-<pre class="coq"><code>Class InnerProductSpace (F V : Type) `{VectorSpace F V} {Vi : HasInner F V} := {
-  inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟨ u , v ⟩);
-
-  is_commutative :: Commutative V F inner;
-}.
-
-Definition norm2 {F V : Type} `{InnerProductSpace F V} (u : V) : F := ⟨ u , u ⟩.</code></pre>
-<p>The pairing itself is not a field of the class:
-<code>⟨ _ , _ ⟩</code> comes in as the implicit parameter
-<code>Vi : HasInner F V</code>, the one-method operational class that
-carries the symbol. The class states only laws.</p>
-<p><a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.inner_linear"><code>inner_linear</code></a>
-says: fix the right slot at any vector <code>v</code>, and the resulting
-function
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>↦</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">u \mapsto \langle u , v\rangle</annotation></semantics></math>
-is a linear map
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>→</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">V \to F</annotation></semantics></math>.
-<a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
-is the three-field class of the previous post — respects
-<code>==</code>, additive, homogeneous — so one field here does the work
-of three separate laws, and every theorem already proved about linear
-maps applies to the pairing without restatement. The <code>::</code> in
-front of the field registers it for instance search rather than merely
-storing it, so a <code>rewrite</code> under the brackets finds the
-respect law with nothing named by hand. Where a proof wants one half of
-linearity spelled out, <a
-href="coqdoc/Riktig.Theory.InnerProductSpace.html"><code>Theory/InnerProductSpace.v</code></a>
-names it:</p>
-<pre class="coq"><code>Definition inner_left_additive (u v w : V) : ⟨ u + v , w ⟩ == ⟨ u , w ⟩ + ⟨ v , w ⟩ :=
-  additive (f := fun x : V =&gt; ⟨ x , w ⟩) u v.
-
-Definition inner_left_scale (a : F) (u v : V) : ⟨ a *: u , v ⟩ == a * ⟨ u , v ⟩ :=
-  homogeneous (f := fun x : V =&gt; ⟨ x , v ⟩) a u.</code></pre>
-<p>Each is a definition, not a proof script: the law is already sitting
-in the <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
-instance, and these two just give it a name at the pairing.</p>
-<p>The last definition, <code>norm2 u = ⟨ u , u ⟩</code>, is the
-<em>squared length</em> of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>;
-write it
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u\|^2</annotation></semantics></math>.
-There is deliberately no square root and no claim that it is positive —
-positivity needs an <em>ordered</em> field, and we do not assume one
-here. <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#norm2"><code>norm2</code></a>
-is simply the quadratic form the pairing induces, and it is all the
-following needs.</p>
-<h2 id="expanding-a-square-norm2_add">Expanding a square: <a
-href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a></h2>
-<p>The one fact we will carry forward is what happens to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u+v\|^2</annotation></semantics></math>.
-In an ordinary real inner product this is the law of cosines; here it
-holds formally, from the bilinearity axioms alone:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\|u+v\|^2 \;=\; \big(\|u\|^2 + \|v\|^2\big) + \big(\langle u,v\rangle + \langle v,u\rangle\big).</annotation></semantics></math></p>
-<p>The heart of it is expanding
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u+v, u+v\rangle</annotation></semantics></math>
-by additivity in each slot in turn:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">additivity in the left slot</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">additivity in the right slot, twice</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
-\langle u+v,u+v\rangle
- &amp;= \langle u,u+v\rangle + \langle v,u+v\rangle &amp;&amp;\{\text{additivity in the left slot}\}\\
- &amp;= (\langle u,u\rangle+\langle u,v\rangle) + (\langle v,u\rangle+\langle v,v\rangle) &amp;&amp;\{\text{additivity in the right slot, twice}\}
-\end{aligned}</annotation></semantics></math></p>
-<p>then regrouping the four terms into the two diagonal ones and the two
-cross ones. That is <a
-href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_expand"><code>inner_expand</code></a>:</p>
-<pre class="coq"><code>Theorem inner_expand : forall u v : V,
-  ⟨ u + v , u + v ⟩ == (⟨ u , u ⟩ + ⟨ v , v ⟩) + (⟨ u , v ⟩ + ⟨ v , u ⟩).
-Proof.
-  intros u v.
-  calc (⟨ u + v , u + v ⟩)
-    == (⟨ u , u + v ⟩ + ⟨ v , u + v ⟩)
-      { (inner_left_additive u v (u + v)) }
-    == ((⟨ u , u ⟩ + ⟨ u , v ⟩) + ⟨ v , u + v ⟩)
-      { (inner_right_additive u u v) }
-    == ((⟨ u , u ⟩ + ⟨ u , v ⟩) + (⟨ v , u ⟩ + ⟨ v , v ⟩))
-      { (inner_right_additive v u v) }
-    == ((⟨ u , u ⟩ + ⟨ v , v ⟩) + (⟨ u , v ⟩ + ⟨ v , u ⟩))
-      { (add_rotate ⟨ u , u ⟩ ⟨ u , v ⟩ ⟨ v , u ⟩ ⟨ v , v ⟩) }.
-Qed.</code></pre>
-<p>Reading the chain:</p>
-<ul>
-<li><code>inner_left_additive u v (u + v)</code> splits the left slot:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u+v, w\rangle =
-\langle u,w\rangle + \langle v,w\rangle</annotation></semantics></math>,
-with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">w = u+v</annotation></semantics></math>.</li>
-<li><code>inner_right_additive u u v</code> splits the right slot of the
-first term. This right-additivity is not an axiom — it was derived
-earlier in the file from symmetry plus left-additivity — but it is
-available now as an ordinary lemma.</li>
-<li><code>inner_right_additive v u v</code> splits the right slot of the
-second term.</li>
-<li><a
-href="coqdoc/Riktig.Theory.AbGroup.html#add_rotate"><code>add_rotate</code></a>
-is a pure abelian-group rearrangement,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a+b)+(c+d) =
-(a+d)+(b+c)</annotation></semantics></math>, proved back in the
-abelian-groups post. It gathers the two diagonal scalars
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>,</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,u\rangle, \langle v,v\rangle</annotation></semantics></math>
-into one pair and the two cross scalars
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>,</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle, \langle v,u\rangle</annotation></semantics></math>
-into the other.</li>
-</ul>
-<p>Since
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>w</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|w\|^2</annotation></semantics></math>
-is <em>defined</em> as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle w,w\rangle</annotation></semantics></math>,
-renaming the three diagonal pairings gives the statement we wanted:</p>
-<pre class="coq"><code>Theorem norm2_add : forall u v : V,
-  norm2 (u + v) == (norm2 u + norm2 v) + (⟨ u , v ⟩ + ⟨ v , u ⟩).</code></pre>
-<p>Notice the cross term
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle + \langle v,u\rangle</annotation></semantics></math>.
-It is the whole subject of the rest of this post.</p>
-<h2 id="a-squared-length-without-a-pairing-quadratic-forms">A squared
-length without a pairing: quadratic forms</h2>
-<p>Look again at what the cross term is made of. The quantity
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u\|^2</annotation></semantics></math>
-never asks the pairing about two <em>different</em> vectors — it only
-ever feeds one vector to both slots. So a structure that wants nothing
-but squared lengths does not need a pairing at all; it needs a function
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>:</mo><mi>V</mi><mo>→</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">Q : V \to F</annotation></semantics></math>
-that behaves like one. Such a function is a <em>quadratic form</em>, and
-three conditions pin the behaviour down:</p>
-<ul>
-<li>it respects <code>==</code>;</li>
-<li>scaling a vector by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
-scales its value by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>a</mi><mn>2</mn></msup><annotation encoding="application/x-tex">a^2</annotation></semantics></math>:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mspace width="0.167em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(a\,u) = a^2\,Q(u)</annotation></semantics></math>;</li>
-<li>its <em>polar form</em>, the correction term
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{polar} Q(u,v) = Q(u+v) - Q(u) - Q(v)</annotation></semantics></math>
-measuring how far
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
-is from additive, is linear in
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
-for each fixed
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>.</li>
-</ul>
-<p>The third condition is the one doing the real work: it is exactly the
-statement that
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
-is a <em>degree-two</em> function rather than some arbitrary one. In <a
-href="coqdoc/Riktig.Interface.QuadraticForm.html"><code>Interface/QuadraticForm.v</code></a>:</p>
-<pre class="coq"><code>Definition polar {F V : Type} `{VectorSpace F V} (Q : V -&gt; F) (u v : V) : F :=
-  Q (u + v) + - Q u + - Q v.
-
-Class QuadraticForm (F V : Type) `{VectorSpace F V} (Q : V -&gt; F) := {
-  quad_proper  :: Proper (equ ==&gt; equ) Q;
-  quad_scale   :: Homogeneous F V F mult (fun a =&gt; a * a) Q;
-  polar_linear :: forall v : V, Linear F V F (fun u =&gt; polar Q u v);
-}.</code></pre>
-<p><a
-href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
-is the same class the linear maps used, with the weight applied to the
-scalar left as a parameter:
-<code>Homogeneous F V F mult (fun a =&gt; a * a) Q</code> unfolds to
-<code>Q (a *: u) == (a * a) * Q u</code>. A linear map passes
-<code>fun a =&gt; a</code> there; a quadratic form passes the
-squaring.</p>
-<p>Every inner product produces a quadratic form — take
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mo>⋅</mo><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">Q = \|\cdot\|^2</annotation></semantics></math>
-— and its polar form is the cross term of <a
-href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a>,
-doubled up by symmetry (<a
-href="coqdoc/Riktig.Theory.QuadraticForm.html"><code>Theory/QuadraticForm.v</code></a>):</p>
-<pre class="coq"><code>Lemma polar_norm2 : forall u v : V, polar norm2 u v == ⟨ u , v ⟩ + ⟨ u , v ⟩.
-Proof.
-  intros u v. unfold polar.
-  rewrite (norm2_add u v), &lt;- (commutative u v). ring.
-Qed.</code></pre>
-<p><a
-href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a>
-turns the goal’s
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u+v\|^2</annotation></semantics></math>
-into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\|u\|^2 + \|v\|^2) +
-(\langle u,v\rangle + \langle v,u\rangle)</annotation></semantics></math>;
-<a
-href="coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>,
-used right-to-left, rewrites the
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle v,u\rangle</annotation></semantics></math>
-into a second
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle
-u,v\rangle</annotation></semantics></math>. What is left is an identity
-in the abelian group with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|u\|^2</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\|v\|^2</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle</annotation></semantics></math>
-as opaque atoms — the two squared lengths cancel against the two
-subtractions, leaving the doubled cross term — so <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.ring"><code>ring</code></a>
-finishes it without being told which lemma to use. That instance is <a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#Inner_QuadraticForm"><code>Inner_QuadraticForm</code></a>,
-and it is what connects the second half of this post back to the
-first.</p>
-<h2
-id="geometric-algebra-a-vector-squared-is-its-own-value-under-q">Geometric
-algebra: a vector squared is its own value under
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math></h2>
-<p>Now embed the vectors into a ring. A <em>ring</em>
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-has an addition and a multiplication with a unit
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>,
-the multiplication distributing over the addition on both sides — and,
-crucially, it need not be commutative (the endomorphism ring of the
-previous post was the first example). A <em>geometric algebra</em> over
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>V</mi><mo>,</mo><mi>Q</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(V, Q)</annotation></semantics></math>
-is such a ring
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
-with
+<h1 id="inner-products-lengths-and-the-polarization-identity">Inner
+products, lengths, and the polarization identity</h1>
+<p>A vector space lets you add and stretch, and that is all. It has no
+notion of length, of angle, or of two directions being perpendicular.
+Those come from one extra operation — a way of multiplying two vectors
+to get a scalar — and remarkably little has to be assumed about it
+before the familiar geometry appears.</p>
+<h2 id="the-structure">The structure</h2>
+<p>An <a href="https://en.wikipedia.org/wiki/Inner_product_space">inner
+product</a> on a vector space
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
-mapped into it linearly by a map <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.ga_vec"><code>ga_vec</code></a>,
-subject to one governing axiom — writing
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mi>u</mi></msub><annotation encoding="application/x-tex">e_u</annotation></semantics></math>
-for the image of the vector
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
-in the ring:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><mspace width="0.167em"></mspace><msub><mi>e</mi><mi>u</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">e_u\, e_u \;=\; Q(u) \mathbin{*:} 1.</annotation></semantics></math></p>
-<p>In words: <em>a vector, multiplied by itself in the ring, is its own
-squared length</em> — as a scalar multiple of the ring’s unit. That
-axiom, <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>GeometricAlgebra.contraction</code></a>,
-is the seed of the Clifford algebras, the setting in which rotations and
-reflections turn into ordinary multiplication.</p>
-<pre class="coq"><code>Class GeometricAlgebra (F V A : Type) `{QuadraticForm F V}
-    {Ae : EqRel A} {Az : Zero A} {Aa : HasAdd A} {An : HasNeg A}
-    {Ao : One A} {Am : HasMult A} {As : HasScale F A} := {
-  ring    :: Ring A;
-  scaling :: ScaleLaws F A;
-
-  mul_linear_l :: forall y : A, Linear F A A (fun x =&gt; x * y);
-  mul_linear_r :: forall x : A, Linear F A A (fun y =&gt; x * y);
-
-  ga_vec     : V -&gt; A;
-  vec_linear :: Linear F V A ga_vec;
-
-  contraction : forall u : V, ga_vec u * ga_vec u == Q u *: 1;
-}.</code></pre>
-<p>Seven fields, and five of them are structures already defined
-elsewhere. <code>ring :: Ring A</code> does not restate associativity,
-distributivity and the rest — it <em>is</em> the ring, held as a field
-and declared <code>::</code>, so instance search finds it and every ring
-theorem in the library applies to <code>A</code> at once.
-<code>scaling :: ScaleLaws F A</code> holds the module laws for
-<code>*:</code> the same way. The two <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
-fields say multiplication is linear in each argument separately, which
-is what makes the scalars pass through products; <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.vec_linear"><code>vec_linear</code></a>
-says the embedding is linear. Only <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>
-is new mathematics, and it is one line.</p>
-<p>The contraction axiom only ever mentions a vector squared — a vector
-times <em>itself</em>. What does it say about the product of two
-<em>different</em> vectors? That is what the polarization identity
-extracts.</p>
-<h2 id="the-polarization-identity">The polarization identity</h2>
-<p><strong>The claim, in one sentence:</strong> the symmetric part of
-the geometric product of two vectors —
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>u</mi></msub></mrow><annotation encoding="application/x-tex">e_u e_v + e_v e_u</annotation></semantics></math>
-— is the polar form of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><mspace width="0.167em"></mspace><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mspace width="0.167em"></mspace><msub><mi>e</mi><mi>u</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">e_u\, e_v + e_v\, e_u \;=\; \operatorname{polar} Q(u,v) \mathbin{*:} 1.</annotation></semantics></math></p>
-<p><strong>The blackboard argument</strong> is to square
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>
-in two ways and equate them. Expanding the product in the ring, then
-contracting each squared term:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>v</mi></msub></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">distributivity</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">contraction on each square</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
-(e_u + e_v)(e_u + e_v)
- &amp;= e_u e_u + e_v e_u + e_u e_v + e_v e_v &amp;&amp;\{\text{distributivity}\}\\
- &amp;= Q(u) \mathbin{*:} 1 + Q(v) \mathbin{*:} 1 + (e_u e_v + e_v e_u) &amp;&amp;\{\text{contraction on each square}\}
-\end{aligned}</annotation></semantics></math></p>
-<p>But
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo>=</mo><msub><mi>e</mi><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">e_u + e_v = e_{u+v}</annotation></semantics></math>
-because the embedding is linear, so the same quantity contracts
-directly:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msub><mi>e</mi><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow></msub><mspace width="0.167em"></mspace><msub><mi>e</mi><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow></msub><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">linearity of the embedding</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="1.0em"></mspace><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">contraction</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">(e_u + e_v)(e_u + e_v) = e_{u+v}\, e_{u+v} \quad\{\text{linearity of the embedding}\}\quad = Q(u+v) \mathbin{*:} 1 \quad\{\text{contraction}\}</annotation></semantics></math></p>
-<p>Equate the two, and use the definition of the polar form —
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>+</mo><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u+v) = \big(Q(u) + Q(v)\big) + \operatorname{polar} Q(u,v)</annotation></semantics></math>:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">Q(u) \mathbin{*:} 1 + Q(v) \mathbin{*:} 1 + (e_u e_v + e_v e_u)
-= \big(Q(u) + Q(v) + \operatorname{polar} Q(u,v)\big) \mathbin{*:} 1.</annotation></semantics></math></p>
-<p>The two
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
-terms are identical on both sides. Cancel them, and what is left is
-precisely the identity.</p>
-<p><strong>In Coq</strong> this is two lemmas. The first, <a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#contract_add"><code>contract_add</code></a>,
-<em>is</em> the “square in two ways and equate” step: it drives the two
-contracted terms plus the cross terms all the way to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u+v) *: 1</annotation></semantics></math>.</p>
-<pre class="coq"><code>Lemma contract_add : forall u v : V,
-  (Q u *: (1 : A) + Q v *: 1)
-    + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)
-  == Q (u + v) *: 1.
-Proof.
-  intros u v.
-  calc (((Q u *: (1 : A) + Q v *: (1 : A))
-          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-    == (((ga_vec u * ga_vec u + Q v *: (1 : A))
-          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-      { (contraction u) }
-    == (((ga_vec u * ga_vec u + ga_vec v * ga_vec v)
-          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-      { (contraction v) }
-    == (((ga_vec u * ga_vec u + ga_vec v * ga_vec u)
-          + (ga_vec v * ga_vec v + ga_vec u * ga_vec v)) : A)
-      { (add_rotate (ga_vec u * ga_vec u) (ga_vec v * ga_vec v)
-           (ga_vec u * ga_vec v) (ga_vec v * ga_vec u)) }
-    == (((ga_vec u * ga_vec u + ga_vec v * ga_vec u)
-          + (ga_vec u * ga_vec v + ga_vec v * ga_vec v)) : A)
-      { (commutative (ga_vec v * ga_vec v) (ga_vec u * ga_vec v)) }
-    == (((ga_vec u + ga_vec v) * (ga_vec u + ga_vec v)) : A)
-      { (mul_add_expand (ga_vec u) (ga_vec v) (ga_vec u) (ga_vec v)) }
-    == ((ga_vec (u + v) * ga_vec (u + v)) : A)
-      { ((fun x y =&gt; additive (opA := add) (opB := add) (f := ga_vec) x y) u v) }
-    == ((Q (u + v) *: (1 : A)) : A)
-      { (contraction (u + v)) }.
-Qed.</code></pre>
-<ul>
-<li><code>contraction u</code>, used right-to-left, turns
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u) *: 1</annotation></semantics></math>
-back into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>u</mi></msub></mrow><annotation encoding="application/x-tex">e_u e_u</annotation></semantics></math>;
-<code>contraction v</code> does the same for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(v) *: 1</annotation></semantics></math>.
-Now every term is a product of embedded vectors.</li>
-<li><a
-href="coqdoc/Riktig.Theory.AbGroup.html#add_rotate"><code>add_rotate</code></a>,
-the abelian-group rearrangement from the abelian-groups post, and <a
-href="coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>,
-commutativity of <code>+</code>, shuffle the four products into the
-pattern
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(e_u e_u + e_v e_u) + (e_u e_v + e_v e_v)</annotation></semantics></math>.</li>
-<li><a
-href="coqdoc/Riktig.Theory.Ring.html#mul_add_expand"><code>mul_add_expand</code></a>
-is the ring’s own expansion
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>c</mi><mo>+</mo><mi>b</mi><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>d</mi><mo>+</mo><mi>b</mi><mi>d</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a+b)(c+d) = (ac+bc) +
-(ad+bd)</annotation></semantics></math>, used right-to-left to
-<em>fold</em> those four products back into the single square
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(e_u + e_v)(e_u + e_v)</annotation></semantics></math>.</li>
-<li>The next step replaces
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub></mrow><annotation encoding="application/x-tex">e_u + e_v</annotation></semantics></math>
-by
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow></msub><annotation encoding="application/x-tex">e_{u+v}</annotation></semantics></math>.
-Its justification is <code>additive (f := ga_vec)</code>, the additivity
-half of the <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.vec_linear"><code>vec_linear</code></a>
-field, fetched from the instance database by instance search rather than
-named as a field — the <code>opA := add</code> and
-<code>opB := add</code> annotations just tell search which two
-operations are meant.</li>
-<li><code>contraction (u+v)</code> contracts that square to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u+v) *: 1</annotation></semantics></math>.</li>
-</ul>
-<p>The second lemma, <a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>,
-performs the cancellation. First a one-line rearrangement of the
-definition of <a
-href="coqdoc/Riktig.Interface.QuadraticForm.html#polar"><code>polar</code></a>,
-then the proof:</p>
-<pre class="coq"><code>Lemma polar_recovers : forall u v : V, (Q u + Q v) + polar Q u v == Q (u + v).
-Proof.
-  intros u v. unfold polar.
-  rewrite &lt;- (neg_add_associative (Q (u + v)) (Q u) (Q v)).
-  exact (add_sub_cancel (Q u + Q v) (Q (u + v))).
-Qed.
-
-Theorem polarization : forall u v : V,
-  ga_vec u * ga_vec v + ga_vec v * ga_vec u == polar Q u v *: (1 : A).
-Proof.
-  intros u v.
-  apply (cancel_l (Q u *: (1 : A) + Q v *: 1)).
-  calc (((Q u *: (1 : A) + Q v *: 1)
-          + (ga_vec u * ga_vec v + ga_vec v * ga_vec u)) : A)
-    == ((Q (u + v) *: (1 : A)) : A)
-      { (contract_add u v) }
-    == ((((Q u + Q v) + polar Q u v) *: (1 : A)) : A)
-      { (polar_recovers u v) }
-    == (((Q u + Q v) *: (1 : A) + polar Q u v *: (1 : A)) : A)
-      { (right_distributive (Q u + Q v) (polar Q u v) (1 : A)) }
-    == (((Q u *: (1 : A) + Q v *: (1 : A)) + polar Q u v *: (1 : A)) : A)
-      { (right_distributive (Q u) (Q v) (1 : A)) }.
-Qed.</code></pre>
-<ul>
-<li><code>apply (cancel_l (Q u *: 1 + Q v *: 1))</code> is the
-cancellation step made precise. <a
-href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
-— “if
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mo>=</mo><mi>a</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">a + b = a + c</annotation></semantics></math>
-then
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">b = c</annotation></semantics></math>”
-— was proved back in the groups post; applying it here adds the two
-contracted terms to <em>both</em> sides of the goal, so it now suffices
-to prove the augmented equation.</li>
-<li>The first <code>transitivity</code> step is <a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#contract_add"><code>contract_add</code></a>:
-the left side, the contracted terms plus the cross terms, becomes
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mi>*</mi><mo>:</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">Q(u+v) *: 1</annotation></semantics></math>.</li>
-<li>The second unfolds
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u+v)</annotation></semantics></math>
-back into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(Q(u) + Q(v)) +
-\operatorname{polar} Q(u,v)</annotation></semantics></math> by <a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polar_recovers"><code>polar_recovers</code></a>,
-read backwards. It cannot be a bare <code>rewrite</code>, because the
-rewriting happens under <code>*:</code>; <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.scale_proper"><code>ScaleLaws.scale_proper</code></a>
-is the law saying <code>*:</code> respects <code>==</code> in each
-argument, and applying it to the two equations — the interesting one on
-the left, reflexivity on the right — performs the substitution.</li>
-<li>The last two steps are <a
-href="coqdoc/Riktig.Props.html#right_distributive"><code>right_distributive</code></a>
-for <code>*:</code>, splitting a scaling by a sum of scalars into a sum
-of scalings, applied twice: once at the top and once inside the left
-summand, the second time under <code>+</code> and so again through a
-respect law, <a
-href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>.
-What is left matches what <a
-href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
-put on the right, and the goal closes.</li>
-</ul>
-<p>Now specialize. Take
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mo>⋅</mo><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">Q = \|\cdot\|^2</annotation></semantics></math>
-coming from an inner product — that is the <a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#Inner_QuadraticForm"><code>Inner_QuadraticForm</code></a>
-instance — and <a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#polar_norm2"><code>polar_norm2</code></a>
-says
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>polar</mi><mo>&#8289;</mo></mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\operatorname{polar} Q(u,v) = \langle u,v\rangle + \langle u,v\rangle</annotation></semantics></math>.
-So for an inner product space the identity reads</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>u</mi></msub><msub><mi>e</mi><mi>v</mi></msub><mo>+</mo><msub><mi>e</mi><mi>v</mi></msub><msub><mi>e</mi><mi>u</mi></msub><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mrow><mi>*</mi><mo>:</mo></mrow><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">e_u e_v + e_v e_u = \big(\langle u,v\rangle + \langle u,v\rangle\big) \mathbin{*:} 1,</annotation></semantics></math></p>
-<p>the classical polarization identity: the symmetric part of the
-geometric product is twice the inner product. Stating the theorem over a
-quadratic form rather than a pairing costs nothing here — the proof
-never used symmetry or two-slot additivity — and it buys the forms that
-no inner product gives, such as the indefinite ones of spacetime.</p>
-<h2 id="an-algebra-that-satisfies-the-axioms">An algebra that satisfies
-the axioms</h2>
-<p>The axioms are not vacuous: <a
-href="coqdoc/Riktig.Impl.CliffordFin.html"><code>Impl/CliffordFin.v</code></a>
-constructs instances. The simplest interesting one takes the vector
-space to be the field itself — a one-dimensional line — with the
-<em>negated</em> square as its quadratic form,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mspace width="0.167em"></mspace><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u) = -(u\,u)</annotation></semantics></math>,
-and takes the ring
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-to be the complex numbers over
+over a field
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
-(pairs with the usual complex multiplication, written <code>C F</code>),
-embedding each vector
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
-on the imaginary axis. A vector squared is then
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mi>i</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><msup><mi>u</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(ui)(ui) = -u^2</annotation></semantics></math>,
-which is exactly
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u)</annotation></semantics></math>
-— the contraction axiom here <em>is</em> the familiar
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>i</mi><mn>2</mn></msup><mo>=</mo><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">i^2 = -1</annotation></semantics></math>.</p>
-<p>The quadratic form is assembled from two pieces the library already
-has: <a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#square_form"><code>square_form</code></a>,
-the form
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>↦</mo><mi>u</mi><mspace width="0.167em"></mspace><mi>u</mi></mrow><annotation encoding="application/x-tex">u \mapsto u\,u</annotation></semantics></math>
-on a field, and <a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#neg_form"><code>neg_form</code></a>,
-which negates a quadratic form and proves the result is one. Everything
-else the class asks for is a structure proved earlier in the same file,
-so the instance is a literal naming them:</p>
-<pre class="coq"><code>  Definition GA_Cliff1 : GeometricAlgebra F F (C F) (Q := neg_form square_form) :=
-    {| GeometricAlgebra.ring         := C_Ring;
-       GeometricAlgebra.scaling      := Cliff1_ScaleLaws;
-       GeometricAlgebra.mul_linear_l := fun y =&gt;
-         {| Linear.proper := fun x x&#39; Hx =&gt; op_proper x x&#39; Hx y y (reflexivity y);
-            Linear.is_additive := fun x x&#39; =&gt; right_distributive x x&#39; y;
-            Linear.is_homogeneous := fun a x =&gt; cliff1_ga_scale_mul_l a x y |};
-       GeometricAlgebra.mul_linear_r := fun x =&gt;
-         {| Linear.proper := fun y y&#39; Hy =&gt; op_proper x x (reflexivity x) y y&#39; Hy;
-            Linear.is_additive := fun y y&#39; =&gt; left_distributive x y y&#39;;
-            Linear.is_homogeneous := fun a y =&gt; cliff1_ga_scale_mul_r a x y |};
-       GeometricAlgebra.ga_vec       := cliff1_ga_vec;
-       GeometricAlgebra.vec_linear :=
-         {| Linear.proper         := cliff1_ga_vec_proper;
-            Linear.is_additive    := cliff1_ga_vec_add;
-            Linear.is_homogeneous := cliff1_ga_vec_scale |};
-       GeometricAlgebra.contraction  := cliff1_ga_contract |}.</code></pre>
-<p>Every entry is either a structure proved once (<a
-href="coqdoc/Riktig.Impl.Complex.html#C_Ring"><code>C_Ring</code></a>,
-the complex numbers are a ring; <a
-href="coqdoc/Riktig.Impl.CliffordFin.html#Cliff1_ScaleLaws"><code>Cliff1_ScaleLaws</code></a>,
-the module laws for scaling a complex number by a field element) or a
-three-line <a
+is an operation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mspace width="0.167em"></mspace><mo>⋅</mo><mspace width="0.167em"></mspace><mo>,</mo><mi>⋅</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">⟩</mo><mo>:</mo><mi>V</mi><mo>×</mo><mi>V</mi><mo>→</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">\langle\,\cdot\,,\cdot\,\rangle : V \times V \to F</annotation></semantics></math>
+that is linear in its first argument and symmetric:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>+</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">⟨</mo><mi>a</mi><mi>*</mi><mo>:</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mi>a</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\langle u + u&#39;, v\rangle = \langle u, v\rangle + \langle u&#39;, v\rangle,
+\qquad \langle a *: u, v\rangle = a\,\langle u, v\rangle,
+\qquad \langle u, v\rangle = \langle v, u\rangle.</annotation></semantics></math></p>
+<pre class="coq"><code>  Class InnerProductSpace (F V : Type) `{VectorSpace F V} {Vi : HasInner F V} := {
+    inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟨ u , v ⟩);
+    is_commutative :: Commutative V F inner;
+  }.</code></pre>
+<p>Two fields for three laws, because the first two are exactly what <a
 href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
-literal whose three fields are lemmas from the same file. The carriers
-are implicit — Coq reads <code>F</code>, <code>V</code> and
-<code>A</code> off the stated type — and the whole thing is checked, for
-an arbitrary field, by a one-line example:</p>
-<pre class="coq"><code>Example ga_cliff1_check (F : Type) `{FF : Field F} :
-  GeometricAlgebra F F (C F) (Q := neg_form square_form) := GA_Cliff1.</code></pre>
-<p>With the instance in scope, <a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>
-— proved above once, for every geometric algebra — is a theorem about
-complex numbers with no further work.</p>
-<p><em>Next: with categories and linear maps in hand, geometric algebra
-shows what it is for — reflections and rotations as products.</em></p>
+says: freeze the second argument and what remains,
+<code>fun u =&gt; ⟨ u , v ⟩</code>, is a linear map from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>.
+Rather than restate additivity and homogeneity, the class reuses the
+class the previous post defined. Symmetry is the catalogue’s <a
+href="coqdoc/Riktig.Props.html#Commutative"><code>Commutative</code></a>,
+read at an operation whose output type differs from its inputs’.</p>
+<p>Notice what is <em>absent</em>: no positivity, no requirement that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle u,u\rangle \geq 0</annotation></semantics></math>.
+That needs an ordered field to even state, and everything in this post
+holds without it — over the complex numbers, over finite fields, over
+anything.</p>
+<p>Length gets a name but not a square root, which would not exist in a
+general field:</p>
+<pre class="coq"><code>Definition norm2 {F V : Type} `{InnerProductSpace F V} (u : V) : F := ⟨ u , u ⟩.</code></pre>
+<h2 id="symmetry-does-the-work-twice">Symmetry does the work twice</h2>
+<p>The class demands linearity in the <em>first</em> argument only.
+Linearity in the second is a theorem, and its proof is the pattern for
+everything below: step across with symmetry, use the law you have, step
+back.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo>+</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>+</mo><mi>w</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>w</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u, v + w\rangle = \langle v + w, u\rangle
+= \langle v, u\rangle + \langle w, u\rangle
+= \langle u, v\rangle + \langle u, w\rangle</annotation></semantics></math></p>
+<pre class="coq"><code>  Theorem inner_right_additive : forall u v w : V,
+    ⟨ u , v + w ⟩ == ⟨ u , v ⟩ + ⟨ u , w ⟩.
+  Proof.
+    intros u v w.
+    calc (⟨ u , v + w ⟩)
+      == (⟨ v + w , u ⟩)              { (commutative u (v + w)) }
+      == (⟨ v , u ⟩ + ⟨ w , u ⟩)      { (inner_left_additive v w u) }
+      == (⟨ u , v ⟩ + ⟨ w , u ⟩)      { (commutative v u) }
+      == (⟨ u , v ⟩ + ⟨ u , w ⟩)      { (commutative w u) }.
+  Qed.</code></pre>
+<p>The same three-step shape gives <a
+href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_right_scale"><code>inner_right_scale</code></a>,
+and the zero and negation facts come from the group post yet again —
+freezing an argument leaves an additive map, so <a
+href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>
+applies and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mn>0</mn><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle 0, u\rangle = 0</annotation></semantics></math>
+needs no calculation of its own.</p>
+<h2 id="expanding-a-square">Expanding a square</h2>
+<p>Now the familiar identity. On the blackboard, expanding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u+v, u+v\rangle</annotation></semantics></math>
+by linearity in each argument gives four terms, which regroup into</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\|u+v\|^2 = \big(\|u\|^2 + \|v\|^2\big) + \big(\langle u,v\rangle + \langle v,u\rangle\big).</annotation></semantics></math></p>
+<pre class="coq"><code>  Theorem inner_expand : forall u v : V,
+    ⟨ u + v , u + v ⟩ == (⟨ u , u ⟩ + ⟨ v , v ⟩) + (⟨ u , v ⟩ + ⟨ v , u ⟩).
+  Proof.
+    intros u v.
+    calc (⟨ u + v , u + v ⟩)
+      == (⟨ u , u + v ⟩ + ⟨ v , u + v ⟩)
+        { (inner_left_additive u v (u + v)) }
+      == ((⟨ u , u ⟩ + ⟨ u , v ⟩) + ⟨ v , u + v ⟩)
+        { (inner_right_additive u u v) }
+      == ((⟨ u , u ⟩ + ⟨ u , v ⟩) + (⟨ v , u ⟩ + ⟨ v , v ⟩))
+        { (inner_right_additive v u v) }
+      == ((⟨ u , u ⟩ + ⟨ v , v ⟩) + (⟨ u , v ⟩ + ⟨ v , u ⟩))
+        { (add_rotate ⟨ u , u ⟩ ⟨ u , v ⟩ ⟨ v , u ⟩ ⟨ v , v ⟩) }.
+  Qed.</code></pre>
+<p>Three of the four steps are linearity, one in each argument. The last
+step is the interesting one: it is <a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_rotate"><code>add_rotate</code></a>,
+one of the rearrangement lemmas from the abelian-group post, doing
+nothing but moving four summands into the grouping the statement wants.
+That is the division of labour the whole library is arranged around —
+the geometry supplies three steps, and the bookkeeping step is a lemma
+proved once, elsewhere, about any abelian group.</p>
+<p>Since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle = \langle v,u\rangle</annotation></semantics></math>,
+the last bracket is twice the inner product, and reading the identity
+backwards recovers
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,v\rangle</annotation></semantics></math>
+from lengths alone. That is the <em>polarization identity</em>: an inner
+product is determined by the lengths it induces.</p>
+<h2 id="the-same-identity-in-a-geometric-algebra">The same identity, in
+a geometric algebra</h2>
+<p>Geometric algebra takes a different route to the same place. Instead
+of a scalar-valued product on vectors, it embeds the vectors in an
+algebra where they can be multiplied and stay in the algebra, subject to
+one axiom: a vector times itself is the scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u)</annotation></semantics></math>
+its <a href="https://en.wikipedia.org/wiki/Quadratic_form">quadratic
+form</a> assigns, times the identity.</p>
+<pre class="coq"><code>    contraction : forall u : V, ga_vec u * ga_vec u == Q u *: 1;</code></pre>
+<p>From that single equation, the symmetric part of the product of two
+<em>different</em> vectors is forced. Squaring
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>+</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u+v</annotation></semantics></math>
+and subtracting the squares of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+leaves</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>⋅</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">uv + vu = \big(Q(u+v) - Q(u) - Q(v)\big) \cdot 1,</annotation></semantics></math></p>
+<p>and the bracket — the <em>polar form</em> of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>,
+written <code>polar Q u v</code> — is the inner product in disguise.</p>
+<pre class="coq"><code>  Theorem polarization : forall u v : V,
+    ga_vec u * ga_vec v + ga_vec v * ga_vec u == polar Q u v *: (1 : A).
+  Proof.
+    intros u v.
+    apply (cancel_l (Q u *: (1 : A) + Q v *: 1)).</code></pre>
+<p>The proof opens with <a
+href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
+— the group cancellation law from the group post — to add
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u) + Q(v)</annotation></semantics></math>
+to both sides, after which four steps of distributivity and the
+contraction axiom finish it. Nothing in it knows what
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
+is.</p>
+<p>So the two developments meet: an inner product built from lengths,
+and a product of vectors whose symmetric part <em>is</em> that inner
+product. The geometric algebra posts later in the series build on this
+equation, and <a
+href="coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>
+gets its own statement of it for free —
+<code>Proof. exact polarization. Qed.</code></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Interface.InnerProductSpace.html"><code>Interface/InnerProductSpace.v</code></a>
-(the class) · <a
+(the structure, and <a
+href="coqdoc/Riktig.Interface.InnerProductSpace.html#norm2"><code>norm2</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html"><code>Theory/InnerProductSpace.v</code></a>
 (<a
+href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_right_additive"><code>inner_right_additive</code></a>,
+<a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_expand"><code>inner_expand</code></a>,
 <a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.QuadraticForm.html"><code>Interface/QuadraticForm.v</code></a>
-(<a
-href="coqdoc/Riktig.Interface.QuadraticForm.html#polar"><code>polar</code></a>,
-the <a
-href="coqdoc/Riktig.Interface.QuadraticForm.html#QuadraticForm.QuadraticForm"><code>QuadraticForm</code></a>
-class) · <a
-href="coqdoc/Riktig.Theory.QuadraticForm.html"><code>Theory/QuadraticForm.v</code></a>
-(<a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#polar_norm2"><code>polar_norm2</code></a>,
-<a
-href="coqdoc/Riktig.Theory.QuadraticForm.html#Inner_QuadraticForm"><code>Inner_QuadraticForm</code></a>)
-· <a
 href="coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>
-(the class and <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>GeometricAlgebra.contraction</code></a>)
+(<a
+href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#contract_add"><code>contract_add</code></a>,
-<a
-href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>)
-· <a
-href="coqdoc/Riktig.Impl.CliffordFin.html"><code>Impl/CliffordFin.v</code></a>
-(<a
-href="coqdoc/Riktig.Impl.CliffordFin.html#GA_Cliff1"><code>GA_Cliff1</code></a>,
-the Cl(0,1) instance).</p>
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>).</p>
 </main>
 </body>
 </html>
