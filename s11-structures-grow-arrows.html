@@ -32,7 +32,7 @@ of composition</h2>
 <p>A category has objects and arrows (<em>morphisms</em>) between them.
 Arrows compose associatively, and every object has a do-nothing arrow.
 That’s all. In <a
-href="coqdoc/Riktig.Interface.Category.html"><code>theories/Interface/Category.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Category.html"><code>theories/Structure/Category.v</code></a>:</p>
 <pre class="coq"><code>Module Category.
   Class Category (obj : Type) := {
     hom : obj -&gt; obj -&gt; Type;
@@ -65,7 +65,7 @@ are the same standalone law classes a monoid uses —
 <code>unit · x == x</code> for a unit in <code>A</code> acting on a
 <code>B</code>. A monoid instantiates them at one carrier; a category
 instantiates them at <a
-href="coqdoc/Riktig.Interface.Category.html#Category.comp"><code>comp</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Category.comp"><code>comp</code></a>
 viewed as an action of the endomorphisms <code>hom y y</code> on the
 arrows <code>hom x y</code>. Nothing is restated, only aimed somewhere
 new. The readable form of each law is a two-line definition just below
@@ -108,7 +108,7 @@ theorem: initial and terminal objects</h2>
 a property of its arrows. A <strong>terminal</strong> object has exactly
 one arrow coming in from everywhere; an <strong>initial</strong> object
 exactly one going out to everywhere. The whole interface (<a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>)
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>)
 is three fields:</p>
 <pre class="coq"><code>Module Terminal.
   Class Terminal {O : Type} (C : Category O) := {
@@ -121,11 +121,11 @@ Export Terminal.
 Notation terminal_morphism := Terminal.morphism.</code></pre>
 <p>In Coq-types: <code>unit</code> is terminal (every type has exactly
 one function into it), the empty type is initial (<a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
 is the mirror image, with <a
-href="coqdoc/Riktig.Interface.Category.html#Initial.init"><code>init</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Initial.init"><code>init</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Category.html#Initial.emit"><code>emit</code></a>).</p>
+href="coqdoc/Riktig.Structure.Category.html#Initial.emit"><code>emit</code></a>).</p>
 <p>But saying “<strong>the</strong> terminal object” is an obligation:
 what if there are two? The first real theorem of the category track (<a
 href="coqdoc/Riktig.Theory.InitialTerminal.html"><code>Theory/InitialTerminal.v</code></a>)
@@ -176,7 +176,7 @@ the two morphisms and the two laws, in that order.</p>
 <p>Next, the only lemma the proof needs: <em>every endomorphism of a
 terminal object is the identity</em>. Why? Both <code>f</code> and
 <code>cat_id</code> are arrows into a terminal object, and <a
-href="coqdoc/Riktig.Interface.Category.html#Terminal.morphism_uniqueness"><code>Terminal.morphism_uniqueness</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Terminal.morphism_uniqueness"><code>Terminal.morphism_uniqueness</code></a>
 says there is only one of those:</p>
 <pre class="coq"><code>Lemma term_endo_id (T : Terminal C) :
   forall f : term (Terminal:=T) ~&gt; term (Terminal:=T), f == cat_id.
@@ -212,7 +212,7 @@ href="coqdoc/Riktig.Theory.InitialTerminal.html#initial_iso"><code>initial_iso</
 is the same proof with all arrows reversed. And since any arrow into a
 terminal object <em>is</em> the terminal morphism, the isomorphism could
 not have been anything else — that uniqueness is immediate from <a
-href="coqdoc/Riktig.Interface.Category.html#Terminal.morphism_uniqueness"><code>Terminal.morphism_uniqueness</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#Terminal.morphism_uniqueness"><code>Terminal.morphism_uniqueness</code></a>,
 though the file does not state it as a separate theorem.)
 Uniqueness-up-to-iso is category theory’s notion of “the”, and from here
 on the project earns every definite article it uses.</p>
@@ -223,18 +223,18 @@ exponentials, CCC: the rest of the reconstruction</h2>
 played — pick out an object by a universal property of its arrows — so
 we state them at a glance and let the files speak.</p>
 <p>A <strong>product</strong> of <code>a</code> and <code>b</code> (<a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>)
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>)
 is an object with projections <a
-href="coqdoc/Riktig.Interface.Category.html#HasProducts.pi1"><code>pi1</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#HasProducts.pi1"><code>pi1</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Category.html#HasProducts.pi2"><code>pi2</code></a>
+href="coqdoc/Riktig.Structure.Category.html#HasProducts.pi2"><code>pi2</code></a>
 through which any object mapping into both <code>a</code> and
 <code>b</code> factors, uniquely (<a
-href="coqdoc/Riktig.Interface.Category.html#HasProducts.pi1_pair"><code>HasProducts.pi1_pair</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#HasProducts.pi1_pair"><code>HasProducts.pi1_pair</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Category.html#HasProducts.pi2_pair"><code>HasProducts.pi2_pair</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#HasProducts.pi2_pair"><code>HasProducts.pi2_pair</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Category.html#HasProducts.uniqueness"><code>HasProducts.uniqueness</code></a>).
+href="coqdoc/Riktig.Structure.Category.html#HasProducts.uniqueness"><code>HasProducts.uniqueness</code></a>).
 No mention of “pairs of elements” — yet in Coq-types this is exactly
 <code>prod</code>/<code>fst</code>/<code>snd</code>, and <a
 href="coqdoc/Riktig.Theory.Product.html"><code>Theory/Product.v</code></a>
@@ -244,10 +244,10 @@ href="coqdoc/Riktig.Theory.Product.html#pair_eta"><code>pair_eta</code></a>,
 href="coqdoc/Riktig.Theory.Product.html#pair_comp"><code>pair_comp</code></a>,
 commutativity of <code>×</code> up to iso). An
 <strong>exponential</strong> (<a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>)
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>)
 <em>internalizes</em> the arrows <code>a ~&gt; b</code> as an object
 <code>exp_obj a b</code>, with an application arrow <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
+href="coqdoc/Riktig.Structure.Category.html#HasExponentials.eval_morphism"><code>eval_morphism</code></a>
 and a currying operation whose central law is</p>
 <pre class="coq"><code>curry_beta       : forall (x a b : O) (h : prod_obj x a ~&gt; b),
     eval_morphism ∘ (curry h ×× cat_id) == h;</code></pre>
@@ -260,7 +260,7 @@ href="coqdoc/Riktig.Theory.Exponential.html#uncurry_curry"><code>uncurry_curry</
 in the usual few rewrite lines.</p>
 <p>A category with a terminal object, all products, and all exponentials
 is <strong>cartesian closed</strong> (<a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>)
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>)
 — three capabilities bundled:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="bold">𝐂𝐂𝐂</mtext><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">nothing</mtext><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">pairing</mtext><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><mtext mathvariant="normal">function types</mtext></mrow><annotation encoding="application/x-tex">\textbf{CCC} \;=\; \text{nothing} \;+\; \text{pairing} \;+\; \text{function types}</annotation></semantics></math></p>
 <p>And the tower’s capstone instance, at the bottom of <a
@@ -274,7 +274,7 @@ href="coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>:</p>
 axioms added. Why this is the right stopping point for today:
 <strong>CCCs are exactly the worlds where lambda calculus makes
 sense.</strong> The <a
-href="coqdoc/Riktig.Interface.Category.html#HasExponentials.curry"><code>curry</code></a>/<a
+href="coqdoc/Riktig.Structure.Category.html#HasExponentials.curry"><code>curry</code></a>/<a
 href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>
 algebra <em>is</em> the typing of <code>λ</code> and application; <a
 href="coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>
@@ -283,7 +283,7 @@ the post on lambda terms you can run: lambda terms as a formal,
 executable object — with variables done right.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
 · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/theories/Theory"><code>Theory/</code></a>
 · <a

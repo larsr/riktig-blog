@@ -46,13 +46,13 @@ that is linear in its first argument and symmetric:</p>
 \qquad \langle a *: u, v\rangle = a\,\langle u, v\rangle,
 \qquad \langle u, v\rangle = \langle v, u\rangle.</annotation></semantics></math></p>
 <pre class="coq"><code>  Class InnerProductSpace (F V : Type) `{VectorSpace F V} {Vi : HasInner F V} := {
-    inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟨ u , v ⟩);
+    inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟪ u , v ⟫);
     is_commutative :: Commutative V F inner;
   }.</code></pre>
 <p>Two fields for three laws, because the first two are exactly what <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 says: freeze the second argument and what remains,
-<code>fun u =&gt; ⟨ u , v ⟩</code>, is a linear map from
+<code>fun u =&gt; ⟪ u , v ⟫</code>, is a linear map from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
 to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>.
@@ -68,7 +68,7 @@ holds without it — over the complex numbers, over finite fields, over
 anything.</p>
 <p>Length gets a name but not a square root, which would not exist in a
 general field:</p>
-<pre class="coq"><code>Definition norm2 {F V : Type} `{InnerProductSpace F V} (u : V) : F := ⟨ u , u ⟩.</code></pre>
+<pre class="coq"><code>Definition norm2 {F V : Type} `{InnerProductSpace F V} (u : V) : F := ⟪ u , u ⟫.</code></pre>
 <h2 id="symmetry-does-the-work-twice">Symmetry does the work twice</h2>
 <p>The class demands linearity in the <em>first</em> argument only.
 Linearity in the second is a theorem, and its proof is the pattern for
@@ -78,14 +78,14 @@ back.</p>
 = \langle v, u\rangle + \langle w, u\rangle
 = \langle u, v\rangle + \langle u, w\rangle</annotation></semantics></math></p>
 <pre class="coq"><code>  Theorem inner_right_additive : forall u v w : V,
-    ⟨ u , v + w ⟩ == ⟨ u , v ⟩ + ⟨ u , w ⟩.
+    ⟪ u , v + w ⟫ == ⟪ u , v ⟫ + ⟪ u , w ⟫.
   Proof.
     intros u v w.
-    calc (⟨ u , v + w ⟩)
-      == (⟨ v + w , u ⟩)              { (commutative u (v + w)) }
-      == (⟨ v , u ⟩ + ⟨ w , u ⟩)      { (inner_left_additive v w u) }
-      == (⟨ u , v ⟩ + ⟨ w , u ⟩)      { (commutative v u) }
-      == (⟨ u , v ⟩ + ⟨ u , w ⟩)      { (commutative w u) }.
+    calc (⟪ u , v + w ⟫)
+      == (⟪ v + w , u ⟫)              { commutative }
+      == (⟪ v , u ⟫ + ⟪ w , u ⟫)      { inner_left_additive }
+      == (⟪ u , v ⟫ + ⟪ w , u ⟫)      { (commutative v) }
+      == (⟪ u , v ⟫ + ⟪ u , w ⟫)      { (commutative w) }.
   Qed.</code></pre>
 <p>The same three-step shape gives <a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_right_scale"><code>inner_right_scale</code></a>,
@@ -102,18 +102,18 @@ needs no calculation of its own.</p>
 by linearity in each argument gives four terms, which regroup into</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>+</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\|u+v\|^2 = \big(\|u\|^2 + \|v\|^2\big) + \big(\langle u,v\rangle + \langle v,u\rangle\big).</annotation></semantics></math></p>
 <pre class="coq"><code>  Theorem inner_expand : forall u v : V,
-    ⟨ u + v , u + v ⟩ == (⟨ u , u ⟩ + ⟨ v , v ⟩) + (⟨ u , v ⟩ + ⟨ v , u ⟩).
+    ⟪ u + v , u + v ⟫ == (⟪ u , u ⟫ + ⟪ v , v ⟫) + (⟪ u , v ⟫ + ⟪ v , u ⟫).
   Proof.
     intros u v.
-    calc (⟨ u + v , u + v ⟩)
-      == (⟨ u , u + v ⟩ + ⟨ v , u + v ⟩)
-        { (inner_left_additive u v (u + v)) }
-      == ((⟨ u , u ⟩ + ⟨ u , v ⟩) + ⟨ v , u + v ⟩)
-        { (inner_right_additive u u v) }
-      == ((⟨ u , u ⟩ + ⟨ u , v ⟩) + (⟨ v , u ⟩ + ⟨ v , v ⟩))
-        { (inner_right_additive v u v) }
-      == ((⟨ u , u ⟩ + ⟨ v , v ⟩) + (⟨ u , v ⟩ + ⟨ v , u ⟩))
-        { (add_rotate ⟨ u , u ⟩ ⟨ u , v ⟩ ⟨ v , u ⟩ ⟨ v , v ⟩) }.
+    calc (⟪ u + v , u + v ⟫)
+      == (⟪ u , u + v ⟫ + ⟪ v , u + v ⟫)
+        { inner_left_additive }
+      == ((⟪ u , u ⟫ + ⟪ u , v ⟫) + ⟪ v , u + v ⟫)
+        { inner_right_additive }
+      == ((⟪ u , u ⟫ + ⟪ u , v ⟫) + (⟪ v , u ⟫ + ⟪ v , v ⟫))
+        { inner_right_additive }
+      == ((⟪ u , u ⟫ + ⟪ v , v ⟫) + (⟪ u , v ⟫ + ⟪ v , u ⟫))
+        { add_rotate }.
   Qed.</code></pre>
 <p>Three of the four steps are linearity, one in each argument. The last
 step is the interesting one: it is <a
@@ -153,21 +153,32 @@ leaves</p>
 <p>and the bracket — the <em>polar form</em> of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>,
 written <code>polar Q u v</code> — is the inner product in disguise.</p>
-<pre class="coq"><code>  Theorem polarization : forall u v : V,
-    ga_vec u * ga_vec v + ga_vec v * ga_vec u == polar Q u v *: (1 : A).
+<p>Nothing in that argument uses vectors. It works for any two ring
+elements whose squares happen to be scalars, so that is how it is
+proved: <code>x</code> and <code>y</code> are algebra elements, and
+“squares to a scalar” is a hypothesis rather than an axiom.</p>
+<pre class="coq"><code>  Theorem scalar_squares_polarization : forall (x y : A) (p q s : F),
+    x * x == p *: 1 -&gt; y * y == q *: 1 -&gt; (x + y) * (x + y) == s *: 1 -&gt;
+    x * y + y * x == ((s + - p) + - q) *: 1.
   Proof.
-    intros u v.
-    apply (cancel_l (Q u *: (1 : A) + Q v *: 1)).</code></pre>
+    intros x y p q s Hx Hy Hs.
+    apply (cancel_l (p *: (1 : A) + q *: 1)).</code></pre>
 <p>The proof opens with <a
 href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
 — the group cancellation law from <a
 href="s03-groups-undoing-and-cancellation.html">the group post</a> — to
 add
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">Q(u) + Q(v)</annotation></semantics></math>
-to both sides, after which four steps of distributivity and the
-contraction axiom finish it. Nothing in it knows what
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Q</mi><annotation encoding="application/x-tex">Q</annotation></semantics></math>
-is.</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>+</mo><mi>q</mi></mrow><annotation encoding="application/x-tex">p + q</annotation></semantics></math>
+to both sides, after which expanding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(x+y)(x+y)</annotation></semantics></math>
+and two distributivity steps finish it. The vector statement is the
+instance
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">x = u</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">y = v</annotation></semantics></math>
+as elements of the algebra, with the contraction axiom supplying all
+three hypotheses:</p>
+<pre class="coq"><code>  Theorem polarization : forall u v : V,
+    ga_vec u * ga_vec v + ga_vec v * ga_vec u == polar Q u v *: (1 : A).</code></pre>
 <p>So the two developments meet: an inner product built from lengths,
 and a product of vectors whose symmetric part <em>is</em> that inner
 product. The <a href="s39-geometric-algebra-payoff.html">geometric
@@ -179,9 +190,9 @@ gets its own statement of it for free —
 <code>Proof. exact polarization. Qed.</code></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html"><code>Interface/InnerProductSpace.v</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html"><code>Structure/InnerProductSpace.v</code></a>
 (the structure, and <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#norm2"><code>norm2</code></a>)
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#norm2"><code>norm2</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html"><code>Theory/InnerProductSpace.v</code></a>
 (<a
@@ -191,12 +202,14 @@ href="coqdoc/Riktig.Theory.InnerProductSpace.html#inner_expand"><code>inner_expa
 <a
 href="coqdoc/Riktig.Theory.InnerProductSpace.html#norm2_add"><code>norm2_add</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>
+href="coqdoc/Riktig.Structure.GeometricAlgebra.html"><code>Structure/GeometricAlgebra.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>)
+href="coqdoc/Riktig.Structure.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>
 (<a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#scalar_squares_polarization"><code>scalar_squares_polarization</code></a>,
+<a
 href="coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>).</p>
 </main>
 </body>

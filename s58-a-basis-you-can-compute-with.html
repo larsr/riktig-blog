@@ -48,39 +48,47 @@ and the concrete space of tuples, which for a finite basis is
 to scalars.</p>
 <p>So the library defines a basis as exactly that: the data of the basis
 vectors, a linear coordinate map, and proofs that the two directions
-undo each other. <code>lincomb b c</code> is the linear combination
+undo each other. The vectors are indexed by a finite carrier
+<code>I</code> — any type with decidable equality and one duplicate-free
+enumeration of length <code>n</code>; the concrete <code>Fin.t n</code>
+is one such carrier, not part of the definition.
+<code>lincomb b c</code> is the linear combination
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>b</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i c_i
 \cdot b_i</annotation></semantics></math>; the class demands that
 reconstructing a vector from its coordinates gives the vector back, and
 that reading the coordinates of a reconstruction gives the coordinates
 back:</p>
-<pre class="coq"><code>Class Basis (n : nat) (F V : Type)
-    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
-    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} := {
-  basis_vec            : Fin.t n -&gt; V;
-  basis_coords         : LinearMap F V (Fin.t n -&gt; F);
-  basis_reconstruction : forall v : V,
-    lincomb basis_vec (basis_coords v) == v;
-  basis_coords_linear_combination : forall c : Fin.t n -&gt; F,
-    basis_coords (lincomb basis_vec c) == c
-}.</code></pre>
+<pre class="coq"><code>Module Basis.
+  Class Basis (n : nat) (I F V : Type)
+      {Ieq : EqDec I} {IFin : FinIndex n I}
+      {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+      {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+      {VV : VectorSpace F V} := {
+    vec            : I -&gt; V;
+    coords         : LinearMap F V (I -&gt; F);
+    reconstruction : forall v : V,
+      lincomb vec (coords v) == v;
+    coords_linear_combination : forall c : I -&gt; F,
+      coords (lincomb vec c) == c
+  }.
+End Basis.</code></pre>
 <p>Two round trips, <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_reconstruction"><code>basis_reconstruction</code></a>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.reconstruction"><code>Basis.reconstruction</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords_linear_combination"><code>basis_coords_linear_combination</code></a>,
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords_linear_combination"><code>Basis.coords_linear_combination</code></a>,
 are spanning and independence packaged as a single mutual inverse — no
 separate machinery for “a linearly independent list.” The linear
 combination it refers to is defined as a finite sum over the index
 set:</p>
-<pre class="coq"><code>Definition lincomb {n : nat} (b : Fin.t n -&gt; V) (c : Fin.t n -&gt; F) : V :=
-  bigopF (fun i =&gt; c i *: b i).</code></pre>
-<p>Here <code>bigopF f</code> sums <code>f</code> over all
+<pre class="coq"><code>Definition lincomb (b : I -&gt; V) (c : I -&gt; F) : V :=
+  bigopI (fun i =&gt; c i *: b i).</code></pre>
+<p>Here <code>bigopI f</code> sums <code>f</code> over the carrier’s
+enumeration of all
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
-indices of <code>Fin.t n</code>, and <code>*:</code> is scaling a vector
-by a scalar. To exhibit an actual basis, we need vectors <code>b</code>
-and a coordinate map for which those two round trips hold.</p>
+indices, and <code>*:</code> is scaling a vector by a scalar. To exhibit
+an actual basis, we need vectors <code>b</code> and a coordinate map for
+which those two round trips hold.</p>
 <h2 id="the-standard-basis-vector">The standard basis vector</h2>
 <p>The cleanest example lives in the coordinate space itself, $V = $
 <code>Fin.t n -&gt; F</code> — the vectors <em>are</em> the tuples. Its
@@ -92,9 +100,14 @@ in position
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-everywhere else. In code:</p>
-<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F :=
-  fun j =&gt; if dec (i = j) then 1 else 0.</code></pre>
+everywhere else. The branch “am I in position
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>?”
+is not special to <code>Fin.t n</code>; the library states it once, for
+any index type <code>I</code> with decidable equality and any ring
+<code>R</code> of values, and the standard basis vector is that
+definition read at <code>I = Fin.t n</code>:</p>
+<pre class="coq"><code>Definition delta (i j : I) : R := if dec (i = j) then 1 else 0.</code></pre>
+<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
 <p>The <code>if dec (i = j) then 1 else 0</code> is the
 decidable-equality idiom: <code>dec (i = j)</code> is not a boolean but
 a <em>proof-carrying</em> decision that either hands back evidence
@@ -112,23 +125,25 @@ off it — which is precisely the Kronecker delta
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>δ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">\delta_{ij}</annotation></semantics></math>
 written as a computable function.</p>
 <p>Two one-line facts read straight off that definition:
-<code>e i j</code> is
+<code>delta i j</code> is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 when the indices agree and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 when they differ.</p>
-<pre class="coq"><code>Lemma e_at_eq : forall (n : nat) (i j : Fin.t n), i = j -&gt; e i j == (1 : F).
+<pre class="coq"><code>Lemma delta_at_eq : forall i j : I, i = j -&gt; delta i j == 1.
 Proof.
-  intros n i j Hij.
-  unfold e; destruct (dec (i = j)) as [_ | Hne].
+  intros i j Hij.
+  unfold delta; destruct (dec (i = j)) as [_ | Hne].
   - reflexivity.
   - destruct (Hne Hij).
 Qed.</code></pre>
-<p>Each unfolds <code>e</code>, splits on the decision, and in the
-impossible branch derives a contradiction from the two conflicting
-proofs (<code>Hne Hij</code> and <code>Hij Heq</code> are each a proof
-of <code>False</code>, which <code>destruct</code> turns into anything).
-One term of the coordinate sum,
+<p>Each unfolds <a
+href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>,
+splits on the decision, and in the impossible branch derives a
+contradiction from the two conflicting proofs (<code>Hne Hij</code> and
+<code>Hij Heq</code> are each a proof of <code>False</code>, which
+<code>destruct</code> turns into anything). One term of the coordinate
+sum,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">c_i \cdot e_i(j)</annotation></semantics></math>,
 therefore collapses the same way — it is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>c</mi><mi>i</mi></msub><annotation encoding="application/x-tex">c_i</annotation></semantics></math>
@@ -137,18 +152,19 @@ on the diagonal and
 off it, because scaling in
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
 is just multiplication:</p>
-<pre class="coq"><code>Lemma mul_e_eq : forall (n : nat) (a : F) (i j : Fin.t n),
-  i = j -&gt; a * e i j == a.
+<pre class="coq"><code>Lemma mul_delta_eq : forall (a : R) (i j : I), i = j -&gt; a * delta i j == a.
 Proof.
-  intros n a i j Hij.
-  rewrite (e_at_eq n i j Hij).
+  intros a i j Hij.
+  rewrite (delta_at_eq i j Hij).
   exact (right_identity a).
 Qed.</code></pre>
 <p>On the diagonal, <code>a * 1 = a</code> (<a
 href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>,
 the right-identity law of the field’s multiplication); off it,
 <code>a * 0 = 0</code> (<a
-href="coqdoc/Riktig.Theory.Ring.html#mul_0_r"><code>mul_0_r</code></a>).
+href="coqdoc/Riktig.Theory.Ring.html#mul_0_r"><code>mul_0_r</code></a>,
+inside <a
+href="coqdoc/Riktig.Theory.BigOp.html#mul_delta_neq"><code>mul_delta_neq</code></a>).
 These are the two facts the main argument feeds on.</p>
 <h2 id="the-delta-collapse">The delta collapse</h2>
 <p>Here is the theorem that makes <code>e</code> a genuine basis. Take
@@ -172,152 +188,103 @@ where it is
 \sum_{i} c_i \cdot e_i(j) \;=\; \sum_i c_i \cdot \delta_{ij} \;=\; c_j.
 </annotation></semantics></math></p>
 <p>That is the whole content of “coordinates read back what a
-combination put in.” In Coq:</p>
+combination put in.” Notice that the blackboard argument never uses what
+the indices <em>are</em> — only that one term survives and the rest
+vanish. The library proves it at that level of generality. A <em>finite
+index type</em> is a type <code>I</code> whose elements one
+duplicate-free list enumerates:</p>
+<pre class="coq"><code>Class FinIndex (n : nat) (I : Type) {eqdec : EqDec I} := {
+  enum          : list I;
+  enum_NoDup    : NoDup enum;
+  enum_complete : forall i : I, In i enum;
+  enum_length   : length enum = n;
+}.</code></pre>
+<p>and <code>bigopI f</code> sums <code>f</code> over that
+enumeration:</p>
+<pre class="coq"><code>Definition bigopI (f : I -&gt; M) : M := bigop_list f enum.</code></pre>
+<p>The one-survivor argument is then a statement about <em>support</em>:
+if <code>f</code> vanishes at every index other than <code>p</code>, the
+whole sum is the term at <code>p</code>.</p>
+<pre class="coq"><code>Lemma bigopI_support_singleton : forall (p : I) (f : I -&gt; M),
+  (forall i : I, i &lt;&gt; p -&gt; f i == 0) -&gt;
+  bigopI f == f p.
+Proof.
+  intros p f Hsupp.
+  calc (bigopI f)
+    == (f p + bigop_list f (remove eq_dec p enum))
+         { bigopI_extract }
+    == (f p + (0 : M))
+         { (bigop_list_zero_on f (remove eq_dec p enum)
+             (fun i Hi =&gt; Hsupp i (proj2 (in_remove eq_dec enum i p Hi)))) }
+    == (f p)
+         { right_identity }.
+Qed.</code></pre>
+<p>Walking the three steps:</p>
+<ul>
+<li><a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_extract"><code>bigopI_extract</code></a>
+pulls the term at <code>p</code> out front: the sum over <a
+href="coqdoc/Riktig.Structure.Fin.html#FinIndex.enum"><code>enum</code></a>
+equals <code>f p</code> plus the sum over
+<code>remove eq_dec p enum</code>, the enumeration with <code>p</code>
+deleted. <a
+href="coqdoc/Riktig.Structure.Fin.html#FinIndex.enum_NoDup"><code>enum_NoDup</code></a>
+is what makes the deletion lossless — <code>p</code> occurred exactly
+once, so exactly one term leaves the sum.</li>
+<li>Every index still in the shortened list is different from
+<code>p</code> (that is <code>in_remove</code>), so the support
+hypothesis sends its term to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+and <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigop_list_zero_on"><code>bigop_list_zero_on</code></a>
+collapses the whole tail to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>.</li>
+<li><a
+href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
+— adding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+changes nothing — finishes.</li>
+</ul>
+<p>Feeding it <code>f i := c i * delta i j</code> and
+<code>p := j</code> is the delta collapse: off the diagonal <a
+href="coqdoc/Riktig.Theory.BigOp.html#mul_delta_neq"><code>mul_delta_neq</code></a>
+provides the vanishing, and the surviving term is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>j</mi></msub><mo>⋅</mo><msub><mi>δ</mi><mrow><mi>j</mi><mi>j</mi></mrow></msub><mo>=</mo><msub><mi>c</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">c_j \cdot \delta_{jj} = c_j</annotation></semantics></math>
+by <a
+href="coqdoc/Riktig.Theory.BigOp.html#mul_delta_eq"><code>mul_delta_eq</code></a>:</p>
+<pre class="coq"><code>Lemma bigopI_delta : forall (c : I -&gt; R) (j : I),
+  bigopI (fun i =&gt; c i * delta i j) == c j.
+Proof.
+  intros c j.
+  calc (bigopI (fun i =&gt; c i * delta i j))
+    == (c j * delta j j)
+         { (bigopI_support_singleton j (fun i =&gt; c i * delta i j)
+             (fun i Hne =&gt; mul_delta_neq (c i) i j Hne)) }
+    == (c j)
+         { mul_delta_eq }.
+Qed.</code></pre>
+<p>No induction anywhere: the enumeration carries the finiteness, and
+the support collapse does the rest. <code>Fin.t n</code> <em>is</em> a
+finite index type — <code>fin_all n</code>, the list
+<code>0, 1, ..., n-1</code>, is its enumeration — and on it the
+enumeration fold agrees with <a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>,
+the structural fold the matrix implementation computes with:</p>
+<pre class="coq"><code>Lemma bigopF_bigopI : forall (n : nat) (f : Fin.t n -&gt; M),
+  bigopF f == bigopI f.</code></pre>
+<p>So the concrete collapse is the abstract one, transported:</p>
 <pre class="coq"><code>Lemma lincomb_std_delta : forall (n : nat) (c : Fin.t n -&gt; F)
     (j : Fin.t n),
   bigopF (fun i =&gt; c i * e i j) == c j.
 Proof.
-  intros n; induction n as [| n IH]; intros c j.
-  - exact (Fin.case0
-             (fun j0 =&gt; bigopF (fun i =&gt; c i * e i j0) == c j0) j).
-  - apply (Fin.caseS&#39; j
-             (fun j0 =&gt; bigopF (fun i =&gt; c i * e i j0) == c j0)).
-    + calc (bigopF (fun i =&gt; c i * e i Fin.F1))
-        == (c Fin.F1 * e (Fin.F1 (n:=n)) Fin.F1
-            + bigopF (fun i =&gt; c (Fin.FS i) * e (Fin.FS i) Fin.F1))
-        == (c Fin.F1
-            + bigopF (fun i =&gt; c (Fin.FS i) * e (Fin.FS i) Fin.F1))
-        == (c Fin.F1 + bigopF (fun _ : Fin.t n =&gt; (0 : F)))
-        == (c Fin.F1 + 0)
-        == (c Fin.F1).
-      * exact (bigopF_S n (fun i =&gt; c i * e i Fin.F1)).
-      * rewrite (mul_e_eq (S n) (c Fin.F1) Fin.F1 Fin.F1 eq_refl).
-        reflexivity.
-      * apply op_proper; [reflexivity |].
-        apply bigopF_ext. intros i.
-        exact (mul_e_neq (S n) (c (Fin.FS i)) (Fin.FS i)
-                 Fin.F1 (fin_FS_neq_F1 n i)).
-      * apply op_proper; [reflexivity | exact (bigopF_zero n)].
-      * exact (right_identity (c Fin.F1)).
-    + intros j&#39;.
-      calc (bigopF (fun i =&gt; c i * e i (Fin.FS j&#39;)))
-        == (c Fin.F1 * e (Fin.F1 (n:=n)) (Fin.FS j&#39;)
-            + bigopF (fun i =&gt; c (Fin.FS i) * e (Fin.FS i) (Fin.FS j&#39;)))
-        == ((0 : F)
-            + bigopF (fun i =&gt; c (Fin.FS i) * e (Fin.FS i) (Fin.FS j&#39;)))
-        == ((0 : F) + bigopF (fun i =&gt; c (Fin.FS i) * e i j&#39;))
-        == ((0 : F) + c (Fin.FS j&#39;))
-        == (c (Fin.FS j&#39;)).
-      * exact (bigopF_S n (fun i =&gt; c i * e i (Fin.FS j&#39;))).
-      * apply op_proper; [| reflexivity].
-        exact (mul_e_neq (S n) (c Fin.F1) Fin.F1 (Fin.FS j&#39;)
-                 (fin_F1_neq_FS n j&#39;)).
-      * apply op_proper; [reflexivity |].
-        apply bigopF_ext. intros i.
-        exact (mul_e_FS n (c (Fin.FS i)) i j&#39;).
-      * apply op_proper; [reflexivity |].
-        exact (IH (fun i =&gt; c (Fin.FS i)) j&#39;).
-      * exact (left_identity (c (Fin.FS j&#39;))).
+  intros n c j.
+  calc (bigopF (fun i =&gt; c i * e i j))
+    == (bigopI (fun i =&gt; c i * e i j))
+      { (bigopF_bigopI n (fun i =&gt; c i * e i j)) }
+    == (c j)
+      { (bigopI_delta c j) }.
 Qed.</code></pre>
-<p>The proof is induction on the dimension
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>,
-because <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a> is
-defined by recursion on
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>:
-an empty sum is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
-and a sum over
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n+1</annotation></semantics></math>
-indices splits as <em>first term plus the sum over the rest</em>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mrow><mi>i</mi><mo>&lt;</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mi>f</mi><mi>i</mi></msub><mo>=</mo><msub><mi>f</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo>+</mo><msub><mo>∑</mo><mrow><mi>i</mi><mo>&lt;</mo><mi>n</mi></mrow></msub><msub><mi>f</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_{i&lt;n+1} f_i =
-f_{F1} + \sum_{i&lt;n} f_{FS\,i}</annotation></semantics></math>.
-Walking it:</p>
-<ul>
-<li><code>induction n</code> sets up the base case
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">n = 0</annotation></semantics></math>
-and the step, with <code>IH</code> the statement at dimension
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.</li>
-<li>The base case has no positions at all — <code>Fin.t 0</code> is
-empty — so the index <code>j</code> cannot exist. <code>Fin.case0</code>
-discharges the goal by observing there is no such <code>j</code> to
-prove anything about.</li>
-<li>In the step, <code>Fin.caseS' j</code> splits on where
-<code>j</code> sits: either the first position <code>Fin.F1</code>, or
-<code>Fin.FS j'</code> for some earlier position <code>j'</code>. These
-are the two cases
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">j = 0</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">j \neq 0</annotation></semantics></math>
-of the blackboard argument.</li>
-<li><strong>Case $j = $ <code>F1</code>.</strong> The first
-<code>calc</code> step, justified by <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_S"><code>bigopF_S</code></a>,
-peels the sum’s first term off the rest: it becomes
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo>⋅</mo><msub><mi>e</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>c</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow></msub><mo>⋅</mo><msub><mi>e</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">c_{F1}\cdot e_{F1}(F1) +
-\sum_i c_{FS\,i} \cdot e_{FS\,i}(F1)</annotation></semantics></math>,
-which is what <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
-already equals by definition. Now the first term is on the diagonal, so
-<a
-href="coqdoc/Riktig.Impl.FinVecBasis.html#mul_e_eq"><code>mul_e_eq</code></a>
-turns
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo>⋅</mo><msub><mi>e</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">c_{F1}\cdot e_{F1}(F1)</annotation></semantics></math>
-into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>c</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><annotation encoding="application/x-tex">c_{F1}</annotation></semantics></math>.
-Every remaining term is off-diagonal — <code>FS i</code> is never
-<code>F1</code> (that is <a
-href="coqdoc/Riktig.Theory.Fin.html#fin_FS_neq_F1"><code>fin_FS_neq_F1</code></a>)
-— so <a
-href="coqdoc/Riktig.Impl.FinVecBasis.html#mul_e_neq"><code>mul_e_neq</code></a>
-sends each to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
-<a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>
-rewrites the whole tail into a sum of zeros, and <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_zero"><code>bigopF_zero</code></a>
-collapses it to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>.
-What is left is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo>+</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">c_{F1} + 0</annotation></semantics></math>,
-and <a
-href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
-(the right-identity law: adding
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-changes nothing) finishes it at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>c</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><annotation encoding="application/x-tex">c_{F1}</annotation></semantics></math>.</li>
-<li><strong>Case $j = $ <code>FS j'</code>.</strong> Peel off the first
-term again. This time it is <em>off</em>-diagonal — <code>F1</code> is
-never <code>FS j'</code> (<a
-href="coqdoc/Riktig.Theory.Fin.html#fin_F1_neq_FS"><code>fin_F1_neq_FS</code></a>)
-— so <a
-href="coqdoc/Riktig.Impl.FinVecBasis.html#mul_e_neq"><code>mul_e_neq</code></a>
-sends
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo>⋅</mo><msub><mi>e</mi><mrow><mi>F</mi><mn>1</mn></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><msup><mi>j</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">c_{F1}\cdot e_{F1}(FS\,j&#39;)</annotation></semantics></math>
-to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>.
-In the tail, every term compares <code>FS i</code> against
-<code>FS j'</code>, and stripping the common <code>FS</code> leaves
-<code>e i j'</code> (that is <a
-href="coqdoc/Riktig.Impl.FinVecBasis.html#mul_e_FS"><code>mul_e_FS</code></a>);
-<a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>
-rewrites the tail into
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>c</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><msup><mi>j</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sum_i c_{FS\,i}\cdot e_i(j&#39;)</annotation></semantics></math>,
-which is exactly the induction hypothesis <code>IH</code> applied to the
-shifted coordinates
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>↦</mo><msub><mi>c</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">i \mapsto
-c_{FS\,i}</annotation></semantics></math> at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>j</mi><mo>′</mo></msup><annotation encoding="application/x-tex">j&#39;</annotation></semantics></math>
-— it equals
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>c</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><annotation encoding="application/x-tex">c_{FS\,j&#39;}</annotation></semantics></math>.
-What is left is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>+</mo><msub><mi>c</mi><mrow><mi>F</mi><mi>S</mi><mspace width="0.167em"></mspace><msup><mi>j</mi><mo>′</mo></msup></mrow></msub></mrow><annotation encoding="application/x-tex">0 +
-c_{FS\,j&#39;}</annotation></semantics></math>, and <a
-href="coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
-(the left-identity law) finishes it.</li>
-</ul>
-<p>Both cases end where the blackboard did: the whole sum equals the
+<p>The sum ends where the blackboard did: the whole sum equals the
 single surviving coordinate.</p>
 <h2 id="from-the-collapse-to-a-basis">From the collapse to a basis</h2>
 <p>The collapse is stated on a bare sum. Lifting it to <a
@@ -328,7 +295,7 @@ gives the round-trip law itself — for every coordinate tuple
 <p>and the lift is one short step: evaluating a linear combination
 <code>lincomb e c</code> at a position <code>j</code> means evaluating
 the sum at <code>j</code>, and evaluation commutes with the sum (<a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_app"><code>bigopF_app</code></a>),
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_app"><code>bigopI_app</code></a>),
 turning it into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sum_i (c_i \cdot e_i)(j) = \sum_i c_i
 \cdot e_i(j)</annotation></semantics></math> — the collapse again.</p>
@@ -337,23 +304,23 @@ turning it into
 Proof.
   intros n c j.
   calc (lincomb e c j)
-    == (bigopF (fun i =&gt; (c i *: e i) j)) { (bigopF_app n (fun i =&gt; c i *: e i) j) }
-    == (c j)                              { (lincomb_std_delta n c j) }.
+    == (bigopI (fun i =&gt; (c i *: e i) j)) { (bigopI_app (fun i =&gt; c i *: e i) j) }
+    == (c j)                              { (bigopI_delta c j) }.
 Qed.</code></pre>
 <p><code>lincomb e c == c</code> says: build a vector from a tuple of
 coordinates using the standard basis, and you recover the very tuple you
 started with. That single equation is <em>both</em> round trips the <a
-href="coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
 record asks for — for this space the coordinate map is the identity, so
 reconstruction and coordinate-reading are the same statement read in the
 two directions. The basis assembles with <a
 href="coqdoc/Riktig.Impl.FinVecBasis.html#lincomb_std"><code>lincomb_std</code></a>
 supplied for both fields:</p>
-<pre class="coq"><code>  Definition FinVec_Basis (n : nat) : Basis n F (Fin.t n -&gt; F) :=
-    {| basis_vec := e;
-       basis_coords                    := linear_map_id;
-       basis_reconstruction            := fun v =&gt; lincomb_std n v;
-       basis_coords_linear_combination := fun c =&gt; lincomb_std n c |}.</code></pre>
+<pre class="coq"><code>  Definition FinVec_Basis (n : nat) : Basis n (Fin.t n) F (Fin.t n -&gt; F) :=
+    {| Basis.vec := e;
+       Basis.coords                    := linear_map_id;
+       Basis.reconstruction            := fun v =&gt; lincomb_std n v;
+       Basis.coords_linear_combination := fun c =&gt; lincomb_std n c |}.</code></pre>
 <p>The record literal names all four fields directly. The coordinate map
 is <a
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_id"><code>linear_map_id</code></a>,
@@ -369,14 +336,23 @@ spaces, and a field acting on itself — each a basis-free space with no
 new code.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+href="coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
 record) · <a
+href="coqdoc/Riktig.Structure.Fin.html"><code>Structure/Fin.v</code></a>
+(the <a
+href="coqdoc/Riktig.Structure.Fin.html#FinIndex.FinIndex"><code>FinIndex</code></a>
+class) · <a
 href="coqdoc/Riktig.Theory.Basis.html"><code>Theory/Basis.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Basis.html#lincomb"><code>lincomb</code></a>
 and its algebra) · <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+(<a href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI"><code>bigopI</code></a>,
+the support collapse) · <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
 (the standard basis vector <code>e</code>) · <a
 href="coqdoc/Riktig.Impl.FinVecBasis.html"><code>Impl/FinVecBasis.v</code></a>

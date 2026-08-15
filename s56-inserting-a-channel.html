@@ -41,7 +41,7 @@ monad <code>M</code> — plain <code>∘</code> no longer type-checks:
 <code>f</code>’s output is an <code>M B</code>, but <code>g</code> wants
 a <code>B</code>. Kleisli composition is the fix. It runs
 <code>f</code>, then <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>s
 its value into <code>g</code>, threading the monad through:</p>
 <pre class="coq"><code>Notation &quot;f &gt;=&gt; g&quot; := (fun x =&gt; bind (f x) g) (at level 55, right associativity).</code></pre>
 <p>So <code>(f &gt;=&gt; g) x</code> is <code>f x &gt;&gt;= g</code>:
@@ -51,7 +51,7 @@ monad, and it is what lets us write a pipeline of effectful steps as one
 arrow.</p>
 <h2 id="a-kleisli-isomorphism-a-round-trip-that-lands-on-ret">A Kleisli
 isomorphism: a round trip that lands on <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a></h2>
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a></h2>
 <p>The channel we want to insert is a matched encode/decode pair.
 Encoding turns a <code>B</code> into some wire representation
 <code>B'</code>, decoding turns it back; both are effectful, so encoding
@@ -59,7 +59,7 @@ is a Kleisli arrow <code>B -&gt; M B'</code> and decoding is
 <code>B' -&gt; M B</code>. For the pair to be a lossless round trip,
 going one way and back must return the original value with no effect —
 that is, must equal <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>.</p>
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>.</p>
 <p>Being a lossless round trip is a property of the <em>pair</em> of
 arrows, so it is stated about the pair, as a typeclass with two fields —
 one per direction:</p>
@@ -80,10 +80,10 @@ href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.to_from"><code>Kleisli
 is the same round trip started from the other side. These two
 <code>bind ... == ret ...</code> equations are the entire content of
 “lossless.” (The round trips land on <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, not
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>, not
 on the raw identity function, because in a monad the identity for <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> is
-<a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>,
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a> is
+<a href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>,
 not <code>fun x =&gt; x</code>.)</p>
 <p>A codec is then a bundle holding the two arrows plus one instance of
 that class about them:</p>
@@ -144,7 +144,7 @@ decode, then running <code>prog2</code>, is the same as running
 for bind and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>η</mi><annotation encoding="application/x-tex">\eta</annotation></semantics></math>
 for <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, the
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>, the
 argument is a three-step chain:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mi>e</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>λ</mi><msup><mi>b</mi><mo>′</mo></msup><mi>.</mi><mspace width="0.222em"></mspace><mi>d</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>b</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><msub><mi>p</mi><mn>2</mn></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>e</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>d</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><msub><mi>p</mi><mn>2</mn></msub></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity, right to left</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>η</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><msub><mi>p</mi><mn>2</mn></msub></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">the round trip: </mtext><mspace width="0.333em"></mspace></mrow><mi>e</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>d</mi><mo>=</mo><mi>η</mi><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><msub><mi>p</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mi>η</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> is bind’s left unit.</mtext></mrow><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{aligned}
@@ -185,9 +185,9 @@ The monad’s associativity law <code>Monad.associative</code> reads
 the chain uses it right-to-left, so <code>symmetry</code> flips it
 before applying.</li>
 <li><code>apply Monad.bind_proper</code> handles the middle step. <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
 says <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>
 respects <code>==</code> in both arguments: replace the first argument
 by an equal one and the continuation by a pointwise-equal one, and the
 result is unchanged. Here the first argument
@@ -206,7 +206,7 @@ same <code>prog1</code>; they differ only in the continuation, and <a
 href="coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_pointwise</code></a>
 says those continuations agree on every value <code>b</code>. So one
 appeal to <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
 — reflexivity on <code>prog1</code>, the pointwise lemma on the
 continuation — finishes it:</p>
 <pre class="coq"><code>Theorem channel_insertion : forall a : A,
@@ -221,7 +221,7 @@ Qed.</code></pre>
 <code>prog1 a &gt;&gt;= prog2</code> and the right side is
 <code>prog1 a &gt;&gt;= (fun b =&gt; ki_to codec b &gt;&gt;= ...)</code>.
 <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>
 splits the goal into the two arguments of the outer bind:
 <code>reflexivity</code> on <code>prog1 a</code> (literally the same on
 both sides), and the continuations, which <a
@@ -230,10 +230,10 @@ matched at every <code>b</code> — used via <code>symmetry</code> because
 the theorem states the plain composite on the left and the channelled
 one on the right. That is the whole proof: the codec’s round trip
 <em>is</em> <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, and
-<a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> is
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>, and
+<a href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a> is
 what <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>
 does nothing with.</p>
 <h2 id="a-concrete-channel-the-cantor-pairing-codec">A concrete channel:
 the Cantor pairing codec</h2>
@@ -317,13 +317,13 @@ href="coqdoc/Riktig.Theory.KleisliIso.html#ki_insert_pointwise"><code>ki_insert_
 <a
 href="coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion"><code>channel_insertion</code></a>,
 and the Cantor-pairing example) · <a
-href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
+href="coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>, the
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>/<a
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>, the
 <code>&gt;=&gt;</code> notation, and the monad laws
 <code>Monad.associative</code>/<code>Monad.left_identity</code>/<a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>)
+href="coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
 (the <code>option</code> monad the concrete codec uses).</p>

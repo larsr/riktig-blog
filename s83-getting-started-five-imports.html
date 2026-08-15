@@ -27,14 +27,14 @@ figuring out which files to <code>Require</code>.</p>
 <p>Nothing collides, which is what makes generous imports safe in the
 first place. Each structure class sits inside a module of its own name
 that is then <code>Export</code>ed, so <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field.Field</code></a>
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field.Field</code></a>
 is also reachable as plain <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>,
 and a structure’s derived facts stay qualified when the short name would
 be ambiguous — <a
-href="coqdoc/Riktig.Interface.Category.html#Category.comp_left_identity"><code>Category.comp_left_identity</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Category.comp_left_identity"><code>Category.comp_left_identity</code></a>
 rather than a bare <a
-href="coqdoc/Riktig.Interface.Category.html#Category.comp_left_identity"><code>comp_left_identity</code></a>.
+href="coqdoc/Riktig.Structure.Category.html#Category.comp_left_identity"><code>comp_left_identity</code></a>.
 The individual algebraic <em>laws</em> are not duplicated per structure
 at all: there is exactly one <a
 href="coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
@@ -70,7 +70,7 @@ asks for it; <code>Require Import</code> keeps them private. The algebra
 tower exports: <a
 href="coqdoc/Riktig.Theory.AbGroup.html"><code>Theory/AbGroup.v</code></a>
 begins
-<code>From Riktig Require Export Interface.AbGroup Theory.Group</code>,
+<code>From Riktig Require Export Structure.AbGroup Theory.Group</code>,
 and because each of those exports its own parents in turn, asking for it
 hands you the <code>==</code>/<code>+</code>/<code>-</code> notation and
 the law names <a
@@ -82,7 +82,7 @@ href="coqdoc/Riktig.Props.html#right_inverse"><code>right_inverse</code></a>
 along with the theorems. The category files import: <a
 href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
 begins
-<code>From Riktig Require Import Ops Interface.Category Lib.Calc</code>,
+<code>From Riktig Require Import Ops Structure.Category Lib.Calc</code>,
 so a client that asks only for <a
 href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
 gets the theorems but no <code>==</code>, and the first <code>==</code>
@@ -98,15 +98,15 @@ and no <code>Section</code> before them:</p>
 <pre class="coq"><code>From Coq Require Import ZArith Morphisms QArith Bool List.
 From Coq.Vectors Require Fin.
 Import ListNotations.
-From Riktig Require Import Theory.AbGroup Impl.Zr Interface.LinearMap
+From Riktig Require Import Theory.AbGroup Impl.Zr Structure.LinearMap
   Impl.Qf Impl.FinVec Theory.Category Impl.CoqCat Lambda.Church
   Channel.Trace.</code></pre>
 <p>Eight names, not the seventeen an earlier version of this file
 listed. <code>Theory.AbGroup</code> carries
-<code>Interface.AbGroup</code>, <code>Theory.Group</code>,
+<code>Structure.AbGroup</code>, <code>Theory.Group</code>,
 <code>Ops</code> and <code>Props</code> with it;
-<code>Interface.LinearMap</code> carries <code>Interface.Field</code>
-and <code>Interface.VectorSpace</code>; <code>Impl.CoqCat</code> carries
+<code>Structure.LinearMap</code> carries <code>Structure.Field</code>
+and <code>Structure.VectorSpace</code>; <code>Impl.CoqCat</code> carries
 <code>Theory.Category</code>; <code>Lambda.Church</code> carries
 <code>Lambda.Syntax</code> and <code>Lambda.Conv</code>;
 <code>Channel.Trace</code> carries <code>Theory.Subseq</code>. Naming an
@@ -144,8 +144,8 @@ and <a
 href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
 are the names of the single-law property classes that live there — the
 ones the <a
-href="coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
-class binds its own axioms to. <code>Interface.AbGroup</code> supplies
+href="coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
+class binds its own axioms to. <code>Structure.AbGroup</code> supplies
 the class the <code>Context</code> line asks for,
 <code>Theory.AbGroup</code> supplies <a
 href="coqdoc/Riktig.Theory.AbGroup.html#add_swap_l"><code>add_swap_l</code></a>,
@@ -188,16 +188,14 @@ End Generic.</code></pre>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ℚ</mi><mn>2</mn></msup><annotation encoding="application/x-tex">\mathbb{Q}^2</annotation></semantics></math>
 (<code>Fin.t 2 -&gt; Q</code>), built from the field’s own scale laws. A
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 is a record holding a function together with a proof that the function
 is linear, and <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
 builds one from the function and its three laws — respects
 <code>==</code>, respects <code>+</code>, respects scaling:</p>
 <pre class="coq"><code>Section ScaleMap.
-  Context {F V : Type} `{FF : Field F}.
-  Context {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}.
-  Context {VV : VectorSpace F V} (c : F).
+  Context {F V : Type} `{VV : VectorSpace F V} (c : F).
 
   #[export] Instance scale_map_proper : Proper (equ ==&gt; equ) (fun v : V =&gt; c *: v).
   Proof.
@@ -265,14 +263,14 @@ isomorphisms:</p>
   Qed.
 End Generic.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Category.html#Category.comp_left_identity"><code>Category.comp_left_identity</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Category.comp_left_identity"><code>Category.comp_left_identity</code></a>
 is one of the places where the qualified name earns its keep. A
 category’s identity law is an instance of the same <a
 href="coqdoc/Riktig.Props.html#LeftIdentity"><code>LeftIdentity</code></a>
 class the monoid used, at <a
-href="coqdoc/Riktig.Interface.Category.html#Category.comp"><code>comp</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Category.comp"><code>comp</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Category.html#Category.id"><code>id</code></a>;
+href="coqdoc/Riktig.Structure.Category.html#Category.id"><code>id</code></a>;
 the category file wraps that instance in a named definition of its
 own,</p>
 <pre class="coq"><code>  Definition comp_left_identity {obj : Type} `{Category obj}
@@ -401,12 +399,12 @@ directly</td>
 </tr>
 <tr>
 <td>state something over an abstract <a
-href="coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>/<a
-href="coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>/<a
-href="coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>/<a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>/<a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a></td>
-<td><code>Interface.&lt;Name&gt;</code></td>
+href="coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>/<a
+href="coqdoc/Riktig.Structure.Group.html#Group.Group"><code>Group</code></a>/<a
+href="coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>/<a
+href="coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>/<a
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a></td>
+<td><code>Structure.&lt;Name&gt;</code></td>
 </tr>
 <tr>
 <td>use derived facts (<a
@@ -418,8 +416,8 @@ href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a>,
 </tr>
 <tr>
 <td>work with vectors/linear maps abstractly</td>
-<td><code>Interface.VectorSpace</code>,
-<code>Interface.LinearMap</code></td>
+<td><code>Structure.VectorSpace</code>,
+<code>Structure.LinearMap</code></td>
 </tr>
 <tr>
 <td>a concrete field to compute in</td>
@@ -433,7 +431,7 @@ product)</td>
 </tr>
 <tr>
 <td>categories, functors, isomorphisms</td>
-<td><code>Interface.Category</code>, <code>Theory.Category</code></td>
+<td><code>Structure.Category</code>, <code>Theory.Category</code></td>
 </tr>
 <tr>
 <td>Coq’s own types as a category</td>

@@ -36,7 +36,7 @@ such that, for every
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>+</mo><mi>a</mi><mo>=</mo><mi>a</mi><mspace width="2.0em"></mspace><mtext mathvariant="normal">and</mtext><mspace width="2.0em"></mspace><mi>a</mi><mo>+</mo><mn>0</mn><mo>=</mo><mi>a</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">0 + a = a \qquad\text{and}\qquad a + 0 = a.</annotation></semantics></math></p>
 <p>The whole of <a
-href="coqdoc/Riktig.Interface.Monoid.html"><code>Interface/Monoid.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Monoid.html"><code>Structure/Monoid.v</code></a>:</p>
 <pre class="coq"><code>  Class Monoid (M : Type) {eq : EqRel M} {zero : Zero M} {add : HasAdd M} := {
     semigroup         :: Semigroup M add;
     is_left_identity  :: LeftIdentity M M add 0;
@@ -75,15 +75,15 @@ is the whole idea: each hypothesis applies to it from its own side.</p>
   Proof.
     intros e f He Hf.
     calc e
-      == (e + f) { (Hf e) }
-      == f       { (He f) }.
+      == (e + f) { Hf }
+      == f       { He }.
   Qed.</code></pre>
 <p><code>He</code> and <code>Hf</code> are the two hypotheses, and each
-step names the one it uses at the point it uses it: <code>Hf e</code> is
-“f is a right identity, applied to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>”,
-and <code>He f</code> is “e is a left identity, applied to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>”.
+step names the one it uses at the point it uses it: <code>Hf</code> is
+“f is a right identity”, used at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>,
+and <code>He</code> is “e is a left identity”, used at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>.
 Notice what the statement does <em>not</em> say: neither
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>
 nor
@@ -100,7 +100,7 @@ identity <em>is</em> <code>0</code>:</p>
     intros e He.
     calc e
       == (e + 0) { right_identity    }
-      == (0 : M) { (He 0) }.
+      == (0 : M) { He }.
   Qed.</code></pre>
 <p>The first step is the structure’s own right-identity law, the second
 the hypothesis at <code>0</code>. <a
@@ -120,8 +120,8 @@ property that at most one element can have.</p>
 Proof.
   intros e f He Hf.
   calc e
-    == (0 : M) { (zero_unique_l e He) }
-    == f       { (zero_unique_l f Hf) }.
+    == (0 : M) { zero_unique_l }
+    == f       { zero_unique_l }.
 Qed.</code></pre>
 <p>Both elements are shown equal to <code>0</code> by the theorem just
 proved, and <code>==</code> is transitive. Stating it as <a
@@ -146,7 +146,7 @@ lists.</p>
 undone.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Monoid.html"><code>Interface/Monoid.v</code></a>
+href="coqdoc/Riktig.Structure.Monoid.html"><code>Structure/Monoid.v</code></a>
 (the structure) · <a
 href="coqdoc/Riktig.Theory.Monoid.html"><code>Theory/Monoid.v</code></a>
 (<a

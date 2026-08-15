@@ -42,16 +42,16 @@ post</a> needs additivity and nothing else, so it applies to a linear
 map without any glue:</p>
 <pre class="coq"><code>  Theorem linear_map_zero : f 0 == 0.
   Proof.
-    exact (additive_zero (lm_fun f)).
+    exact (additive_zero (LinearMap.map f)).
   Qed.</code></pre>
 <p>A linear map sends
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 — not by a fresh calculation, but because the <code>::</code> on <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.is_additive"><code>is_additive</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.is_additive"><code>is_additive</code></a>
 makes every <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 proof supply an <a
 href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> one,
 and the group theorem asks for that. <a
@@ -61,15 +61,18 @@ href="s97-linearity-is-two-laws.html">whole post</a> on why the two laws
 are stated over arbitrary operations; here it is enough that they are
 separate.</p>
 <p>A map and its proof travel together as one object:</p>
-<pre class="coq"><code>Class LinearMap (F U V : Type)
-    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
-    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
-  lm_fun : U -&gt; V;
-  lm_linear :: Linear F U V lm_fun;
-}.</code></pre>
-<p>with <code>Coercion lm_fun : LinearMap &gt;-&gt; Funclass</code>, so
-a <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+<pre class="coq"><code>Module LinearMap.
+  Class LinearMap (F U V : Type)
+      {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+      {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
+    map    : U -&gt; V;
+    linear :: Linear F U V map;
+  }.
+End LinearMap.</code></pre>
+<p>with
+<code>Coercion LinearMap.map : LinearMap &gt;-&gt; Funclass</code>, so a
+<a
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 can be applied to a vector like any function.</p>
 <h2 id="when-are-two-maps-equal">When are two maps equal?</h2>
 <p>Before the maps can form a vector space they need an equality, and
@@ -79,7 +82,7 @@ everywhere.</p>
     fun f g =&gt; forall u : U, f u == g u.</code></pre>
 <p>This is a good illustration of why the library carries a chosen
 equality per carrier. Two <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 records could hold different proof terms and still be the same map;
 Coq’s built-in equality would distinguish them, and the mathematics does
 not. Pointwise agreement does, and it is an equivalence relation, which
@@ -159,9 +162,9 @@ the ring they form is this one.</p>
 <p><em>Next: inner products, and measuring vectors.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>
+href="coqdoc/Riktig.Structure.Linear.html"><code>Structure/Linear.v</code></a>
 (the two laws) · <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 (a map with its proof, and equality of maps) · <a
 href="coqdoc/Riktig.Theory.LinearMap.html"><code>Theory/LinearMap.v</code></a>
 (<a

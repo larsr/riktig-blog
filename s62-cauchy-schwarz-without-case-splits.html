@@ -64,13 +64,13 @@ two geometries</h2>
 <p>The pairing itself is a class with two fields, and it says nothing
 about signs — a pairing may perfectly well send some vector to a
 negative number when paired with itself (<a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html"><code>Interface/InnerProductSpace.v</code></a>):</p>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html"><code>Structure/InnerProductSpace.v</code></a>):</p>
 <pre class="coq"><code>Class InnerProductSpace (F V : Type) `{VectorSpace F V} {Vi : HasInner F V} := {
-  inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟨ u , v ⟩);
+  inner_linear   :: forall v : V, Linear F V F (fun u =&gt; ⟪ u , v ⟫);
   is_commutative :: Commutative V F inner;
 }.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.inner_linear"><code>inner_linear</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#InnerProductSpace.inner_linear"><code>inner_linear</code></a>
 says that fixing the right slot leaves a linear map
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>→</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">V \to F</annotation></semantics></math>
 — which packages, in one field, that the pairing respects
@@ -83,40 +83,40 @@ from the three space coordinates — is symmetric and bilinear but
 itself to give exactly zero. Building that sign condition into the class
 above would exclude it. Instead the condition is a second class, to be
 required only where it is genuinely used (<a
-href="coqdoc/Riktig.Interface.PosInner.html"><code>Interface/PosInner.v</code></a>):</p>
+href="coqdoc/Riktig.Structure.PosInner.html"><code>Structure/PosInner.v</code></a>):</p>
 <pre class="coq"><code>Module PosInner.
   Class PosInner (F V : Type) `{OrderedField F}
       {piE : EqRel V} {piZ : Zero V} {piA : HasAdd V} {piN : HasNeg V}
       {piS : HasScale F V} {piI : HasInner F V}
       {VS : VectorSpace F V} {IP : InnerProductSpace F V} := {
-    nonneg   : forall u : V, 0 &lt;= ⟨ u , u ⟩;
-    definite : forall u : V, ⟨ u , u ⟩ == 0 -&gt; u == 0
+    nonneg   : forall u : V, 0 &lt;= ⟪ u , u ⟫;
+    definite : forall u : V, ⟪ u , u ⟫ == 0 -&gt; u == 0
   }.
 End PosInner.</code></pre>
 <p>The long binder block is the ambient vocabulary the two laws mention:
 an ordered field of scalars, a vector space, and the pairing that must
 already satisfy <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>.
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>.
 The two laws themselves are short. <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>
 says a vector paired with itself is never negative; <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.definite"><code>PosInner.definite</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.definite"><code>PosInner.definite</code></a>
 says only the zero vector pairs with itself to zero. Wrapping the class
 in a <code>Module</code> is what lets the laws be called <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.nonneg"><code>nonneg</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.nonneg"><code>nonneg</code></a>
 and <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.definite"><code>definite</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.definite"><code>definite</code></a>
 at all without colliding with other laws of the same name elsewhere:
 call sites write <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>
 and <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.definite"><code>PosInner.definite</code></a>.</p>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.definite"><code>PosInner.definite</code></a>.</p>
 <p>Euclidean geometry is <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
 together with <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>;
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>;
 Minkowski geometry is <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
 alone. The quantity
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>u</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle u,u\rangle</annotation></semantics></math>
 has a name of its own, <code>norm2 u</code>, since it appears in nearly
@@ -137,7 +137,7 @@ shrink.</p>
 and it is positive no matter what
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
 is: <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>
 makes the first summand at least zero,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math>
 is positive by assumption, and “nonnegative plus positive is positive”
@@ -163,7 +163,7 @@ leaves the padded inequality, and nowhere did a branch appear. That is a
 lemma of its own (<a
 href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</code></a>):</p>
 <pre class="coq"><code>  Theorem cauchy_schwarz_padded : forall (u v : V) (e : F), 0 &lt; e -&gt;
-    ⟨ u , v ⟩ * ⟨ u , v ⟩ &lt;= (norm2 v + e) * norm2 u.</code></pre>
+    ⟪ u , v ⟫ * ⟪ u , v ⟫ &lt;= (norm2 v + e) * norm2 u.</code></pre>
 <p>Removing the slack is a separate, reusable fact about order: a
 quantity below
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>+</mo><mi>ε</mi><mi>c</mi></mrow><annotation encoding="application/x-tex">b + \varepsilon c</annotation></semantics></math>
@@ -204,10 +204,10 @@ and the order lemma delivers
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≤</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a \le b</annotation></semantics></math>.
 In Coq, the same steps:</p>
 <pre class="coq"><code>  Theorem cauchy_schwarz : forall u v : V,
-    ⟨ u , v ⟩ * ⟨ u , v ⟩ &lt;= norm2 u * norm2 v.
+    ⟪ u , v ⟫ * ⟪ u , v ⟫ &lt;= norm2 u * norm2 v.
   Proof.
     intros u v.
-    apply (le_of_le_add_all_eps_mul (⟨ u , v ⟩ * ⟨ u , v ⟩)
+    apply (le_of_le_add_all_eps_mul (⟪ u , v ⟫ * ⟪ u , v ⟫)
       (norm2 u * norm2 v) (norm2 u) (norm2_nonneg u)).
     intros e He.
     rewrite (mul_commutative (norm2 u) (norm2 v)),
@@ -260,7 +260,7 @@ and <a
 href="coqdoc/Riktig.Theory.InnerGeometry.html#best_approx"><code>best_approx</code></a>
 says no multiple <code>c *: v</code> of the axis comes closer to
 <code>u</code> than the projection does — with distance measured by <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#norm2"><code>norm2</code></a>,
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#norm2"><code>norm2</code></a>,
 which is why no square root is needed to state it.</p>
 <p>Note the hypothesis both carry: <code>norm2 v =/= 0</code>, not
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
@@ -268,12 +268,12 @@ is nonzero”. This is genuinely the right condition rather than a
 convenience. <a
 href="coqdoc/Riktig.Theory.InnerGeometry.html#proj_orthogonal"><code>proj_orthogonal</code></a>
 is proved for a general <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>,
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>,
 positivity or not, and in Minkowski geometry the two conditions differ:
 a vector along a light ray is nonzero and yet pairs with itself to give
 zero, so the divisor in the projection formula vanishes and there is
 nothing to project onto. Under <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
 the two conditions do coincide, which is <a
 href="coqdoc/Riktig.Theory.InnerGeometry.html#norm2_neq_0_iff"><code>norm2_neq_0_iff</code></a>.</p>
 <p>The projection is also the step Gram–Schmidt repeats: take a list of
@@ -283,15 +283,15 @@ needs exactly what this section supplies — the residual is perpendicular
 to the axis — and nothing else.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html"><code>Interface/InnerProductSpace.v</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html"><code>Structure/InnerProductSpace.v</code></a>
 (the pairing and <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#norm2"><code>norm2</code></a>)
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#norm2"><code>norm2</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.PosInner.html"><code>Interface/PosInner.v</code></a>
+href="coqdoc/Riktig.Structure.PosInner.html"><code>Structure/PosInner.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>,
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.nonneg"><code>PosInner.nonneg</code></a>,
 <a
-href="coqdoc/Riktig.Interface.PosInner.html#PosInner.definite"><code>PosInner.definite</code></a>)
+href="coqdoc/Riktig.Structure.PosInner.html#PosInner.definite"><code>PosInner.definite</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</code></a>
 (<a

@@ -32,7 +32,7 @@ times itself is a scalar, namely its own square length.</p>
 <pre class="coq"><code>contraction : forall u : V, ga_vec u * ga_vec u == Q u *: 1;</code></pre>
 <p>Nothing here mentions a dot product or a wedge product. Both are
 <em>consequences</em>. Expand <a
-href="coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>
+href="coqdoc/Riktig.Structure.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>
 at <code>u + v</code> and the cross terms survive:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>u</mi><mi>u</mi><mo>+</mo><mi>u</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>u</mi><mo>+</mo><mi>v</mi><mi>v</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">(u+v)(u+v) = uu + uv + vu + vv,</annotation></semantics></math></p>
 <p>and since the three squares are scalars, so is <code>uv + vu</code>.
@@ -66,22 +66,27 @@ field it has an inverse.</p>
 <p>That is why <a
 href="coqdoc/Riktig.Theory.GAWedgeDot.html"><code>Theory/GAWedgeDot.v</code></a>
 asks for an <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 where <a
 href="coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>
 asks only for a <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>.
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>.
 The extra hypothesis buys one thing: the ability to halve. With it, the
 decomposition takes its familiar shape:</p>
 <pre class="coq"><code>  Theorem ga_product_decompose : forall u v : V,
-    ga_vec u * ga_vec v == ⟨ u , v ⟩ *: (1 : A) + half 1 *: wedge u v.</code></pre>
+    ga_vec u * ga_vec v
+    == ⟪ u , v ⟫ *: (1 : A) + half 1 *: wedge (ga_vec u) (ga_vec v).</code></pre>
 <p>Read it as <code>uv = u·v + u∧v</code> with the wedge carrying its
-conventional factor of one half. The proof is a <code>calc</code> chain
-that doubles the product, splits the doubled form into its symmetric and
-antisymmetric halves, and then halves each:</p>
+conventional factor of one half. The wedge itself is defined on algebra
+elements, <code>wedge x y := x * y + - (y * x)</code> for any
+<code>x y : A</code> — nothing about it needs the arguments to be
+vectors — so the statement embeds the two vectors and wedges their
+images. The proof is a <code>calc</code> chain that doubles the product,
+splits the doubled form into its symmetric and antisymmetric halves, and
+then halves each:</p>
 <pre class="coq"><code>    calc ((ga_vec u * ga_vec v) : A)
       == ((half 1 *: (ga_vec u * ga_vec v + ga_vec u * ga_vec v)) : A)
-        { (sc_half_double (ga_vec u * ga_vec v)) }</code></pre>
+        { sc_half_double }</code></pre>
 <p>The first step is the only interesting one: <a
 href="coqdoc/Riktig.Theory.GAWedgeDot.html#sc_half_double"><code>sc_half_double</code></a>
 says <code>half 1 *: (x + x) == x</code>, so multiplying by one is
@@ -121,7 +126,7 @@ is that convention written as a class:</p>
 <p>with <a
 href="coqdoc/Riktig.Theory.GAWedgeDot.html#wd_w"><code>wd_w</code></a>
 the wedge and a field saying the product decomposes as
-<code>⟨u,v⟩ *: 1 + wd_w u v</code>.</p>
+<code>⟪u,v⟫ *: 1 + wd_w u v</code>.</p>
 <p>The two presentations are inter-derivable, and the pair of theorems
 saying so is the point of the file. But they are not inter-derivable on
 the same terms, and the asymmetry is worth stating plainly.</p>

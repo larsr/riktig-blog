@@ -16,30 +16,30 @@ algebra roadmap — coordinate-free first, matrices as
 representations</h1>
 <p>Principle: operations are defined as (multi)linear maps, never by
 components. Coordinates enter only through <a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+href="../coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
 (a linear iso onto <code>Fin n -&gt; F</code>), and every
 component-level formula is a <em>computation lemma</em> obtained by
 transporting along that iso. Matrix multiplication is composition,
 transported. House style throughout: operational notations from Ops,
 laws as <code>==</code> equations, proofs as rewrite chains.</p>
 <h2
-id="wave-l8--architecture-cleanup-from-the-2026-07-08-interface">Wave L8
-— architecture cleanup (from the 2026-07-08 Interface/</h2>
+id="wave-l8--architecture-cleanup-from-the-2026-07-08-structure">Wave L8
+— architecture cleanup (from the 2026-07-08 Structure/</h2>
 <p>Theory/Impl trichotomy audit; docs/DESIGN.md’s stated rule — “a file
-does exactly one job: Interface states axioms, Theory derives
+does exactly one job: Structure states axioms, Theory derives
 consequences, Impl instantiates” — holds cleanly through the core
 algebra tower (<a
-href="../coqdoc/Riktig.Interface.Monoid.html"><code>Interface/Monoid.v</code></a>..<a
-href="../coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>,
-<code>Interface/InnerProduct.v</code>, <a
-href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>,
+href="../coqdoc/Riktig.Structure.Monoid.html"><code>Structure/Monoid.v</code></a>..<a
+href="../coqdoc/Riktig.Structure.VectorSpace.html"><code>Structure/VectorSpace.v</code></a>,
+<code>Structure/InnerProduct.v</code>, <a
+href="../coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Norm.html"><code>Interface/Norm.v</code></a>)
+href="../coqdoc/Riktig.Structure.Norm.html"><code>Structure/Norm.v</code></a>)
 but has drifted in the faster-moving linear-algebra wave. Full findings
 in the audit transcript; concrete fixes below, none urgent, none
 blocking — this is quality debt, not correctness debt (every file still
 compiles, zero holes). - [ ] <strong>Missing <a
-href="../coqdoc/Riktig.Interface.Determinant.html"><code>Interface/Determinant.v</code></a></strong>
+href="../coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a></strong>
 — the root cause pulling most of the rest down. <a
 href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> (<a
 href="../coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a>) has
@@ -50,8 +50,7 @@ FORCED to carry general theorems (<a
 href="../coqdoc/Riktig.Impl.Det.html#det_col1_add"><code>det_col1_add</code></a>,
 <a
 href="../coqdoc/Riktig.Impl.Elim.html#det_rowF1_add"><code>det_rowF1_add</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>,
+<a href="../coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>,
 row-surgery lemmas — all true for ANY matrix, not “does this one
 algorithm satisfy X”) that architecturally belong in Theory/. Writing
 the spec (the alternating-form characterization, <a
@@ -64,13 +63,13 @@ href="../coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code
 companion would resolve the single largest finding in one move.
 <strong>partial, audited 2026-07-26</strong>: the spec itself EXISTS —
 <a
-href="../coqdoc/Riktig.Interface.Determinant.html"><code>Interface/Determinant.v</code></a>
+href="../coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>
 (<code>Record Determinant</code>: a <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>
 + <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
 + normalization to 1 at a chosen <a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>),
+href="../coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>),
 satisfied by <a
 href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> in <a
 href="../coqdoc/Riktig.Impl.DetInterface.html"><code>Impl/DetInterface.v</code></a>
@@ -83,9 +82,9 @@ href="../coqdoc/Riktig.Impl.DetAlternating.html#det_rowI_scale"><code>det_rowI_s
 / <a
 href="../coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>
 / <code>det_id</code>). The MOVE has not happened: <a
-href="../coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>/<a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
-and their lemmas did relocate to <a
+href="../coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a>/<a
+href="../coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a> and
+their lemmas did relocate to <a
 href="../coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>,
 but <a
 href="../coqdoc/Riktig.Impl.Det.html#det_col1_add"><code>det_col1_add</code></a>
@@ -101,24 +100,24 @@ href="../coqdoc/Riktig.Impl.Elim.html#det_rowF1_scale"><code>det_rowF1_scale</co
 href="../coqdoc/Riktig.Impl.Elim.html#upd_row"><code>upd_row</code></a>
 with its row-surgery lemmas are still in <a
 href="../coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>. -
-[x] <strong>Interface files hosting real Theory content</strong> — three
+[x] <strong>Structure files hosting real Theory content</strong> — three
 of four fixed. <a
-href="../coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+href="../coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
 slimmed to the <a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+href="../coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
 Record; <a
 href="../coqdoc/Riktig.Theory.Basis.html#lincomb"><code>lincomb</code></a>
 + its 4 lemmas moved to <a
 href="../coqdoc/Riktig.Theory.Basis.html"><code>Theory/Basis.v</code></a>
 (with a Definitions-vs-Lemmas split in Bilinear.v specifically: <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#famEq"><code>famEq</code></a>/
+href="../coqdoc/Riktig.Structure.Bilinear.html#famEq"><code>famEq</code></a>/
 <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#upd"><code>upd</code></a>
-stayed in Interface since <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>‘s
+href="../coqdoc/Riktig.Structure.Bilinear.html#upd"><code>upd</code></a>
+stayed in Structure since <a
+href="../coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>‘s
 own record fields use them directly — moving them would have created a
-hard Interface&lt;-&gt;Theory cycle, caught and avoided). <a
-href="../coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+hard Structure&lt;-&gt;Theory cycle, caught and avoided). <a
+href="../coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>
 slimmed likewise; <a
 href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appl"><code>bilinear_map_appl</code></a>/<a
 href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appr"><code>bilinear_map_appr</code></a>/
@@ -130,7 +129,7 @@ href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_zero_map"><code>bilinear_ze
 instance moved to <a
 href="../coqdoc/Riktig.Theory.Bilinear.html"><code>Theory/Bilinear.v</code></a>.
 <a
-href="../coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>
+href="../coqdoc/Riktig.Structure.Integral.html"><code>Structure/Integral.v</code></a>
 slimmed to the <code>Class Integral</code> laws; <a
 href="../coqdoc/Riktig.Theory.Integral.html#integral_empty"><code>integral_empty</code></a>/<a
 href="../coqdoc/Riktig.Theory.Integral.html#integral_rev"><code>integral_rev</code></a>/
@@ -139,7 +138,7 @@ href="../coqdoc/Riktig.Theory.Integral.html#integral_zero_fn"><code>integral_zer
 moved to <a
 href="../coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>
 (no downstream consumers yet, so no call sites to update). Remaining: <a
-href="../coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="../coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 itself — its documented exception covers less than the file does (see
 below, unchanged). - [x] <strong>Theory files importing Impl</strong> —
 resolved by blessing, not moving code: <a
@@ -162,9 +161,9 @@ of convenience. <code>docs/DESIGN.md</code> now states a Fifth pattern
 explicitly, with the test “could the theorem be stated without naming
 that specific Impl/ constructor?” Promoting <a
 href="../coqdoc/Riktig.Theory.HomVS.html#Hom_VectorSpace"><code>Hom_VectorSpace</code></a>/<a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#Field_VectorSpace"><code>Field_VectorSpace</code></a>/<a
+href="../coqdoc/Riktig.Structure.VectorSpace.html#Field_VectorSpace"><code>Field_VectorSpace</code></a>/<a
 href="../coqdoc/Riktig.Theory.ProdVS.html#Prod_VectorSpace"><code>Prod_VectorSpace</code></a>/etc
-to Interface-level facts would be wrong: the Wave L8 Subspace.v fix just
+to Structure-level facts would be wrong: the Wave L8 Subspace.v fix just
 above already established these are instance-minting generic
 constructions, rightly Impl-shaped despite being generic over their
 carrier. Both files’ headers now cite the Fifth pattern instead of
@@ -178,9 +177,9 @@ href="../coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>
 as-is) and <a
 href="../coqdoc/Riktig.Theory.Subspace.html"><code>Theory/Subspace.v</code></a>
 (the real one, fixed): <a
-href="../coqdoc/Riktig.Interface.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>
+href="../coqdoc/Riktig.Structure.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>
 (+ its Hint Mode) moved to <a
-href="../coqdoc/Riktig.Interface.Subspace.html"><code>Interface/Subspace.v</code></a>,
+href="../coqdoc/Riktig.Structure.Subspace.html"><code>Structure/Subspace.v</code></a>,
 axioms only, no carrier. <code>Sub</code>’s construction + instance
 chain stays in <a
 href="../coqdoc/Riktig.Theory.Subspace.html"><code>Theory/Subspace.v</code></a>
@@ -192,7 +191,7 @@ license to define concrete instances… in Theory/”), so it is Impl-shaped
 regardless of genericity. <a
 href="../coqdoc/Riktig.Theory.KerIm.html"><code>Theory/KerIm.v</code></a>
 (the one downstream consumer) now imports both
-<code>Interface.Subspace</code> and <code>Theory.Subspace</code>. - [x]
+<code>Structure.Subspace</code> and <code>Theory.Subspace</code>. - [x]
 <a
 href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>/<a
 href="../coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
@@ -203,20 +202,14 @@ construction with no separate abstract spec worth writing). Not drift
 after all — the original three-way split just hadn’t named this case. -
 [x] <a
 href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>
-bundling all three layers — fixed. <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.FormallyReal"><code>FormallyReal</code></a>
-(+ Hint Mode) moved to <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>;
-<a
-href="../coqdoc/Riktig.Theory.Field.html#fr_sum_of_squares_r"><code>fr_sum_of_squares_r</code></a>/<a
-href="../coqdoc/Riktig.Theory.Field.html#fr_nonzero"><code>fr_nonzero</code></a>
-appended to the existing <a
+bundling all three layers — fixed. <code>FormallyReal</code> (+ Hint
+Mode) moved to <code>Structure/FormallyReal.v</code>;
+<code>fr_sum_of_squares_r</code>/<code>fr_nonzero</code> appended to the
+existing <a
 href="../coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>
 (judgment call: the class needs no order machinery, only concrete
-instances like <a
-href="../coqdoc/Riktig.Impl.Qof.html#Q_FormallyReal"><code>Q_FormallyReal</code></a>
-do, so it fits cleanly next to plain-field theory rather than needing
-its own file). <a
+instances like <code>Q_FormallyReal</code> do, so it fits cleanly next
+to plain-field theory rather than needing its own file). <a
 href="../coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>’s
 import updated to match. - [x] <del><a
 href="../coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a>
@@ -227,11 +220,11 @@ and <a
 href="../coqdoc/Riktig.Impl.QR.html#qr_R_upper"><code>qr_R_upper</code></a>
 are now real theorems. Still generic (no concrete type instantiated —
 the smoke test is abstract-<code>F</code>, since no <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
+href="../coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
 instance exists yet for a concrete space), same mild drift as
 <code>Pointwise.v</code>/<code>ProdVS.v</code> above, not otherwise a
 gap. - [x] Channel/ and Lambda/ deliberately do NOT follow the
-Interface/ Theory/Impl split (confirmed by the audit as a different,
+Structure/ Theory/Impl split (confirmed by the audit as a different,
 reasoned discipline for concrete objects-of-study rather than abstract
 structures-with-many-instances) — internally every file keeps
 spec/theory/impl content in clearly ordered, usually explicitly numbered
@@ -247,10 +240,10 @@ href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>:
 closure proofs); <code>End V := Hom(V,V)</code> is a Ring (composition
 as product) — first noncommutative ring.</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>:
+href="../coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>:
 <code>BilinearMap F U V W</code> (proper + linear in each slot);
 <code>MultilinearForm n F V := (Fin n -&gt; V) -&gt; F</code> with an <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
 mixin.</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>:
@@ -258,9 +251,9 @@ href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>:
 BilinearMap; curry/uncurry between <code>Bilin(U,V;W)</code> and
 <code>Hom(U,Hom(V,W))</code> — both round-trip theorems
 (<code>curry_uncurry</code>, <code>uncurry_curry</code>) proved; the <a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 packaging is open (needs <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 to be a VectorSpace first — see Loose ends).</label></li>
 </ul>
 <h2
@@ -274,7 +267,7 @@ href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a
 twice); <a
 href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 by <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>.</label></li>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>.</label></li>
 <li><label><input type="checkbox" checked="" />Representation theorem:
 given bases, <code>⟦·⟧ : Hom(U,V) ≅ Matrix</code> is a VSIso and
 <code>⟦ g ∘ f ⟧ == ⟦ g ⟧ * ⟦ f ⟧</code>.</label></li>
@@ -325,11 +318,11 @@ deferred to L5’s elementary matrices — a visible Section parameter, not
 an Axiom). Bonus, honestly scoped: <a
 href="../coqdoc/Riktig.Theory.Determinant.html#fstar"><code>fstar</code></a>
 (pullback of a <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>
 along a <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>)
+href="../coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>)
 is proved <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>-
+href="../coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>-
 preserving in full; <a
 href="../coqdoc/Riktig.Theory.Determinant.html#omega_B"><code>omega_B</code></a>
 (the top form read off a basis via detM) is proved linear in its FIRST
@@ -343,7 +336,7 @@ id="wave-l4--inner-product-geometry-scalars-in-an-orderedfield-white_check_mark-
 L4 — inner-product geometry (scalars in an OrderedField) ✅ done</h2>
 <ul class="task-list">
 <li><label><input type="checkbox" checked="" />Positivity as a <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
+href="../coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
 mixin (Minkowski stays a legal <code>InnerProduct</code> instance);
 Cauchy-Schwarz proved with NO extra hypothesis (eps-padding squeeze);
 Pythagoras; projection onto a nonzero vector + best-approximation;
@@ -381,15 +374,15 @@ track.</label></li>
 programs</h2>
 <ul>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>
 mixin (decidable <code>==</code>; instance for Q, in <a
 href="../coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>).</label></li>
 <li>[~] Elementary-matrix infrastructure (<a
 href="../coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>): <a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
+href="../coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>
 (the computational inverse of <a
 href="../coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a>‘s <a
-href="../coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>),
+href="../coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a>),
 row-surgery lemmas, row-F1 linearity/homogeneity of <a
 href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
 (general n), elementary matrices’ row-operation semantics (general, from
@@ -406,8 +399,8 @@ href="../coqdoc/Riktig.Impl.Elim.html#det_eq_rows_F1_FS2"><code>det_eq_rows_F1_F
 (rows F1 = FS-F1 forces <code>detM == 0</code>). Proved the equal-rows
 corollary DIRECTLY from the Laplace recursion rather than via
 swap-negation: this codebase’s <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>/<a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>/<a
+href="../coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
 carry no characteristic assumption, and <code>x == -x</code> only gives
 <code>2x == 0</code>, not <code>x == 0</code>, over a char-2 field — so
 deriving alternation from negation would have silently assumed char ≠ 2.
@@ -436,23 +429,22 @@ a bijection), where a row swap acts by pure POSTCOMPOSITION on <a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_apply"><code>perm_apply</code></a>’s
 values — no <a
 href="../coqdoc/Riktig.Impl.Det.html#minor"><code>minor</code></a>/<a
-href="../coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>
-surgery in sight. Unconditionally proved, general n and general F:
+href="../coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a> surgery
+in sight. Unconditionally proved, general n and general F:
 <code>detM_leibniz_eq_detM : detM_leibniz A == detM A</code> (cofactor
 expansion = permutation sum, by induction, peeling always at the fixed
 position F1 — no relocation needed) and <a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_prod_row_swap"><code>perm_prod_row_swap</code></a>
 (the row-swap half of antisymmetry, holds for ANY i, j, no i ≠ j
 hypothesis even needed). Bonus reusable infrastructure: <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_reindex"><code>bigopF_reindex</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_reindex"><code>bigopF_reindex</code></a>
 — a <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
 sum over a commutative Monoid is invariant under any bijective
-reindexing of <code>Fin.t n</code> — built from <a
-href="../coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>,
-a genuine generalization of <a
+reindexing of <code>Fin.t n</code> — built from
+<code>bijection_skip_step</code>, a genuine generalization of <a
 href="../coqdoc/Riktig.Impl.Elim.html"><code>Impl/Elim.v</code></a>’s <a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
+href="../coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>
 from “extract F1” to “extract an arbitrary base point relocated through
 an arbitrary bijection.” Precisely NOT reached: general row-swap
 antisymmetry and <a
@@ -460,7 +452,7 @@ href="../coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></
 still need (a) a <a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>-level
 analogue of <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_reindex"><code>bigopF_reindex</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_reindex"><code>bigopF_reindex</code></a>
 (mechanical, bounded work, same shape as the proved one) composed with
 (b) “<a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
@@ -494,7 +486,7 @@ href="../coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_lei
 to <a
 href="../coqdoc/Riktig.Impl.DetSign.html#detM_swap_adjacent"><code>detM_swap_adjacent</code></a>:
 swapping any ADJACENT pair of rows of ANY square matrix, any <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>,
 negates <a
 href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> — a
 genuine, strict generalization of <a
@@ -508,14 +500,12 @@ induction does not extend verbatim. The classical fix: factor an
 arbitrary transposition as an ODD-length product of ADJACENT
 transpositions and push the sign-flip through by induction on that
 distance; the next concrete lemma (<a
-href="../coqdoc/Riktig.Impl.DetSignGeneral.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>,
+href="../coqdoc/Riktig.Impl.DetSign.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>,
 <a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>
 under composing two postcompositions) and its proof route (one rewrite
-from <a
-href="../coqdoc/Riktig.Theory.Fin.html#bijection_skip_step_spec"><code>bijection_skip_step_spec</code></a>,
-reconciled via <a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip_some"><code>unskip_some</code></a>)
+from <code>bijection_skip_step_spec</code>, reconciled via <a
+href="../coqdoc/Riktig.Impl.Fin.html#unskip_some"><code>unskip_some</code></a>)
 are identified precisely in the file’s header. <a
 href="../coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>’s
 <a
@@ -523,7 +513,7 @@ href="../coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></
 Context hypothesis remains open. Four focused attempts (two direct, two
 Leibniz-route) have now gone into this family of lemmas, each strictly
 narrowing the gap; the next one should target <a
-href="../coqdoc/Riktig.Impl.DetSignGeneral.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>
+href="../coqdoc/Riktig.Impl.DetSign.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>
 plus the adjacent- transposition factorization specifically — the one
 piece of real new combinatorics left.</li>
 <li><label><input type="checkbox" checked="" /><strong>General row-swap
@@ -537,12 +527,12 @@ postcomposing ANY <code>sigma : Perm n</code> by the transposition of
 ANY two distinct positions <code>i &lt;&gt; j</code> flips <a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign"><code>perm_sign</code></a>,
 unconditionally — the general case, not just adjacent. Built from <a
-href="../coqdoc/Riktig.Impl.DetSignGeneral.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>
+href="../coqdoc/Riktig.Impl.DetSign.html#perm_postcompose_compose"><code>perm_postcompose_compose</code></a>
 (postcomposing twice equals postcomposing once by the composite — turned
 out to need LESS than <a
 href="../coqdoc/Riktig.Impl.DetSign.html"><code>Impl/DetSign.v</code></a>’s
 header worried: the relevant <a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
+href="../coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>
 call is provably never <code>None</code>, so no branch reconciliation
 was needed) plus the classical conjugation identity
 <code>swap(i,j) =     swap(i,k)·swap(k,j)·swap(i,k)</code>, bubbled by
@@ -552,7 +542,7 @@ href="../coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_lei
 to <strong><a
 href="../coqdoc/Riktig.Impl.DetSignGeneral.html#detM_swap_general"><code>detM_swap_general</code></a></strong>:
 swapping ANY two distinct rows of ANY square matrix, any <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>,
 negates <a
 href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> — full
 generality, the fact this whole thread has been reaching for since <a
@@ -575,14 +565,14 @@ href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>
 unchanged). The usual shortcut — swapping equal rows negates det, so
 <code>2·det == 0</code>, so <code>det == 0</code> — is NOT available
 here: this codebase’s <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 carries no characteristic assumption, so <code>2·det == 0</code> doesn’t
 force <code>det == 0</code>. The fix needs a further, genuinely new
 argument: pair up <code>Perm n</code> by a fixed transposition
 <code>(i j)</code> and cancel the <a
 href="../coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
 termwise via <a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
+href="../coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
 inverses — conceptually similar to <a
 href="../coqdoc/Riktig.Impl.DetSign.html#psum_reindex"><code>psum_reindex</code></a>’s
 relabeling but a pairing/involution argument instead, not yet attempted.
@@ -603,14 +593,14 @@ href="../coqdoc/Riktig.Impl.DetAlternating.html"><code>Impl/DetAlternating.v</co
 attempt #6.) <a
 href="../coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_alternating</code></a>:
 equal rows force <code>detM == 0</code>, for ANY square matrix, ANY <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 — no characteristic assumption, unconditionally. Not via the
 “pairing/involution” route sketched in the previous item — simpler once
 attempted: works directly off <a
 href="../coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>‘s own
 cofactor recursion instead of the Leibniz sum. The adjacent-pair case
 isolates exactly the two cofactor terms at the equal rows (a new <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_extract2"><code>bigopF_extract2</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_extract2"><code>bigopF_extract2</code></a>
 helper) and shows they’re <code>x*P</code> and <code>-x*P</code> for the
 SAME <code>x, P</code> — deleting either of two adjacent equal rows
 leaves an IDENTICAL minor — cancelling via <code>grp_invr</code> alone,
@@ -653,17 +643,17 @@ first try; the next one should target the elimination-decomposition
 argument itself.</label></li>
 <li><label><input type="checkbox" checked="" /><strong><a
 href="../coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
-— closed, under <code>DecEq F</code>.</strong> (<a
+— closed, under <code>EquDec F</code>.</strong> (<a
 href="../coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a>,
 attempt #7.)
-<strong><code>detM_mul_dec : DecEq F -&gt; forall n A B,     detM (mat_mul A B) == detM A * detM B</code></strong>
+<strong><code>detM_mul_dec : EquDec F -&gt; forall n A B,     detM (mat_mul A B) == detM A * detM B</code></strong>
 over ANY <code>Field F</code> with decidable equality — no
 characteristic assumption anywhere. The scope decision, honest and
 explicit: Gaussian elimination must test pivots against zero, so
 decidability of <code>==</code> is a genuine hypothesis, taken as an
 explicit per-theorem argument (not a Context — everything in the file
 that doesn’t need it is stated without it). Discharged at Q via <a
-href="../coqdoc/Riktig.Impl.Qf.html#Q_DecEq"><code>Q_DecEq</code></a>:
+href="../coqdoc/Riktig.Impl.Qf.html#Q_EquDec"><code>Q_EquDec</code></a>:
 <strong><a
 href="../coqdoc/Riktig.Impl.DetMul.html#detM_mul_Q"><code>detM_mul_Q</code></a></strong>
 is unconditional, and <a
@@ -725,11 +715,11 @@ href="../coqdoc/Riktig.Impl.DetMul.html#clear_col_spec"><code>clear_col_spec</co
 href="../coqdoc/Riktig.Impl.DetMul.html#clear_row_spec"><code>clear_row_spec</code></a>),
 by list induction over a duplicate-free enumeration of
 <code>Fin.t p</code> (<a
-href="../coqdoc/Riktig.Theory.Fin.html#fin_all"><code>fin_all</code></a>,
+href="../coqdoc/Riktig.Impl.Fin.html#fin_all"><code>fin_all</code></a>,
 with completeness + NoDup); (v) <strong><a
 href="../coqdoc/Riktig.Impl.DetMul.html#gauss_reduce"><code>gauss_reduce</code></a></strong>
 (the certificate, under <a
-href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>):
+href="../coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>):
 every square matrix is taken by a finite list of elementary operations
 either to <a
 href="../coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>
@@ -761,14 +751,14 @@ href="../coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz"><code>detM_leibniz</co
 expansion plus a transposed-Leibniz reconciliation), not attempted. For
 every concrete field in this tree (Q today; any future decidable
 carrier) the <a
-href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>
 form suffices. <a
 href="../coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
 itself is untouched: its Context hypothesis stays as the honest
 interface, now dischargeable.</label></li>
 <li><label><input type="checkbox" />Verified Gaussian elimination over
-<code>Field + DecEq</code>: one core gives solve / invert / det / rank /
-LU; correctness = elementary operations are isos, composed. (<a
+<code>Field + EquDec</code>: one core gives solve / invert / det / rank
+/ LU; correctness = elementary operations are isos, composed. (<a
 href="../coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a>’s
 <a
 href="../coqdoc/Riktig.Impl.DetMul.html#gauss_reduce"><code>gauss_reduce</code></a>/<a
@@ -814,7 +804,7 @@ href="../coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
 just for it); Field_* names kept exact so no downstream file needed more
 than an import-line switch.</label></li>
 <li><label><input type="checkbox" />Uniform slot convention in <a
-href="../coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>:
+href="../coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>:
 frozen slot first in
 <code>bm_add_l</code>/<code>bm_scale_l</code>/<code>bm_scale_r</code>,
 so <a
@@ -824,11 +814,11 @@ are plain partial applications (touches <a
 href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>).</label></li>
 <li><label><input type="checkbox" checked="" />One pointwise setoid on
 <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="../coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.LinearMap.html#linear_map_equ"><code>linear_map_equ</code></a>
+href="../coqdoc/Riktig.Structure.LinearMap.html#linear_map_equ"><code>linear_map_equ</code></a>
 in <a
-href="../coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>);
+href="../coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>);
 <a
 href="../coqdoc/Riktig.Impl.VectCat.html"><code>Impl/VectCat.v</code></a>’s
 <a
@@ -842,22 +832,16 @@ both reuse it.</label></li>
 href="../coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>’s
 bare global <code>e</code> (standard basis) to something prefixed, or
 wrap in a module.</label></li>
-<li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.FormallyReal"><code>FormallyReal</code></a>
+<li><label><input type="checkbox" checked="" /><code>FormallyReal</code>
 class + its two theory lemmas out of <a
 href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>
 (class next to Order in <a
-href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>,
+href="../coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>,
 lemmas to Theory/). <strong>done 2026-07-26</strong>: the class lives in
-its own <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>
-(not in <a
-href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
-— it needs no order machinery), and <a
-href="../coqdoc/Riktig.Theory.Field.html#fr_sum_of_squares_r"><code>fr_sum_of_squares_r</code></a>
-/ <a
-href="../coqdoc/Riktig.Theory.Field.html#fr_nonzero"><code>fr_nonzero</code></a>
-in <a
+its own <code>Structure/FormallyReal.v</code> (not in <a
+href="../coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>
+— it needs no order machinery), and <code>fr_sum_of_squares_r</code> /
+<code>fr_nonzero</code> in <a
 href="../coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>’s
 <code>FormallyRealTheory</code> section; <a
 href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>
@@ -883,16 +867,16 @@ id="loose-ends-from-the-2026-07-08-deferred-work-audit-all-severity">Loose
 ends (from the 2026-07-08 deferred-work audit; all severity</h2>
 <p>“nice to have”, none blocking — recorded so they aren’t forgotten) -
 [ ] Infinite bases (finitely supported coordinate functions) — <a
-href="../coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>’s
+href="../coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>’s
 header promises these “deferred to the analysis track”, but no
 analysis-roadmap line actually claims them; <a
 href="../coqdoc/Riktig.Impl.ListVS.html"><code>Impl/ListVS.v</code></a>
 is the finitely-supported building block, unlinked. - [x] Upgrade <a
 href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>’s
 curry/uncurry pair to a real <a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 (needs <code>BilinearMap F U V W</code> to be a <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+href="../coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
 first, i.e. a <a
 href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>-style
 construction on bilinear maps — a small L2-style instance nobody has
@@ -951,7 +935,7 @@ href="../coqdoc/Riktig.Theory.Exterior.html#ga_symmetric_part"><code>ga_symmetri
 shows u<em>v + v</em>u == 2<em>⟨u,v⟩</em>:1 — the geometric product’s
 split into symmetric (inner product) and antisymmetric (wedge) parts,
 cashing <a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>‘s
+href="../coqdoc/Riktig.Structure.GeometricAlgebra.html"><code>Structure/GeometricAlgebra.v</code></a>‘s
 own <a
 href="../coqdoc/Riktig.Theory.GeometricAlgebra.html#polarization"><code>polarization</code></a>
 lemma. Two concrete instances (<a
@@ -962,17 +946,15 @@ href="../coqdoc/Riktig.Impl.CliffordFin.html#GA_trivial"><code>GA_trivial</code>
 href="../coqdoc/Riktig.Impl.CliffordFin.html#GA_Cliff1"><code>GA_Cliff1</code></a>
 (genuine Cl(0,1) via <a
 href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>,
-needing no <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.FormallyReal"><code>FormallyReal</code></a>
-at all — stronger than expected). Full Cl(n) via
-tensor-algebra-mod-ideal, grade decomposition, and the
+needing no <code>FormallyReal</code> at all — stronger than expected).
+Full Cl(n) via tensor-algebra-mod-ideal, grade decomposition, and the
 det-as-top-grade-component connection are deferred, documented precisely
 in both files’ headers; <a
 href="../coqdoc/Riktig.Theory.Exterior.html#wedge"><code>wedge</code></a>
 can’t literally be an <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
 <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>
 since that record is F-valued only and <a
 href="../coqdoc/Riktig.Theory.Exterior.html#wedge"><code>wedge</code></a>
 lands in the algebra A.</li>
@@ -993,7 +975,7 @@ L7 — decompositions (abstract first, matrices only as computation)</h2>
 <p>Principle for this wave specifically: a matrix is a basis-specific
 representation of a linear map (post #10), so factorization theorems
 belong on <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>/<a
+href="../coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>/<a
 href="../coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a> first
 — a fact true regardless of basis — with a <a
 href="../coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>
@@ -1005,8 +987,8 @@ import.</strong> - [~] Rank–nullity:
 href="../coqdoc/Riktig.Theory.Subspace.html"><code>Theory/Subspace.v</code></a>
 builds the general reusable piece (a predicate <code>P</code> closed
 under +/scale/0 makes <code>{v : V | P v}</code> a VectorSpace, full <a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>-&gt;<a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>-&gt;<a
+href="../coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
 chain, <a
 href="../coqdoc/Riktig.Theory.Pointwise.html"><code>Theory/Pointwise.v</code></a>-style),
 and <a
@@ -1025,7 +1007,7 @@ href="../coqdoc/Riktig.Theory.KerIm.html"><code>Theory/KerIm.v</code></a>.
 - [ ] First isomorphism theorem: <code>V / ker f ≅ im f</code>. Needs
 quotient vector spaces, a construction not yet built (though
 <code>Sub</code>/ <a
-href="../coqdoc/Riktig.Interface.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>
+href="../coqdoc/Riktig.Structure.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>
 from <a
 href="../coqdoc/Riktig.Theory.Subspace.html"><code>Theory/Subspace.v</code></a>
 may make the quotient construction — V modulo a subspace — a nearby,
@@ -1078,7 +1060,7 @@ since <code>A</code>’s column already equals
 <code>gram_schmidt_fin v j</code> plus a combination of strictly earlier
 columns) both proved. Smoke test is abstract-<code>F</code> (no concrete
 <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
+href="../coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>
 instance exists yet in the tree to instantiate at). Normalizing
 <code>Q</code> to orthonormal still waits on sqrt (interval track),
 matching <a
@@ -1111,7 +1093,7 @@ inverses are carried in the certificate already — <a
 href="../coqdoc/Riktig.Impl.DetMul.html#elem_op_cofactor"><code>elem_op_cofactor</code></a>).
 - [ ] Cholesky: LU specialized to symmetric positive-definite matrices
 (via <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>)
+href="../coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>)
 — relevant later for the Lagrangian’s kinetic-energy quadratic forms
 (analysis roadmap stage 8). - [ ] Schur (<code>A = Q U Q*</code>,
 <code>U</code> upper-triangular): exists for <em>every</em> square

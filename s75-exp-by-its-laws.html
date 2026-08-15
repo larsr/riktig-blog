@@ -30,7 +30,7 @@ obey and derive everything else from those. This post does exactly
 that.</p>
 <h2 id="the-four-laws">The four laws</h2>
 <p>Here is the specification, verbatim from <a
-href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>.
+href="coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>.
 It takes an ordered field <code>F</code> and asks for a function
 <code>exp_fn</code> on it, together with four laws (and the fact that
 <code>exp_fn</code> respects the equality <code>==</code>):</p>
@@ -52,9 +52,9 @@ Export Exp.
 Notation exp_fn := Exp.fn.</code></pre>
 <p>The class lives inside a <code>Module Exp</code>, so the fields are
 written with the module as their prefix — <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>,
+href="coqdoc/Riktig.Structure.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>.
+href="coqdoc/Riktig.Structure.Exp.html#Exp.positive"><code>Exp.positive</code></a>.
 The <code>Export</code> on the second-to-last line lifts the class name
 itself out of the module, so the class can still be written
 <code>Exp F</code>; the final <code>Notation</code> gives the function
@@ -63,17 +63,17 @@ everywhere below.</p>
 <p>Two fields are written with <code>::</code> rather than
 <code>:</code>, which declares them as typeclass instances rather than
 plain projections. <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.fn_proper"><code>fn_proper</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.fn_proper"><code>fn_proper</code></a>
 — a <code>Proper (equ ==&gt; equ) fn</code>, <a
 href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> being the name of
 the relation written <code>==</code> — thereby lands in the database
 Coq’s <code>rewrite</code> consults, so equals can be rewritten under
 <code>exp_fn</code> with nothing further to declare.</p>
 <p><a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>add_to_mul</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>add_to_mul</code></a>
 is the more interesting one. It is not spelled out as an equation but
 named: <code>Additive F F add mult fn</code> is the reusable statement
-“<a href="coqdoc/Riktig.Interface.Exp.html#Exp.fn"><code>fn</code></a>
+“<a href="coqdoc/Riktig.Structure.Exp.html#Exp.fn"><code>fn</code></a>
 carries the first operation to the second”,</p>
 <pre class="coq"><code>    Class Additive := additive : forall x y : A, f (x ⋆ y) == f x · f y.</code></pre>
 <p>so <code>Additive F F add mult fn</code> unfolds to
@@ -82,27 +82,27 @@ with <code>::</code> puts that instance in scope, so a proof can reach
 the law by writing <a
 href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a> and
 letting search find which homomorphism is meant, rather than naming <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
 explicitly. The same class states what it means for a linear map to
 respect addition, or for the absolute value to respect multiplication;
 <code>exp</code> is the case where the two operations differ.</p>
 <p>The four laws read as plain statements about the function:</p>
 <ul>
 <li><a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>:
+href="coqdoc/Riktig.Structure.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>:
 <code>exp_fn 0 == 1</code> — the exponential of zero is one.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>:
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>:
 <code>exp_fn (a + b) == exp_fn a * exp_fn b</code> — it turns sums into
 products. Together with <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>
 this is exactly what it means for <code>exp_fn</code> to be a
 homomorphism from <code>(F, +, 0)</code> to <code>(F, *, 1)</code>.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>:
+href="coqdoc/Riktig.Structure.Exp.html#Exp.positive"><code>Exp.positive</code></a>:
 <code>0 &lt;= exp_fn a</code> — its values are never negative.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>:
+href="coqdoc/Riktig.Structure.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>:
 <code>a &lt; b -&gt; exp_fn a &lt; exp_fn b</code> — it is strictly
 increasing.</li>
 </ul>
@@ -113,14 +113,14 @@ property a reader might expect to find in the list and does not. Strict
 positivity, <code>exp_fn a =/= 0</code> and hence
 <code>0 &lt; exp_fn a</code>, is deliberately not a fifth law, because
 it follows from <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>.
+href="coqdoc/Riktig.Structure.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>.
 The next section is that derivation.</p>
 <h2 id="from-nonnegative-to-strictly-positive">From nonnegative to
 strictly positive</h2>
 <p><a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.positive"><code>Exp.positive</code></a>
 says <code>exp_fn a</code> is never negative, but it leaves the door
 open to <code>exp_fn a == 0</code>. The laws already rule that out. The
 reason is one line of algebra: <code>exp_fn a</code> has a
@@ -140,7 +140,7 @@ href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>:</
 Proof.
   intros a.
   calc (exp_fn a * exp_fn (- a))
-    == (exp_fn (a + - a)) { (additive (opA := add) (opB := mult) (f := exp_fn) a (- a)) }
+    == (exp_fn (a + - a)) { additive[exp_fn] }
     == (exp_fn (0 : F))   { (right_inverse (op := add) a) }
     == (1 : F)            { (zero_to_one (F := F)) }.
 Qed.</code></pre>
@@ -148,18 +148,16 @@ Qed.</code></pre>
 product <code>exp_fn a * exp_fn (- a)</code> back into
 <code>exp_fn (a + - a)</code> — the sums-to-products law, matched here
 in its backward direction (<code>calc</code> tries both ways and takes
-whichever closes). It is invoked as <a
-href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a>, the
+whichever closes). It is invoked as <code>additive[exp_fn]</code>, the
 projection of the <a
-href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
-class, with the three implicit arguments supplied by name:
-<code>opA := add</code> and <code>opB := mult</code> say which pair of
-operations, and <code>f := exp_fn</code> which homomorphism.
-<code>right_inverse (op := add)</code> is the group law
+href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> class
+with the homomorphism pinned; naming <code>exp_fn</code> is enough,
+since the instance it selects already says which pair of operations the
+law relates. <code>right_inverse (op := add)</code> is the group law
 <code>a + - a == 0</code>, rewriting the argument to
 <code>exp_fn 0</code>; the annotation is needed because a field has a
 second inverse law, for multiplication. <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>
 turns that into <code>1</code>, closing the chain at the goal’s own
 right-hand side.</p>
 <p>Nonvanishing follows immediately: if <code>exp_fn a</code> were
@@ -181,14 +179,14 @@ Proof.
   intros a Heq.
   apply (nontrivial (F:=F)).
   calc (1 : F)
-    == (exp_fn a * exp_fn (- a)) { (exp_add_neg a) }
+    == (exp_fn a * exp_fn (- a)) { exp_add_neg }
     == (0 * exp_fn (- a))        { Heq }
     == (0 : F)                   { mul_0_l }.
 Qed.</code></pre>
 <p>Here <code>=/=</code> is “not equal”, so the goal unfolds to an
 assumption <code>Heq : exp_fn a == 0</code> leading to a contradiction.
 <a
-href="coqdoc/Riktig.Interface.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
+href="coqdoc/Riktig.Structure.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
 is the field’s law that <code>1 =/= 0</code>; to reach a contradiction
 it suffices to prove <code>1 == 0</code>. The chain gets there: <a
 href="coqdoc/Riktig.Theory.Exp.html#exp_add_neg"><code>exp_add_neg</code></a>
@@ -223,7 +221,7 @@ Qed.</code></pre>
 href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
 breaks <code>0 &lt; exp_fn a</code> into its two parts. The first,
 <code>0 &lt;= exp_fn a</code>, is <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.positive"><code>Exp.positive</code></a>
 verbatim. The second is the apartness <code>0 =/= exp_fn a</code>;
 assuming <code>Heq : 0 == exp_fn a</code>, we invoke
 <code>exp_nonzero a</code> (which wants <code>exp_fn a == 0</code>) and
@@ -264,7 +262,7 @@ the field’s law that a nonzero element times its inverse is
 <code>1</code>.</p>
 <h2 id="injective-from-monotone">Injective, from monotone</h2>
 <p>The one law not yet used is <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>,
+href="coqdoc/Riktig.Structure.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>,
 strict monotonicity, and it buys injectivity: if two inputs have the
 same exponential, they were the same input. The idea is that a strictly
 increasing function cannot send two different points to one value — if
@@ -297,7 +295,7 @@ Proof.
     exact Heq.
 Qed.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_antisymmetric"><code>OrderedField.le_antisymmetric</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_antisymmetric"><code>OrderedField.le_antisymmetric</code></a>
 is the order law <code>a &lt;= b -&gt; b &lt;= a -&gt; a == b</code>, so
 it splits <code>a == b</code> into the two inequalities
 <code>a &lt;= b</code> and <code>b &lt;= a</code>. Each is an instance
@@ -306,7 +304,7 @@ of the helper
 first direction feeds it <code>Heq</code> directly, the second feeds it
 <code>Heq</code> turned around by <code>symmetry</code> to get
 <code>b &lt;= a</code>. The helper itself is where <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
 does its work — assuming <code>a</code> and <code>b</code> were ordered
 the wrong way would make their exponentials strictly ordered,
 contradicting <code>exp_fn a == exp_fn b</code>.</p>
@@ -324,16 +322,16 @@ href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a
 — was proved with a <code>Context {F : Type} `{Exp F}</code> at the top
 of the section and nothing else. Not one of them looked at a formula for
 <code>exp</code>, because there is no formula to look at: <a
-href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+href="coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>
 supplies only the four laws. So each of these facts holds for
 <em>any</em> function on <em>any</em> ordered field that satisfies <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>,
+href="coqdoc/Riktig.Structure.Exp.html#Exp.zero_to_one"><code>Exp.zero_to_one</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>,
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.positive"><code>Exp.positive</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.positive"><code>Exp.positive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
 — the power series over the reals, the limit of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>x</mi><mi>/</mi><mi>n</mi><msup><mo stretchy="false" form="postfix">)</mo><mi>n</mi></msup></mrow><annotation encoding="application/x-tex">(1 + x/n)^n</annotation></semantics></math>,
 or any other construction someone eventually writes down and proves
@@ -343,7 +341,7 @@ makes all of its theory independent of which construction you pick.</p>
 integration.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+href="coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>
 (the four laws) · <a
 href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a> (<a
 href="coqdoc/Riktig.Theory.Exp.html#exp_nonzero"><code>exp_nonzero</code></a>,

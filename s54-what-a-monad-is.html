@@ -33,17 +33,17 @@ computation and passes its result — if there is one — into a function
 that produces the next computation. The second, <em>return</em>, takes a
 plain value and makes the trivial computation that just yields it. The
 vocabulary is one tiny class per operation, from <a
-href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>:</p>
 <pre class="coq"><code>Class HasBind (M : Type -&gt; Type) := bind : forall {A B}, M A -&gt; (A -&gt; M B) -&gt; M B.
 Class HasReturn (M : Type -&gt; Type) := ret : forall {A}, A -&gt; M A.</code></pre>
 <p>The carrier is not a single type but a type <em>constructor</em>
 <code>M : Type -&gt; Type</code> — <code>option</code>, or later a
 parser — because a computation of an <code>A</code> is a value of some
 wrapper type <code>M A</code>. <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>
 takes an <code>M A</code> and a continuation <code>A -&gt; M B</code>
 and delivers an <code>M B</code>; <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>
 injects an <code>A</code> into <code>M A</code>. The infix notation
 <code>&gt;&gt;=</code> is attached to bind, so
 <code>p &gt;&gt;= f</code> reads “run <code>p</code>, then feed its
@@ -66,12 +66,12 @@ again.</p>
 a monad</h2>
 <p>Operations with the right types are not enough — a sort function of
 type <code>list -&gt; list</code> need not sort. <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> and
-<a href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a> and
+<a href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>
 have to <em>behave</em>, and the behaviour is three equations. The <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a>
 class bundles the vocabulary with those laws, verbatim from <a
-href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>:</p>
 <pre class="coq"><code>Module Monad.
   Class Monad (M : Type -&gt; Type) {Me : forall A, EqRel (M A)}
               {Mb : HasBind M} {Mr : HasReturn M} := {
@@ -94,10 +94,10 @@ that declares the field as a typeclass instance, so once a
 <code>Monad M</code> is in scope Coq’s instance search finds these two
 facts on its own and <code>rewrite</code> may replace one side of a
 <code>==</code> by the other underneath a <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>,
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>,
 with neither law named at the call site.</p>
 <p>Notice how <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>
 compares the two continuations: not by some equality on the function
 type <code>A -&gt; M B</code>, but pointwise,
 <code>fun f g =&gt; forall x, f x == g x</code>. The domain
@@ -115,12 +115,12 @@ m \mathbin{&gt;\!\!&gt;\!\!=} \eta \;=\; m, \qquad
 <ul>
 <li><code>Monad.left_identity</code>: injecting <code>x</code> and then
 binding into <code>f</code> is just <code>f x</code> — <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a> on
 the left of a bind does nothing.</li>
 <li><code>Monad.right_identity</code>: binding a computation into <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> gives
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a> gives
 the computation back — <a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> on
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a> on
 the right does nothing either.</li>
 <li><code>Monad.associative</code>: two binds in a row can be regrouped,
 exactly like the associativity of a monoid, but for sequencing.</li>
@@ -154,11 +154,11 @@ needed:</p>
   bind (ret x) f == f x.
 Proof. intros A B x f. reflexivity. Qed.</code></pre>
 <p>With the three laws and the fact that <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>
 respects equality (<a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>),
+href="coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>Monad.bind_proper</code></a>),
 <code>option</code> is registered as a <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>,
+href="coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a>,
 and the generic theory — for instance the derived <a
 href="coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a> and its
 functor laws in <a
@@ -169,14 +169,14 @@ first fails</h2>
 <p>Sequencing is only half of what a parser wants. The other half is
 <em>choice</em>: try one parser, and if it fails, try another. That is a
 separate structure, <a
-href="coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>,
+href="coqdoc/Riktig.Structure.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>,
 with its own two operations — <a
-href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>,
+href="coqdoc/Riktig.Structure.Alternative.html#fail"><code>fail</code></a>,
 the computation that always fails, and <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>
 (written <code>&lt;|&gt;</code>), which runs its left argument and falls
 back to the right only if the left fails. From <a
-href="coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Alternative.html"><code>Structure/Alternative.v</code></a>:</p>
 <pre class="coq"><code>Class HasFail (M : Type -&gt; Type) := fail : forall {A}, M A.
 Class HasAlt (M : Type -&gt; Type) := alt : forall {A}, M A -&gt; M A -&gt; M A.</code></pre>
 <pre class="coq"><code>Module Alternative.
@@ -195,7 +195,7 @@ Export Alternative.</code></pre>
 let <code>==</code> be rewritten under <code>&lt;|&gt;</code> — say
 <code>(M A, &lt;|&gt;, fail)</code> is a monoid: <code>&lt;|&gt;</code>
 is associative and <a
-href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#fail"><code>fail</code></a>
 is a two-sided identity —</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>r</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>q</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&lt;|&gt;} r \;=\; p \mathbin{&lt;|&gt;} (q \mathbin{&lt;|&gt;} r), \qquad
 \mathsf{fail} \mathbin{&lt;|&gt;} q \;=\; q, \qquad
@@ -219,13 +219,13 @@ by reusing the monoid laws rather than by restating them. Writing them
 with <code>::</code> also means instance search can find, say,
 associativity of <code>&lt;|&gt;</code> without the proof having to name
 the <a
-href="coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
 field it came from.</p>
 <p>Note what is <em>not</em> in the list: commutativity.
 <code>p &lt;|&gt; q</code> is not <code>q &lt;|&gt; p</code> in general,
 because the choice is <em>ordered</em> — it commits to the left as soon
 as the left succeeds. For a parser, that is the definition of <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>,
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>,
 from <a
 href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>,
 where <code>Parser S T := S -&gt; option (T * S)</code>:</p>
@@ -241,16 +241,16 @@ wins.</p>
 <h2 id="a-plausible-law-that-is-false">A plausible law that is
 false</h2>
 <p>Now the interesting part. <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>
 distributes over <code>+</code> and <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>
 looks like an addition, so it is tempting to expect a distributivity law
 connecting them: binding a choice into <code>f</code> ought to equal
 choosing between the two binds. In symbols,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mover><mo>=</mo><mo accent="false">?</mo></mover><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;\stackrel{?}{=}\; (p \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&lt;|&gt;} (q \mathbin{&gt;\!\!&gt;\!\!=} f).</annotation></semantics></math></p>
 <p>This is false, and the reason is exactly the ordered, committed
 nature of <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>.
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>.
 On the left, <code>p &lt;|&gt; q</code> decides <em>first</em>, before
 <code>f</code> is ever consulted. If <code>p</code> succeeds, the choice
 commits to <code>p</code>’s branch — and if <code>f</code> then fails on
@@ -276,13 +276,13 @@ Definition counter_f (n : nat) : Parser nat nat :=
 <p>Trace both sides on any input. The left side commits to
 <code>p</code>, whose result <code>O</code> sends <code>f</code>
 straight to <a
-href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>:</p>
+href="coqdoc/Riktig.Structure.Alternative.html#fail"><code>fail</code></a>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>q</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>O</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&lt;|&gt;} q) \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; p \mathbin{&gt;\!\!&gt;\!\!=} f \;=\; f\,O \;=\; \mathsf{fail}.</annotation></semantics></math></p>
 <p>The right side lets <code>p &gt;&gt;= f</code> fail and falls back to
 <code>q &gt;&gt;= f</code>, which succeeds with <code>S O</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>p</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>q</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>&gt;</mo><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>=</mo></mrow><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗂</mi><mi>𝗅</mi></mrow><mrow><mo>&lt;</mo><mo stretchy="false" form="prefix">|</mo><mo>&gt;</mo></mrow><mi>f</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>S</mi><mspace width="0.167em"></mspace><mi>O</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>S</mi><mspace width="0.167em"></mspace><mi>O</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">(p \mathbin{&gt;\!\!&gt;\!\!=} f) \mathbin{&lt;|&gt;} (q \mathbin{&gt;\!\!&gt;\!\!=} f) \;=\; \mathsf{fail} \mathbin{&lt;|&gt;} f\,(S\,O) \;=\; S\,O.</annotation></semantics></math></p>
 <p><a
-href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#fail"><code>fail</code></a>
 on the left, a success on the right: the two are not equal. Here is the
 refutation in full:</p>
 <pre class="coq"><code>Lemma bind_alt_not_distributive :
@@ -316,7 +316,7 @@ constructors — and closes the goal.</li>
 lesson is that an equation that “looks like distributivity” is not true
 by resemblance; it has to be checked against what the operations
 actually do, and here the committed choice of <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>
 is exactly what breaks it.</p>
 <p>There <em>is</em> a restricted form that holds — the two sides agree
 whenever <code>f</code> cannot turn a success of <code>p</code> into a
@@ -353,17 +353,17 @@ and proving each iteration terminates by a shrinking measure on the
 input.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
+href="coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Monad.html#HasBind"><code>HasBind</code></a>,
+href="coqdoc/Riktig.Structure.Monad.html#HasBind"><code>HasBind</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Monad.html#HasReturn"><code>HasReturn</code></a>,
+href="coqdoc/Riktig.Structure.Monad.html#HasReturn"><code>HasReturn</code></a>,
 the laws) · <a
-href="coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html"><code>Structure/Alternative.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>,
+href="coqdoc/Riktig.Structure.Alternative.html#fail"><code>fail</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>)
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
 (<code>option</code> as a monad) · <a

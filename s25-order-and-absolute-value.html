@@ -17,7 +17,7 @@ obeying the familiar commutative and distributive laws. The rational
 numbers are the first example. But a field says nothing about whether
 one element sits below another, and nothing about how far an element is
 from zero: <code>&lt;=</code> and <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> are
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> are
 simply not part of its vocabulary. This post adds them, as two
 operations governed by laws rather than by any construction, and then
 derives from those laws a fact that looks too plain to need a proof at
@@ -29,17 +29,17 @@ exist</em> apart from <em>how they behave</em>. Order is opt-in
 vocabulary — most structures never mention it — so its two symbols live
 in their own file rather than in the shared symbol table. Here they are,
 from <a
-href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>:</p>
 <pre class="coq"><code>Class HasLe T := le : Rel T.
 Infix &quot;&lt;=&quot; := le (at level 70, no associativity).
 
 Class HasAbs T := abs : T -&gt; T.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>
+href="coqdoc/Riktig.Structure.Order.html#HasLe"><code>HasLe</code></a>
 says there is a binary relation written <code>&lt;=</code>; <a
-href="coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>
+href="coqdoc/Riktig.Structure.Order.html#HasAbs"><code>HasAbs</code></a>
 says there is a unary operation <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>.
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>.
 Neither says anything yet about how they behave. A <em>strict</em> order
 is not a third operation — it is a definition that unfolds to a
 conjunction the order laws already speak about:</p>
@@ -51,9 +51,9 @@ Infix &quot;&lt;&quot; := lt (at level 70, no associativity).</code></pre>
 <h2 id="the-ordered-field-the-laws">The ordered field: the laws</h2>
 <p>The structure bundles the vocabulary with its laws. Here is the whole
 <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 class, from <a
-href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>:</p>
 <pre class="coq"><code>Module OrderedField.
   Class OrderedField (F : Type) `{Field F}
                      {le : HasLe F} {abs : HasAbs F} := {
@@ -77,7 +77,7 @@ href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>:</p
 End OrderedField.
 Export OrderedField.</code></pre>
 <p>The <code>&lt;=</code> and <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>
 operations are not fields of the class; they arrive as the implicit
 class parameters <code>HasLe F</code> and <code>HasAbs F</code>,
 alongside the field operations that <code>`{Field F}</code> brings in. A
@@ -86,7 +86,7 @@ declares its order and its absolute value as ordinary instances and the
 class then says how they behave. Wrapping the class in
 <code>Module OrderedField</code> is what lets the laws keep short
 English names — the structure’s name arrives by qualification, <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>,
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>,
 and the <code>Export</code> on the last line keeps
 <code>OrderedField F</code> writable unqualified.</p>
 <p>The class opens with its two respect laws: equal arguments compare
@@ -95,58 +95,58 @@ time. <code>Proper (equ ==&gt; equ ==&gt; iff) le</code> reads: replace
 either argument of <code>&lt;=</code> by something <code>==</code> to it
 and you get an equivalent proposition.
 <code>Proper (equ ==&gt; equ) abs</code> reads: replace <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>’s
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>’s
 argument by something <code>==</code> to it and the result is
 <code>==</code> to what it was. Both fields are declared with
 <code>::</code> rather than <code>:</code>, which makes the field itself
 a typeclass instance the moment an <code>OrderedField F</code> is in
 scope; that is what lets <code>rewrite</code> move <code>==</code> under
 <code>&lt;=</code> and under <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>
 without either law being named.</p>
 <p>The next block governs <code>&lt;=</code>: it is reflexive,
 transitive, antisymmetric — <code>a &lt;= b</code> and
 <code>b &lt;= a</code> force <code>a == b</code> — and <em>total</em>,
 meaning any two elements compare one way or the other. <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
 says <code>&lt;=</code> is not refuted by refuting its refutation; it
 stands in for decidability, which is deliberately not assumed. Every
 intended model pays nothing for it: a decidable order like ℚ satisfies
 it trivially, and constructive Cauchy reals <em>define</em>
 <code>a &lt;= b</code> as <code>~ (b &lt; a)</code>, so their
 <code>&lt;=</code> is stable by construction. <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.add_le_monotone_left"><code>add_le_monotone_left</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.add_le_monotone_left"><code>add_le_monotone_left</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.mul_nonneg_closed"><code>mul_nonneg_closed</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.mul_nonneg_closed"><code>mul_nonneg_closed</code></a>
 are the two ways order interacts with the arithmetic: adding the same
 thing to both sides preserves <code>&lt;=</code>, and a product of
 nonnegatives is nonnegative.</p>
 <p>The last block of the class is the point of the title. <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> is
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> is
 not defined as “<code>a</code> if <code>a</code> is nonnegative, else
 <code>-a</code>” — that would be a case split on the sign, and would
 need the order to be decidable. Instead <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> is an
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> is an
 operation pinned down entirely by five laws: it is nonnegative (<a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_nonneg"><code>abs_nonneg</code></a>),
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_nonneg"><code>abs_nonneg</code></a>),
 it is zero exactly when its argument is (<a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_zero_iff"><code>abs_zero_iff</code></a>),
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_zero_iff"><code>abs_zero_iff</code></a>),
 it is multiplicative (<a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_mul"><code>abs_mul</code></a>),
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_mul"><code>abs_mul</code></a>),
 it is unchanged by negation (<a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_neg"><code>abs_neg</code></a>),
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_neg"><code>abs_neg</code></a>),
 and it obeys the triangle inequality (<a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_triangle"><code>abs_triangle</code></a>).
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_triangle"><code>abs_triangle</code></a>).
 One extra law, <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_nonneg_identity"><code>abs_nonneg_identity</code></a>,
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_nonneg_identity"><code>abs_nonneg_identity</code></a>,
 says <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>
 leaves a nonnegative element alone. Everything else about absolute value
 is derived from these. <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_neg"><code>abs_neg</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_neg"><code>abs_neg</code></a>
 is not strictly independent — it follows from the rest by a case split
 on <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>le_total</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_total"><code>le_total</code></a>
 together with a uniqueness argument for nonnegative square roots — but
 it is asserted anyway, so that every later proof needing it is one
 rewrite instead of a detour.</p>
@@ -177,7 +177,7 @@ Proof.
   apply (mul_cancel_l (abs 1)).
   - intros Hz. exact (nontrivial (proj1 (abs_zero_iff 1) Hz)).
   - calc (abs (1 : F) * abs (1 : F))
-      == (abs ((1 : F) * 1))  { abs_mul }
+      == (abs ((1 : F) * 1))  { additive[abs] }
       == (abs (1 : F))        { right_identity }
       == (abs (1 : F) * 1)    { right_identity }.
 Qed.</code></pre>
@@ -192,7 +192,7 @@ nonzero, and that <code>abs 1 * abs 1 == abs 1 * 1</code>.</li>
 <code>abs 1 == 0</code> (<code>Hz</code>); then
 <code>proj1 (OrderedField.abs_zero_iff 1) Hz</code> gives
 <code>1 == 0</code>, and <a
-href="coqdoc/Riktig.Interface.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
+href="coqdoc/Riktig.Structure.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
 — the field law <code>1 =/= 0</code> — turns that into the contradiction
 the goal wants.</li>
 <li>The second bullet is the blackboard chain, machine-checked. The
@@ -200,7 +200,7 @@ the goal wants.</li>
 <code>abs 1 * abs 1 == abs (1 * 1) == abs 1 == abs 1 * 1</code>, and
 each <code>{ ... }</code> names the single law that justifies its step:
 <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_mul"><code>OrderedField.abs_mul</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_mul"><code>OrderedField.abs_mul</code></a>
 folds the two factors into one absolute value, then <a
 href="coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
 — the law class’s projection, here resolving to multiplication’s
@@ -219,7 +219,7 @@ one</h2>
 blackboard it is two short steps:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mspace width="0.278em"></mspace><mo>≤</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="postfix">|</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">absolute values are nonnegative</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mo stretchy="false" form="prefix">|</mo><mn>1</mn><mo stretchy="false" form="postfix">|</mo><mo>=</mo><mn>1</mn><mo>,</mo><mspace width="0.222em"></mspace><mtext mathvariant="normal">just proved</mtext><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">0 \;\le\; \lvert 1\rvert \quad\{\text{absolute values are nonnegative}\} \;=\; 1 \quad\{\lvert 1\rvert = 1,\ \text{just proved}\}.</annotation></semantics></math></p>
 <p>The first is a genuine inequality — <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.abs_nonneg"><code>OrderedField.abs_nonneg</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.abs_nonneg"><code>OrderedField.abs_nonneg</code></a>
 says the absolute value of anything is at least <code>0</code>, so in
 particular <code>0 &lt;= abs 1</code>. The second is the equation we
 just proved, <code>abs 1 == 1</code>. Chaining an inequality with an
@@ -228,7 +228,7 @@ href="coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>:</p>
 <pre class="coq"><code>Lemma zero_le_one : (0 : F) &lt;= 1.
 Proof.
   calc (0 : F)
-    == (abs (1 : F)) { (abs_nonneg (1 : F)) }
+    == (abs (1 : F)) { abs_nonneg }
     == (1 : F)       { abs_one }.
 Qed.</code></pre>
 <p>The one subtlety worth pausing on is that this <code>calc</code>
@@ -260,16 +260,16 @@ nothing.</p>
 all runs: the rationals</h2>
 <p>None of this is abstract for its own sake. The rational numbers are
 the first type shown to satisfy <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>,
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>,
 in <a href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>,
 with Coq’s standard <code>Qle</code> as the order and <code>Qabs</code>
 as the absolute value:</p>
 <pre class="coq"><code>Instance Q_Le  : HasLe Q := Qle.
 Instance Q_Abs : HasAbs Q := Qabs.</code></pre>
 <p>Those two instances <em>are</em> the <a
-href="coqdoc/Riktig.Interface.Order.html#HasLe"><code>HasLe</code></a>
+href="coqdoc/Riktig.Structure.Order.html#HasLe"><code>HasLe</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Order.html#HasAbs"><code>HasAbs</code></a>
+href="coqdoc/Riktig.Structure.Order.html#HasAbs"><code>HasAbs</code></a>
 parameters the class asks for. Each law is then discharged by the
 corresponding standard fact about <code>Q</code>, and the instance is
 assembled as one record of laws:</p>
@@ -291,7 +291,7 @@ assembled as one record of laws:</p>
   OrderedField.abs_nonneg_identity  := Qabs_pos
 |}.</code></pre>
 <p>Notice <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_stable"><code>OrderedField.le_stable</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_stable"><code>OrderedField.le_stable</code></a>
 is filled by <a
 href="coqdoc/Riktig.Impl.Qof.html#Qle_stable"><code>Qle_stable</code></a>:
 <code>Q</code>’s order <em>is</em> decidable (through
@@ -319,7 +319,7 @@ holds on the rationals as <a
 href="coqdoc/Riktig.Theory.Order.html#zero_le_one"><code>zero_le_one</code></a>
 instantiated at <code>Q</code>, no new proof written. Whatever
 <code>&lt;=</code> and <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> mean
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> mean
 on the rationals, they were forced to mean it by the laws — and
 <code>0 &lt;= 1</code> came out the far end.</p>
 <p><em>Next: putting a length on the vectors of a vector space, measured
@@ -327,9 +327,9 @@ in an ordered field, and using it to say what it means for a sequence to
 converge.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+href="coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 class) · <a
 href="coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
 (<a

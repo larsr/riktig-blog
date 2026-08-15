@@ -63,7 +63,7 @@ is <em>an adjoint of
 off the left slot and onto the right. The definition names exactly this
 relation:</p>
 <pre class="coq"><code>  Definition is_adjoint (f g : LinearMap F V V) : Prop :=
-    forall u w : V, ⟨ f u , w ⟩ == ⟨ u , g w ⟩.</code></pre>
+    forall u w : V, ⟪ f u , w ⟫ == ⟪ u , g w ⟫.</code></pre>
 <p>Nothing here says such a
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
 exists. Over an infinite-dimensional space it may not, and even in
@@ -124,28 +124,28 @@ Qed.</code></pre>
 href="coqdoc/Riktig.Theory.InnerGeometry.html#adjoint_unique"><code>adjoint_unique</code></a>,
 which carries the argument above verbatim:</p>
 <pre class="coq"><code>Theorem adjoint_unique : forall f g1 g2 : LinearMap F V V,
-  (forall u w : V, ⟨ lm_fun g1 u , w ⟩ == ⟨ u , lm_fun f w ⟩) -&gt;
-  (forall u w : V, ⟨ lm_fun g2 u , w ⟩ == ⟨ u , lm_fun f w ⟩) -&gt;
-  forall u : V, lm_fun g1 u == lm_fun g2 u.
+  (forall u w : V, ⟪ LinearMap.map g1 u , w ⟫ == ⟪ u , LinearMap.map f w ⟫) -&gt;
+  (forall u w : V, ⟪ LinearMap.map g2 u , w ⟫ == ⟪ u , LinearMap.map f w ⟫) -&gt;
+  forall u : V, LinearMap.map g1 u == LinearMap.map g2 u.
 Proof.
   intros f g1 g2 Hg1 Hg2 u.
-  apply (sub_eq_zero (lm_fun g1 u) (lm_fun g2 u)).
+  apply (sub_eq_zero (LinearMap.map g1 u) (LinearMap.map g2 u)).
   apply inner_nondegenerate.
   intros w.
-  transitivity (⟨ u , lm_fun f w ⟩ + - ⟨ u , lm_fun f w ⟩).
-  - calc (⟨ w , lm_fun g1 u + - lm_fun g2 u ⟩)
-      == (⟨ w , lm_fun g1 u ⟩ + ⟨ w , - lm_fun g2 u ⟩)
-        { (inner_right_additive w (lm_fun g1 u) (- lm_fun g2 u)) }
-      == (⟨ w , lm_fun g1 u ⟩ + - ⟨ w , lm_fun g2 u ⟩)
-        { (inner_right_neg w (lm_fun g2 u)) }
-      == (⟨ lm_fun g1 u , w ⟩ + - ⟨ w , lm_fun g2 u ⟩)
-        { (commutative w (lm_fun g1 u)) }
-      == (⟨ lm_fun g1 u , w ⟩ + - ⟨ lm_fun g2 u , w ⟩)
-        { (commutative w (lm_fun g2 u)) }
-      == (⟨ u , lm_fun f w ⟩ + - ⟨ lm_fun g2 u , w ⟩)
-        { (Hg1 u w) }
-      == (⟨ u , lm_fun f w ⟩ + - ⟨ u , lm_fun f w ⟩)
-        { (Hg2 u w) }.
+  transitivity (⟪ u , LinearMap.map f w ⟫ + - ⟪ u , LinearMap.map f w ⟫).
+  - calc (⟪ w , LinearMap.map g1 u + - LinearMap.map g2 u ⟫)
+      == (⟪ w , LinearMap.map g1 u ⟫ + ⟪ w , - LinearMap.map g2 u ⟫)
+        { inner_right_additive }
+      == (⟪ w , LinearMap.map g1 u ⟫ + - ⟪ w , LinearMap.map g2 u ⟫)
+        { inner_right_neg }
+      == (⟪ LinearMap.map g1 u , w ⟫ + - ⟪ w , LinearMap.map g2 u ⟫)
+        { (commutative w) }
+      == (⟪ LinearMap.map g1 u , w ⟫ + - ⟪ LinearMap.map g2 u , w ⟫)
+        { (commutative w) }
+      == (⟪ u , LinearMap.map f w ⟫ + - ⟪ LinearMap.map g2 u , w ⟫)
+        { Hg1 }
+      == (⟪ u , LinearMap.map f w ⟫ + - ⟪ u , LinearMap.map f w ⟫)
+        { Hg2 }.
   - apply right_inverse.
 Qed.</code></pre>
 <p>Reading the proof:</p>
@@ -244,9 +244,9 @@ which is the adjoint relation for the two composites. In Coq,
   is_adjoint (linear_map_comp f2 f1) (linear_map_comp g1 g2).
 Proof.
   intros f1 g1 f2 g2 Hfg1 Hfg2 u w.
-  calc (⟨ f2 (f1 u) , w ⟩)
-    == (⟨ f1 u , g2 w ⟩)      { (Hfg2 (f1 u) w) }
-    == (⟨ u , g1 (g2 w) ⟩)    { (Hfg1 u (g2 w)) }.
+  calc (⟪ f2 (f1 u) , w ⟫)
+    == (⟪ f1 u , g2 w ⟫)      { Hfg2 }
+    == (⟪ u , g1 (g2 w) ⟫)    { Hfg1 }.
 Qed.</code></pre>
 <p>Reading it: after <code>intros</code>, the goal is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><msub><mi>f</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>f</mi><mn>1</mn></msub><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>w</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><msub><mi>g</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>g</mi><mn>2</mn></msub><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\langle f_2(f_1 u) , w\rangle =
@@ -279,7 +279,7 @@ input left to right, and for each new vector subtracts off its
 part pointing in a genuinely new direction. The projection of a vector
 onto the axis through another one is</p>
 <pre class="coq"><code>Definition proj {F V : Type} `{InnerProductSpace F V} (v u : V) : V :=
-  (⟨ u , v ⟩ * inv (norm2 v)) *: v.</code></pre>
+  (⟪ u , v ⟫ * inv (norm2 v)) *: v.</code></pre>
 <p>— note the argument order: <code>proj v u</code> returns a multiple
 of its <em>first</em> argument, so it is the projection of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
@@ -450,15 +450,15 @@ Proof.
   intros a b Hab.
   apply (mul_cancel_l two a b two_neq_0).
   calc (two * a)
-    == (a * two)  { (mul_commutative two a) }
-    == (a + a)    { (mul_two a) }
+    == (a * two)  { mul_commutative }
+    == (a + a)    { mul_two }
     == (b + b)    { Hab }
-    == (b * two)  { (mul_two b) }
-    == (two * b)  { (mul_commutative two b) }.
+    == (b * two)  { mul_two }
+    == (two * b)  { mul_commutative }.
 Qed.</code></pre>
 <p>and the full theorem strings the two together:</p>
 <pre class="coq"><code>Theorem isometry_preserves_inner : forall f : LinearMap F V V,
-  is_isometry f -&gt; forall u v : V, ⟨ f u , f v ⟩ == ⟨ u , v ⟩.
+  is_isometry f -&gt; forall u v : V, ⟪ f u , f v ⟫ == ⟪ u , v ⟫.
 Proof.
   intros f Hiso u v.
   assert (Hfuv : norm2 (f u + f v) == norm2 (u + v)).
@@ -467,7 +467,7 @@ Proof.
     (Hiso u), (Hiso v) in Hfuv.
   apply (cancel_l (norm2 u + norm2 v)) in Hfuv.
   rewrite (commutative (f v) (f u)), (commutative v u) in Hfuv.
-  exact (double_inj (⟨ f u , f v ⟩) (⟨ u , v ⟩) Hfuv).
+  exact (double_inj (⟪ f u , f v ⟫) (⟪ u , v ⟫) Hfuv).
 Qed.</code></pre>
 <p>Reading it:</p>
 <ul>
@@ -522,7 +522,7 @@ the one place positivity is used) to strip the doubling and deliver the
 theorem exactly.</li>
 </ul>
 <p>No rotation or reflection is instantiated as a concrete <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 anywhere yet, so there is no ready-made <code>Example</code> to run this
 theorem on at a genuinely pair-scrambling candidate. The one witness on
 hand is the identity map: <code>linear_map_id u</code> unfolds to
@@ -566,9 +566,9 @@ href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</co
 <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_pairwise_orthogonal"><code>gram_schmidt_pairwise_orthogonal</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html"><code>Interface/InnerProductSpace.v</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html"><code>Structure/InnerProductSpace.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#InnerProductSpace.InnerProductSpace"><code>InnerProductSpace</code></a>
 class).</p>
 </main>
 </body>

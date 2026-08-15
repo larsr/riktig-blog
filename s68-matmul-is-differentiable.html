@@ -60,7 +60,7 @@ href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
         ‖ f (a + h) + - (f a + L h) ‖ &lt;= eps * ‖ h ‖.</code></pre>
 <p>Every symbol in that statement that measures size is
 <code>‖ ‖</code>, the norm of a <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>.
+href="coqdoc/Riktig.Structure.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>.
 So before matrix multiplication can be differentiated, matrices need a
 norm.</p>
 <h2 id="a-norm-on-matrices-without-a-square-root">A norm on matrices,
@@ -77,7 +77,7 @@ href="coqdoc/Riktig.Impl.MatrixNorm.html"><code>Impl/MatrixNorm.v</code></a>):</
 <pre class="coq"><code>Definition mat_norm (A : Matrix m n F) : F :=
   bigopF (fun i : Fin.t m =&gt; bigopF (fun j : Fin.t n =&gt; abs (A i j))).</code></pre>
 <p>The five <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
+href="coqdoc/Riktig.Structure.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
 laws — <a
 href="coqdoc/Riktig.Impl.MatrixNorm.html#mat_norm_proper"><code>mat_norm_proper</code></a>,
 <a
@@ -89,7 +89,7 @@ href="coqdoc/Riktig.Impl.MatrixNorm.html#mat_norm_scale"><code>mat_norm_scale</c
 and <a
 href="coqdoc/Riktig.Impl.MatrixNorm.html#mat_norm_triangle"><code>mat_norm_triangle</code></a>
 — are each the corresponding fact about <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>,
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>,
 applied under the two sums, and they assemble into <a
 href="coqdoc/Riktig.Impl.MatrixNorm.html#Matrix_NormedSpace"><code>Matrix_NormedSpace</code></a>.
 This is not merely the cheaper choice: under multiplication the
@@ -118,17 +118,17 @@ href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_scale_r"><code>mat_mul_scale_r</cod
 and <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_proper"><code>mat_mul_proper</code></a>
 into a <a
-href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 — supplying its projections <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_scale"><code>bilinear_left_scale</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_left_scale"><code>bilinear_left_scale</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_additive"><code>bilinear_right_additive</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_right_additive"><code>bilinear_right_additive</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_scale"><code>bilinear_right_scale</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_right_scale"><code>bilinear_right_scale</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_map_proper"><code>bilinear_map_proper</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_map_proper"><code>bilinear_map_proper</code></a>
 respectively. There is nothing to prove; it is packaging.</p>
 <p>What is <em>not</em> packaging is the estimate. A bilinear map is
 differentiable when it is bounded — when some constant
@@ -185,17 +185,17 @@ Proof.
   calc (‖ mat_mul A B ‖)
     == (bigopF (fun i =&gt; bigopF (fun k =&gt;
           bigopF (fun j =&gt; abs (A i j) * abs (B j k)))))
-       { (mat_mul_norm_bound_step1 A B) }
+       { mat_mul_norm_bound_step1 }
     == (bigopF (fun i =&gt; bigopF (fun j =&gt;
           bigopF (fun k =&gt; abs (A i j) * abs (B j k)))))
-       { (mat_mul_norm_bound_step2 A B) }
+       { mat_mul_norm_bound_step2 }
     == (bigopF (fun i =&gt; bigopF (fun j =&gt;
           abs (A i j) * bigopF (fun k =&gt; abs (B j k)))))
-       { (mat_mul_norm_bound_step3 A B) }
+       { mat_mul_norm_bound_step3 }
     == (bigopF (fun i =&gt; bigopF (fun j =&gt; abs (A i j) * ‖ B ‖)))
-       { (mat_mul_norm_bound_step5 A B) }
+       { mat_mul_norm_bound_step5 }
     == (‖ A ‖ * ‖ B ‖)
-       { (mat_mul_norm_bound_step6 A B) }.
+       { mat_mul_norm_bound_step6 }.
 Qed.</code></pre>
 <p><code>calc</code> writes a proof as the sequence of objects it passes
 through, with the law justifying each step in braces. The relation is
@@ -210,15 +210,15 @@ href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_norm_bound_step1"><code>m
 is the entrywise bound summed twice, <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_norm_bound_step2"><code>mat_mul_norm_bound_step2</code></a>
 is the interchange (one use of <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>),
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>),
 <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_norm_bound_step3"><code>mat_mul_norm_bound_step3</code></a>
 and <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_norm_bound_step6"><code>mat_mul_norm_bound_step6</code></a>
 are <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_mul_l"><code>bigopF_mul_l</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_mul_l"><code>bigopF_mul_l</code></a>
 and <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_mul_r"><code>bigopF_mul_r</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_mul_r"><code>bigopF_mul_r</code></a>
 pulling a constant factor through a sum, and <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html#mat_mul_norm_bound_step5"><code>mat_mul_norm_bound_step5</code></a>
 applies the one-row bound under both sums. That one-row bound, <a
@@ -277,7 +277,7 @@ doing the four-term cancellation and <a
 href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_bound"><code>bilinear_remainder_bound</code></a>
 doing the estimate. What matmul contributes is the two ingredients: the
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 witness and the boundedness proof. The derivative itself is named
 first,</p>
 <pre class="coq"><code>Definition mat_mul_deriv_lm (A0 : Matrix m n F) (B0 : Matrix n p F) :

@@ -99,7 +99,7 @@ line, because the work was already done in <code>V</code>.</p>
 <code>ScaleLaws F (X -&gt; V)</code> instance, and that instance plus
 the abelian-group one is already a whole vector space, because those two
 <em>are</em> the two fields of <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>:</p>
+href="coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>:</p>
 <pre class="coq"><code>#[export] Instance PW_VectorSpace : VectorSpace F (X -&gt; V) := {}.</code></pre>
 <p>Because the construction is itself generic, it <em>iterates</em>:
 functions into functions into <code>V</code> are a vector space too,
@@ -142,7 +142,7 @@ over verbatim.</p>
 
 Instance Field_ScaleLaws {F : Type} `{Field F} : ScaleLaws F F := {}.</code></pre>
 <p>The empty braces are the whole proof. Each field of <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
+href="coqdoc/Riktig.Structure.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>
 is filled by instance search at the ring’s own laws: distributivity of
 scaling over a vector sum <em>is</em> left-distributivity of
 <code>*</code>, scaling by
@@ -193,28 +193,31 @@ the functions:</p>
   }.
 End Inverse.</code></pre>
 <p>An isomorphism is then two linear maps carrying that property:</p>
-<pre class="coq"><code>Class VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
-    {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
-    {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
-  vsi_to : LinearMap F U V;
-  vsi_from : LinearMap F V U;
-  vsi_inverse :: Inverse vsi_to vsi_from;
-}.</code></pre>
+<pre class="coq"><code>Module VSIso.
+  Class VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
+      {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
+    to      : LinearMap F U V;
+    from    : LinearMap F V U;
+    inverse :: Inverse to from;
+  }.
+End VSIso.</code></pre>
 <p>The two <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 fields are the maps; the third carries the two round-trip laws —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">\mathrm{from}(\mathrm{to}(u)) = u</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">f</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">\mathrm{to}(\mathrm{from}(v)) = v</annotation></semantics></math>:
 go over and back and you are where you started, in either direction. The
 <code>::</code> marks that third field as an instance, so once you hold
-a <a href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+a <a
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 the round trips are found by instance search rather than named by hand;
 under the names <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_fromto"><code>vsi_fromto</code></a>
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_from_to"><code>vsiso_from_to</code></a>
 and <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_tofrom"><code>vsi_tofrom</code></a>
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_to_from"><code>vsiso_to_from</code></a>
 they are also available directly, and anything true of one carrier
 transports to the other by rewriting along them.</p>
 <p>The main isomorphism is the record/column one,</p>
@@ -266,7 +269,7 @@ href="coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>
 (products) · <a
 href="coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>
 (the one-point space) · <a
-href="coqdoc/Riktig.Interface.VectorSpace.html"><code>Interface/VectorSpace.v</code></a>
+href="coqdoc/Riktig.Structure.VectorSpace.html"><code>Structure/VectorSpace.v</code></a>
 (the class, and a field over itself) · <a
 href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
 (linear maps as a space) · <a

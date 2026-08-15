@@ -29,7 +29,7 @@ time without naming them: <code>List.map</code> is one, and it will be
 our worked example.</p>
 <h2 id="the-functor-class">The Functor class</h2>
 <p>From <a
-href="coqdoc/Riktig.Interface.Category.html"><code>theories/Interface/Category.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Category.html"><code>theories/Structure/Category.v</code></a>:</p>
 <pre class="coq"><code>Module Functor.
   Class Functor {C D : Type} (cC : Category C) (cD : Category D) := {
     fobj      : C -&gt; D;
@@ -47,37 +47,37 @@ Notation fmap    := Functor.fmap.</code></pre>
 has:</p>
 <ul>
 <li><a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fobj"><code>fobj</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#Functor.fobj"><code>fobj</code></a>,
 the action on objects: every object of <code>C</code> is sent to an
 object of <code>D</code>.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap"><code>fmap</code></a>,
 the action on arrows: an arrow <code>x ~&gt; y</code> in <code>C</code>
 is sent to an arrow <code>fobj x ~&gt; fobj y</code> in <code>D</code>.
 The functor moves the endpoints by <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fobj"><code>fobj</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fobj"><code>fobj</code></a>
 and the arrow between them by <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>.</li>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap"><code>fmap</code></a>.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_proper"><code>fmap_proper</code></a>:
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap_proper"><code>fmap_proper</code></a>:
 <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap"><code>fmap</code></a>
 respects the hom equality — equal arrows go to equal arrows.</li>
 <li>Two laws. <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_id"><code>Functor.fmap_id</code></a>:
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap_id"><code>Functor.fmap_id</code></a>:
 the identity arrow is sent to the identity arrow. <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_comp"><code>Functor.fmap_comp</code></a>:
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap_comp"><code>Functor.fmap_comp</code></a>:
 the image of a composite is the composite of the images,
 <code>fmap (f ∘ g) == fmap f ∘ fmap g</code>. Structure in, same
 structure out.</li>
 </ul>
 <p>As with <a
-href="coqdoc/Riktig.Interface.Category.html#Category.Category"><code>Category</code></a>,
+href="coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>,
 the class sits inside its own module so the law fields can be short, and
 the abbreviations underneath keep <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fobj"><code>fobj</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fobj"><code>fobj</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap"><code>fmap</code></a>
 spelled the way every proof writes them.</p>
 <h2 id="the-list-functor-map">The list functor: map</h2>
 <p>Take <code>C</code> and <code>D</code> both to be <a
@@ -116,7 +116,7 @@ Qed.</code></pre>
 <p><a
 href="coqdoc/Riktig.Impl.CatFunctors.html#list_fmap_id"><code>list_fmap_id</code></a>
 is <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_id"><code>Functor.fmap_id</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap_id"><code>Functor.fmap_id</code></a>
 for this functor: mapping the identity function over a list gives back
 the same list. Its proof is an induction on the list — empty list closes
 by <code>reflexivity</code>, and the cons case rewrites by the induction
@@ -124,14 +124,14 @@ hypothesis <code>IH</code>.</p>
 <p><a
 href="coqdoc/Riktig.Impl.CatFunctors.html#list_fmap_comp"><code>list_fmap_comp</code></a>
 is <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_comp"><code>Functor.fmap_comp</code></a>:
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap_comp"><code>Functor.fmap_comp</code></a>:
 mapping a composed function <code>fun x =&gt; f (g x)</code> is the same
 as mapping <code>g</code> and then mapping <code>f</code>. This is the
 standard-library fact <code>map_map</code>, and it is the law a compiler
 uses to fuse two passes over a list into one. A third small lemma, <a
 href="coqdoc/Riktig.Impl.CatFunctors.html#list_fmap_proper"><code>list_fmap_proper</code></a>,
 gives <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap_proper"><code>fmap_proper</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap_proper"><code>fmap_proper</code></a>
 from the standard <code>map_ext</code> (equal functions map to equal
 results). The instance collects the pieces:</p>
 <pre class="coq"><code>Instance ListFunctor : Functor CoqCat CoqCat :=
@@ -164,14 +164,14 @@ Notation NaturalTransformation := NaturalTransformation.NaturalTransformation.
 Notation eta                   := NaturalTransformation.eta.</code></pre>
 <ul>
 <li><a
-href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.eta"><code>eta</code></a>
+href="coqdoc/Riktig.Structure.Category.html#NaturalTransformation.eta"><code>eta</code></a>
 is the family: for each object <code>x</code>, one arrow from
 <code>F</code>’s version of <code>x</code> to <code>G</code>’s version,
 <code>fobj F x ~&gt; fobj G x</code>. (<a
-href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.eta"><code>eta</code></a>
+href="coqdoc/Riktig.Structure.Category.html#NaturalTransformation.eta"><code>eta</code></a>
 is the traditional name, the Greek letter η.)</li>
 <li><a
-href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>
+href="coqdoc/Riktig.Structure.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>
 is the single law that makes the family coherent. Take any arrow
 <code>f : x ~&gt; y</code> in <code>C</code>. There are two ways to get
 from <code>F</code>’s version of <code>x</code> to <code>G</code>’s
@@ -203,11 +203,11 @@ Instance RevNat :
 <p>Here both functors are <a
 href="coqdoc/Riktig.Impl.CatFunctors.html#ListFunctor"><code>ListFunctor</code></a>,
 so <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.fmap"><code>fmap</code></a>
 on each side is <a
 href="coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a>, and the
 family <a
-href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.eta"><code>eta</code></a>
+href="coqdoc/Riktig.Structure.Category.html#NaturalTransformation.eta"><code>eta</code></a>
 is <code>rev</code>. Writing the naturality square out with those
 substitutions, it says, for every <code>f</code>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">p</mi></mrow><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.278em"></mspace><mo>∘</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">v</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">v</mi></mrow><mspace width="0.278em"></mspace><mo>∘</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">p</mi></mrow><mspace width="0.167em"></mspace><mi>f</mi></mrow><annotation encoding="application/x-tex">\mathrm{map}\,f \;\circ\; \mathrm{rev} \;=\; \mathrm{rev} \;\circ\; \mathrm{map}\,f</annotation></semantics></math></p>
@@ -218,7 +218,7 @@ Spelled out on an element <code>l</code>, that is
 standard-library fact <code>map_rev</code>. So the entire proof is one
 step: <code>intros l; apply map_rev</code>. The content is not the proof
 effort — it is the recognition that <a
-href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>
+href="coqdoc/Riktig.Structure.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>
 of <code>rev</code> is exactly this familiar identity about reversing
 and mapping.</p>
 <p>It runs. Mapping the successor function <code>S</code> over the
@@ -241,11 +241,11 @@ terminal objects, and products — and the style of proof that comes with
 them.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Category.html#Functor.Functor"><code>Functor</code></a>
+href="coqdoc/Riktig.Structure.Category.html#Functor.Functor"><code>Functor</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Category.html#NaturalTransformation.NaturalTransformation"><code>NaturalTransformation</code></a>
+href="coqdoc/Riktig.Structure.Category.html#NaturalTransformation.NaturalTransformation"><code>NaturalTransformation</code></a>
 classes) · <a
 href="coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>
 (types and functions as a category) · <a

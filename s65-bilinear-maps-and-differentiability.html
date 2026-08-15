@@ -80,56 +80,59 @@ End Bilinear.</code></pre>
 <code>V</code>, <code>W</code> a vector space over it, before the laws
 can even be stated. The content is the last three lines, and it says
 literally what the English says. <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.linear_l"><code>linear_l</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#Bilinear.linear_l"><code>linear_l</code></a>
 fixes the second argument at an arbitrary <code>v</code> and demands
 that <code>fun u =&gt; b u v</code> be linear; <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.linear_r"><code>linear_r</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#Bilinear.linear_r"><code>linear_r</code></a>
 fixes the first at an arbitrary <code>u</code> and demands the same of
 <code>b u</code>. The <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.proper"><code>proper</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#Bilinear.proper"><code>proper</code></a>
 field says
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
 respects the setoid equality in both arguments.</p>
 <p>A <em>bilinear map</em> is then that property attached to a function,
 as a record:</p>
-<pre class="coq"><code>Class BilinearMap (F U V W : Type)
-    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
-    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
-    {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
-    {VU : VectorSpace F U}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V}
-    {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W}
-    {VW : VectorSpace F W} := {
-  bm_fun : U -&gt; V -&gt; W;
-  bm_bilinear :: Bilinear F U V W bm_fun;
-}.</code></pre>
+<pre class="coq"><code>Module BilinearMap.
+  Class BilinearMap (F U V W : Type)
+      {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+      {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U}
+      {VU : VectorSpace F U}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+      {VV : VectorSpace F V}
+      {eW : EqRel W} {zW : Zero W} {aW : HasAdd W} {nW : HasNeg W} {sW : HasScale F W}
+      {VW : VectorSpace F W} := {
+    map      : U -&gt; V -&gt; W;
+    bilinear :: Bilinear F U V W map;
+  }.
+End BilinearMap.</code></pre>
 <p>Two fields: the function, and one proof that the function is
 bilinear. A bilinear map is an <em>element</em> — of a vector space of
 its own, as it happens — so no <a
-href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 is ever registered as an instance for search to find; the laws
 themselves are the class above, and those search may look for freely. A
 <code>Coercion</code> declaration on <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bm_fun"><code>bm_fun</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.map"><code>BilinearMap.map</code></a>
 means a <a
-href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 named <code>b</code> can be applied directly, <code>b u v</code>.</p>
 <p>Working with nested classes at the point of use is awkward, so the
 file also unfolds the two <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 fields back into the four flat equations a caller actually rewrites
 with. Each is a one-liner reading a law off the appropriate slot:</p>
 <pre class="coq"><code>  Definition bilinear_left_additive (b : BilinearMap F U V W)
     : forall (u u&#39; : U) (v : V), b (u + u&#39;) v == b u v + b u&#39; v :=
-    fun u u&#39; v =&gt; additive (f := fun x =&gt; bm_fun b x v) u u&#39;.</code></pre>
+    fun u u&#39; v =&gt; additive (f := fun x =&gt; BilinearMap.map b x v) u u&#39;.</code></pre>
 <p>Here <a
 href="coqdoc/Riktig.Props.html#additive"><code>additive</code></a> is
 the projection of the <a
 href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> law,
-and the implicit argument <code>f := fun x =&gt; bm_fun b x v</code>
-tells Coq <em>which</em> function’s additivity is wanted — the left slot
-with <code>v</code> frozen. The same shape gives
+and the implicit argument
+<code>f := fun x =&gt; BilinearMap.map b x v</code> tells Coq
+<em>which</em> function’s additivity is wanted — the left slot with
+<code>v</code> frozen. The same shape gives
 <code>bilinear_left_scale b</code>,
 <code>bilinear_right_additive b</code>,
 <code>bilinear_right_scale b</code>, and
@@ -164,11 +167,11 @@ structure builds another: fixing a slot gives a linear map</h2>
 first argument of a bilinear map fixed at some
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>,
 what remains is a function of one vector — and it is a genuine <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>,
 because <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_additive"><code>bilinear_right_additive</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_right_additive"><code>bilinear_right_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_right_scale"><code>bilinear_right_scale</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_right_scale"><code>bilinear_right_scale</code></a>
 are precisely the two linear-map laws for that function. The file
 packages exactly this:</p>
 <pre class="coq"><code>  Definition bilinear_map_appl (u : U) : LinearMap F V W :=
@@ -178,7 +181,7 @@ packages exactly this:</p>
       (bilinear_right_additive b u)
       (fun (a : F) (v : V) =&gt; bilinear_right_scale b a u v).</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
 is the builder that takes a function and its three laws and returns the
 record. Read the three proof arguments: the additivity law of the new
 linear map is <code>bilinear_right_additive b u</code> — the right-slot
@@ -292,15 +295,15 @@ term the “scales twice” observation predicts:</p>
     calc (B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)))
       == ((B (u0 + du) v0 + B (u0 + du) dv)
             + - (B u0 v0 + (B du v0 + B u0 dv)))
-        { (bilinear_right_additive B (u0 + du) v0 dv) }
+        { bilinear_right_additive }
       == (((B u0 v0 + B du v0) + B (u0 + du) dv)
             + - (B u0 v0 + (B du v0 + B u0 dv)))
-        { (bilinear_left_additive B u0 du v0) }
+        { bilinear_left_additive }
       == (((B u0 v0 + B du v0) + (B u0 dv + B du dv))
             + - (B u0 v0 + (B du v0 + B u0 dv)))
-        { (bilinear_left_additive B u0 du dv) }
+        { bilinear_left_additive }
       == (B du dv)
-        { (four_term_cancel (B u0 v0) (B du v0) (B u0 dv) (B du dv)) }.
+        { four_term_cancel }.
   Qed.</code></pre>
 <p>Reading the chain:
 <code>bilinear_right_additive B (u0+du) v0 dv</code> splits the right
@@ -309,7 +312,7 @@ slot, turning
 into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mo>+</mo><mi>B</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>u</mi><mn>0</mn></msub><mo>+</mo><mi>d</mi><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B(u_0+du)\,v_0 + B(u_0+du)\,dv</annotation></semantics></math>.
 The two <a
-href="coqdoc/Riktig.Interface.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_left_additive"><code>bilinear_left_additive</code></a>
 steps then split the left slot of each piece, producing all four terms.
 <a
 href="coqdoc/Riktig.Theory.AbGroup.html#four_term_cancel"><code>four_term_cancel</code></a>
@@ -406,7 +409,7 @@ and the other from the two lemmas above:</p>
         * apply pos_inv. apply one_plus_nonneg_pos. exact HC.
       + intros [du dv] Hh.
         simpl.
-        unfold lm_fun, bilinear_deriv_lm, bilinear_deriv_fun; simpl.
+        unfold LinearMap.map, bilinear_deriv_lm, bilinear_deriv_fun; simpl.
         calc (‖ B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)) ‖)
           == (‖ B du dv ‖)
           == (eps * ‖ (du, dv) ‖).
@@ -433,7 +436,7 @@ norm of the leftover <em>equals</em> the norm of the cross term
 (that is <a
 href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_eq"><code>bilinear_remainder_eq</code></a>,
 applied under <a
-href="coqdoc/Riktig.Interface.Norm.html#NormedSpace.vnorm_proper"><code>NormedSpace.vnorm_proper</code></a>
+href="coqdoc/Riktig.Structure.Norm.html#NormedSpace.vnorm_proper"><code>NormedSpace.vnorm_proper</code></a>
 since equal vectors have equal norms), and that cross term is bounded by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\varepsilon\,\lVert (du,dv)\rVert</annotation></semantics></math>
 (that is <a
@@ -455,15 +458,15 @@ gives its derivative — and the associativity behind backpropagation —
 for free.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>
+href="coqdoc/Riktig.Structure.Linear.html"><code>Structure/Linear.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 class) · <a
-href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>
 class, the <a
-href="coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 record, and the four flat slot laws) · <a
 href="coqdoc/Riktig.Theory.Bilinear.html"><code>Theory/Bilinear.v</code></a>
 (<a

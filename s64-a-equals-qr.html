@@ -54,18 +54,18 @@ Write <code>gram_schmidt_fin v</code> for the perpendicularized family.
 Then all three matrices are one line each (<a
 href="coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a>):</p>
 <pre class="coq"><code>  Definition qr_Q (v : Fin.t n -&gt; V) : Matrix n n F :=
-    fun i j =&gt; basis_coords B (gram_schmidt_fin v j) i.
+    fun i j =&gt; Basis.coords B (gram_schmidt_fin v j) i.
 
   Definition qr_R_coeff (v : Fin.t n -&gt; V) (j k : Fin.t n) : F :=
     if lt_dec (fin_to_nat k) (fin_to_nat j)
-      then ⟨ v j , gram_schmidt_fin v k ⟩ * inv (norm2 (gram_schmidt_fin v k)) else 0.
+      then ⟪ v j , gram_schmidt_fin v k ⟫ * inv (norm2 (gram_schmidt_fin v k)) else 0.
 
   Definition qr_R (v : Fin.t n -&gt; V) : Matrix n n F :=
     fun i j =&gt; e j i + qr_R_coeff v j i.
 
   Definition qr_A (v : Fin.t n -&gt; V) : Matrix n n F :=
-    fun i j =&gt; basis_coords B (v j) i.</code></pre>
-<p><code>basis_coords B w i</code> is coordinate <code>i</code> of the
+    fun i j =&gt; Basis.coords B (v j) i.</code></pre>
+<p><code>Basis.coords B w i</code> is coordinate <code>i</code> of the
 vector <code>w</code> in the chosen basis, so column <code>j</code> of
 <a href="coqdoc/Riktig.Impl.QR.html#qr_Q"><code>qr_Q</code></a> is the
 <code>j</code>-th perpendicularized vector written out in coordinates,
@@ -80,8 +80,8 @@ is the projection coefficient of <code>v j</code> onto the
 the output is strictly earlier than the column, and zero otherwise. The
 gate is where “only earlier vectors were subtracted” enters the matrix.
 The first summand is the Kronecker delta from the standard basis,</p>
-<pre class="coq"><code>  Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F :=
-    fun j =&gt; if dec (i = j) then 1 else 0.</code></pre>
+<pre class="coq"><code>Definition delta (i j : I) : R := if dec (i = j) then 1 else 0.</code></pre>
+<pre class="coq"><code>  Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
 <p>so <code>e j i</code> contributes a
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 exactly on the diagonal.</p>
@@ -196,14 +196,14 @@ vectors is needed at all.</p>
     intros v i Hcontra.
     apply (nontrivial (F:=F)).
     calc (1 : F)
-      == (qr_R v i i) { (qr_R_diag v i) }
+      == (qr_R v i i) { qr_R_diag }
       == (0 : F)      { Hcontra }.
   Qed.</code></pre>
 <p>The proof reads as a contradiction: assume the diagonal entry is
 <code>0</code>; then <code>1 == qr_R v i i == 0</code> by <a
 href="coqdoc/Riktig.Impl.QR.html#qr_R_diag"><code>qr_R_diag</code></a>
 and that assumption, and <a
-href="coqdoc/Riktig.Interface.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
+href="coqdoc/Riktig.Structure.Field.html#Field.nontrivial"><code>Field.nontrivial</code></a>
 — the field axiom <code>1 =/= 0</code> — refutes it.</p>
 <h2 id="the-factorization-itself">The factorization itself</h2>
 <p><strong>Statement.</strong> Provided every perpendicularized vector
@@ -302,9 +302,9 @@ href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></
 (the list-based construction QR packages) · <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
 (<code>e</code>, the standard-basis delta) · <a
-href="coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+href="coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords"><code>basis_coords</code></a>).</p>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords"><code>Basis.coords</code></a>).</p>
 </main>
 </body>
 </html>

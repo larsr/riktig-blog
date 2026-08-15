@@ -101,7 +101,7 @@ href="coqdoc/Riktig.Theory.Log.html#exp_lt_reflect"><code>exp_lt_reflect</code><
 is a small lemma one page earlier —
 <code>exp a &lt; exp b -&gt; a &lt; b</code>, “exp reflects the order,”
 essentially <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
 run in reverse — and <code>apply</code>ing it turns the goal
 <code>log a &lt; log b</code> into the seemingly harder
 <code>exp (log a) &lt; exp (log b)</code>. It only looks harder:
@@ -117,7 +117,7 @@ increasing,” a fact already in hand.</p>
 <p>The same reduce-to-an-exp-equality-and-let-injectivity-finish-it
 pattern proves the rest of the file’s small law list — <code>log</code>
 turns products into sums, the mirror image of <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>.
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>.
 Since <code>exp</code> is injective, it is enough to show both sides
 have the same exponential:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>a</mi><mi>b</mi></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>y</mi><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>y</mi><mtext mathvariant="normal">, twice</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi>exp</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>a</mi><mo>+</mo><mrow><mi>log</mi><mo>&#8289;</mo></mrow><mi>b</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">sums-to-products, read backwards</mtext><mo stretchy="false" form="postfix">}</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
@@ -131,10 +131,10 @@ Proof.
   intros a b Ha Hb.
   apply exp_injective.
   calc (exp_fn (log_fn (a * b) (mul_pos a b Ha Hb)))
-    == (a * b)                                        { (exp_log (a * b) (mul_pos a b Ha Hb)) }
-    == (exp_fn (log_fn a Ha) * b)                      { (exp_log a Ha) }
-    == (exp_fn (log_fn a Ha) * exp_fn (log_fn b Hb))   { (exp_log b Hb) }
-    == (exp_fn (log_fn a Ha + log_fn b Hb))            { (additive (opA := add) (opB := mult) (f := exp_fn) (log_fn a Ha) (log_fn b Hb)) }.
+    == (a * b)                                        { exp_log }
+    == (exp_fn (log_fn a Ha) * b)                      { exp_log }
+    == (exp_fn (log_fn a Ha) * exp_fn (log_fn b Hb))   { (exp_log b) }
+    == (exp_fn (log_fn a Ha + log_fn b Hb))            { additive[exp_fn] }.
 Qed.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.Exp.html#exp_injective"><code>exp_injective</code></a>
@@ -144,7 +144,7 @@ through <code>exp(log a)</code>/<code>exp(log b)</code> (three uses of
 <a
 href="coqdoc/Riktig.Theory.Log.html#exp_log"><code>exp_log</code></a>,
 the round-trip law), landing on <code>exp(log a + log b)</code> via <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>’s
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>Exp.add_to_mul</code></a>’s
 sums-to-products law read backwards — exactly the blackboard chain
 above, just walked in the opposite direction (from the exp side down to
 the plain product, rather than from the product up to the sum).</p>
@@ -195,7 +195,7 @@ acting on itself is just absolute value; <a
 href="coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</code></a>
 opens by building exactly that instance — <code>F</code> normed over
 itself via <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>,
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>,
 registered as <a
 href="coqdoc/Riktig.Theory.MLDerivatives.html#Field_NormedSpace"><code>Field_NormedSpace</code></a>
 — and every derivative statement in the rest of the file, ReLU’s
@@ -204,7 +204,7 @@ included, rests on it.</p>
 <code>relu : F -&gt; F</code>. Deciding whether a given field element is
 <code>&gt;= 0</code> is exactly the kind of case split a bare ordered
 field doesn’t license without extra assumptions — the same reason <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> and
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> and
 <a href="coqdoc/Riktig.Ops.html#inv"><code>inv</code></a> are taken as
 given operations here rather than built by case analysis. Instead of
 proving a fact about one specific <code>relu</code>, the file proves a
@@ -406,7 +406,7 @@ href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_relu_pos"><code>is_deriv_
 <a
 href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_relu_neg"><code>is_deriv_relu_neg</code></a>,
 <code>exp_is_deriv</code>) · <a
-href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+href="coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>
 (the TODO naming exactly this gap).</p>
 </main>
 </body>

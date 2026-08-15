@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Complex numbers over any formally real field</title>
+<title>Complex numbers over any field where −1 is not a square</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
-<h1 id="complex-numbers-over-any-formally-real-field">Complex numbers
-over any formally real field</h1>
+<h1 id="complex-numbers-over-any-field-where-1-is-not-a-square">Complex
+numbers over any field where −1 is not a square</h1>
 <p>A <strong>field</strong> is a set with addition and multiplication
 behaving the way they do in the rationals: both are associative and
 commutative, multiplication distributes over addition, there is a
@@ -54,32 +54,32 @@ hypothesis is exactly the one that rules this out.</p>
 one-line hypothesis</h2>
 <p>The property is called <strong>formal reality</strong>. Here is its
 entire definition, from <a
-href="coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>:</p>
-<pre class="coq"><code>Module FormallyReal.
-  Class FormallyReal (F : Type) `{Field F} :=
-    sum_of_squares : forall a b : F, a * a + b * b == 0 -&gt; a == 0.
-  Hint Mode FormallyReal ! - - - - - - - - : typeclass_instances.
-End FormallyReal.
-Export FormallyReal.</code></pre>
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html"><code>Structure/MinusOneNotASquare.v</code></a>:</p>
+<pre class="coq"><code>Module MinusOneNotASquare.
+  Class MinusOneNotASquare (F : Type) `{Field F} :=
+    two_squares_vanish : forall a b : F, a * a + b * b == 0 -&gt; a == 0.
+  Hint Mode MinusOneNotASquare ! - - - - - - - - : typeclass_instances.
+End MinusOneNotASquare.
+Export MinusOneNotASquare.</code></pre>
 <p>One axiom, <a
-href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>:
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html#MinusOneNotASquare.two_squares_vanish"><code>MinusOneNotASquare.two_squares_vanish</code></a>:
 if <code>a*a + b*b == 0</code>, then <code>a == 0</code>. By the
 symmetry of the statement <code>b</code> must vanish too — that
 companion fact is <a
-href="coqdoc/Riktig.Theory.Field.html#fr_sum_of_squares_r"><code>fr_sum_of_squares_r</code></a>
+href="coqdoc/Riktig.Theory.Field.html#two_squares_vanish_r"><code>two_squares_vanish_r</code></a>
 in <a
 href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>,
 proved in three lines by commuting the two squares and appealing to <a
-href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>.
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html#MinusOneNotASquare.two_squares_vanish"><code>MinusOneNotASquare.two_squares_vanish</code></a>.
 Equivalently:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
-is not a sum of two squares. The rationals <code>Q</code> and the reals
-<code>R</code> are formally real, because their <em>order</em> makes
-every square nonnegative and a sum of nonnegatives zero only when each
-is zero. The complex numbers are famously not formally real
+is not a square. The rationals <code>Q</code> and the reals
+<code>R</code> satisfy this, because their <em>order</em> makes every
+square nonnegative and a sum of nonnegatives zero only when each is
+zero. The complex numbers do not
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>1</mn><mn>2</mn></msup><mo>+</mo><msup><mi>i</mi><mn>2</mn></msup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1^2 + i^2 = 0</annotation></semantics></math>)
-— which is the whole reason <code>i</code> cannot itself live in a
-formally real <code>F</code>.</p>
+— which is the whole reason <code>i</code> cannot already live in such
+an <code>F</code>.</p>
 <p>This is precisely the missing fact from the division formula, and
 nothing more. We are not asking <code>F</code> to be ordered, or
 complete, or the rationals specifically — only that a sum of two squares
@@ -142,21 +142,21 @@ by symmetry) — contradicting
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z \neq 0</annotation></semantics></math>.
 The proof of this lemma is the <em>only</em> place in the whole
 construction that touches <a
-href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>.</p>
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html#MinusOneNotASquare.two_squares_vanish"><code>MinusOneNotASquare.two_squares_vanish</code></a>.</p>
 <pre class="coq"><code>Lemma norm2_nonzero : forall z : C F, z =/= 0 -&gt; norm2 z =/= 0.
 Proof.
   intros z Hz Hn. apply Hz. split.
-  - exact (sum_of_squares (re z) (im z) Hn).
-  - exact (fr_sum_of_squares_r (re z) (im z) Hn).
+  - exact (two_squares_vanish (re z) (im z) Hn).
+  - exact (two_squares_vanish_r (re z) (im z) Hn).
 Qed.</code></pre>
 <p>Read it by contradiction, which is how the <code>=/=</code> (meaning
 “not equal”) goals unfold. Assume <code>z =/= 0</code> and, for
 contradiction, <code>norm2 z == 0</code> (that is <code>Hn</code>). To
 derive the contradiction we show <code>z == 0</code>, i.e. both
 components vanish: <a
-href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html#MinusOneNotASquare.two_squares_vanish"><code>MinusOneNotASquare.two_squares_vanish</code></a>
 gives <code>re z == 0</code> from <code>Hn</code>, and its companion <a
-href="coqdoc/Riktig.Theory.Field.html#fr_sum_of_squares_r"><code>fr_sum_of_squares_r</code></a>
+href="coqdoc/Riktig.Theory.Field.html#two_squares_vanish_r"><code>two_squares_vanish_r</code></a>
 gives <code>im z == 0</code>. Together they contradict <code>Hz</code>.
 Without formal reality this lemma is simply false, and everything below
 collapses.</p>
@@ -271,26 +271,27 @@ it needs:</p>
 <p>The <code>{}</code> is an empty record literal: every field of the
 structure is left for instance search, which finds the law instances
 proved just above. A <a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
+href="coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>
 is an abelian group plus a multiplicative monoid plus two distributivity
 laws, and all four are already in the database, so the ring costs one
 line.</p>
 <h2 id="the-complex-rationals-for-free">The complex rationals, for
 free</h2>
 <p>Assemble all the laws and you get an instance
-<code>C_Field : Field (C F)</code> that holds whenever <code>F</code> is
-a formally real field. Nothing in it is specific to any particular
-<code>F</code>. So to obtain the complex rationals as a genuine field,
-the only new obligation is the one hypothesis: that <code>Q</code> is
-formally real. That single instance lives in <a
+<code>C_Field : Field (C F)</code> that holds whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+is not a square in <code>F</code>. Nothing in it is specific to any
+particular <code>F</code>. So to obtain the complex rationals as a
+genuine field, the only new obligation is the one hypothesis, and that
+single instance lives in <a
 href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>, proved
 from <code>Q</code>’s order (a rational square is nonnegative, a sum of
 two nonnegative rationals is zero only when both are):</p>
-<pre class="coq"><code>Instance Q_FormallyReal : FormallyReal Q := Qfr_sos.</code></pre>
+<pre class="coq"><code>Instance Q_MinusOneNotASquare : MinusOneNotASquare Q := Q_two_squares_vanish.</code></pre>
 <p>And then, in the same file, the complex rationals are a field with no
 further construction — the underscore asks Coq to find the field
 structure, and its instance resolution assembles it, reaching for <a
-href="coqdoc/Riktig.Impl.Qof.html#Q_FormallyReal"><code>Q_FormallyReal</code></a>
+href="coqdoc/Riktig.Impl.Qof.html#Q_MinusOneNotASquare"><code>Q_MinusOneNotASquare</code></a>
 at exactly the point the inverse law needs it:</p>
 <pre class="coq"><code>Example cq_field_check : Field (C Q) := _.</code></pre>
 <p>The file compiles as it stands, so the <code>_</code> really is
@@ -301,17 +302,17 @@ addition, multiplication, and division, appear at once, without a single
 line of code written specifically for them.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html"><code>Structure/MinusOneNotASquare.v</code></a>
 (the one-line axiom) · <a
 href="coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>
 (<code>C F</code>, its ring and field structure) · <a
 href="coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Field.html#fr_sum_of_squares_r"><code>fr_sum_of_squares_r</code></a>,
+href="coqdoc/Riktig.Theory.Field.html#two_squares_vanish_r"><code>two_squares_vanish_r</code></a>,
 the companion of <a
-href="coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.sum_of_squares"><code>FormallyReal.sum_of_squares</code></a>)
-· <a href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a>
-(<code>Q</code> is formally real, and <code>Field (C Q)</code> by
+href="coqdoc/Riktig.Structure.MinusOneNotASquare.html#MinusOneNotASquare.two_squares_vanish"><code>MinusOneNotASquare.two_squares_vanish</code></a>)
+· <a href="coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a> (the
+<code>Q</code> instance, and <code>Field (C Q)</code> by
 resolution).</p>
 </main>
 </body>

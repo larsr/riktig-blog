@@ -41,8 +41,8 @@ the standard library’s <code>sumbool</code>, written
 what an <code>if</code> looks at — it is a two-way choice, exactly like
 a boolean — but riding along with the tag is the actual evidence. A
 proposition that has such a value is called <strong>decidable</strong>,
-and the whole vocabulary is two lines, from <a
-href="coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>:</p>
+and the Leibniz half of the vocabulary is two lines, from <a
+href="coqdoc/Riktig.Structure.Decidable.html"><code>Structure/Decidable.v</code></a>:</p>
 <pre class="coq"><code>Class Decidable (P : Prop) := dec : {P} + {~ P}.
 Arguments dec _ {_}.
 
@@ -50,7 +50,7 @@ Class EqDec (A : Type) := eq_dec : forall (x y : A), Decidable (x = y).
 Instance EqDec_Decidable {A} `{EqDec A} : forall x y : A, Decidable (x = y) := eq_dec.</code></pre>
 <p><code>Decidable P</code> says: there is a decision procedure for
 <code>P</code>, namely a value <a
-href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+href="coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
 of type <code>{P} + {~ P}</code>. The <code>Arguments dec _ {_}</code>
 line makes the proposition explicit and the instance implicit, so you
 write <code>dec P</code> and instance resolution finds the procedure.
@@ -121,7 +121,7 @@ proposition — <code>P</code> holds exactly when <code>b</code> is
 <code>true</code>. Then the two kinds of <code>if</code> agree. This is
 the bridge a program crosses when it wants to restate a clause written
 with <a
-href="coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+href="coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
 in terms of a stdlib boolean comparison such as <code>Nat.ltb</code>. On
 the blackboard:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>P</mi><mo>↔</mo><mi>b</mi><mo>=</mo><mrow><mi>𝗍</mi><mi>𝗋</mi><mi>𝗎</mi><mi>𝖾</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mrow><mi>dec</mi><mo>&#8289;</mo></mrow><mi>P</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> then </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>1</mn></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> else </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>2</mn></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo minsize="180%" maxsize="180%" stretchy="true" form="prefix">(</mo><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>b</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> then </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>1</mn></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> else </mtext><mspace width="0.333em"></mspace></mrow><msub><mi>a</mi><mn>2</mn></msub><mo minsize="180%" maxsize="180%" stretchy="true" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\bigl(P \leftrightarrow b = \mathsf{true}\bigr) \;\Longrightarrow\; \Bigl(\text{if } \operatorname{dec} P \text{ then } a_1 \text{ else } a_2\Bigr) \;=\; \Bigl(\text{if } b \text{ then } a_1 \text{ else } a_2\Bigr),</annotation></semantics></math></p>
@@ -170,10 +170,14 @@ the function that is <code>1</code> at coordinate <code>i</code> and
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mn>1</mn></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>=</mo><mi>j</mi></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mn>0</mn></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>≠</mo><mi>j</mi><mi>.</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">e_i(j) \;=\; \begin{cases} 1 &amp; \text{if } i = j \\ 0 &amp; \text{if } i \neq j. \end{cases}</annotation></semantics></math></p>
 <p>Writing it down needs a branch on “is this coordinate the special
 one?”, and that question, <code>i = j</code>, is an equality of indices
-— a proposition. From <a
-href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>:</p>
-<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F :=
-  fun j =&gt; if dec (i = j) then 1 else 0.</code></pre>
+— a proposition. <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+states the branch once, for any index type <code>I</code> with decidable
+equality, and <a
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
+reads the standard basis vector off it at <code>I = Fin.t n</code>:</p>
+<pre class="coq"><code>Definition delta (i j : I) : R := if dec (i = j) then 1 else 0.</code></pre>
+<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
 <p>This reads exactly like the mathematics: <code>e i</code> at input
 <code>j</code> is <code>if i = j then 1 else 0</code>. It type-checks
 because <code>Fin.t n</code> has decidable equality — the instance
@@ -200,10 +204,13 @@ gives <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, and
 <code>&gt;=</code> all at once.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Decidable.html"><code>Interface/Decidable.v</code></a>
+href="coqdoc/Riktig.Structure.Decidable.html"><code>Structure/Decidable.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
-href="coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
+href="coqdoc/Riktig.Structure.Decidable.html#Decidable"><code>Decidable</code></a>,
+<a
+href="coqdoc/Riktig.Structure.Decidable.html#EqDec"><code>EqDec</code></a>
+and <a
+href="coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>
 classes) · <a
 href="coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>
 (<a

@@ -69,9 +69,9 @@ Proof.
            (linear_map_proper f (vs i) (vs j) Heq)).
 Qed.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
 is a class whose entire content is that single collapse law, so <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_from_law"><code>alternating_from_law</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_from_law"><code>alternating_from_law</code></a>
 reduces the goal <code>Alternating fstar</code> to the law itself, and
 the rest of the proof proves it. If two input vectors
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>,</mo><msub><mi>v</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">v_i, v_j</annotation></semantics></math>
@@ -80,7 +80,7 @@ coincide, then their images
 f(v_j)</annotation></semantics></math> coincide too — that is
 <code>linear_map_proper f</code>, the fact that a linear map respects
 the setoid equality — so <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>,
 the collapse law of the original
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ω</mi><annotation encoding="application/x-tex">\omega</annotation></semantics></math>,
 fires on the image family and the pulled-back form also returns
@@ -149,7 +149,7 @@ and <code>reflexivity</code> closes it: the two sides are equal by
 computation alone, nothing to prove by hand.</p>
 <p>The determinant of the <em>map</em> is then just this, read through
 the basis:</p>
-<pre class="coq"><code>  Definition det (B : Basis n F U) (f : LinearMap F U U) : F :=
+<pre class="coq"><code>  Definition det (B : Basis n (Fin.t n) F U) (f : LinearMap F U U) : F :=
     detM (mat_of B B f).</code></pre>
 <h2 id="the-identity-map-has-determinant-one">The identity map has
 determinant one</h2>
@@ -157,7 +157,8 @@ determinant one</h2>
 scales the unit of volume by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>.</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(\mathrm{id}) \;=\; \det(I) \;=\; 1.</annotation></semantics></math></p>
-<pre class="coq"><code>  Theorem det_id : forall B : Basis n F U, det B (linear_map_id (F:=F) (U:=U)) == 1.
+<pre class="coq"><code>  Theorem det_id : forall B : Basis n (Fin.t n) F U,
+    det B (linear_map_id (F:=F) (U:=U)) == 1.
   Proof.
     intros B.
     unfold det.
@@ -191,7 +192,7 @@ then
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
 scales volume by the product of the two scalings:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>∘</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">matrix of a composite</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">determinant of a product</mtext><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(f \circ g) \;=\; \det\bigl(\mathrm{mat}(f)\cdot\mathrm{mat}(g)\bigr) \quad\{\text{matrix of a composite}\} \;=\; \det(f)\cdot\det(g) \quad\{\text{determinant of a product}\}.</annotation></semantics></math></p>
-<pre class="coq"><code>Theorem det_comp : forall (B : Basis n F U) (f g : LinearMap F U U),
+<pre class="coq"><code>Theorem det_comp : forall (B : Basis n (Fin.t n) F U) (f g : LinearMap F U U),
   det B (linear_map_comp f g) == det B f * det B g.
 Proof.
   intros B f g.
@@ -237,7 +238,7 @@ every field with decidable equality, and unconditional over
 <pre class="coq"><code>Corollary detM_mul_Q : forall (n : nat) (A B : Matrix n n Q),
   detM (mat_mul A B) == detM A * detM B.
 Proof.
-  exact (detM_mul_dec Q_DecEq).
+  exact (detM_mul_dec Q_EquDec).
 Qed.</code></pre>
 <p>Discharging the hypothesis makes <a
 href="coqdoc/Riktig.Theory.Determinant.html#det_comp"><code>det_comp</code></a>
@@ -247,7 +248,7 @@ too:</p>
 <pre class="coq"><code>Corollary det_comp_Q : forall (U : Type)
     (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
     (sU : HasScale Q U) (VU : VectorSpace Q U) (n : nat)
-    (B : Basis n Q U) (f g : LinearMap Q U U),
+    (B : Basis n (Fin.t n) Q U) (f g : LinearMap Q U U),
   det B (linear_map_comp f g) == det B f * det B g.
 Proof.
   intros U eU zU aU nU sU VU n B f g.
@@ -279,7 +280,7 @@ B&#39;\, B</annotation></semantics></math> and
 which multiply to the identity. Their determinants are therefore
 reciprocal:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo>⋅</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">multiplicativity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>P</mi><mo>⋅</mo><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>=</mo><mi>I</mi><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\det(P)\cdot\det(P^{-1}) \;=\; \det(P\cdot P^{-1}) \quad\{\text{multiplicativity}\} \;=\; \det(I) \quad\{P\cdot P^{-1} = I\} \;=\; 1 \quad\{\det(I) = 1\}.</annotation></semantics></math></p>
-<pre class="coq"><code>Lemma change_of_basis_det_inv : forall B B&#39; : Basis n F U,
+<pre class="coq"><code>Lemma change_of_basis_det_inv : forall B B&#39; : Basis n (Fin.t n) F U,
   detM (change_of_basis B&#39; B) * detM (change_of_basis B B&#39;) == 1.
 Proof.
   intros B B&#39;.
@@ -324,7 +325,7 @@ the blackboard chain is:</p>
 \;=\; \det(M).
 </annotation></semantics></math></p>
 <p>And the Coq proof is that chain, link for link:</p>
-<pre class="coq"><code>Theorem det_basis_independent : forall (B B&#39; : Basis n F U) (f : LinearMap F U U),
+<pre class="coq"><code>Theorem det_basis_independent : forall (B B&#39; : Basis n (Fin.t n) F U) (f : LinearMap F U U),
   det B&#39; f == det B f.
 Proof.
   intros B B&#39; f.
@@ -361,7 +362,7 @@ href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
 splits off
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>P</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(P)</annotation></semantics></math>,
 then (under <a
-href="coqdoc/Riktig.Interface.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
+href="coqdoc/Riktig.Structure.Magma.html#Magma.op_proper"><code>Magma.op_proper</code></a>
 — the law that a binary operation respects equality, here used to
 rewrite inside the right factor of a product) splits the remaining
 product. <a

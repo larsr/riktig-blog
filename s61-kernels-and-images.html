@@ -39,7 +39,7 @@ sends to zero</h2>
 equivalence relation that every operation is required to respect — not
 Coq’s built-in equality of terms. That is why a linear map carries a
 third requirement beside additivity and scaling: <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
 saying <code>f</code> sends equivalent inputs to equivalent outputs,
 which is what lets <code>==</code> be rewritten underneath an
 application of <code>f</code>. The kernel of <code>f</code> is then the
@@ -62,7 +62,7 @@ Proof.
   intros u v Hu Hv.
   unfold ker_pred in Hu, Hv |- *.
   calc (f (u + v))
-    == (f u + f v)          { (linear_map_additive f u v) }
+    == (f u + f v)          { linear_map_additive }
     == ((0 : V) + f v)      { Hu }
     == ((0 : V) + (0 : V))  { Hv }
     == (0 : V)              { left_identity }.
@@ -90,7 +90,7 @@ Proof.
   intros a u Hu.
   unfold ker_pred in Hu |- *.
   calc (f (a *: u))
-    == (a *: f u)     { (linear_map_scale f a u) }
+    == (a *: f u)     { linear_map_scale }
     == (a *: (0 : V)) { Hu }
     == (0 : V)        { scale_zero }.
 Qed.</code></pre>
@@ -135,7 +135,7 @@ Proof.
   destruct Hv2 as [u2 Hu2].
   exists (u1 + u2).
   calc (f (u1 + u2))
-    == (f u1 + f u2)  { (linear_map_additive f u1 u2) }
+    == (f u1 + f u2)  { linear_map_additive }
     == (v1 + f u2)    { Hu1 }
     == (v1 + v2)      { Hu2 }.
 Qed.</code></pre>
@@ -144,7 +144,7 @@ preimages <code>u1</code>, <code>u2</code> with <code>f u1 == v1</code>
 and <code>f u2 == v2</code>; <code>exists (u1 + u2)</code> proposes
 their sum as the preimage of <code>v1 + v2</code>; and the
 <code>calc</code> chain — <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
 to split <code>f</code> over the sum, then <code>Hu1</code> and
 <code>Hu2</code> — lands on <code>v1 + v2</code> exactly as the
 blackboard line does. Scaling is the analogous one-witness argument
@@ -186,8 +186,9 @@ and a basis of size <code>r</code> for <code>Im f</code>, the claim is
     (sU : HasScale F U) (VU : VectorSpace F U)
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V)
-    (f : LinearMap F U V) (n : nat) (Bn : Basis n F U)
-    (k : nat) (Bk : Basis k F (Ker f)) (r : nat) (Br : Basis r F (Im f)),
+    (f : LinearMap F U V) (n : nat) (Bn : Basis n (Fin.t n) F U)
+    (k : nat) (Bk : Basis k (Fin.t k) F (Ker f))
+    (r : nat) (Br : Basis r (Fin.t r) F (Im f)),
     n = Nat.add k r.</code></pre>
 <p>This is a <code>Definition</code> of a <code>Prop</code>, not a
 <code>Theorem</code> — it names the statement without asserting it. Two
@@ -203,8 +204,8 @@ one. The file names that requirement too:</p>
   forall (F V : Type) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V) (n : nat)
-    (Bn : Basis n F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
-    exists k : nat, k &lt;= n /\ exists Bk : Basis k F (Sub V P), True.</code></pre>
+    (Bn : Basis n (Fin.t n) F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
+    exists k : nat, (k &lt;= n)%nat /\ exists Bk : Basis k (Fin.t k) F (Sub V P), True.</code></pre>
 <p>That is the Steinitz exchange fact, and it <em>is</em> proved — by
 induction on the dimension of the ambient space, splitting off a
 hyperplane at each step, as <a

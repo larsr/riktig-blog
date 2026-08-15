@@ -48,7 +48,7 @@ unaided, with nothing to prove:</p>
 <pre class="coq"><code>Example matrix_vs_check (F : Type) `{FF : Field F} (m n : nat) :
   VectorSpace F (Matrix m n F) := _.</code></pre>
 <p>Multiplication is the familiar sum, written with <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>,
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>,
 the finite sum of a family indexed by <code>Fin.t n</code>:</p>
 <pre class="coq"><code>Definition mat_mul {m n p : nat} (A : Matrix m n F) (B : Matrix n p F)
     : Matrix m p F :=
@@ -56,7 +56,7 @@ the finite sum of a family indexed by <code>Fin.t n</code>:</p>
 <p>Its laws are all finite-sum bookkeeping. <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
 is one application of <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>,
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>,
 the interchange
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mo>∑</mo><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mo>∑</mo><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i \sum_j = \sum_j \sum_i</annotation></semantics></math>
 for finite sums, proved by induction in <a
@@ -75,17 +75,17 @@ two sections are why.</p>
 <h2 id="writing-a-map-down">Writing a map down</h2>
 <p>A basis, here, is not a list of vectors but a coordinate system. A
 <code>Basis n F V</code> bundles a family <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_vec"><code>basis_vec</code></a>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.vec"><code>Basis.vec</code></a>
 of <code>n</code> vectors in <code>V</code> with a <em>linear map</em>
 <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords"><code>basis_coords</code></a>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords"><code>Basis.coords</code></a>
 from <code>V</code> to the coordinate space
 <code>Fin.t n -&gt; F</code>, subject to two round-trip laws: rebuilding
 a vector from its coordinates returns the vector (<a
-href="coqdoc/Riktig.Interface.Basis.html#basis_reconstruction"><code>basis_reconstruction</code></a>),
+href="coqdoc/Riktig.Structure.Basis.html#Basis.reconstruction"><code>Basis.reconstruction</code></a>),
 and reading off the coordinates of a combination returns the
 coefficients (<a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords_linear_combination"><code>basis_coords_linear_combination</code></a>).</p>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords_linear_combination"><code>Basis.coords_linear_combination</code></a>).</p>
 <p>With a basis
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>b</mi><mn>1</mn><mi>U</mi></msubsup><mo>,</mo><mi>…</mi><mo>,</mo><msubsup><mi>b</mi><mi>n</mi><mi>U</mi></msubsup></mrow><annotation encoding="application/x-tex">b^U_1,\dots,b^U_n</annotation></semantics></math>
 of
@@ -105,7 +105,7 @@ value on the
 source basis vector.</strong> That is the definition, verbatim (<a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>):</p>
 <pre class="coq"><code>Definition mat_of (f : LinearMap F U V) : Matrix m n F :=
-  fun i j =&gt; basis_coords BV (f (basis_vec BU j)) i.</code></pre>
+  fun i j =&gt; Basis.coords BV (f (Basis.vec BU j)) i.</code></pre>
 <p>Nothing is lost in the writing down. The same file rebuilds a map
 from a grid — <code>hom_of A</code> sends <code>u</code> to the
 combination of target basis vectors whose
@@ -173,7 +173,7 @@ as a rule for computing the coordinates of an image: they are the
 matrix, applied to the coordinates of the argument.</p>
 <pre class="coq"><code>Theorem mat_of_coords : forall (f : LinearMap F U V) (u : U)
     (i : Fin.t m),
-  basis_coords BV (f u) i == hom_of_coeff (mat_of f) u i.</code></pre>
+  Basis.coords BV (f u) i == hom_of_coeff (mat_of f) u i.</code></pre>
 <p>With that in hand the headline is one line. Take <code>u</code> to be
 the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>-th
@@ -189,12 +189,12 @@ entry of the product.</p>
     == mat_mul (mat_of BV BW g) (mat_of BU BV f).
 Proof.
   intros g f i j.
-  exact (mat_of_coords BV BW g (f (basis_vec BU j)) i).
+  exact (mat_of_coords BV BW g (f (Basis.vec BU j)) i).
 Qed.</code></pre>
 <p><code>intros g f i j</code> opens the pointwise equality of two
 matrices at one entry; what closes it is <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
-for the outer map, read at the point <code>f (basis_vec BU j)</code>.
+for the outer map, read at the point <code>f (Basis.vec BU j)</code>.
 Both sides of the goal are then the same sum by conversion, so no
 rewriting is needed at all.</p>
 <p>Two lemmas carry the blackboard steps. <a
@@ -206,14 +206,14 @@ combination of the images, proved by induction on the index type out of
 <a
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_zero"><code>linear_map_zero</code></a>,
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>.
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>.
 <a
 href="coqdoc/Riktig.Theory.MatRep.html#coords_vec"><code>coords_vec</code></a>
 says a basis vector’s coordinates are a delta,
-<code>basis_coords B (basis_vec B j) == e j</code>; it follows from <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords_linear_combination"><code>basis_coords_linear_combination</code></a>
+<code>Basis.coords B (Basis.vec B j) == e j</code>; it follows from <a
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords_linear_combination"><code>Basis.coords_linear_combination</code></a>
 once a delta-weighted combination is collapsed to its single surviving
 term. Expand, push through, collect — the three moves from first-year
 exercises — are each a named rewrite.</p>
@@ -280,13 +280,13 @@ href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></
 <a
 href="coqdoc/Riktig.Impl.Matrix.html#Matrix_Ring"><code>Matrix_Ring</code></a>,
 the numeric example) · <a
-href="coqdoc/Riktig.Interface.Basis.html"><code>Interface/Basis.v</code></a>
+href="coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>,
+href="coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_vec"><code>basis_vec</code></a>,
+href="coqdoc/Riktig.Structure.Basis.html#Basis.vec"><code>Basis.vec</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords"><code>basis_coords</code></a>)
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords"><code>Basis.coords</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>
 (<a
@@ -302,9 +302,9 @@ href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>
 · <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>,
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>,
 <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>)
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
 (<a

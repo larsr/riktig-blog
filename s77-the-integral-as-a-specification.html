@@ -33,7 +33,7 @@ The scalars <code>a</code>, <code>b</code> come from an ordered field
 <code>F</code>: a space where vectors can be added, scaled by a scalar
 (written <code>c *: v</code>), and measured by a norm (written
 <code>‖ v ‖</code>). Here is the whole specification, from <a
-href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Integral.html"><code>Structure/Integral.v</code></a>:</p>
 <pre class="coq"><code>Module Integral.
   Class Integral (F V : Type) `{OrderedField F}
       {Ve : EqRel V} {Vz : Zero V} {Va : HasAdd V} {Vn : HasNeg V}
@@ -63,7 +63,7 @@ End Integral.
 Export Integral.
 Notation int := Integral.int.</code></pre>
 <p>Read the fields one at a time. The first, <a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.int"><code>int</code></a>,
+href="coqdoc/Riktig.Structure.Integral.html#Integral.int"><code>int</code></a>,
 is just the operation: a function of an integrand and two endpoints —
 the one field that is data rather than a law, which is why it keeps a
 short global name of its own. The rest are the laws, and the module
@@ -71,7 +71,7 @@ wrapper is what lets them read as plain English; call sites qualify
 them.</p>
 <ul>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.int_proper"><code>Integral.int_proper</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.int_proper"><code>Integral.int_proper</code></a>
 says the integral respects equality: replacing the integrand by a
 pointwise-equal one, or an endpoint by an equal one, gives an equal
 result. (<code>==</code> is the structure’s own equality, <a
@@ -79,29 +79,29 @@ href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is its name, and
 <code>pointwise_relation F equ</code> is that equality read argument by
 argument on integrands.) The <code>::</code> declares it as an instance,
 which is what lets <code>rewrite</code> replace equals in any of <a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.int"><code>int</code></a>’s
+href="coqdoc/Riktig.Structure.Integral.html#Integral.int"><code>int</code></a>’s
 three arguments.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.is_additive"><code>Integral.is_additive</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.is_additive"><code>Integral.is_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.is_homogeneous"><code>Integral.is_homogeneous</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.is_homogeneous"><code>Integral.is_homogeneous</code></a>
 are linearity: the integral of a sum is the sum of the integrals, and a
 scalar pulls straight out through the integral sign. They are stated in
 the vocabulary the rest of the development uses for those two
 properties, which is worth a paragraph of its own below.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.additivity"><code>Integral.additivity</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.additivity"><code>Integral.additivity</code></a>
 is the gluing law,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mo>+</mo><msubsup><mo>∫</mo><mi>b</mi><mi>c</mi></msubsup><mo>=</mo><msubsup><mo>∫</mo><mi>a</mi><mi>c</mi></msubsup></mrow><annotation encoding="application/x-tex">\int_a^b + \int_b^c = \int_a^c</annotation></semantics></math>.
 Note it is stated with no condition on the order of <code>a</code>,
 <code>b</code>, <code>c</code> — it holds unconditionally.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.constant"><code>Integral.constant</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.constant"><code>Integral.constant</code></a>
 fixes the integral of a constant function:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup><mi>v</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">\int_a^b v = (b - a)\,v</annotation></semantics></math>.
 Here <code>b + - a</code> is <code>b</code> minus <code>a</code>.</li>
 <li><a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.bound"><code>Integral.bound</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.bound"><code>Integral.bound</code></a>
 is the estimate everything downstream leans on: if <code>‖f‖</code>
 stays below <code>M</code> across <code>[a, b]</code> and
 <code>a &lt;= b</code>, then the integral is no larger than
@@ -119,7 +119,7 @@ turns the integral into a function of the integrand alone,
 <code>fun f g t =&gt; f t + g t</code> and scaling is
 <code>fun c f t =&gt; c *: f t</code>, and those are exactly the
 operations passed in. So <a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.is_additive"><code>is_additive</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.is_additive"><code>is_additive</code></a>
 says: the map “integrate over <code>[a,b]</code>” is a homomorphism from
 pointwise addition of integrands to addition of vectors. It is the same
 class that states what a linear map does to sums, applied to a space
@@ -136,7 +136,7 @@ is the projection of the <a
 href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
 class, and the implicit argument <code>f := fun h =&gt; int h a b</code>
 tells search which homomorphism is meant. <a
-href="coqdoc/Riktig.Interface.Integral.html#Integral.linear_scale"><code>Integral.linear_scale</code></a>
+href="coqdoc/Riktig.Structure.Integral.html#Integral.linear_scale"><code>Integral.linear_scale</code></a>
 is the matching one-liner for scaling.</p>
 <p>That is the entire contract. Nothing here says how to
 <em>compute</em> an integral, and nothing here mentions completeness —
@@ -266,7 +266,7 @@ support — that lets the three theorems above hold for every integral
 there will ever be, without any of them having been built yet.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>
+href="coqdoc/Riktig.Structure.Integral.html"><code>Structure/Integral.v</code></a>
 (the specification: the class and its laws) · <a
 href="coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>
 (<a

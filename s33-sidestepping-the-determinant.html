@@ -55,10 +55,10 @@ injection <code>Fin.t n -&gt; Fin.t (S n)</code> that misses
 which is partial: the deleted position is the one thing
 <code>skip r</code> never produces, so it has no preimage to compute in
 the smaller matrix. That inverse exists (<a
-href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>, in
-<a href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>),
-and with it a single tracked row is manageable. Two tracked rows are
-not. Each of
+href="coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>, in <a
+href="coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a>), and
+with it a single tracked row is manageable. Two tracked rows are not.
+Each of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>
@@ -77,9 +77,9 @@ and nothing else.</p>
 <p>Making that precise needs a data type of permutations that Coq can
 enumerate and compute with. <code>Perm n</code> is the standard “choose
 the first value, recurse on the rest” encoding, reusing the same <a
-href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>
-injection — once, to build the enumeration, never to relocate an
-already-fixed row:</p>
+href="coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a> injection
+— once, to build the enumeration, never to relocate an already-fixed
+row:</p>
 <pre class="coq"><code>Inductive Perm : nat -&gt; Type :=
 | Perm_O : Perm O
 | Perm_S : forall {n : nat}, Fin.t (S n) -&gt; Perm n -&gt; Perm (S n).
@@ -147,7 +147,7 @@ href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
 already does. Peeling one level of <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html#psum"><code>psum</code></a>
 produces exactly the <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
 over first values that <a
 href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>’s own
 expansion produces, so the two peelings match term by term:</p>
@@ -155,7 +155,7 @@ expansion produces, so the two peelings match term by term:</p>
     detM_leibniz A == detM A.</code></pre>
 <p>The inductive step is a five-link <code>calc</code> chain inside one
 <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>.
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_ext"><code>bigopF_ext</code></a>.
 <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html#perm_sign_S"><code>perm_sign_S</code></a>
 and <a
@@ -182,8 +182,8 @@ level’s factor out, and the induction hypothesis rewrites the remaining
 sum to <code>detM (minor A i)</code>. Crucially, the peeling always
 happens at the fixed first position of the <em>product’s own index</em>,
 never at a position relocated through someone else’s deletion, so <a
-href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>
-never appears.</p>
+href="coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a> never
+appears.</p>
 <h2 id="what-a-row-swap-does-to-the-product">What a row swap does to the
 product</h2>
 <p>Here is the payment for the reformulation.</p>
@@ -198,7 +198,7 @@ product</h2>
     exact (row_swap_eq_swap_fin n A i j (perm_apply sigma c) c).
   Qed.</code></pre>
 <p>Three lines. <a
-href="coqdoc/Riktig.Theory.BigOp.html#prodF_ext"><code>prodF_ext</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#prodF_ext"><code>prodF_ext</code></a>
 says two products agree if their factors do, and <a
 href="coqdoc/Riktig.Impl.DetLeibniz.html#row_swap_eq_swap_fin"><code>row_swap_eq_swap_fin</code></a>
 says reading entry
@@ -241,16 +241,21 @@ once, for any commutative monoid, rather than for determinants:</p>
     (forall x, tau&#39; (tau x) = x) -&gt; (forall y, tau (tau&#39; y) = y) -&gt;
     bigopF g == bigopF (fun i =&gt; g (tau i)).</code></pre>
 <p>A bijection is supplied as a pair of mutually inverse functions
-rather than as an existence claim, so the proof can compute with it. The
-induction peels the sum at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\tau(1)</annotation></semantics></math>
-and needs the restriction of
+rather than as an existence claim, so the proof can compute with it.
+There is no induction over positions at all: the sum over
+<code>Fin.t n</code> is the sum over an explicit duplicate-free
+enumeration of it (<a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_bigopI"><code>bigopF_bigopI</code></a>),
+the image of that enumeration under
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-to the remaining positions — which is <a
-href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>,
-the same “restrict a bijection through <a
-href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>”
-primitive the permutation encoding uses.</p>
+is the same list reordered (<code>NoDup_Permutation</code>, with
+injectivity from the inverse pair), and a sum over a commutative monoid
+does not see the reordering (<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigop_list_permutation"><code>bigop_list_permutation</code></a>).
+That is <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_reindex"><code>bigopI_reindex</code></a>,
+stated once for any finite index type and transported to
+<code>Fin.t n</code>.</p>
 <h2 id="running-it">Running it</h2>
 <p>The reformulation is a definition that computes, so it can be checked
 against the original on actual numbers rather than only related to it by
@@ -293,13 +298,11 @@ href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, the
 cofactor recursion the reformulation is compared against) · <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_reindex"><code>bigopF_reindex</code></a>)
-· <a href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>
-(<a href="coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>, <a
-href="coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>, <a
-href="coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>).</p>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_reindex"><code>bigopF_reindex</code></a>)
+· <a href="coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a>, <a
+href="coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>, <a
+href="coqdoc/Riktig.Impl.Fin.html#swap_fin"><code>swap_fin</code></a>).</p>
 </main>
 </body>
 </html>

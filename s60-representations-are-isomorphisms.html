@@ -93,10 +93,10 @@ tables and then converting must equal converting and then adding. The
 maps that commute with the algebra are the <strong>linear maps</strong>:
 functions <code>f</code> with <code>f (u + v) == f u + f v</code> and
 <code>f (a *: u) == a *: f u</code>, respecting <code>==</code> (<a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>).
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>).
 So an isomorphism of representations, <a
-href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a> in
-<a
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
+in <a
 href="coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>,
 is: two linear maps that undo each other.</p>
 <p>“Undoing each other” is a property of two plain functions, so it is
@@ -109,29 +109,31 @@ stated separately, about the functions rather than about any bundle:</p>
   }.
 End Inverse.</code></pre>
 <p>and the isomorphism is the two maps carrying it:</p>
-<pre class="coq"><code>Class VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
-    {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
-    {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
-  vsi_to : LinearMap F U V;
-  vsi_from : LinearMap F V U;
-  vsi_inverse :: Inverse vsi_to vsi_from;
-}.</code></pre>
+<pre class="coq"><code>Module VSIso.
+  Class VSIso (F U V : Type) {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F}
+      {Fn : HasNeg F} {Fo : One F} {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eU : EqRel U} {zU : Zero U} {aU : HasAdd U} {nU : HasNeg U} {sU : HasScale F U} {VU : VectorSpace F U}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V} {VV : VectorSpace F V} := {
+    to      : LinearMap F U V;
+    from    : LinearMap F V U;
+    inverse :: Inverse to from;
+  }.
+End VSIso.</code></pre>
 <p>Three fields, each earning its keep: the two maps are the
 conversions, <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_inverse"><code>vsi_inverse</code></a>
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso.inverse"><code>VSIso.inverse</code></a>
 says no information is lost either way round, and linearity — carried
 inside each <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 — says any algebra you do in one representation agrees with doing it in
 the other. The two halves of <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_inverse"><code>vsi_inverse</code></a>
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso.inverse"><code>VSIso.inverse</code></a>
 are available under the names <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_fromto"><code>vsi_fromto</code></a>
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_from_to"><code>vsiso_from_to</code></a>
 and <a
-href="coqdoc/Riktig.Theory.VSIso.html#vsi_tofrom"><code>vsi_tofrom</code></a>,
+href="coqdoc/Riktig.Theory.VSIso.html#vsiso_to_from"><code>vsiso_to_from</code></a>,
 and once you hold a <a
-href="coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>,
+href="coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>,
 every equation about one carrier can be moved to the other by rewriting
 along them — the proofs travel with the data.</p>
 <h2 id="step-3-the-proof">Step 3: the proof</h2>
@@ -151,7 +153,7 @@ orders. There is nothing deep here, and that is the point: once the
 definitions from steps 1 and 2 are in place, the theorem is bookkeeping,
 and bookkeeping is what the machine checks best.</p>
 <p><strong>In Coq.</strong> The two maps, each built by <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
 from its underlying function and the three linearity proofs (every one
 of which is <code>reflexivity</code> at every point, in the sense
 above):</p>

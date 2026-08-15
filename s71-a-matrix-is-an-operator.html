@@ -45,7 +45,7 @@ is a function <code>Fin.t n -&gt; F</code>. Such functions form a vector
 space with no extra work — add and scale them pointwise.</p>
 <p>Applying a matrix to a coordinate vector is the textbook dot product
 of each row against the vector, written as a finite sum <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
 over the shared index (<a
 href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>):</p>
 <pre class="coq"><code>  Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
@@ -84,9 +84,9 @@ is distributivity pushed under the sum:</p>
 two coordinate vectors are equal when they agree at every index. The
 <code>calc</code> chain has two steps, one per line of the blackboard
 chain — <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_ext"><code>bigopF_ext</code></a>
 rewrites the summand by distributivity, and <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_add"><code>bigopF_add</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_add"><code>bigopF_add</code></a>
 splits the sum of two summands into a sum of two sums.</p>
 <p>Homogeneity is the same shape with a commutativity swap instead of
 distributivity:</p>
@@ -95,22 +95,24 @@ distributivity:</p>
     mat_vec A (a *: v) == a *: mat_vec A v.</code></pre>
 <p><code>Linear F U V f</code> is the class collecting exactly these
 three facts about a function <code>f</code> — <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.proper"><code>Linear.proper</code></a>,
+href="coqdoc/Riktig.Structure.Linear.html#Linear.proper"><code>Linear.proper</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.is_additive"><code>Linear.is_additive</code></a>,
+href="coqdoc/Riktig.Structure.Linear.html#Linear.is_additive"><code>Linear.is_additive</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.is_homogeneous"><code>Linear.is_homogeneous</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.is_homogeneous"><code>Linear.is_homogeneous</code></a>
 — and a <code>LinearMap F U V</code> (<a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>)
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>)
 is a function together with a proof that it is linear, two fields and no
 more. Its implicit binders are only what the two laws literally mention
 — an equality, an addition and a scaling on each carrier:</p>
-<pre class="coq"><code>Class LinearMap (F U V : Type)
-    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
-    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
-  lm_fun : U -&gt; V;
-  lm_linear :: Linear F U V lm_fun;
-}.</code></pre>
+<pre class="coq"><code>Module LinearMap.
+  Class LinearMap (F U V : Type)
+      {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+      {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
+    map    : U -&gt; V;
+    linear :: Linear F U V map;
+  }.
+End LinearMap.</code></pre>
 <p>Nothing here demands that <code>F</code> be a field or that
 <code>U</code> and <code>V</code> be vector spaces. Additivity and
 homogeneity can be stated with only <code>+</code> and <code>*:</code>
@@ -120,13 +122,13 @@ and vector-space structure appear later, in the theorems that need them
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_zero"><code>linear_map_zero</code></a>
 needs a zero to preserve, and negation to cancel with.</p>
 <p>A <code>Coercion</code> declaration on <a
-href="coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.map"><code>LinearMap.map</code></a>
 is what lets a caller write <code>f u</code> rather than
-<code>lm_fun f u</code>, and the <code>::</code> on <a
-href="coqdoc/Riktig.Interface.LinearMap.html#lm_linear"><code>lm_linear</code></a>
+<code>LinearMap.map f u</code>, and the <code>::</code> on <a
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.linear"><code>LinearMap.linear</code></a>
 registers the linearity proof where instance search can find it. So the
 three lemmas package a matrix as a value of that record, built by <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
 from the function and its three laws:</p>
 <pre class="coq"><code>  Definition mat_vec_lm {m n : nat} (A : Matrix m n F) :
       LinearMap F (Fin.t n -&gt; F) (Fin.t m -&gt; F) :=
@@ -279,13 +281,13 @@ href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></
 <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>,
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>,
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>,
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>,
 <a
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_comp"><code>linear_map_comp</code></a>)
 · <a

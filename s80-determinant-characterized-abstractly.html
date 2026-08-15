@@ -43,19 +43,21 @@ every other position held fixed, scales or adds the output the same way
 — “linear in each direction separately,” stated by replacing one
 argument at a time:</p>
 <p>Multilinearity is stated of a plain function on families of vectors,
-as a typeclass indexed by that function:</p>
+as a typeclass indexed by that function. The families are indexed by any
+carrier <code>I</code> with decidable equality — pinning one slot is all
+the laws need, so no finiteness and no arity appears here:</p>
 <pre class="coq"><code>Module Multilinear.
-  Class Multilinear (n : nat) (F V : Type)
+  Class Multilinear (I F V : Type) {Ieq : EqDec I}
       {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
       {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
       {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
       {VV : VectorSpace F V}
-      (form : (Fin.t n -&gt; V) -&gt; F) := {
-    proper :: Proper (@famEq V eV n ==&gt; equ) form;
+      (form : (I -&gt; V) -&gt; F) := {
+    proper :: Proper (@famEq V eV I ==&gt; equ) form;
 
-    is_additive :: forall (vs : Fin.t n -&gt; V) (i : Fin.t n),
+    is_additive :: forall (vs : I -&gt; V) (i : I),
       Additive V F add add (fun x =&gt; form (upd vs i x));
-    is_homogeneous :: forall (vs : Fin.t n -&gt; V) (i : Fin.t n),
+    is_homogeneous :: forall (vs : I -&gt; V) (i : I),
       Homogeneous F V F mult (fun a =&gt; a) (fun x =&gt; form (upd vs i x));
   }.
 End Multilinear.</code></pre>
@@ -81,22 +83,24 @@ saying the scalar passes through unchanged rather than being twisted by
 a conjugation on the way. Multilinearity is thus not a new pair of
 axioms but a family of instances of two laws the tree already had.</p>
 <p>A <em>chosen</em> such function, carrying its proof, is a <a
-href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>:</p>
-<pre class="coq"><code>Class MultilinearForm (n : nat) (F V : Type)
-    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
-    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
-    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} := {
-  mf_fun : (Fin.t n -&gt; V) -&gt; F;
-  mf_multilinear :: Multilinear n F V mf_fun;
-}.</code></pre>
+href="coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>:</p>
+<pre class="coq"><code>Module MultilinearForm.
+  Class MultilinearForm (I F V : Type) {Ieq : EqDec I}
+      {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+      {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+      {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+      {VV : VectorSpace F V} := {
+    map         : (I -&gt; V) -&gt; F;
+    multilinear :: Multilinear I F V map;
+  }.
+End MultilinearForm.</code></pre>
 <p>Two fields: the function, and one proof it is multilinear. Read back
 off such a record, the laws carry the names a caller uses — <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_scale"><code>multilinear_form_scale</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#multilinear_form_scale"><code>multilinear_form_scale</code></a>,
 and <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_proper"><code>multilinear_form_proper</code></a>.</p>
+href="coqdoc/Riktig.Structure.Bilinear.html#multilinear_form_proper"><code>multilinear_form_proper</code></a>.</p>
 <p>A form is <em>alternating</em> if feeding it two equal arguments in
 two different positions always produces
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
@@ -104,21 +108,21 @@ two different positions always produces
 compared coincide”. That is a single law, so the class <em>is</em> that
 law, with no fields around it:</p>
 <pre class="coq"><code>Module Alternating.
-  Class Alternating {n : nat} {F V : Type}
+  Class Alternating {I F V : Type} {Ieq : EqDec I}
       {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
       {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
       {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
       {VV : VectorSpace F V}
-      (form : (Fin.t n -&gt; V) -&gt; F) :=
-    repeat_zero : forall (vs : Fin.t n -&gt; V) (i j : Fin.t n),
+      (form : (I -&gt; V) -&gt; F) :=
+    repeat_zero : forall (vs : I -&gt; V) (i j : I),
       i &lt;&gt; j -&gt; vs i == vs j -&gt; form vs == 0.
 End Alternating.</code></pre>
 <p>Because the carriers are implicit and <a
-href="coqdoc/Riktig.Interface.Bilinear.html#mf_fun"><code>mf_fun</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.map"><code>MultilinearForm.map</code></a>
 is a coercion, <code>Alternating m</code> reads directly for a <a
-href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>
 named <code>m</code>, and the law read off it is <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>.</p>
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>.</p>
 <p>A determinant is one further requirement stacked on top of both:
 alternating, multilinear, and equal to exactly
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
@@ -129,30 +133,31 @@ factor a particular map applies,” the way fixing what
 “<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 metre” means turns “a length” into a number you can compare across
 rulers.</p>
-<pre class="coq"><code>Class Determinant (n : nat) (F V : Type)
+<pre class="coq"><code>Class Determinant (n : nat) (I F V : Type)
+    {Ieq : EqDec I} {IFin : FinIndex n I}
     {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
     {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} (B : Basis n F V) := {
-  determinant_form : MultilinearForm n F V;
+    {VV : VectorSpace F V} (B : Basis n I F V) := {
+  determinant_form : MultilinearForm I F V;
   determinant_is_alternating :: Alternating determinant_form;
-  determinant_normalization : determinant_form (basis_vec B) == 1;
+  determinant_normalization : determinant_form (Basis.vec B) == 1;
 }.</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_form"><code>determinant_form</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_form"><code>determinant_form</code></a>
 carries a multilinear form’s own laws whole, rather than restating them,
 and <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_is_alternating"><code>determinant_is_alternating</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_is_alternating"><code>determinant_is_alternating</code></a>
 is the second property from above; <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_normalization"><code>determinant_normalization</code></a>
-is the third, <code>basis_vec B</code> being the family of vectors the
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_normalization"><code>determinant_normalization</code></a>
+is the third, <code>Basis.vec B</code> being the family of vectors the
 chosen basis consists of. Read back off a determinant <code>D</code>,
 those three come out as <code>determinant_multilinear_form D</code>,
 <code>determinant_alternating D</code> and
 <code>determinant_basis_normalization D</code>. Nothing in this record
 mentions a matrix, an entry, a sign, or a recursive computation. It is
 data, not a search: a <a
-href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html#Determinant"><code>Determinant</code></a>
 is a <em>choice</em> of such a form, supplied by whoever builds one, the
 same way a basis is a chosen list of vectors rather than something
 automatic instance resolution goes looking for on its own.</p>
@@ -187,7 +192,7 @@ case is vacuous (there is no <code>i : Fin.t 0</code> to point at, so
 <code>Fin.case0</code> disposes of it outright); in dimension
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mi>S</mi><mspace width="0.167em"></mspace><mi>p</mi></mrow><annotation encoding="application/x-tex">n = S\,p</annotation></semantics></math>,
 the one-slot family update <a
-href="coqdoc/Riktig.Interface.Bilinear.html#upd"><code>upd</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#upd"><code>upd</code></a>
 used by the abstract record and the row-surgery operation <a
 href="coqdoc/Riktig.Impl.Elim.html#upd_row"><code>upd_row</code></a>
 used by the concrete matrix code are shown to agree pointwise (<a
@@ -203,20 +208,20 @@ href="coqdoc/Riktig.Impl.DetAlternating.html#detM_alternating"><code>detM_altern
 Assembled, <a
 href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> becomes a
 value of the <a
-href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html#Determinant"><code>Determinant</code></a>
 record:</p>
 <pre class="coq"><code>  Definition detM_Determinant (n : nat) :
-      Determinant n F (Fin.t n -&gt; F) (FinVec_Basis n) :=
+      Determinant n (Fin.t n) F (Fin.t n -&gt; F) (FinVec_Basis n) :=
     determinant_from_laws (detM_mf n) (detM_alt n) (detM_basis_1 n).</code></pre>
 <p><a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_from_laws"><code>determinant_from_laws</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_from_laws"><code>determinant_from_laws</code></a>
 is the builder: hand it the multilinear form, the alternating proof and
 the normalization proof, and the carriers and the basis are filled in by
 unification.</p>
 <p>and Coq accepts a small resolution check confirming the pieces fit
 together unaided:</p>
 <pre class="coq"><code>Example detM_determinant_check (F : Type) `{FF : Field F} (n : nat) :
-  Determinant n F (Fin.t n -&gt; F) (FinVec_Basis n) := detM_Determinant n.</code></pre>
+  Determinant n (Fin.t n) F (Fin.t n -&gt; F) (FinVec_Basis n) := detM_Determinant n.</code></pre>
 <p>The list of properties is satisfiable, and satisfiable by exactly the
 computation anyone would expect it to be.</p>
 <h2
@@ -224,11 +229,11 @@ id="a-theorem-that-costs-nothing-extra-swapping-two-arguments-flips-the-sign">A
 theorem that costs nothing extra: swapping two arguments flips the
 sign</h2>
 <p>Because <a
-href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html#Determinant"><code>Determinant</code></a>
 is a real record with real fields, anything provable from <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
 alone is true of <em>every</em> determinant, on every field, for every
 basis — without ever touching <a
 href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>. Here is
@@ -248,7 +253,7 @@ forced to
 since
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>W</mi><annotation encoding="application/x-tex">W</annotation></semantics></math>
 then has two distinct positions holding the same value, <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
 gives
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>W</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m(W) = 0</annotation></semantics></math>
 outright. Expanding that
@@ -275,7 +280,7 @@ of the swapped family and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(v)</annotation></semantics></math>
 itself, and their sum being zero makes each the negative of the
 other.</p>
-<pre class="coq"><code>Theorem mf_swap_neg : forall (vs : Fin.t n -&gt; V) (i j : Fin.t n),
+<pre class="coq"><code>Theorem mf_swap_neg : forall (vs : I -&gt; V) (i j : I),
   i &lt;&gt; j -&gt; m (fswap vs i j) == - m vs.
 Proof.
   intros vs i j Hij.
@@ -333,7 +338,7 @@ Proof.
           symmetry. exact (fswap_at_j vs i j Hij).
         + rewrite (u_off (upd vs j a) i k b Hik), (u_off vs j k a Hjk).
           symmetry. unfold fswap.
-          rewrite (swap_fin_ne n i j k (fun Heq =&gt; Hik (eq_sym Heq)) (fun Heq =&gt; Hjk (eq_sym Heq))).
+          rewrite (swap_ne swap i j k (fun Heq =&gt; Hik (eq_sym Heq)) (fun Heq =&gt; Hjk (eq_sym Heq))).
           reflexivity. }
     assert (HT2m : m (upd (upd vs j a) i b) == m (fswap vs i j))
       by (apply (multilinear_form_proper m); exact HT2).
@@ -352,15 +357,15 @@ Qed.</code></pre>
 records that
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">first summand</mtext><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">second summand</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m(\text{first summand}) + m(\text{second summand}) = 0</annotation></semantics></math>,
 read off <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
 at
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>W</mi><annotation encoding="application/x-tex">W</annotation></semantics></math>;
 <code>HP2val</code> shows the second summand reduces to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(v)</annotation></semantics></math>
 — an inner update that turns out to be idempotent, feeding <a
-href="coqdoc/Riktig.Interface.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#multilinear_form_additive"><code>multilinear_form_additive</code></a>
 again, with one of <em>its</em> two pieces sent to zero by <a
-href="coqdoc/Riktig.Interface.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#alternating_repeat_zero"><code>alternating_repeat_zero</code></a>
 applied to a fresh equal pair; <code>HP1val</code> shows the first
 summand reduces, symmetrically, to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
@@ -369,16 +374,18 @@ the two known values back into <code>HW0</code>’s equation to conclude
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">swap</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(\text{swap}) = -m(v)</annotation></semantics></math>.
 Read as a fact about a determinant specifically, this is immediate —
 plug in its own multilinear form and its own alternating witness:</p>
-<pre class="coq"><code>Theorem det_swap_neg : forall (n : nat) (F V : Type) `{FF : Field F}
+<pre class="coq"><code>Theorem det_swap_neg : forall (n : nat) (I F V : Type)
+    (Ieq : EqDec I) (IFin : FinIndex n I) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V)
-    (B : Basis n F V) (D : Determinant n F V B)
-    (vs : Fin.t n -&gt; V) (i j : Fin.t n),
-  i &lt;&gt; j -&gt; D (fswap vs i j) == - D vs.
+    (B : Basis n I F V) (D : Determinant n I F V B)
+    (vs : I -&gt; V) (i j : I),
+  i &lt;&gt; j -&gt; D (fswap swap vs i j) == - D vs.
 Proof.
-  intros n F V Fe Fz Fa Fn Fo Fm Fi FF eV zV aV nV sV VV B D vs i j Hij.
+  intros n I F V Ieq IFin Fe Fz Fa Fn Fo Fm Fi FF eV zV aV nV sV VV B D
+    swap Sw vs i j Hij.
   exact (mf_swap_neg (determinant_multilinear_form D) (determinant_alternating D)
-           vs i j Hij).
+           swap vs i j Hij).
 Qed.</code></pre>
 <p>Nothing about <a
 href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, no first
@@ -787,21 +794,21 @@ either computation:</p>
 Proof. exact (detM_mul 3 mat3_ns_g mat3_b_g). Qed.</code></pre>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Determinant.html"><code>Interface/Determinant.v</code></a>
+href="coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Determinant.html#Determinant"><code>Determinant</code></a>,
+href="coqdoc/Riktig.Structure.Determinant.html#Determinant"><code>Determinant</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_multilinear_form"><code>determinant_multilinear_form</code></a>,
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_multilinear_form"><code>determinant_multilinear_form</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_alternating"><code>determinant_alternating</code></a>,
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_alternating"><code>determinant_alternating</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Determinant.html#determinant_basis_normalization"><code>determinant_basis_normalization</code></a>)
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_basis_normalization"><code>determinant_basis_normalization</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>)
+href="coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.DetInterface.html"><code>Impl/DetInterface.v</code></a>
 (<a

@@ -35,7 +35,7 @@ Class HasOle (A : Type) := ole : A -&gt; A -&gt; Prop.</code></pre>
 <p>Then the class of laws, which takes those two operations as
 parameters and says nothing about what they are, only how they behave.
 From <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html"><code>Interface/DecTotalOrder.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html"><code>Structure/DecTotalOrder.v</code></a>:</p>
 <pre class="coq"><code>Module DecTotalOrder.
   Class DecTotalOrder (A : Type) {olt : HasOlt A} {ole : HasOle A} := {
     olt_dec    :: forall x y : A, Decidable (olt x y);
@@ -48,31 +48,31 @@ End DecTotalOrder.
 Export DecTotalOrder.</code></pre>
 <p>The class sits inside a module of the same name, so each law is
 written <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>,
 <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
 and so on: the module path carries the prefix instead of every field
 name repeating it. The <code>Export</code> line then puts the module’s
 contents into scope for anyone who imports the file, so the class itself
 can still be named plain <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
 when a type is declared to satisfy it.</p>
 <p>Reading the four laws. <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
 is the single decision procedure — for every pair <code>x y</code>,
 <code>olt x y</code> is decidable, so a program can branch on it. <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>DecTotalOrder.olt_strict</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>DecTotalOrder.olt_strict</code></a>
 asks that <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#olt"><code>olt</code></a>
 be a <code>StrictOrder</code>, standard-library shorthand for
 <em>irreflexive</em> (<code>x &lt; x</code> never holds) and
 <em>transitive</em> (<code>x &lt; y</code> and <code>y &lt; z</code>
 give <code>x &lt; z</code>). <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>
 is trichotomy: any two elements compare one of exactly three ways —
 <code>x &lt; y</code>, or <code>x = y</code>, or <code>y &lt; x</code>.
 The last law, <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>,
 ties the two relations together: <code>x &lt;= y</code> means precisely
 <em>not</em> <code>y &lt; x</code>.</p>
 <p>Two of those laws are things instance search should be able to use on
@@ -82,10 +82,10 @@ says so. A field declared with <code>::</code> rather than
 <code>:</code> is registered as a typeclass instance the moment a type
 is shown to satisfy the class. So writing <code>dec (olt x y)</code>
 resolves through <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
 and the standard library’s <code>StrictOrder_Irreflexive</code> and
 <code>transitivity</code> reach <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>DecTotalOrder.olt_strict</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>DecTotalOrder.olt_strict</code></a>,
 with no separate instance declaration anywhere. The last two fields are
 ordinary <code>:</code> fields: a proof names them directly, and
 instance search has nothing to do with a disjunction or an
@@ -99,9 +99,9 @@ Definition oge {A} `{HasOle A} (x y : A) : Prop := ole y x.</code></pre>
 <code>x &gt;= y</code> is just <code>y &lt;= x</code>. So the four
 comparisons <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>,
 <code>&gt;=</code> all trace back to one relation <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#olt"><code>olt</code></a>,
 and its one decider <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>DecTotalOrder.olt_dec</code></a>
 settles every one of them — decide <code>olt y x</code> and you have
 decided <code>x &gt; y</code> too. Four comparisons for the price of
 one.</p>
@@ -132,7 +132,7 @@ trichotomy, splitting into the three cases <code>XY : olt x y</code>,
 <code>E : x = y</code>, and <code>YX : olt y x</code>.</li>
 <li>First case, <code>olt x y</code>. Reading <code>Y : ole y x</code>
 through <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
 (its forward direction,
 <code>proj1 (DecTotalOrder.ole_not_lt y x)</code>) yields
 <code>~ olt x y</code> — which contradicts <code>XY</code>, and
@@ -141,11 +141,11 @@ href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code
 <code>exact E</code>.</li>
 <li>Third case, <code>olt y x</code>, is symmetric: reading
 <code>X : ole x y</code> through <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>DecTotalOrder.ole_not_lt</code></a>
 yields <code>~ olt y x</code>, contradicting <code>YX</code>.</li>
 </ul>
 <p>The companion laws — reflexivity of <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#ole"><code>ole</code></a>,
 its transitivity, the bridge <code>olt x y -&gt; ole x y</code> — sit
 beside this one in the same file, each a short run through the same
 axioms.</p>
@@ -168,7 +168,7 @@ x = y &amp; \text{otherwise} \quad \{\text{trichotomy, both strict cases exclude
 \end{cases}
 </annotation></semantics></math></p>
 <p>Since <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#olt"><code>olt</code></a>
 is decidable, both comparisons are decisions the machine can make, so
 this whole procedure computes. From <a
 href="coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>:</p>
@@ -208,7 +208,7 @@ equality, remains.</li>
 instance: strings in dictionary order</h2>
 <p>All of the above is stated for an abstract <code>A</code>. The moment
 a real type is shown to satisfy <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>,
 every one of those results — the four comparisons, antisymmetry,
 decidable equality — holds for it. Strings are one such type. They are
 ordered by comparing their sequences of characters left to right, the
@@ -250,15 +250,15 @@ divisor, binary search — as plain recursive terms that compare with
 these deciders.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html"><code>Interface/DecTotalOrder.v</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html"><code>Structure/DecTotalOrder.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#HasOlt"><code>HasOlt</code></a>/<a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#HasOle"><code>HasOle</code></a>,
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#HasOlt"><code>HasOlt</code></a>/<a
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#HasOle"><code>HasOle</code></a>,
 the <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
 class, <a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#ogt"><code>ogt</code></a>/<a
-href="coqdoc/Riktig.Interface.DecTotalOrder.html#oge"><code>oge</code></a>)
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#ogt"><code>ogt</code></a>/<a
+href="coqdoc/Riktig.Structure.DecTotalOrder.html#oge"><code>oge</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>
 (<a

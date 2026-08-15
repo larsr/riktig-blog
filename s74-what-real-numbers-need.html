@@ -47,15 +47,15 @@ numbers.</p>
 comes first, and separately</h2>
 <p>Everything in the first paragraph — the arithmetic, the order, the
 two compatibility conditions — is already a structure of its own, <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 in <a
-href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>.
+href="coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>.
 It takes a type <code>F</code> that is already a <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>,
 an order <a
-href="coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a> and an
+href="coqdoc/Riktig.Structure.Order.html#le"><code>le</code></a> and an
 absolute value <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> on
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> on
 it, and states the laws all three must jointly satisfy:</p>
 <pre class="coq"><code>Module OrderedField.
   Class OrderedField (F : Type) `{Field F}
@@ -81,18 +81,18 @@ End OrderedField.</code></pre>
 <p>The order half is the five laws after the two properness fields:
 <code>&lt;=</code> is reflexive, transitive, antisymmetric and total — a
 total order, not merely a partial one — and <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
 says a doubly-negated inequality is an inequality, which is what lets a
 proof argue by contradiction about <code>&lt;=</code> without assuming
 excluded middle everywhere. Then <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.add_le_monotone_left"><code>add_le_monotone_left</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.add_le_monotone_left"><code>add_le_monotone_left</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.mul_nonneg_closed"><code>mul_nonneg_closed</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.mul_nonneg_closed"><code>mul_nonneg_closed</code></a>
 are the two compatibility conditions that make the order an order <em>of
 a field</em>: you may add the same <code>c</code> to both sides, and a
 product of two nonnegative elements is nonnegative. The last six laws
 pin down <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>. It
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>. It
 is carried as its own operation rather than defined as “if
 <code>0 &lt;= a</code> then <code>a</code> else <code>- a</code>,”
 because that definition would have to <em>decide</em> the order, and for
@@ -101,15 +101,15 @@ a general model of the reals no such decision procedure exists.</p>
 <code>:</code>. That makes the field itself a typeclass instance
 whenever an <code>OrderedField F</code> is in scope, so
 <code>rewrite</code> can replace an argument of <code>&lt;=</code> or of
-<a href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> by
+<a href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> by
 anything <code>==</code> to it without the law ever being named.</p>
 <p>The rationals satisfy every line of that class. So does every model
 of the reals. The class does not distinguish them.</p>
 <h2 id="the-specification-in-full">The specification, in full</h2>
 <p>Here is <a
-href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>,
+href="coqdoc/Riktig.Structure.Reals.html"><code>Structure/Reals.v</code></a>,
 the entire file:</p>
-<pre class="coq"><code>From Riktig.Interface Require Export Order.
+<pre class="coq"><code>From Riktig.Structure Require Export Order.
 
 Module Reals.
   Class Reals (R : Type) `{OrderedField R} := {
@@ -130,7 +130,7 @@ ordered field, and the <code>&lt;=</code> appearing below is
 order laws. Everything the first two sections described is inherited,
 and what is left is the single thing the rationals lack.</p>
 <p>Read <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>complete</code></a>
+href="coqdoc/Riktig.Structure.Reals.html#Reals.complete"><code>complete</code></a>
 as a sentence about an arbitrary set <code>P : Pred R</code>, where
 <code>Pred T</code> abbreviates <code>T -&gt; Prop</code> — a set is the
 property of belonging to it. <em>If</em> <code>P</code> is inhabited
@@ -145,19 +145,19 @@ out with no appeal to anything outside the class.</p>
 <p>The <code>Hint Mode</code> line tells Coq’s instance search to wait
 until it knows the carrier type <code>R</code> — the position marked
 <code>!</code> — before trying to solve a <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>
+href="coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>
 goal. Without it, search asked for <code>Reals ?R</code> would try to
 invent the carrier, which does not terminate.</p>
 <h2 id="no-instance-on-purpose">No instance — on purpose</h2>
 <p>Nowhere does the file exhibit a concrete type and prove it satisfies
 <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>.
+href="coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>.
 The specification says <em>what</em> a real-number system must satisfy
 and stops there.</p>
 <p>That is deliberate, and it is worth being clear about why it is a
 reasonable choice rather than an unfinished one.</p>
 <p>Building an actual model of <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>
+href="coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>
 means constructing the reals — as Dedekind cuts, or as equivalence
 classes of Cauchy sequences of rationals, or by importing Coq’s
 standard-library <code>R</code> — and then discharging every field of
@@ -167,22 +167,22 @@ nothing to do with the things one <em>proves using</em> completeness.
 The intermediate value theorem, the mean value theorem, the existence of
 suprema in any argument that needs them — these are statements about
 <em>any</em> type satisfying <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>,
+href="coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>,
 and their proofs quote <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>complete</code></a>
+href="coqdoc/Riktig.Structure.Reals.html#Reals.complete"><code>complete</code></a>
 and the order laws by name, never the internal machinery of cuts or
 sequences.</p>
 <p>The reward for the split is concrete. Anything proved generically
 against the <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>
+href="coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>
 class — with a <code>Context {R : Type} `{Reals R}</code> at the top,
 the way <a
 href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>
 proves things against <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.Exp"><code>Exp</code></a> —
+href="coqdoc/Riktig.Structure.Exp.html#Exp.Exp"><code>Exp</code></a> —
 holds automatically for <em>every</em> model the class will ever have.
 Prove the intermediate value theorem once from <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.complete"><code>complete</code></a>,
+href="coqdoc/Riktig.Structure.Reals.html#Reals.complete"><code>complete</code></a>,
 and it is simultaneously a theorem about the classical stdlib reals and
 about the constructive Cauchy reals, the moment either instance is
 supplied. The construction is a plug fitted later into a socket whose
@@ -190,12 +190,12 @@ shape is already fixed; the theorems are wired to the socket, not the
 plug.</p>
 <p>The split also explains why the file is fourteen lines. A first draft
 might reasonably have restated the order and its eight laws inside <a
-href="coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>,
+href="coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>,
 and the class would then carry two orders that happen to coincide — its
-own <a href="coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a>
+own <a href="coqdoc/Riktig.Structure.Order.html#le"><code>le</code></a>
 and the ordered field’s — with every downstream lemma having to be told
 which one it meant. Requiring <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 as a superclass instead means there is exactly one <code>&lt;=</code> in
 play, and the file has nothing left to say except the one axiom that
 distinguishes the reals from the rationals.</p>
@@ -204,11 +204,11 @@ function — <code>exp</code> pinned down by four laws, with no formula
 written at all.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>
+href="coqdoc/Riktig.Structure.Reals.html"><code>Structure/Reals.v</code></a>
 (the completeness axiom, and nothing else) · <a
-href="coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+href="coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>
 (the ordered field it builds on) · <a
-href="coqdoc/Riktig.Interface.Field.html"><code>Interface/Field.v</code></a>
+href="coqdoc/Riktig.Structure.Field.html"><code>Structure/Field.v</code></a>
 (the field under that).</p>
 </main>
 </body>

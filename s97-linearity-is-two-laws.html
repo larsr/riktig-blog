@@ -65,7 +65,7 @@ conjugation transforms it in
 equation-shape that recurs at many different operations. This post shows
 a formalization that takes both observations literally: one class per
 law, each parameterized by the operations it relates, and <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 assembled from the two by filling the slots in.</p>
 <h2 id="one-law-any-two-operations">One law, any two operations</h2>
 <p>Throughout, <code>==</code> is each carrier’s chosen equivalence
@@ -94,9 +94,9 @@ href="coqdoc/Riktig.Ops.html#add"><code>add</code></a> and the target
 side with <a href="coqdoc/Riktig.Ops.html#mult"><code>mult</code></a>
 and it is the exponential’s law. That second reading is not hypothetical
 — it is how the library’s <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.Exp"><code>Exp</code></a>
+href="coqdoc/Riktig.Structure.Exp.html#Exp.Exp"><code>Exp</code></a>
 interface states the law of exponents, in <a
-href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>:</p>
 <pre class="coq"><code>Class Exp (F : Type) `{OrderedField F} := {
   fn : F -&gt; F;
   fn_proper :: Proper (equ ==&gt; equ) fn;
@@ -165,10 +165,10 @@ whose scalars come out conjugated. The law-shape
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mrow><mi>*</mi><mo>:</mo></mrow><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>w</mi><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(a \mathbin{*:} x) = w(a) \cdot f(x)</annotation></semantics></math>
 covers all of these with one definition.</p>
 <h2 id="assembling-linear">Assembling <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a></h2>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a></h2>
 <p>With both laws in the catalogue, the definition of a linear map is
 just a matter of filling in slots, in <a
-href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Linear.html"><code>Structure/Linear.v</code></a>:</p>
 <pre class="coq"><code>Class Linear (F U V : Type)
     {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
     {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V}
@@ -178,26 +178,26 @@ href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>:<
   is_homogeneous :: Homogeneous F U V scale (fun a =&gt; a) f;
 }.</code></pre>
 <p>Three fields. <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.proper"><code>proper</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.proper"><code>proper</code></a>
 says <code>f</code> sends <code>==</code>-equal inputs to
 <code>==</code>-equal outputs — the license every rewrite under
 <code>f</code> needs, since <code>==</code> is a chosen equivalence
 rather than Coq’s built-in equality. <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.is_additive"><code>is_additive</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.is_additive"><code>is_additive</code></a>
 is the <a
 href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> class
 at <a href="coqdoc/Riktig.Ops.html#add"><code>add</code></a> on both
 sides. <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.is_homogeneous"><code>is_homogeneous</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.is_homogeneous"><code>is_homogeneous</code></a>
 is the <a
 href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
 class with the target-side action filled by <code>V</code>’s own scaling
 and the weight filled by the identity function. Nothing here is new; <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 names a particular way of filling in two reusable laws.</p>
 <p>The <code>::</code> on each field re-exports it as an instance in its
 own right: any <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 proof in scope makes the underlying <a
 href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a> and
 <a
@@ -226,7 +226,7 @@ with <code>f</code> any map between two groups carrying the constraint
   Proof.
     apply (cancel_l (f 0)).
     calc (f 0 + f 0)
-      == (f (0 + 0)) { (additive 0 0) }
+      == (f (0 + 0)) { additive }
       == (f 0)       { left_identity }
       == (f 0 + 0)   { right_identity }.
   Qed.</code></pre>
@@ -250,17 +250,17 @@ registered instance still hands the proof over directly, as
 <code>additive_zero f (fa := my_proof)</code>. There is therefore just
 one theorem, not one convenient version and one general version.</p>
 <p>Linear maps are the case where nothing needs handing over at all. <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 packages a function with its <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 proof, whose <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.is_additive"><code>is_additive</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.is_additive"><code>is_additive</code></a>
 field is an <a
 href="coqdoc/Riktig.Props.html#Additive"><code>Additive</code></a>
 instance, so the zero law is one line naming only the map:</p>
 <pre class="coq"><code>  Theorem linear_map_zero : f 0 == 0.
   Proof.
-    exact (additive_zero (lm_fun f)).
+    exact (additive_zero (LinearMap.map f)).
   Qed.</code></pre>
 <p>Had additivity been fused into a monolithic “linearity” axiom, this
 reuse would need glue at every step. Stated as its own class, the
@@ -278,7 +278,7 @@ is not one —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 has no multiplicative inverse. That is why
 <code>zero_to_one : fn 0 == 1</code> appears as a separate axiom in the
-<a href="coqdoc/Riktig.Interface.Exp.html#Exp.Exp"><code>Exp</code></a>
+<a href="coqdoc/Riktig.Structure.Exp.html#Exp.Exp"><code>Exp</code></a>
 class above rather than as a consequence.</p>
 <h2 id="a-linear-map-you-can-compute-a-matrix-times-a-vector">A linear
 map you can compute: a matrix times a vector</h2>
@@ -293,7 +293,7 @@ with entries
 In <a
 href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>,
 over any field, with <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
 the sum over a finite index type:</p>
 <pre class="coq"><code>Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
     : Fin.t m -&gt; F :=
@@ -321,17 +321,17 @@ are compared (vector equality here is entrywise). The first
 <code>calc</code> step rewrites each summand by <a
 href="coqdoc/Riktig.Props.html#left_distributive"><code>left_distributive</code></a>
 — the field’s distributivity, via <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_ext"><code>bigopF_ext</code></a>,
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_ext"><code>bigopF_ext</code></a>,
 which may rewrite under a sum precisely because the sum respects
 <code>==</code>. The second step is <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_add"><code>bigopF_add</code></a>,
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_add"><code>bigopF_add</code></a>,
 splitting the sum of pointwise sums into two sums: the last equality of
 the displayed chain.</p>
 <p>Homogeneity is the mirror image, with commutativity of multiplication
 doing the reordering
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><msub><mi>v</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">A_{ij}(a v_j) = a (A_{ij} v_j)</annotation></semantics></math>
 inside the sum and <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopF_mul_l"><code>bigopF_mul_l</code></a>
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_mul_l"><code>bigopF_mul_l</code></a>
 pulling the constant
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
 out:</p>
@@ -358,7 +358,7 @@ packaged linear map, through the record’s builder function:</p>
     (mat_vec_scale m n A).</code></pre>
 <p>From this point on, <code>mat_vec A</code> is not a function that
 happens to satisfy two equations — it is a <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>,
 and everything proved about linear maps in general (<a
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_zero"><code>linear_map_zero</code></a>
 above, composition, the vector-space structure on the maps themselves)
@@ -372,9 +372,9 @@ is usually not linear as a map on pairs — doubling both factors
 quadruples the product. The right notion is <em>bilinear</em>: freeze
 either argument and the remaining one-argument function is linear. The
 definition in <a
-href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>
 says exactly that, by using <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 twice:</p>
 <pre class="coq"><code>Class Bilinear (F U V W : Type)
     {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
@@ -393,7 +393,7 @@ twice:</p>
 }.</code></pre>
 <p>The long implicit prefix is the field and the three vector spaces
 with their operations; the content is the last two fields, one <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 instance per slot. Note what the slot laws jointly imply: expanding both
 arguments gives
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><mi>v</mi><mo>+</mo><msup><mi>v</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>,</mo><msup><mi>v</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mo stretchy="false" form="prefix">(</mo><msup><mi>u</mi><mo>′</mo></msup><mo>,</mo><msup><mi>v</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">b(u+u&#39;, v+v&#39;) = b(u,v) + b(u,v&#39;) + b(u&#39;,v) +
@@ -417,9 +417,9 @@ additive and homogeneous in the right):</p>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
 vector arguments, returns a scalar, and is linear in each argument with
 the others frozen. The <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Multilinear.Multilinear"><code>Multilinear</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html#Multilinear.Multilinear"><code>Multilinear</code></a>
 class in <a
-href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>
 states the per-slot laws with the same two classes this post started
 from — <code>upd vs i x</code> is the family <code>vs</code> of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
@@ -427,9 +427,9 @@ vectors with its
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
 member replaced by <code>x</code>, so each frozen-slot function is
 literally <code>fun x =&gt; form (upd vs i x)</code>:</p>
-<pre class="coq"><code>is_additive :: forall (vs : Fin.t n -&gt; V) (i : Fin.t n),
+<pre class="coq"><code>is_additive :: forall (vs : I -&gt; V) (i : I),
   Additive V F add add (fun x =&gt; form (upd vs i x));
-is_homogeneous :: forall (vs : Fin.t n -&gt; V) (i : Fin.t n),
+is_homogeneous :: forall (vs : I -&gt; V) (i : I),
   Homogeneous F V F mult (fun a =&gt; a) (fun x =&gt; form (upd vs i x));</code></pre>
 <p>Look at the <a
 href="coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
@@ -454,14 +454,14 @@ href="coqdoc/Riktig.Props.html#Associative"><code>Associative</code></a>,
 <a
 href="coqdoc/Riktig.Props.html#left_distributive"><code>left_distributive</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>
+href="coqdoc/Riktig.Structure.Linear.html"><code>Structure/Linear.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 class) · <a
-href="coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>
+href="coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.Exp"><code>Exp</code></a>, <a
-href="coqdoc/Riktig.Interface.Exp.html#Exp.add_to_mul"><code>add_to_mul</code></a>)
+href="coqdoc/Riktig.Structure.Exp.html#Exp.Exp"><code>Exp</code></a>, <a
+href="coqdoc/Riktig.Structure.Exp.html#Exp.add_to_mul"><code>add_to_mul</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
 (<a
@@ -469,13 +469,13 @@ href="coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code><
 <a
 href="coqdoc/Riktig.Theory.Group.html#additive_negation"><code>additive_negation</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>,
 <a
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_zero"><code>linear_map_zero</code></a>,
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>)
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>
 (<a
@@ -487,13 +487,13 @@ href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_scale"><code>mat_vec_scale</code>
 <a
 href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_lm"><code>mat_vec_lm</code></a>)
 · <a
-href="coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>
+href="coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#Multilinear.Multilinear"><code>Multilinear</code></a>,
+href="coqdoc/Riktig.Structure.Bilinear.html#Multilinear.Multilinear"><code>Multilinear</code></a>,
 <a
-href="coqdoc/Riktig.Interface.Bilinear.html#upd"><code>upd</code></a>) ·
+href="coqdoc/Riktig.Structure.Bilinear.html#upd"><code>upd</code></a>) ·
 <a
 href="coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</code></a>
 (<a

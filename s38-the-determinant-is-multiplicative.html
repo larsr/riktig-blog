@@ -100,7 +100,7 @@ href="coqdoc/Riktig.Impl.DetMul.html#elem_ops_factor_cofactor"><code>elem_ops_fa
 and applying a list commutes with multiplying on the right (<a
 href="coqdoc/Riktig.Impl.DetMul.html#elem_ops_apply_mul"><code>elem_ops_apply_mul</code></a>).</p>
 <p>The reduction itself is then a theorem producing such a list:</p>
-<pre class="coq"><code>  Theorem gauss_reduce : forall (dec : DecEq F) (n : nat) (A : Matrix n n F),
+<pre class="coq"><code>  Theorem gauss_reduce : forall (dec : EquDec F) (n : nat) (A : Matrix n n F),
     exists l : list (ElemOp n),
       (elem_ops_apply l A == @mat_id F _ _ n)
       \/ (exists i : Fin.t n, forall j : Fin.t n, elem_ops_apply l A i j == 0).</code></pre>
@@ -110,12 +110,12 @@ disjunction <em>is</em> the singular/nonsingular dichotomy, carried as
 data: no rank, no dimension theory, no case left implicit.</p>
 <p>Note the first argument. Elimination has to <em>choose a pivot</em>,
 which means deciding whether a candidate entry is zero. A <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 here is a setoid with an equality relation <code>==</code>; for a
 general field there is no algorithm answering <code>x == 0</code>, so
 the decision procedure is taken as an explicit argument on exactly the
 results that need it.</p>
-<pre class="coq"><code>  Theorem detM_mul_dec : forall (dec : DecEq F) (n : nat)
+<pre class="coq"><code>  Theorem detM_mul_dec : forall (dec : EquDec F) (n : nat)
       (A B : Matrix n n F),
     detM (mat_mul A B) == detM A * detM B.</code></pre>
 <p>The nonsingular branch is the regrouping above. The singular branch
@@ -355,13 +355,13 @@ elimination route:</p>
 <pre class="coq"><code>Corollary det_comp_Q : forall (U : Type)
     (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
     (sU : HasScale Q U) (VU : VectorSpace Q U) (n : nat)
-    (B : Basis n Q U) (f g : LinearMap Q U U),
+    (B : Basis n (Fin.t n) Q U) (f g : LinearMap Q U U),
   det B (linear_map_comp f g) == det B f * det B g.
 
 Corollary det_basis_indep_Q : forall (U : Type)
     (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
     (sU : HasScale Q U) (VU : VectorSpace Q U)
-    (n : nat) (B B&#39; : Basis n Q U) (f : LinearMap Q U U),
+    (n : nat) (B B&#39; : Basis n (Fin.t n) Q U) (f : LinearMap Q U U),
   det B&#39; f == det B f.</code></pre>
 <h2 id="on-numbers">On numbers</h2>
 <p>The product law is also run. With the matrix

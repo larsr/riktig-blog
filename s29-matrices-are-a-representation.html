@@ -33,9 +33,9 @@ structure is a property of a plain function — respecting the equality
 <code>==</code> chosen for each space, plus
 <code>f (u + v) == f u + f v</code> and
 <code>f (a *: u) == a *: f u</code> — and that property is the class <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>,
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>,
 in <a
-href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>:</p>
+href="coqdoc/Riktig.Structure.Linear.html"><code>Structure/Linear.v</code></a>:</p>
 <pre class="coq"><code>Module Linear.
   Class Linear (F U V : Type)
       {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
@@ -62,36 +62,38 @@ giving <code>f (u + v) == f u + f v</code>;
 “carries scaling across, up to a reweighting” class with the reweighting
 taken to be the identity, giving <code>f (a *: u) == a *: f u</code>. A
 norm is homogeneous too, with <a
-href="coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a> as
+href="coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a> as
 its reweighting — same class, different filling.</p>
 <p>A <strong>linear map</strong> is then the data — the function
 together with a proof that it is linear:</p>
-<pre class="coq"><code>Class LinearMap (F U V : Type)
-    {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
-    {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
-  lm_fun : U -&gt; V;
-  lm_linear :: Linear F U V lm_fun;
-}.</code></pre>
+<pre class="coq"><code>Module LinearMap.
+  Class LinearMap (F U V : Type)
+      {eU : EqRel U} {aU : HasAdd U} {sU : HasScale F U}
+      {eV : EqRel V} {aV : HasAdd V} {sV : HasScale F V} := {
+    map    : U -&gt; V;
+    linear :: Linear F U V map;
+  }.
+End LinearMap.</code></pre>
 <p>The three laws are read out of a map under the names <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>,
 <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_additive"><code>linear_map_additive</code></a>
 and <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>,
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>,
 each a one-line definition that instantiates the general projection at
 the map’s own function — <code>linear_map_scale f</code> is
-<code>homogeneous (f := lm_fun f)</code> — and it is those readable
-names the proofs below cite. Notice what is <em>not</em> here: no grid
-of numbers, no rows and columns.</p>
+<code>homogeneous (f := LinearMap.map f)</code> — and it is those
+readable names the proofs below cite. Notice what is <em>not</em> here:
+no grid of numbers, no rows and columns.</p>
 <h2 id="coordinates-a-vector-written-in-a-basis">Coordinates: a vector
 written in a basis</h2>
 <p>A <strong>basis</strong> of an <code>n</code>-dimensional space is a
 choice of <code>n</code> vectors such that every vector is a unique
 combination <code>c_1 *: b_1 + ... + c_n *: b_n</code>. The scalars
 <code>c_i</code> are the vector’s <strong>coordinates</strong>;
-<code>basis_coords B</code> reads them off (as a linear map into the
+<code>Basis.coords B</code> reads them off (as a linear map into the
 space of coordinate functions <code>Fin.t n -&gt; F</code>), and
-<code>basis_vec B</code> recovers the basis vectors. The one fact we
+<code>Basis.vec B</code> recovers the basis vectors. The one fact we
 need is that these round-trip: rebuilding a vector from its coordinates
 gives the vector back. With that, a coordinate-free vector and its
 column of scalars carry the same information — the basis is the
@@ -108,9 +110,9 @@ the coordinates of what <code>f</code> does to the <code>j</code>-th
 source basis vector. From <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>:</p>
 <pre class="coq"><code>Definition mat_of (f : LinearMap F U V) : Matrix m n F :=
-  fun i j =&gt; basis_coords BV (f (basis_vec BU j)) i.</code></pre>
+  fun i j =&gt; Basis.coords BV (f (Basis.vec BU j)) i.</code></pre>
 <p>Entry <code>(i, j)</code> is the <code>i</code>-th coordinate of
-<code>f (basis_vec BU j)</code>: what the <code>j</code>-th source basis
+<code>f (Basis.vec BU j)</code>: what the <code>j</code>-th source basis
 vector becomes, expressed in the target basis. The columns of the matrix
 <em>are</em> the images of the basis vectors.</p>
 <p>The reverse — rebuilding a map from a rectangle of scalars — reads
@@ -118,10 +120,10 @@ each output coordinate as a row of the matrix against the input’s
 coordinate column, then reassembles the target vector from those
 coordinates:</p>
 <pre class="coq"><code>Definition hom_of_coeff (A : Matrix m n F) (u : U) : Fin.t m -&gt; F :=
-  fun i =&gt; bigopF (fun j =&gt; A i j * basis_coords BU u j).
+  fun i =&gt; bigopF (fun j =&gt; A i j * Basis.coords BU u j).
 
 Definition hom_of_fun (A : Matrix m n F) (u : U) : V :=
-  lincomb (basis_vec BV) (hom_of_coeff A u).</code></pre>
+  lincomb (Basis.vec BV) (hom_of_coeff A u).</code></pre>
 <p><code>hom_of_coeff A u i</code> is the sum
 <code>Σ_j A i j * (coordinate j of u)</code> — row <code>i</code> of
 <code>A</code> paired with <code>u</code>’s coordinate column, which is
@@ -129,9 +131,9 @@ exactly one entry of “matrix times vector.” <a
 href="coqdoc/Riktig.Theory.MatRep.html#hom_of_fun"><code>hom_of_fun</code></a>
 then combines the resulting coordinates against the target basis. Handed
 to <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>
 with its three linearity proofs, this becomes a genuine <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>:</p>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>:</p>
 <pre class="coq"><code>Definition hom_of (A : Matrix m n F) : LinearMap F U V :=
   linear_map_from_laws
     (hom_of_fun A)
@@ -160,17 +162,17 @@ column.” That identity is <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>:</p>
 <pre class="coq"><code>Theorem mat_of_coords : forall (f : LinearMap F U V) (u : U)
     (i : Fin.t m),
-  basis_coords BV (f u) i == hom_of_coeff (mat_of f) u i.
+  Basis.coords BV (f u) i == hom_of_coeff (mat_of f) u i.
 Proof.
   intros f u i.
-  calc (basis_coords BV (f u) i)
-    == (basis_coords BV
-          (lincomb (basis_vec BV) (hom_of_coeff (mat_of f) u)) i)
+  calc (Basis.coords BV (f u) i)
+    == (Basis.coords BV
+          (lincomb (Basis.vec BV) (hom_of_coeff (mat_of f) u)) i)
     == (hom_of_coeff (mat_of f) u i).
-  - exact (linear_map_proper (basis_coords BV) (f u)
-             (lincomb (basis_vec BV) (hom_of_coeff (mat_of f) u))
+  - exact (linear_map_proper (Basis.coords BV) (f u)
+             (lincomb (Basis.vec BV) (hom_of_coeff (mat_of f) u))
              (hom_expand f u) i).
-  - exact (basis_coords_linear_combination BV (hom_of_coeff (mat_of f) u) i).
+  - exact (Basis.coords_linear_combination BV (hom_of_coeff (mat_of f) u) i).
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
@@ -181,11 +183,11 @@ expression: the target vector rebuilt from the coordinate column
 <li>The first link is <code>hom_expand f u</code>, the
 expand-and-collect computation above, which says <code>f u</code> equals
 that rebuilt vector; <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>
-transports the equality under <code>basis_coords BV</code> and reads it
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_proper"><code>linear_map_proper</code></a>
+transports the equality under <code>Basis.coords BV</code> and reads it
 at index <code>i</code>.</li>
 <li>The second link, <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_coords_linear_combination"><code>basis_coords_linear_combination</code></a>,
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords_linear_combination"><code>Basis.coords_linear_combination</code></a>,
 is the round-trip fact: reading coordinate <code>i</code> back off a
 reconstruction returns coordinate <code>i</code> of the column you built
 it from.</li>
@@ -206,14 +208,14 @@ href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>:</p>
 Proof.
   intros f u.
   calc (hom_of (mat_of f) u)
-    == (lincomb (basis_vec BV) (basis_coords BV (f u)))
+    == (lincomb (Basis.vec BV) (Basis.coords BV (f u)))
     == (f u).
-  - apply (lincomb_proper m (basis_vec BV)
-             (hom_of_coeff (mat_of f) u) (basis_coords BV (f u))).
+  - apply (lincomb_proper (Basis.vec BV)
+             (hom_of_coeff (mat_of f) u) (Basis.coords BV (f u))).
     intros i.
     symmetry.
     exact (mat_of_coords f u i).
-  - exact (basis_reconstruction BV (f u)).
+  - exact (Basis.reconstruction BV (f u)).
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
@@ -221,7 +223,7 @@ Qed.</code></pre>
 every point, so it suffices to show
 <code>hom_of (mat_of f) u == f u</code>.</li>
 <li>The <code>calc</code> chain routes through
-<code>lincomb (basis_vec BV) (basis_coords BV (f u))</code>, the
+<code>lincomb (Basis.vec BV) (Basis.coords BV (f u))</code>, the
 reconstruction of <code>f u</code> from <em>its own</em>
 coordinates.</li>
 <li>The first link matches the two coordinate columns entry by entry: <a
@@ -232,7 +234,7 @@ of <code>f u</code>, and <a
 href="coqdoc/Riktig.Theory.Basis.html#lincomb_proper"><code>lincomb_proper</code></a>
 lifts that agreement through the reassembly.</li>
 <li>The second link, <a
-href="coqdoc/Riktig.Interface.Basis.html#basis_reconstruction"><code>basis_reconstruction</code></a>,
+href="coqdoc/Riktig.Structure.Basis.html#Basis.reconstruction"><code>Basis.reconstruction</code></a>,
 is the basis round-trip: a vector rebuilt from its own coordinates is
 itself.</li>
 </ul>
@@ -270,10 +272,10 @@ bases.”</p>
 work. Entry <code>(i, j)</code> of the composite’s matrix is, by
 definition of <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>,
-the <code>i</code>-th coordinate of <code>g (f (basis_vec BU j))</code>
+the <code>i</code>-th coordinate of <code>g (f (Basis.vec BU j))</code>
 — and that is <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
-for <code>g</code>, read at the point <code>f (basis_vec BU j)</code>,
+for <code>g</code>, read at the point <code>f (Basis.vec BU j)</code>,
 whose right-hand side is exactly the sum
 <code>Σ_k ⟦g⟧ i k * ⟦f⟧ k j</code> that <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
@@ -283,20 +285,20 @@ computes. Verbatim:</p>
     == mat_mul (mat_of BV BW g) (mat_of BU BV f).
 Proof.
   intros g f i j.
-  exact (mat_of_coords BV BW g (f (basis_vec BU j)) i).
+  exact (mat_of_coords BV BW g (f (Basis.vec BU j)) i).
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
 <li><code>intros g f i j</code> — matrices are equal when equal
 entrywise, so fix an entry <code>(i, j)</code>.</li>
 <li>The left side, <code>mat_of BU BW (linear_map_comp g f) i j</code>,
-unfolds to <code>basis_coords BW (g (f (basis_vec BU j))) i</code>. The
+unfolds to <code>Basis.coords BW (g (f (Basis.vec BU j))) i</code>. The
 right side, <code>mat_mul (mat_of BV BW g) (mat_of BU BV f) i j</code>,
 unfolds to
-<code>hom_of_coeff (mat_of BV BW g) (f (basis_vec BU j)) i</code>.</li>
+<code>hom_of_coeff (mat_of BV BW g) (f (Basis.vec BU j)) i</code>.</li>
 <li>Those two are precisely the two sides of <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
-for <code>g</code> at the point <code>f (basis_vec BU j)</code>. The
+for <code>g</code> at the point <code>f (Basis.vec BU j)</code>. The
 single <a
 href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>
 supplies it. Composition and multiplication were never two facts to be
@@ -341,13 +343,13 @@ the result off in coordinates.</p>
 factor by which a linear map scales volume.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Interface.Linear.html"><code>Interface/Linear.v</code></a>
+href="coqdoc/Riktig.Structure.Linear.html"><code>Structure/Linear.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.Linear.html#Linear.Linear"><code>Linear</code></a>
+href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 class) · <a
-href="coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 (the <a
-href="coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 record, <a
 href="coqdoc/Riktig.Theory.LinearMap.html#linear_map_comp"><code>linear_map_comp</code></a>)
 · <a

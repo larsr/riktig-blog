@@ -155,22 +155,21 @@ R \cdot \big(\mathrm{rotor}(j_1)\cdot\mathrm{rotor}(j_2)\cdots\mathrm{rotor}(j_n
     induction joints as [| j rest IH]; intros orientation.
     - calc (chain_orientation_from2 orientation [])
         == (orientation : Cl F 2)
-           { (chain_orientation_from2_nil orientation) }
+           { chain_orientation_from2_nil }
         == (orientation * 1 : Cl F 2)
-           { (right_identity orientation) }
+           { right_identity }
         == (orientation * chain_rotor2 [] : Cl F 2)
            { chain_rotor2_nil }.
     - calc (chain_orientation_from2 orientation (j :: rest))
         == (chain_orientation_from2
               (orientation * rotor (joint2_c j) (joint2_s j)) rest : Cl F 2)
-           { (chain_orientation_from2_cons orientation j rest) }
+           { chain_orientation_from2_cons }
         == ((orientation * rotor (joint2_c j) (joint2_s j)) * chain_rotor2 rest : Cl F 2)
-           { (IH (orientation * rotor (joint2_c j) (joint2_s j))) }
+           { IH }
         == (orientation * (rotor (joint2_c j) (joint2_s j) * chain_rotor2 rest) : Cl F 2)
-           { (associative orientation (rotor (joint2_c j) (joint2_s j))
-                (chain_rotor2 rest)) }
+           { associative }
         == (orientation * chain_rotor2 (j :: rest) : Cl F 2)
-           { (chain_rotor2_cons j rest) }.
+           { chain_rotor2_cons }.
   Qed.</code></pre>
 <p>The proof is an induction on the joint list, matching the two
 definitions’ own recursion. <code>calc</code> opens the equational chain
@@ -239,7 +238,7 @@ new joint’s rotor on the right. Multiplication in <code>Cl F 2</code> or
 <code>Cl F 3</code> is total — an ordinary function defined on every
 pair of elements, with no configuration of steering values it fails to
 handle — and it is associative because that is one of the laws every <a
-href="coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
+href="coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>
 instance is required to satisfy, checked once for the whole family of
 algebras when <a
 href="coqdoc/Riktig.Impl.Clifford.html#Cl_Ring"><code>Cl_Ring</code></a>
@@ -370,7 +369,7 @@ Example planar_arm_positions :
     [ ga_vec (plane_vector (1#1)%Q (0#1)%Q); ga_vec (plane_vector (0#1)%Q (0#1)%Q) ].
 Proof. repeat constructor; apply cl2_ext; vm_compute; reflexivity. Qed.</code></pre>
 <p><code>Q</code>, the rationals, is an ordinary <a
-href="coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>,
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>,
 so every definition above specializes to it directly with no extra work.
 Because an element of <code>Cl Q 2</code> is a <em>function</em> from
 blades to coefficients, the expected positions are stated coefficient by

@@ -166,9 +166,9 @@ calculation and the Coq are the same calculation.</p>
     - now rewrite Nat.gcd_0_r.
     - assert (Hlt : a mod b &lt; b) by (apply Nat.mod_upper_bound; exact Hb).
       calc (gcd b (a mod b))
-        == (Nat.gcd b (a mod b)) { (IH b (a mod b) Hlt) }
+        == (Nat.gcd b (a mod b)) { IH }
         == (Nat.gcd (a mod b) b) { Nat.gcd_comm }
-        == (Nat.gcd b a)         { (Nat.Lcm0.gcd_mod a b) }
+        == (Nat.gcd b a)         { Nat.Lcm0.gcd_mod }
         == (Nat.gcd a b)         { Nat.gcd_comm }.
   Qed.</code></pre>
 <p>Walking it:</p>
@@ -192,11 +192,11 @@ step.</li>
 and the first thing needed is the decrease itself:
 <code>Hlt : a mod b &lt; b</code>, from <code>Nat.mod_upper_bound</code>
 and <code>Hb</code>.</li>
-<li>The first step of the chain is the induction hypothesis applied at
-the smaller pair, <code>IH b (a mod b) Hlt</code>; that is where the
-program is traded for <code>Nat.gcd</code>. The three remaining steps
-stay inside the library: <code>Nat.gcd_comm</code> swaps the two
-arguments, <code>Nat.Lcm0.gcd_mod</code> — which states
+<li>The first step of the chain is the induction hypothesis
+<code>IH</code>, used at the smaller pair <code>(b, a mod b)</code>;
+that is where the program is traded for <code>Nat.gcd</code>. The three
+remaining steps stay inside the library: <code>Nat.gcd_comm</code> swaps
+the two arguments, <code>Nat.Lcm0.gcd_mod</code> — which states
 <code>Nat.gcd (a mod b) b = Nat.gcd b a</code> — is the library’s own
 Euclid step, and <code>Nat.gcd_comm</code> swaps back.</li>
 </ul>

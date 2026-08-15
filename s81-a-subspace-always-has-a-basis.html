@@ -47,16 +47,16 @@ undo each other. Closure under addition and scaling — the property that
 makes a subset a subspace — is likewise a small class,
 <code>SubspacePred F V P</code>, carrying three laws about a predicate
 <code>P</code> on vectors: <a
-href="coqdoc/Riktig.Interface.Subspace.html#SubspacePred.zero"><code>SubspacePred.zero</code></a>
+href="coqdoc/Riktig.Structure.Subspace.html#SubspacePred.zero"><code>SubspacePred.zero</code></a>
 says <code>0</code> satisfies <code>P</code>, <a
-href="coqdoc/Riktig.Interface.Subspace.html#SubspacePred.add_closed"><code>SubspacePred.add_closed</code></a>
+href="coqdoc/Riktig.Structure.Subspace.html#SubspacePred.add_closed"><code>SubspacePred.add_closed</code></a>
 and <a
-href="coqdoc/Riktig.Interface.Subspace.html#SubspacePred.scale_closed"><code>SubspacePred.scale_closed</code></a>
+href="coqdoc/Riktig.Structure.Subspace.html#SubspacePred.scale_closed"><code>SubspacePred.scale_closed</code></a>
 say <code>P</code> survives <code>+</code> and scaling.
 <code>Sub V P</code> is the actual subspace as a type — the vectors
 satisfying <code>P</code>, paired with their proof of membership — and
 it inherits a <a
-href="coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+href="coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
 structure automatically, by nothing more than combining the pieces
 above.</p>
 <p>With those three pieces named, the question from the introduction
@@ -155,15 +155,15 @@ few lines. <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#eval_lm"><code>eval_lm</code></a>
 evaluates a coordinate function at one fixed index and is linear (a
 short fact proved earlier in the file); composing it with
-<code>basis_coords Bn</code> gives the linear map that reads off a
+<code>Basis.coords Bn</code> gives the linear map that reads off a
 vector’s first coordinate, and its kernel is the hyperplane:</p>
 <pre class="coq"><code>Section Hyperplane.
   Context {F V : Type} `{FF : Field F}.
   Context {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}.
   Context {VV : VectorSpace F V}.
-  Context {m : nat} (Bn : Basis (S m) F V).
+  Context {m : nat} (Bn : Basis (S m) (Fin.t (S m)) F V).
 
-  Definition c1 : LinearMap F V F := linear_map_comp (eval_lm Fin.F1) (basis_coords Bn).
+  Definition c1 : LinearMap F V F := linear_map_comp (eval_lm Fin.F1) (Basis.coords Bn).
 
   Definition H (v : V) : Prop := ker_pred c1 v.
 
@@ -174,12 +174,12 @@ for kernels and images in general. The file goes on to prove, by the
 same drop-the-first-coordinate idea as the blackboard sketch, that the
 tail basis vectors give an actual <code>Basis m</code> of
 <code>H</code>:</p>
-<pre class="coq"><code>Definition hyperplane_basis : Basis m F (Sub V H) :=
-  {| basis_vec := hp_basis_vec; basis_coords := hp_coords;
-     basis_reconstruction := hp_recon;
-     basis_coords_linear_combination := hp_coords_lincomb |}.</code></pre>
+<pre class="coq"><code>Definition hyperplane_basis : Basis m (Fin.t m) F (Sub V H) :=
+  {| Basis.vec := hp_sub_vec; Basis.coords := hp_coords;
+     Basis.reconstruction := hp_recon;
+     Basis.coords_linear_combination := hp_coords_lincomb |}.</code></pre>
 <p>(<a
-href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_basis_vec"><code>hp_basis_vec</code></a>,
+href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_sub_vec"><code>hp_sub_vec</code></a>,
 <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_coords"><code>hp_coords</code></a>,
 and their two round-trip proofs <a
@@ -194,14 +194,14 @@ the induction that uses them, below.)</p>
 the same way, generically, for any linear functional
 <code>phi</code>:</p>
 <pre class="coq"><code>Definition eb_vec (i : Fin.t (S k)) : W :=
-  Fin.caseS&#39; i (fun _ =&gt; W) w1 (fun i&#39; =&gt; proj1_sig (basis_vec BHW i&#39;)).</code></pre>
+  Fin.caseS&#39; i (fun _ =&gt; W) w1 (fun i&#39; =&gt; proj1_sig (Basis.vec BHW i&#39;)).</code></pre>
 <p>and, after the round-trip proofs for the extended coordinate map (a
 few hundred lines of the same delta-collapse bookkeeping), the assembled
 basis:</p>
-<pre class="coq"><code>Definition extend_basis_by_vector : Basis (S k) F W :=
-  {| basis_vec := eb_vec; basis_coords := eb_coords;
-     basis_reconstruction := eb_recon;
-     basis_coords_linear_combination := eb_coords_lincomb |}.</code></pre>
+<pre class="coq"><code>Definition extend_basis_by_vector : Basis (S k) (Fin.t (S k)) F W :=
+  {| Basis.vec := eb_vec; Basis.coords := eb_coords;
+     Basis.reconstruction := eb_recon;
+     Basis.coords_linear_combination := eb_coords_lincomb |}.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#eb_vec"><code>eb_vec</code></a>
 is exactly “prepend <code>w1</code>, keep the old basis vectors after
@@ -214,9 +214,9 @@ case.</p>
 included, nothing elided:</p>
 <pre class="coq"><code>Theorem subspace_basis_exists : forall (n : nat) (F V : Type) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
-    (sV : HasScale F V) (VV : VectorSpace F V) (Bn : Basis n F V) (P : V -&gt; Prop)
+    (sV : HasScale F V) (VV : VectorSpace F V) (Bn : Basis n (Fin.t n) F V) (P : V -&gt; Prop)
     (SP : SubspacePred F V P),
-  exists k : nat, Nat.le k n /\ exists Bk : Basis k F (Sub V P), True.
+  exists k : nat, Nat.le k n /\ exists Bk : Basis k (Fin.t k) F (Sub V P), True.
 Proof.
   induction n as [| m IH];
     intros F V Fe Fz Fa Fn Fo Fm Fi FF eV zV aV nV sV VV Bn P SP.
@@ -298,7 +298,7 @@ case split from the sketch, <code>Hex</code>/<code>Hnex</code>.</li>
 <code>Hv1_1</code> proves
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c_1(v_1) = 1</annotation></semantics></math>,
 by <a
-href="coqdoc/Riktig.Interface.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>
+href="coqdoc/Riktig.Structure.LinearMap.html#linear_map_scale"><code>linear_map_scale</code></a>
 (pulling the scalar through the linear map <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#c1"><code>c1</code></a>)
 followed by <a
@@ -359,7 +359,7 @@ constructive by default, so <code>P \/ ~P</code> is not available for an
 arbitrary proposition without a procedure that actually determines which
 side holds. Here the proposition is about an abstract field
 <code>F</code> — the codebase’s <a
-href="coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 class assumes none of the algebraic laws come with a decision procedure
 for equality — so there is no way to compute, for an arbitrary vector
 <code>v0</code>, whether <code>c1 v0</code> equals zero or not. Excluded
@@ -376,7 +376,7 @@ data used to build something outside <code>Prop</code> — which is
 exactly what happens next, since <code>v0</code> becomes
 <code>v1</code>, which becomes <code>w1</code>, which becomes an actual
 entry in the basis-vector list of the <a
-href="coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+href="coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
 record being constructed. The witness has to be extracted as real data,
 not just used to derive a further fact, and that extraction is what this
 axiom supplies.</p>
@@ -393,8 +393,8 @@ href="coqdoc/Riktig.Theory.KerIm.html#subspace_has_basis_statement"><code>subspa
   forall (F V : Type) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V) (n : nat)
-    (Bn : Basis n F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
-    exists k : nat, k &lt;= n /\ exists Bk : Basis k F (Sub V P), True.</code></pre>
+    (Bn : Basis n (Fin.t n) F V) (P : V -&gt; Prop) (SP : SubspacePred F V P),
+    exists k : nat, (k &lt;= n)%nat /\ exists Bk : Basis k (Fin.t k) F (Sub V P), True.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_basis_exists"><code>subspace_basis_exists</code></a>
 discharges it in one line, by direct application:</p>
@@ -419,8 +419,9 @@ so it type-checks and names the goal precisely:</p>
     (sU : HasScale F U) (VU : VectorSpace F U)
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V)
-    (f : LinearMap F U V) (n : nat) (Bn : Basis n F U)
-    (k : nat) (Bk : Basis k F (Ker f)) (r : nat) (Br : Basis r F (Im f)),
+    (f : LinearMap F U V) (n : nat) (Bn : Basis n (Fin.t n) F U)
+    (k : nat) (Bk : Basis k (Fin.t k) F (Ker f))
+    (r : nat) (Br : Basis r (Fin.t r) F (Im f)),
     n = Nat.add k r.</code></pre>
 <p>This is still not proved, and <a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#subspace_has_basis"><code>subspace_has_basis</code></a>

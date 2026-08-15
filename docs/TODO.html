@@ -27,6 +27,99 @@ href="../coqdoc/Riktig.Theory.SubspaceBasis.html"><code>Theory/SubspaceBasis.v</
 — the Steinitz exchange needs to decide whether a subspace is the whole
 space and to extract a witness vector from an existence proof.
 Everything else is closed under the global context.</p>
+<h2 id="active-queue-2026-08-14--numbered-tasks">Active queue
+(2026-08-14) — numbered tasks</h2>
+<ul class="task-list">
+<li><label><input type="checkbox" />#106 Lambda as a structure (Lars
+2026-08-15, doctrine at full strength: no inductive types or function
+definitions outside Impl). Structure/: a class over an abstract carrier
+T with EqRel (conversion as the setoid), operations var/abs/app and
+substitution as an OPERATION, laws as equations (beta, and the
+substitution algebra – the sigma-calculus laws are the known equational
+presentation; weigh against a categorical/CCC presentation through the
+existing Category track). Theory/: Church encodings,
+standardization-style consequences, proved from the laws alone. Impl/:
+today’s inductive tm (Syntax.v) and Scoped.v’s Exp become instances; the
+current Lambda track files migrate or move under Impl. PROTOTYPE FIRST
+(LambdaLab): the substitution-law set is the entire
+difficulty.</label></li>
+<li><label><input type="checkbox" />#105 Setoid indices:
+Structure/Theory never assume Leibniz decidability (Lars 2026-08-14:
+structures and theories are abstract, equational; Coq’s computational
+equality is an Impl phenomenon). Migrate FinIndex, Basis,
+Multilinear/upd/famEq, Swap and the enumeration laws from {EqDec I} to
+{eI : EqRel I} {EquDec I}, restating NoDup/completeness up to [==]
+(setoid list membership); Fin.t’s instance recovers the Leibniz case
+since its [==] is [eq]. Large: the enumeration machinery and DetSign’s
+permutation lists sit on Leibniz lists today. Prototype
+first.</label></li>
+<li><label><input type="checkbox" />#104 Theory-defines-no-functions
+rollout (doctrine set by Lars 2026-08-14; DESIGN rule 1 amended; Swap is
+the exemplar — class in Theory/Fin.v, function + instance in
+Impl/Fin.v). Remaining defined-in-Theory operations to migrate to
+class-with-equations + Impl instance: bigop, bigop_list, bigopI
+(Theory/BigOp.v), lincomb (Theory/Basis.v), upd and famEq
+(Structure/Bilinear.v — spec vocabulary, needs its own shape),
+GramSchmidt’s algorithm, and a ruling on construction definitions
+(linear_map_comp, basis_transport, from_laws builders): constructions of
+data records may be a distinct, permitted category.</label></li>
+</ul>
+<p>The assistant’s work queue; the numbers are cited in commit
+discussions and chat. In flight means a background worker owns it.</p>
+<ul class="task-list">
+<li><label><input type="checkbox" />#66 Strip prose from Theory/ and
+Impl/, move it to per-file blog posts. Held until the code queue below
+is empty.</label></li>
+<li><label><input type="checkbox" />#78 Blog rewrite to the 2026-08-02
+contract, one post per structure/program; includes reviewing recent
+posts against the 2026-08-13 focus amendment. Held with
+#66.</label></li>
+<li><label><input type="checkbox" checked="" />#99 (done 2026-08-14, CI
+25029) Justification-minimality sweep over all calc chains (bare general
+projections; smallest pinning prefix otherwise) plus general-names
+substitution (additive[f] over structure-specific spellings, register
+missing Additive/Homogeneous instances). Landed: 591 slots -&gt; 518
+bare, 25 minimally pinned, 48 kept-full; four wedge instances
+registered; five rule-8 defects fixed.</label></li>
+<li><label><input type="checkbox" checked="" />#101 (done 2026-08-14, CI
+25029) Fin phase 3: abstract permutation signs over the EqDec swap;
+retire Theory/Fin.v’s bijection_skip_step block once
+DetSign/DetSignGeneral/DetAlternating stop using it. Landed:
+bijection_skip_step retired (~260 lines), Perm n is a FinIndex,
+Theory/Fin.v names no Fin.t (new Impl/Fin.v).</label></li>
+<li><label><input type="checkbox" />#103 Fin phase 4: consumers (MatRep,
+Det chain, FinVecBasis, GramSchmidt, SubspaceBasis) stated over the
+FinIndex class; Fin.t only in Impl and at run sites. Theory files carry
+lemmas about structures, never about an Impl-owned concrete type (Lars,
+2026-08-14). After #99 and #101 merge. Landed 2026-08-14 (prototype
+FinLab2.v): Basis/Multilinear/ Alternating/Determinant classes take an
+index carrier with EqDec + FinIndex binders; lincomb is bigopI over the
+enumeration; the bigopF layer, FinIndex_Fin and prodF moved from
+Theory/BigOp.v to the new Impl/FinIndex.v, retiring the flagged
+Theory-&gt;Impl edge (and Structure/Bilinear.v’s Impl.Decidable import).
+Carrier-abstract now: Theory/Basis, Bilinear (upd_at/upd_off),
+DualBasis, Transport, Derivative (partial_at), Determinant (Pullback,
+SwapNegates over the EqDec swap), MatRep’s coords/lm_lincomb layer.
+Still at Fin.t, as run sites of Impl-owned types: everything typed by
+Matrix (MatRep’s mat_of layer, MatVec, Trace, Determinant’s detM
+sections, Exterior, Jacobian, Backprop, MatMulBilinear), SubspaceBasis
+(builds bases by structural recursion on Fin.t; candidate for an Impl
+move or an index-transport construction), KerIm’s two dimension
+statements (pin the carrier their discharger constructs; documented
+Impl.FinIndex edge), and the concrete-dimension files SU3Algebra (Fin.t
+8), SpaceRotor (Fin.t 3), Maxwell, PlaneRotor.</label></li>
+<li><label><input type="checkbox" checked="" />#102 (done 2026-08-14)
+Resolution hot-spot measurement. Finding: resolution is NOT a cost
+center — the top of the ranking is concrete computation (SU3Algebra’s
+structure-constant table, 316 s of ~420 s tree total; SpaceRotor blade
+reduction; ABNF vm_compute), and no short proof has a slow Qed. Baseline
+log kept by scripts/hotspots.py; optional future optimization:
+reflective evaluation for SU3’s table checks.</label></li>
+<li><label><input type="checkbox" />(unnumbered, awaiting ruling) GA
+lecture-facing pass: grading interface with grade projections, notations
+for wedge, dot, grade parts and basis vectors, a signature-list helper,
+and a compiling Lecture.v; discussed 2026-08-13/14.</label></li>
+</ul>
 <h2
 id="docsdesignmd-rules-8910--audit-gaps-found-2026-07-21">docs/DESIGN.md
 Rules 8/9/10 — audit gaps (found 2026-07-21)</h2>
@@ -34,7 +127,7 @@ Rules 8/9/10 — audit gaps (found 2026-07-21)</h2>
 own text, that outstanding files would be “tracked in docs/TODO.md” —
 they never were, until this audit. Several files below were touched by a
 rename commit whose OWN message claims the file is “done” (e.g.
-<code>4eec38d</code>: “Interface/Order.v … full descriptive field names
+<code>4eec38d</code>: “Structure/Order.v … full descriptive field names
 … aligned”) when grepping the actual field names shows it is not: the
 commit renamed the substructure-wiring fields and added documentation,
 but left the class’s own law fields untouched. Lesson for future
@@ -48,9 +141,9 @@ descriptive names, no abbreviations)</strong> — all items below fixed
 2026-07-22:</label>
 <ul class="task-list">
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Order.html"><code>Interface/Order.v</code></a>
+href="../coqdoc/Riktig.Structure.Order.html"><code>Structure/Order.v</code></a>
 — <strong>fixed 2026-07-22</strong>: all 15 of <a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>’s
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>’s
 own law/respect fields renamed to the <code>ordered_field_</code> prefix
 (<code>ordered_field_le_refl</code>,
 <code>ordered_field_le_trans</code>,
@@ -105,58 +198,57 @@ TODO entry’s own history text) and a clean <code>make -j</code> rebuild
 — not just a commit message. Superseded 2026-07-25 by the module wrap
 (Wave I2): the class moved into <code>Module OrderedField</code>, so the
 prefix went back to being the module path (<a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>),
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.le_total"><code>OrderedField.le_total</code></a>),
 and the two operational fields
 <code>ordered_field_le</code>/<code>ordered_field_abs</code> became the
 implicit class parameters <code>{Fl : HasLe F}</code>
 <code>{Fb : HasAbs F}</code>.</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
+href="../coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
 — <strong>fixed 2026-07-22</strong>: all 7 under-prefixed classes
 renamed — <a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.Functor"><code>Functor</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Functor.Functor"><code>Functor</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.fmap_id"><code>fmap_id</code></a>/
+href="../coqdoc/Riktig.Structure.Category.html#Functor.fmap_id"><code>fmap_id</code></a>/
 <a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.fmap_comp"><code>fmap_comp</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Functor.fmap_comp"><code>fmap_comp</code></a>
 → <code>functor_fmap_id</code>/<code>functor_fmap_comp</code>), <a
-href="../coqdoc/Riktig.Interface.Category.html#NaturalTransformation.NaturalTransformation"><code>NaturalTransformation</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#NaturalTransformation.NaturalTransformation"><code>NaturalTransformation</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Category.html#NaturalTransformation.naturality"><code>naturality</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#NaturalTransformation.naturality"><code>naturality</code></a>
 → <code>natural_transformation_naturality</code>), <a
-href="../coqdoc/Riktig.Interface.Category.html#Initial.Initial"><code>Initial</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Initial.Initial"><code>Initial</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Category.html#Initial.emit_uniqueness"><code>emit_uniqueness</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Initial.emit_uniqueness"><code>emit_uniqueness</code></a>
 → <code>initial_emit_uniqueness</code>), <a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.HasProducts"><code>HasProducts</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.HasProducts"><code>HasProducts</code></a>
 (<code>pair_pi1</code>/<code>pair_pi2</code>/<code>pair_uniqueness</code>/
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.pair_proper"><code>pair_proper</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.pair_proper"><code>pair_proper</code></a>
 → <code>product_*</code>), <a
-href="../coqdoc/Riktig.Interface.Category.html#HasCoproducts.HasCoproducts"><code>HasCoproducts</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#HasCoproducts.HasCoproducts"><code>HasCoproducts</code></a>
 (<code>case_*</code> → <code>coproduct_*</code>), <a
-href="../coqdoc/Riktig.Interface.Category.html#HasExponentials.HasExponentials"><code>HasExponentials</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#HasExponentials.HasExponentials"><code>HasExponentials</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_beta"><code>curry_beta</code></a>/
+href="../coqdoc/Riktig.Structure.Category.html#HasExponentials.curry_beta"><code>curry_beta</code></a>/
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_uniqueness"><code>curry_uniqueness</code></a>/<code>curry_proper</code>
+href="../coqdoc/Riktig.Structure.Category.html#HasExponentials.curry_uniqueness"><code>curry_uniqueness</code></a>/<code>curry_proper</code>
 → <code>exponential_curry_*</code>). <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.hom"><code>hom</code></a>/<code>cat_id</code>/<a
-href="../coqdoc/Riktig.Interface.Category.html#Category.comp"><code>comp</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Category.hom"><code>hom</code></a>/<code>cat_id</code>/<a
+href="../coqdoc/Riktig.Structure.Category.html#Category.comp"><code>comp</code></a>
 and every other class’s own operational fields (<a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.fobj"><code>fobj</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.fmap"><code>fmap</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Functor.fobj"><code>fobj</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#Functor.fmap"><code>fmap</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#NaturalTransformation.eta"><code>eta</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#NaturalTransformation.eta"><code>eta</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.prod_obj"><code>prod_obj</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.pi1"><code>pi1</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.pi2"><code>pi2</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.prod_obj"><code>prod_obj</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.pi1"><code>pi1</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.pi2"><code>pi2</code></a>,
 etc.) got a documented exemption instead (read only through their own
-notation, the same reasoning as <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>/<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#bm_fun"><code>bm_fun</code></a>/<code>ga_vec</code>).
-Propagated to <a
+notation, the same reasoning as
+<code>lm_fun</code>/<code>bm_fun</code>/<code>ga_vec</code>). Propagated
+to <a
 href="../coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>,
 <a
 href="../coqdoc/Riktig.Impl.VectZero.html"><code>Impl/VectZero.v</code></a>,
@@ -182,52 +274,51 @@ full-tree grep, clean rebuild, and
 2026-07-25 by the module wrap (Wave I2): each of the nine classes moved
 into a module of its own, so the prefixes went back to being the module
 path — <code>Category.left_identity</code>, <a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.fmap_id"><code>Functor.fmap_id</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Functor.fmap_id"><code>Functor.fmap_id</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#NaturalTransformation.naturality"><code>NaturalTransformation.naturality</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#Initial.emit_uniqueness"><code>Initial.emit_uniqueness</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Initial.emit_uniqueness"><code>Initial.emit_uniqueness</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#Terminal.morphism_uniqueness"><code>Terminal.morphism_uniqueness</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Terminal.morphism_uniqueness"><code>Terminal.morphism_uniqueness</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.pi1_pair"><code>HasProducts.pi1_pair</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.pi2_pair"><code>pi2_pair</code></a>/<code>uniqueness</code>/<a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.pair_proper"><code>pair_proper</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.pi1_pair"><code>HasProducts.pi1_pair</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.pi2_pair"><code>pi2_pair</code></a>/<code>uniqueness</code>/<a
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.pair_proper"><code>pair_proper</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasCoproducts.case_inj1"><code>HasCoproducts.case_inj1</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#HasCoproducts.case_inj2"><code>case_inj2</code></a>/<code>uniqueness</code>/
+href="../coqdoc/Riktig.Structure.Category.html#HasCoproducts.case_inj1"><code>HasCoproducts.case_inj1</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#HasCoproducts.case_inj2"><code>case_inj2</code></a>/<code>uniqueness</code>/
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasCoproducts.case_proper"><code>case_proper</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#HasCoproducts.case_proper"><code>case_proper</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_beta"><code>HasExponentials.curry_beta</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#HasExponentials.curry_uniqueness"><code>curry_uniqueness</code></a>/
+href="../coqdoc/Riktig.Structure.Category.html#HasExponentials.curry_beta"><code>HasExponentials.curry_beta</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#HasExponentials.curry_uniqueness"><code>curry_uniqueness</code></a>/
 <code>curry_proper</code>, <a
-href="../coqdoc/Riktig.Interface.Category.html#CCC.terminal"><code>CCC.terminal</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#CCC.products"><code>products</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#CCC.exponentials"><code>exponentials</code></a>.
+href="../coqdoc/Riktig.Structure.Category.html#CCC.terminal"><code>CCC.terminal</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#CCC.products"><code>products</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#CCC.exponentials"><code>exponentials</code></a>.
 The operational fields keep their global spellings as abbreviations
 below each module (<code>cat_id</code> is <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.id"><code>Category.id</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Category.id"><code>Category.id</code></a>,
 <code>terminal_morphism</code> is <a
-href="../coqdoc/Riktig.Interface.Category.html#Terminal.morphism"><code>Terminal.morphism</code></a>),
+href="../coqdoc/Riktig.Structure.Category.html#Terminal.morphism"><code>Terminal.morphism</code></a>),
 so notation-level code is unchanged.</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.LinearMap.html"><code>Interface/LinearMap.v</code></a>
+href="../coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 — <strong>fixed 2026-07-22</strong>: every derived <code>lm_*</code>
 definition/lemma renamed to <code>linear_map_*</code>
 (<code>lm_equ</code>, <code>lm_equ_Equivalence</code>,
 <code>lm_zero</code>, <code>lm_neg</code>, <code>lm_id</code> + its 3
 law lemmas, <code>lm_comp</code> + its 3 law lemmas,
-<code>lm_const0</code> + its 3 law lemmas, <code>lm_check</code>) — <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#lm_fun"><code>lm_fun</code></a>
-itself untouched (the documented coercion exemption). Propagated to 26
-Theory/Impl/Examples files, 18 blog posts, 3 roadmap docs;
-<code>docs/AUDIT-2026-07-13.md</code> (a frozen historical snapshot)
-deliberately left alone. Verified by full-tree grep, clean rebuild,
-<code>make     blog</code>/<code>linkcheck</code> (0 dead
-links).</label></li>
+<code>lm_const0</code> + its 3 law lemmas, <code>lm_check</code>) —
+<code>lm_fun</code> itself untouched (the documented coercion
+exemption). Propagated to 26 Theory/Impl/Examples files, 18 blog posts,
+3 roadmap docs; <code>docs/AUDIT-2026-07-13.md</code> (a frozen
+historical snapshot) deliberately left alone. Verified by full-tree
+grep, clean rebuild, <code>make     blog</code>/<code>linkcheck</code>
+(0 dead links).</label></li>
 <li><label><input type="checkbox"
-checked="" /><code>Interface/InnerProduct.v</code> +
+checked="" /><code>Structure/InnerProduct.v</code> +
 <code>Theory/InnerProduct.v</code> — <strong>fixed 2026-07-22</strong>:
 <code>ip_inner</code> → <code>inner_product_inner</code>;
 <code>ip_add_r</code>/<code>ip_scale_r</code>/<code>ip_zero_l</code>/<code>ip_zero_r</code>/<code>ip_neg_l</code>/
@@ -261,15 +352,15 @@ href="../coqdoc/Riktig.Theory.InnerProductSpace.html#inner_right_additive"><code
 href="../coqdoc/Riktig.Theory.InnerProductSpace.html#inner_left_neg"><code>inner_left_neg</code></a>,
 …) are unaffected — they are theory, not class fields.</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html"><code>Interface/DecTotalOrder.v</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html"><code>Structure/DecTotalOrder.v</code></a>
 + <a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>
 — <strong>fixed 2026-07-22</strong>: <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>olt_dec</code></a>/<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>olt_strict</code></a>/<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_total"><code>olt_total</code></a>/
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_dec"><code>olt_dec</code></a>/<a
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_strict"><code>olt_strict</code></a>/<a
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_total"><code>olt_total</code></a>/
 <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>ole_not_lt</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.ole_not_lt"><code>ole_not_lt</code></a>
 (class) and <a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#ole_refl"><code>ole_refl</code></a>/<a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#olt_ole"><code>olt_ole</code></a>/<a
@@ -278,13 +369,13 @@ href="../coqdoc/Riktig.Theory.DecTotalOrder.html#nolt_ole"><code>nolt_ole</code>
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#ole_trans"><code>ole_trans</code></a>/<a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#ole_antisym"><code>ole_antisym</code></a>/<code>ord_eq_dec</code>
 (theory) all gain the <code>dec_total_order_</code> prefix. <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>/<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#olt"><code>olt</code></a>/<a
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#ole"><code>ole</code></a>
 documented as a read-through-notation exemption
 (<code>&lt;</code>/<code>&lt;=</code>/<code>&gt;</code>/<code>&gt;=</code>),
 matching <code>Category.v</code>’s <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.hom"><code>hom</code></a>/<a
-href="../coqdoc/Riktig.Interface.Category.html#Category.comp"><code>comp</code></a>.
+href="../coqdoc/Riktig.Structure.Category.html#Category.hom"><code>hom</code></a>/<a
+href="../coqdoc/Riktig.Structure.Category.html#Category.comp"><code>comp</code></a>.
 Propagated to <a
 href="../coqdoc/Riktig.Impl.Orders.html"><code>Impl/Orders.v</code></a>,
 <a
@@ -294,19 +385,19 @@ href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>,
 two blog posts. Superseded 2026-07-25 by the module wrap (Wave I2): the
 class moved into <code>Module DecTotalOrder</code>, so the prefix went
 back to being the module path (<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>),
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.olt_total"><code>DecTotalOrder.olt_total</code></a>),
 the theory lemmas dropped it entirely, and <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>/<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#olt"><code>olt</code></a>/<a
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#ole"><code>ole</code></a>
 became the operation classes <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#HasOlt"><code>HasOlt</code></a>/<a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#HasOle"><code>HasOle</code></a>.</label></li>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#HasOlt"><code>HasOlt</code></a>/<a
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#HasOle"><code>HasOle</code></a>.</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Integral.html"><code>Interface/Integral.v</code></a>
+href="../coqdoc/Riktig.Structure.Integral.html"><code>Structure/Integral.v</code></a>
 + <a
 href="../coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>
 — <strong>fixed 2026-07-22</strong>: <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.int_proper"><code>int_proper</code></a>/<code>int_additivity</code>
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.int_proper"><code>int_proper</code></a>/<code>int_additivity</code>
 → <code>integral_proper</code>/ <code>integral_additivity</code>
 (matching their already-<code>integral_</code>- prefixed siblings);
 <code>int_empty</code>/<code>int_rev</code>/<code>int_zero_fn</code> →
@@ -315,46 +406,45 @@ href="../coqdoc/Riktig.Theory.Integral.html#integral_empty"><code>integral_empty
 href="../coqdoc/Riktig.Theory.Integral.html#integral_rev"><code>integral_rev</code></a>/<a
 href="../coqdoc/Riktig.Theory.Integral.html#integral_zero_fn"><code>integral_zero_fn</code></a>.
 <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.int"><code>int</code></a>
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.int"><code>int</code></a>
 itself documented as a read-constantly exemption (no infix stands in for
 it). Propagated to <a
 href="../coqdoc/Riktig.Theory.Action.html"><code>Theory/Action.v</code></a>,
 three blog posts, two roadmap docs. Superseded 2026-07-25 by the module
 wrap (Wave I5): the class moved into <code>Module Integral</code>, so
 its laws became <code>Integral.proper</code>, <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.linear_additive"><code>Integral.linear_additive</code></a>,
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.linear_additive"><code>Integral.linear_additive</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.linear_scale"><code>Integral.linear_scale</code></a>,
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.linear_scale"><code>Integral.linear_scale</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.additivity"><code>Integral.additivity</code></a>,
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.additivity"><code>Integral.additivity</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.constant"><code>Integral.constant</code></a>
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.constant"><code>Integral.constant</code></a>
 and <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.bound"><code>Integral.bound</code></a>;
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.bound"><code>Integral.bound</code></a>;
 <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.int"><code>int</code></a>
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.int"><code>int</code></a>
 stays the one data field, reachable unqualified through
 <code>Notation int := Integral.int</code>. The <a
 href="../coqdoc/Riktig.Theory.Integral.html"><code>Theory/Integral.v</code></a>
 theorems keep their <code>integral_</code> names.</label></li>
 <li><label><input type="checkbox" checked="" />Smaller one-field nits —
 <strong>fixed 2026-07-22</strong>: <a
-href="../coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>’s
+href="../coqdoc/Riktig.Structure.Alternative.html"><code>Structure/Alternative.v</code></a>’s
 <a
-href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.alt_proper"><code>alt_proper</code></a>
+href="../coqdoc/Riktig.Structure.Alternative.html#Alternative.alt_proper"><code>alt_proper</code></a>
 → <code>alternative_alt_proper</code>, <a
-href="../coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>’s
+href="../coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>’s
 <a
-href="../coqdoc/Riktig.Interface.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>
+href="../coqdoc/Riktig.Structure.Monad.html#Monad.bind_proper"><code>bind_proper</code></a>
 → <code>monad_bind_proper</code>, matching the structure prefix their
 sibling equivalence field already carried.</label></li>
 <li><label><input type="checkbox" checked="" />Companion-file spillover
 — <strong>fixed 2026-07-22</strong>: <a
 href="../coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>’s
 <code>fr_sos_r</code> → <code>formally_real_sum_of_squares_r</code>
-(companion of <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html"><code>Interface/FormallyReal.v</code></a>’s
-fully-compliant <code>formally_real_sum_of_squares</code>); <a
+(companion of <code>Structure/FormallyReal.v</code>’s fully-compliant
+<code>formally_real_sum_of_squares</code>); <a
 href="../coqdoc/Riktig.Theory.Bilinear.html"><code>Theory/Bilinear.v</code></a>’s
 ten <code>bm_</code>/<code>bm0_</code>-coded derived lemmas → <a
 href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appl"><code>bilinear_map_appl</code></a>/
@@ -362,11 +452,10 @@ href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appl"><code>bilinear_ma
 href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_map_appr"><code>bilinear_map_appr</code></a>
 and their proper/zero-law companions, <a
 href="../coqdoc/Riktig.Theory.Bilinear.html#bilinear_zero_map"><code>bilinear_zero_map</code></a>
-and its four laws — decided the exemption (read only at the <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#bm_fun"><code>bm_fun</code></a>
-coercion site) does not extend to a dozen ordinary lemmas, the same call
-already made for <code>LinearMap.v</code>’s <code>lm_*</code> apparatus.
-Propagated to <a
+and its four laws — decided the exemption (read only at the
+<code>bm_fun</code> coercion site) does not extend to a dozen ordinary
+lemmas, the same call already made for <code>LinearMap.v</code>’s
+<code>lm_*</code> apparatus. Propagated to <a
 href="../coqdoc/Riktig.Theory.Hom.html"><code>Theory/Hom.v</code></a>
 (builds its own curry/uncurry directly on these), <a
 href="../coqdoc/Riktig.Theory.BilinearVS.html"><code>Theory/BilinearVS.v</code></a>,
@@ -379,25 +468,24 @@ five blog posts.</label></li>
 <li><label><input type="checkbox" checked="" /><strong>Rule 9 (a
 structure’s header documents every law it carries, including embedded
 ones)</strong> — <strong>fixed 2026-07-22</strong>: 6 of 7 classes that
-embed another Interface structure via <code>::</code> already complied
-(<a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
+embed another Structure class via <code>::</code> already complied (<a
+href="../coqdoc/Riktig.Structure.Group.html#Group.Group"><code>Group</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>,
+href="../coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>,
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>,
+href="../coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#CCC.CCC"><code>CCC</code></a>).
+href="../coqdoc/Riktig.Structure.Category.html#CCC.CCC"><code>CCC</code></a>).
 The one gap, <a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html"><code>Interface/GeometricAlgebra.v</code></a>,
+href="../coqdoc/Riktig.Structure.GeometricAlgebra.html"><code>Structure/GeometricAlgebra.v</code></a>,
 quoted <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>’s
+href="../coqdoc/Riktig.Structure.VectorSpace.html#ScaleLaws.ScaleLaws"><code>ScaleLaws</code></a>’s
 4 laws and its own 5 laws completely but silently dropped the 6 <a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
+href="../coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>
 laws (<code>monoid_associative</code>,
 <code>monoid_left_identity</code>, <code>monoid_right_identity</code>,
 <code>group_left_inverse</code>, <code>group_right_inverse</code>,
@@ -501,7 +589,7 @@ href="../coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux_combination"><co
 href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>’s
 <a
 href="../coqdoc/Riktig.Theory.BigOp.html#list_lincomb_map_ext"><code>list_lincomb_map_ext</code></a>/<a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_extract"><code>bigopF_extract</code></a>,
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_extract"><code>bigopF_extract</code></a>,
 <a
 href="../coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>’s
 three induction proofs — technically induction-driven so exempt by the
@@ -525,85 +613,84 @@ read off the multiplication table. <code>Theory/Cliff2Rotor.v</code>
 lost its four <code>transitivity</code> splices into
 <code>Module Reversal</code>’s four component lemmas.</label></li>
 </ul>
-<h2 id="structures-interface--specifications-with-notation">Structures
-(Interface/ — specifications with notation)</h2>
+<h2 id="structures-structure--specifications-with-notation">Structures
+(Structure/ — specifications with notation)</h2>
 <ul class="task-list">
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Group.html#Group.Group"><code>Group</code></a>,
+href="../coqdoc/Riktig.Structure.Group.html#Group.Group"><code>Group</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>,
+href="../coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>,
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 (characteristic-free)</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 with axiomatic <a
-href="../coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>;
-<a
-href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.FormallyReal"><code>FormallyReal</code></a></label></li>
+href="../coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>;
+<code>FormallyReal</code></label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>,
+href="../coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>,
 <code>InnerProduct</code>, <a
-href="../coqdoc/Riktig.Interface.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>,
+href="../coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>,
 <code>Norm</code> (<a
-href="../coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>)</label></li>
+href="../coqdoc/Riktig.Structure.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>)</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a></label></li>
+href="../coqdoc/Riktig.Structure.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a></label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>;
+href="../coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>;
 <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#Bilinear.Bilinear"><code>Bilinear</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>,
+href="../coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#MultilinearForm"><code>MultilinearForm</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>
 + <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>)</label></li>
+href="../coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>)</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>;
+href="../coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>;
 <code>Subspace</code> (<a
-href="../coqdoc/Riktig.Interface.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>)</label></li>
+href="../coqdoc/Riktig.Structure.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>)</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Reals.html#Reals.Reals"><code>Reals</code></a>
+href="../coqdoc/Riktig.Structure.Reals.html#Reals.Reals"><code>Reals</code></a>
 (specification: ordered field + completeness; no instance, by
 design)</label></li>
 <li><label><input type="checkbox" checked="" /><code>Exp</code> (exp by
 its four laws); <a
-href="../coqdoc/Riktig.Interface.Integral.html#Integral.Integral"><code>Integral</code></a>
+href="../coqdoc/Riktig.Structure.Integral.html#Integral.Integral"><code>Integral</code></a>
 (specification)</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
-href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#Decidable"><code>Decidable</code></a>/<a
+href="../coqdoc/Riktig.Structure.Decidable.html#EqDec"><code>EqDec</code></a>
 (the <a
-href="../coqdoc/Riktig.Interface.Decidable.html#dec"><code>dec</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
 vocabulary); <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
 (decidable strict total order, <code>&lt;</code> <code>&lt;=</code>
 <code>&gt;</code> <code>&gt;=</code> syntax)</label></li>
 <li><label><input type="checkbox" checked="" />Category track, all in <a
-href="../coqdoc/Riktig.Interface.Category.html"><code>Interface/Category.v</code></a>
+href="../coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
 (consolidated 2026-07-17): <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.Category"><code>Category</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#Functor.Functor"><code>Functor</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Functor.Functor"><code>Functor</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#NaturalTransformation.NaturalTransformation"><code>NaturalTransformation</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#NaturalTransformation.NaturalTransformation"><code>NaturalTransformation</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#Initial.Initial"><code>Initial</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Initial.Initial"><code>Initial</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#Terminal.Terminal"><code>Terminal</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#Terminal.Terminal"><code>Terminal</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasProducts.HasProducts"><code>HasProducts</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#HasProducts.HasProducts"><code>HasProducts</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasCoproducts.HasCoproducts"><code>HasCoproducts</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#HasCoproducts.HasCoproducts"><code>HasCoproducts</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#HasExponentials.HasExponentials"><code>HasExponentials</code></a>,
+href="../coqdoc/Riktig.Structure.Category.html#HasExponentials.HasExponentials"><code>HasExponentials</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Category.html#CCC.CCC"><code>CCC</code></a></label></li>
+href="../coqdoc/Riktig.Structure.Category.html#CCC.CCC"><code>CCC</code></a></label></li>
 <li><label><input type="checkbox" checked="" /><code>Props</code>: the
 single-law property classes the interfaces bind their axioms to
 (<code>Assoc</code>, <code>Commutes</code>,
@@ -613,14 +700,14 @@ href="../coqdoc/Riktig.Props.html#Injective"><code>Injective</code></a>);
 <code>DistL</code>/<code>DistR</code> generalize a ring’s
 distributivity, wired in through
 <code>Ring_DistL</code>/<code>Ring_DistR</code> (<a
-href="../coqdoc/Riktig.Interface.Ring.html"><code>Interface/Ring.v</code></a>),
+href="../coqdoc/Riktig.Structure.Ring.html"><code>Structure/Ring.v</code></a>),
 so <code>rewrite distl</code>/<code>distr</code> fire against the goal’s
 <a
 href="../coqdoc/Riktig.Ops.html#add"><code>add</code></a>/<code>mul</code>
 before instance search — like
 <code>assoc</code>/<code>idl</code></label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Determinant.html"><code>Interface/Determinant.v</code></a>
+href="../coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>
 — the abstract alternating-form spec: <code>Determinant n F V B</code>
 (<code>B : Basis n F V</code>) bundles an
 <code>Alternating (MultilinearForm n F V)</code> normalized to 1 at the
@@ -720,10 +807,10 @@ href="../coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_is_deriv"><code>biline
 quadratic remainder)</label></li>
 <li><label><input type="checkbox" checked="" />Hom/Dual: curry/uncurry
 round trips (<a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 packaging open, see below)</label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>:
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>:
 <a
 href="../coqdoc/Riktig.Theory.VSIso.html#vsiso_unitor"><code>vsiso_unitor</code></a>,
 <a
@@ -778,31 +865,28 @@ product/exponential laws (<a
 href="../coqdoc/Riktig.Theory.Product.html#pair_eta"><code>pair_eta</code></a>,
 <code>curry_uncurry</code>/<code>uncurry_curry</code>)</label></li>
 <li><label><input type="checkbox" checked="" />BigOp: <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
 laws, Fubini (<a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>),
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>),
 extraction/reindexing, <a
-href="../coqdoc/Riktig.Theory.BigOp.html#prodF"><code>prodF</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#prodF"><code>prodF</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>),
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>),
 order section (<a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_nonneg"><code>bigopF_nonneg</code></a>
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_nonneg"><code>bigopF_nonneg</code></a>
 .. <a
-href="../coqdoc/Riktig.Theory.BigOp.html#abs_bigopF_le"><code>abs_bigopF_le</code></a>)</label></li>
+href="../coqdoc/Riktig.Impl.FinIndex.html#abs_bigopF_le"><code>abs_bigopF_le</code></a>)</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>:
-<a href="../coqdoc/Riktig.Theory.Fin.html#skip"><code>skip</code></a>/<a
-href="../coqdoc/Riktig.Theory.Fin.html#unskip"><code>unskip</code></a>,
+<a href="../coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a>/<a
+href="../coqdoc/Riktig.Impl.Fin.html#unskip"><code>unskip</code></a>, <a
+href="../coqdoc/Riktig.Impl.Fin.html#swap_fin"><code>swap_fin</code></a>,
 <a
-href="../coqdoc/Riktig.Theory.Fin.html#swap_fin"><code>swap_fin</code></a>,
+href="../coqdoc/Riktig.Impl.Fin.html#fin_weaken"><code>fin_weaken</code></a>,
+<code>bijection_skip_step</code> relocation, <a
+href="../coqdoc/Riktig.Impl.Fin.html#fin_to_nat"><code>fin_to_nat</code></a>,
 <a
-href="../coqdoc/Riktig.Theory.Fin.html#fin_weaken"><code>fin_weaken</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.Fin.html#bijection_skip_step"><code>bijection_skip_step</code></a>
-relocation, <a
-href="../coqdoc/Riktig.Theory.Fin.html#fin_to_nat"><code>fin_to_nat</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.Fin.html#fin_all"><code>fin_all</code></a>
+href="../coqdoc/Riktig.Impl.Fin.html#fin_all"><code>fin_all</code></a>
 enumeration (extracted from the Det chain)</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Theory.Sorted.html"><code>Theory/Sorted.v</code></a>:
@@ -838,14 +922,14 @@ href="../coqdoc/Riktig.Theory.UnitVS.html"><code>Theory/UnitVS.v</code></a>,
 <a
 href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
 (End V a <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>),
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>),
 <a
 href="../coqdoc/Riktig.Theory.FieldVS.html"><code>Theory/FieldVS.v</code></a>,
 Subspace <code>Sub</code></label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>
 — derived <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#ole"><code>ole</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#ole"><code>ole</code></a>
 laws (<a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#ole_refl"><code>ole_refl</code></a>,
 <a
@@ -853,7 +937,7 @@ href="../coqdoc/Riktig.Theory.DecTotalOrder.html#ole_trans"><code>ole_trans</cod
 <a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#ole_antisym"><code>ole_antisym</code></a>,
 bridges to <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#olt"><code>olt</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#olt"><code>olt</code></a>
 via <a
 href="../coqdoc/Riktig.Theory.DecTotalOrder.html#olt_ole"><code>olt_ole</code></a>)
 + decidable equality from the order (<a
@@ -891,9 +975,9 @@ the same spirit as the codebase’s existing documented
 <code>functional_extensionality_dep</code>; needed because deciding
 whether a given subspace has a vector outside a given hyperplane is not
 decidable for an abstract <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 with no <a
-href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>).
+href="../coqdoc/Riktig.Structure.Decidable.html#EqDec"><code>EqDec</code></a>).
 <a
 href="../coqdoc/Riktig.Theory.SubspaceBasis.html"><code>Theory/SubspaceBasis.v</code></a>’s
 <a
@@ -913,9 +997,9 @@ href="../coqdoc/Riktig.Theory.KerIm.html#ker_pred"><code>ker_pred</code></a>,
 so the proof lives in <code>SubspaceBasis.v</code> itself, not in
 <code>KerIm.v</code>). Reusable general-purpose pieces built along the
 way: <a
-href="../coqdoc/Riktig.Theory.SubspaceBasis.html#basis_transport"><code>basis_transport</code></a>
+href="../coqdoc/Riktig.Theory.Transport.html#basis_transport"><code>basis_transport</code></a>
 (transport a <a
-href="../coqdoc/Riktig.Interface.Basis.html#Basis"><code>Basis</code></a>
+href="../coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
 along a linear isomorphism), <a
 href="../coqdoc/Riktig.Theory.SubspaceBasis.html#SubspacePred_and"><code>SubspacePred_and</code></a>/the
 double-<code>Sub</code> collapse-expand bridge
@@ -988,7 +1072,7 @@ own gap) — needs detM invariance under an arbitrary COLUMN swap, which
 <a
 href="../coqdoc/Riktig.Impl.DetAlternating.html"><code>Impl/DetAlternating.v</code></a>
 only has for ROWS; (2) the fully general statement, for ANY <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#Alternating.Alternating"><code>Alternating</code></a>
 n-form (not just the specific <a
 href="../coqdoc/Riktig.Theory.Determinant.html#omega_B"><code>omega_B</code></a>),
 needs the harder fact that alternating n-forms on an n-dimensional space
@@ -1007,9 +1091,8 @@ ring), <a
 href="../coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a> (Q
 field), <a
 href="../coqdoc/Riktig.Impl.Qof.html"><code>Impl/Qof.v</code></a> (Q <a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
-+ <a
-href="../coqdoc/Riktig.Interface.FormallyReal.html#FormallyReal.FormallyReal"><code>FormallyReal</code></a>)</label></li>
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
++ <code>FormallyReal</code>)</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.Complex.html"><code>Impl/Complex.v</code></a>:
 <code>C</code> F is a field for any formally real F (so <code>C</code> Q
@@ -1033,7 +1116,7 @@ associativity (Fubini)</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.MatrixNorm.html"><code>Impl/MatrixNorm.v</code></a>:
 entrywise L1 norm, <a
-href="../coqdoc/Riktig.Interface.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
+href="../coqdoc/Riktig.Structure.Norm.html#NormedSpace.NormedSpace"><code>NormedSpace</code></a>
 instance</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.QR.html"><code>Impl/QR.v</code></a>: A = QR
@@ -1067,7 +1150,7 @@ href="../coqdoc/Riktig.Impl.DetLeibniz.html#detM_leibniz_eq_detM"><code>detM_lei
 href="../coqdoc/Riktig.Impl.DetSign.html"><code>Impl/DetSign.v</code></a>/<a
 href="../coqdoc/Riktig.Impl.DetSignGeneral.html"><code>Impl/DetSignGeneral.v</code></a>:
 row-swap antisymmetry, any rows, any <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 (<a
 href="../coqdoc/Riktig.Impl.DetSignGeneral.html#perm_sign_postcompose_swap"><code>perm_sign_postcompose_swap</code></a>,
 <a
@@ -1084,7 +1167,7 @@ href="../coqdoc/Riktig.Impl.DetAlternating.html#det_elem_add"><code>det_elem_add
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a>:
 certified Gauss-Jordan; det of a product under <a
-href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>
 (<a
 href="../coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>);
 unconditional over Q (<a
@@ -1094,9 +1177,9 @@ href="../coqdoc/Riktig.Impl.DetMul.html#det_upper_triangular"><code>det_upper_tr
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.DetMulGeneral.html"><code>Impl/DetMulGeneral.v</code></a>:
 unconditional det-of-a-product for ANY <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>,
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>,
 no <a
-href="../coqdoc/Riktig.Interface.DecEq.html#DecEq"><code>DecEq</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>
 (<a
 href="../coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>)
 — closes the gap <a
@@ -1144,11 +1227,11 @@ href="../coqdoc/Riktig.Impl.ListVS.html"><code>Impl/ListVS.v</code></a>
 (trailing-zeros setoid), <a
 href="../coqdoc/Riktig.Impl.ListMonoid.html"><code>Impl/ListMonoid.v</code></a></label></li>
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Category.html#Category.Category"><code>Category</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>
 instances: <a
 href="../coqdoc/Riktig.Impl.CoqCat.html#CoqCat"><code>CoqCat</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Category.html#CCC.CCC"><code>CCC</code></a>),
+href="../coqdoc/Riktig.Structure.Category.html#CCC.CCC"><code>CCC</code></a>),
 <a
 href="../coqdoc/Riktig.Impl.VectCat.html"><code>Impl/VectCat.v</code></a>,
 <a
@@ -1165,8 +1248,7 @@ the list functor on <a
 href="../coqdoc/Riktig.Impl.CoqCat.html#CoqCat"><code>CoqCat</code></a>
 (<a
 href="../coqdoc/Riktig.Impl.CatFunctors.html#ListFunctor"><code>ListFunctor</code></a>,
-<a href="../coqdoc/Riktig.Theory.Monad.html#map"><code>map</code></a>),
-and <code>rev</code> as a natural transformation
+<code>map</code>), and <code>rev</code> as a natural transformation
 <code>ListFunctor ⇒ ListFunctor</code> (<a
 href="../coqdoc/Riktig.Impl.CatFunctors.html#RevNat"><code>RevNat</code></a>,
 naturality square <a
@@ -1174,15 +1256,15 @@ href="../coqdoc/Riktig.Impl.CatFunctors.html#rev_naturality"><code>rev_naturalit
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.Orders.html"><code>Impl/Orders.v</code></a>
 — <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
 instances: nat, N, Z, Qc, ascii, byte, string, and the
 pullback/pair/list constructions (byte strings free as list byte; raw Q
 and R excluded with reasons)</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>
 — <a
-href="../coqdoc/Riktig.Interface.Decidable.html#Decidable"><code>Decidable</code></a>/<a
-href="../coqdoc/Riktig.Interface.Decidable.html#EqDec"><code>EqDec</code></a>
+href="../coqdoc/Riktig.Structure.Decidable.html#Decidable"><code>Decidable</code></a>/<a
+href="../coqdoc/Riktig.Structure.Decidable.html#EqDec"><code>EqDec</code></a>
 at nat, bool, and <code>Fin.t n</code> (<a
 href="../coqdoc/Riktig.Impl.Decidable.html#fin_eq_dec"><code>fin_eq_dec</code></a>,
 backing <code>FinVec</code>’s standard basis)</label></li>
@@ -1338,7 +1420,7 @@ extraction to a runnable Haskell binary (lambda-eval)</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>:
 STLC terms form a <a
-href="../coqdoc/Riktig.Interface.Category.html#Category.Category"><code>Category</code></a>
+href="../coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>
 (βη fragment, disclosed)</label></li>
 <li><label><input type="checkbox" checked="" />General SKI simulation
 theorem (<a
@@ -1367,26 +1449,26 @@ substitution, on the nose)</label></li>
 parser track (effects and parser combinators)</h2>
 <ul class="task-list">
 <li><label><input type="checkbox" checked="" /><a
-href="../coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>:
+href="../coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>:
 <a
-href="../coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>
+href="../coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a>
 over its two operations (<a
-href="../coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
-href="../coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>,
+href="../coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>/<a
+href="../coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>,
 the <a
-href="../coqdoc/Riktig.Interface.Monad.html#HasBind"><code>HasBind</code></a>/<a
-href="../coqdoc/Riktig.Interface.Monad.html#HasReturn"><code>HasReturn</code></a>
+href="../coqdoc/Riktig.Structure.Monad.html#HasBind"><code>HasBind</code></a>/<a
+href="../coqdoc/Riktig.Structure.Monad.html#HasReturn"><code>HasReturn</code></a>
 carriers) with the three laws; <a
-href="../coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>
+href="../coqdoc/Riktig.Structure.Alternative.html"><code>Structure/Alternative.v</code></a>
 (<a
-href="../coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
+href="../coqdoc/Riktig.Structure.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
 — choice + failure); <a
 href="../coqdoc/Riktig.Theory.Monad.html"><code>Theory/Monad.v</code></a>
 derived laws</label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>:
 <code>option</code> as a <a
-href="../coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a></label></li>
+href="../coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a></label></li>
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>:
 parser combinators — <code>Parser S T := S -&gt; option (T * S)</code>,
@@ -1465,9 +1547,9 @@ href="../coqdoc/Riktig.Theory.Parser.html#char_spec"><code>char_spec</code></a>)
 href="../coqdoc/Riktig.Theory.Parser.html#ParserSound"><code>ParserSound</code></a>
 (“leftover is a suffix of the input”, witnessed by
 <code>s = prefix ++ s'</code>) proved compositionally through <a
-href="../coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
-href="../coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a>/<a
-href="../coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+href="../coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>/<a
+href="../coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>/<a
+href="../coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>
 for <a
 href="../coqdoc/Riktig.Impl.Parser.html#seqL"><code>seqL</code></a>/<a
 href="../coqdoc/Riktig.Impl.Parser.html#seqR"><code>seqR</code></a>/<a
@@ -1533,7 +1615,7 @@ href="../coqdoc/Riktig.Theory.MergeSort.html"><code>Theory/MergeSort.v</code></a
 <li><label><input type="checkbox" checked="" /><a
 href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>:
 the symmetric <code>merge</code> as one lambda term over <a
-href="../coqdoc/Riktig.Interface.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>,
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>,
 derived clause equations
 (<code>merge_nil_l</code>/<code>merge_nil_r</code>/<a
 href="../coqdoc/Riktig.Programs.Merge.html#merge_cons"><code>merge_cons</code></a>),
@@ -1856,7 +1938,7 @@ href="../coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a></lab
 Lib/Decidable.v re-export shim once the quicksort proof lands (removed
 2026-07-17)</label></p></li>
 <li><p><label><input type="checkbox" checked="" />(new) <a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 deserves the same ≅ treatment as <a
 href="../coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>: a
 Prop-level truncation with an Equivalence instance, cheapest via <a
@@ -1871,11 +1953,11 @@ href="../coqdoc/Riktig.Theory.Category.html#Isomorphic_Equivalence"><code>Isomor
 <li><p><label><input type="checkbox" checked="" />(new)
 <code>Add Ring</code>/<code>Add Field</code> for the tower’s setoid
 <code>==</code>: the abstract <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>/<a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>/<a
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 classes themselves can’t host a portable registration (<code>ring</code>
 needs commutative <code>*</code>, which <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>
 doesn’t require in general — <code>End V</code>, <a
 href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
 — and <code>Add     Ring</code>/<code>Add Field</code> key their lookup
@@ -1892,8 +1974,8 @@ href="../coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>’s
 href="../coqdoc/Riktig.Theory.Field.html#field_theory_of_Field"><code>field_theory_of_Field</code></a>
 derive the <code>ring_theory</code>/<code>field_theory</code> records
 generically from any <a
-href="../coqdoc/Riktig.Interface.Ring.html#Ring.Ring"><code>Ring</code></a>/<a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Ring.html#Ring.Ring"><code>Ring</code></a>/<a
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 instance, and <a
 href="../coqdoc/Riktig.Impl.Zr.html"><code>Impl/Zr.v</code></a>
 (<code>Add Ring Z_ring</code>) / <a
@@ -1928,20 +2010,20 @@ href="../coqdoc/Riktig.Theory.MLDerivatives.html"><code>Theory/MLDerivatives.v</
 no <code>Admitted</code>/<code>Axiom</code> anywhere in either file): -
 <code>log</code>: exp’s surjectivity onto the positives is NOT derivable
 from <a
-href="../coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>’s
+href="../coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>’s
 four laws for a generic <a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 — those laws are purely algebraic (a homomorphism law + monotonicity),
 with no completeness/IVT content, and <a
-href="../coqdoc/Riktig.Interface.Reals.html"><code>Interface/Reals.v</code></a>’s
+href="../coqdoc/Riktig.Structure.Reals.html"><code>Structure/Reals.v</code></a>’s
 completeness is stated for a bare <a
-href="../coqdoc/Riktig.Interface.Field.html#Field.Field"><code>Field</code></a>
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
 with its OWN order <code>Reals.le</code>, deliberately not unified with
 <a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>’s
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>’s
 <a
-href="../coqdoc/Riktig.Interface.Order.html#le"><code>le</code></a>/<a
-href="../coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>
+href="../coqdoc/Riktig.Structure.Order.html#le"><code>le</code></a>/<a
+href="../coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>
 (no bridging instance exists anywhere in the tree). <a
 href="../coqdoc/Riktig.Theory.Log.html"><code>Theory/Log.v</code></a>
 therefore introduces surjectivity as an honest, explicitly-flagged
@@ -1972,23 +2054,23 @@ give the one-sided derivatives (<code>lm_id</code> for
 for ANY function agreeing with the identity/0 on the relevant half-line
 — no total <code>relu : F -&gt; F</code> is constructed (deciding
 <code>x &gt;= 0</code> needs decidable order, which a bare <a
-href="../coqdoc/Riktig.Interface.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.OrderedField"><code>OrderedField</code></a>
 does not have). No claim is made at 0, where ReLU is honestly not
 Fréchet-differentiable. - exp’s own derivative (“exp’ = exp”): also not
 derivable from the four <code>Exp</code> laws (same reason as
 <code>log</code>). <code>Theory/       MLDerivatives.v</code> closes the
 two prerequisite gaps <a
-href="../coqdoc/Riktig.Interface.Exp.html"><code>Interface/Exp.v</code></a>’s
+href="../coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>’s
 own header names — a generic <code>NormedSpace F F</code> instance (<a
 href="../coqdoc/Riktig.Theory.MLDerivatives.html#Field_NormedSpace"><code>Field_NormedSpace</code></a>,
 F normed over itself via <a
-href="../coqdoc/Riktig.Interface.Order.html#abs"><code>abs</code></a>)
+href="../coqdoc/Riktig.Structure.Order.html#abs"><code>abs</code></a>)
 and the scaling/negation <code>LinearMap F F F</code> constructions (<a
 href="../coqdoc/Riktig.Theory.MLDerivatives.html#lm_scale_map"><code>lm_scale_map</code></a>/<a
 href="../coqdoc/Riktig.Theory.MLDerivatives.html#lm_neg_map"><code>lm_neg_map</code></a>)
 — then introduces the derivative law itself as an honest hypothesis
 (<code>exp_is_deriv</code>, matching the <code>ExpDeriv</code> class
-<code>Interface/       Exp.v</code>’s TODO sketches), and proves the
+<code>Structure/       Exp.v</code>’s TODO sketches), and proves the
 chain rule compositionally through it (<a
 href="../coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_exp_scale"><code>is_deriv_exp_scale</code></a>,
 <a
@@ -2014,11 +2096,11 @@ and needs its own epsilon-delta estimate). Building both correctly is
 real, freestanding analysis work, precise enough now to pick up
 directly.</label></p></li>
 <li><p><label><input type="checkbox" checked="" />curry/uncurry as a <a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 (needs <a
-href="../coqdoc/Riktig.Interface.Bilinear.html#BilinearMap"><code>BilinearMap</code></a>
+href="../coqdoc/Riktig.Structure.Bilinear.html#BilinearMap.BilinearMap"><code>BilinearMap</code></a>
 as a <a
-href="../coqdoc/Riktig.Interface.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>)
+href="../coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>)
 — done, <a
 href="../coqdoc/Riktig.Theory.BilinearVS.html"><code>Theory/BilinearVS.v</code></a>’s
 <a
@@ -2045,7 +2127,7 @@ href="../coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
 <a
 href="../coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>,
 <a
-href="../coqdoc/Riktig.Interface.Bilinear.html"><code>Interface/Bilinear.v</code></a>,
+href="../coqdoc/Riktig.Structure.Bilinear.html"><code>Structure/Bilinear.v</code></a>,
 <a
 href="../coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>,
 <a
@@ -2058,7 +2140,7 @@ porting/adapting:</p>
 maps</strong> — index permutations
 (<code>gather</code>/<code>scatter</code>, round-trip via an inverse
 permutation) as an explicit <a
-href="../coqdoc/Riktig.Interface.LinearMap.html#LinearMap"><code>LinearMap</code></a>
+href="../coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
 construction; riktig’s determinant row-swap work (<a
 href="../coqdoc/Riktig.Impl.DetSign.html"><code>Impl/DetSign.v</code></a>)
 touches permutations but has no general reusable “reindexing is linear”
@@ -2069,14 +2151,14 @@ href="../coqdoc/Riktig.Lambda.SKI.html#contract"><code>contract</code></a>
 over ARBITRARY index types via a <code>FiniteSum</code> typeclass (<a
 href="../coqdoc/Riktig.Impl.DetMulGeneral.html#fsum"><code>fsum</code></a>
 + linearity), not just <code>Fin n</code> via <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF"><code>bigopF</code></a>.
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>.
 <a
 href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 is the <code>Fin n</code> special case; the general version’s
 <code>contract_assoc</code> (einsum fusion, needs an <a
 href="../coqdoc/Riktig.Impl.DetMulGeneral.html#fsum"><code>fsum</code></a>
 swap + two factoring hypotheses) is the same shape as riktig’s <a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>-based
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>-based
 <a
 href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 associativity, just index-type-generic.</label></li>
@@ -2102,10 +2184,10 @@ correctness).</label></li>
 <code>tile_roundtrip</code>: <code>I ≅ Blocks × Tile</code>) with
 <code>fsum_tiled</code> (a flat sum over a tiled index = a nested sum).
 Conceptually a <a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>-flavored
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>-flavored
 representation isomorphism specialized to summation/indexing rather than
 vector spaces — could plausibly be PHRASED as a <a
-href="../coqdoc/Riktig.Theory.VSIso.html#VSIso"><code>VSIso</code></a>
+href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
 given riktig’s existing AoS↔︎SoA machinery, worth deciding when this is
 actually built.</label></li>
 <li><label><input type="checkbox" /><strong>A SIMD/BLIS micro-kernel
@@ -2135,7 +2217,7 @@ sum-over-sum-type splitting for concrete <code>BNat</code>). All three
 are exactly the kind of finite-sum lemma riktig’s <a
 href="../coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
 already has machinery for (<a
-href="../coqdoc/Riktig.Theory.BigOp.html#bigopF_swap"><code>bigopF_swap</code></a>,
+href="../coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>,
 reindexing) — porting into riktig would very likely close them for real
 rather than inherit the gaps.</label></li>
 </ul>

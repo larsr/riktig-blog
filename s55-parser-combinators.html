@@ -95,7 +95,7 @@ just two binds in a row.</p>
 <h2 id="the-law-sequencing-is-associative">The law: sequencing is
 associative</h2>
 <p>For <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a> to
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a> to
 deserve the name “sequencing,” it must not matter how a chain of three
 steps is grouped. Bracketing the first two together, or the last two
 together, has to give the same parser:</p>
@@ -124,7 +124,7 @@ Qed.</code></pre>
 because <code>==</code> means “equal on every input” — one arbitrary
 <code>input</code> to test them on.</li>
 <li><code>unfold bind, Parser_HasBind</code> replaces both <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s by
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>s by
 their definition, so each side becomes a <code>match</code> on what
 <code>m</code> does to the input.</li>
 <li><code>destruct (m input) as [[v rest] |]</code> is the one case
@@ -137,20 +137,20 @@ branches the two sides have already reduced to the very same expression
 That is why the whole proof is one line after the split.</li>
 </ul>
 <p>The two identity laws (<a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> does
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a> does
 nothing when spliced in on either side) hold the same way. Those three,
 plus two respect laws — that <code>==</code> on parsers is an
 equivalence relation (<a
 href="coqdoc/Riktig.Impl.Parser.html#Parser_EqRel_Equivalence"><code>Parser_EqRel_Equivalence</code></a>),
 and that <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>
 sends <code>==</code>-equal arguments to <code>==</code>-equal results
 (<a
 href="coqdoc/Riktig.Impl.Parser.html#parser_bind_proper"><code>parser_bind_proper</code></a>)
 — are the five fields of the <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a>
 class, so <code>Parser S</code> is a <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a>
 instance. The combinators below are written against that abstract
 interface, not against the raw <code>match</code>.</p>
 <h2 id="the-primitive-parsers">The primitive parsers</h2>
@@ -184,7 +184,7 @@ parser, and if it fails, try the second on the <em>same</em> input:</p>
     | r =&gt; r
     end.</code></pre>
 <p><code>alt p q</code> (this is the <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>
 in the code below) returns <code>p</code>’s result if <code>p</code>
 matched, and otherwise falls back to <code>q</code>.</p>
 <h2 id="repetition-and-why-it-terminates">Repetition, and why it
@@ -223,7 +223,7 @@ parse one <code>p</code>, and if that succeeds with value
 <code>x</code>, recurse with <code>many p input'</code> (the bound one
 character shorter) to gather the rest into <code>xs</code>, returning
 <code>x :: xs</code>; if the leading <code>p</code> fails, <a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>’s
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>’s
 second branch returns the empty list. The recursive call passes
 <code>input'</code>, which is a structural sub-part of
 <code>input</code>, so Coq sees the bound strictly shrink and accepts
@@ -270,7 +270,7 @@ list — a <code>p</code>, then as many
 <p>Again the recursion is structural on the bound <code>input</code>,
 peeling <code>String _ input'</code> down toward
 <code>EmptyString</code>, while the real parsing threads through the <a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>s.
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>s.
 The parsed prefix — a separator followed by another <code>p</code> —
 always consumes input, so the same length argument justifies the same
 bound.</p>
@@ -320,19 +320,19 @@ href="coqdoc/Riktig.Impl.Parser.html"><code>Impl/Parser.v</code></a>
 (the <a
 href="coqdoc/Riktig.Impl.Parser.html#Parser"><code>Parser</code></a>
 type, its <a
-href="coqdoc/Riktig.Interface.Monad.html#Monad.Monad"><code>Monad</code></a>/<a
-href="coqdoc/Riktig.Interface.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
+href="coqdoc/Riktig.Structure.Monad.html#Monad.Monad"><code>Monad</code></a>/<a
+href="coqdoc/Riktig.Structure.Alternative.html#Alternative.Alternative"><code>Alternative</code></a>
 instances, the primitive and repetition combinators, and the smoke
 tests) · <a
-href="coqdoc/Riktig.Interface.Monad.html"><code>Interface/Monad.v</code></a>
+href="coqdoc/Riktig.Structure.Monad.html"><code>Structure/Monad.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Monad.html#bind"><code>bind</code></a>/<a
-href="coqdoc/Riktig.Interface.Monad.html#ret"><code>ret</code></a> and
+href="coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>/<a
+href="coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a> and
 the monad laws the combinators are written against) · <a
-href="coqdoc/Riktig.Interface.Alternative.html"><code>Interface/Alternative.v</code></a>
+href="coqdoc/Riktig.Structure.Alternative.html"><code>Structure/Alternative.v</code></a>
 (<a
-href="coqdoc/Riktig.Interface.Alternative.html#fail"><code>fail</code></a>/<a
-href="coqdoc/Riktig.Interface.Alternative.html#alt"><code>alt</code></a>,
+href="coqdoc/Riktig.Structure.Alternative.html#fail"><code>fail</code></a>/<a
+href="coqdoc/Riktig.Structure.Alternative.html#alt"><code>alt</code></a>,
 the choice operator).</p>
 </main>
 </body>
