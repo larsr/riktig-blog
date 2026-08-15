@@ -102,7 +102,24 @@ example in a genuinely concrete category (not
 visible arrows).</li>
 <li><strong>Functors and natural transformations</strong> [has code] — a
 functor as a structure-preserving map between categories, naturality
-proved for one real example.</li>
+proved for one real example. 7a. <strong>Being isomorphic is an
+equivalence</strong> [has code: Theory/Category.v] — <a
+href="../coqdoc/Riktig.Theory.Category.html#TwoSidedInverse.TwoSidedInverse"><code>TwoSidedInverse</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>
+(data versus law, and why search checks but never invents a witness), <a
+href="../coqdoc/Riktig.Theory.Category.html#iso_refl"><code>iso_refl</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Category.html#iso_sym"><code>iso_sym</code></a>
+as constructions, <a
+href="../coqdoc/Riktig.Theory.Category.html#comp_cancel"><code>comp_cancel</code></a>
+walked as a calc chain, <a
+href="../coqdoc/Riktig.Theory.Category.html#iso_trans"><code>iso_trans</code></a>
+assembled from it, and <a
+href="../coqdoc/Riktig.Theory.Category.html#Isomorphic"><code>Isomorphic</code></a>
+— the truncation — registered as the <code>Equivalence</code> behind
+<code>≅</code> goals. Filename <code>s12a-...</code> so it sorts after
+the Category post it depends on. (written: blog/s12a)</li>
 <li><strong>Initial and terminal objects, products, and the
 universal-property style of proof</strong> [has code:
 Theory/InitialTerminal.v, Theory/Product.v] —
@@ -115,33 +132,95 @@ Part 3.</li>
 <h2
 id="part-3--programs-as-data-lambda-calculus-and-its-transformations">Part
 3 — Programs as data: lambda calculus and its transformations</h2>
+<p>10a. <strong>Typed lambda terms form a category</strong> [has code:
+Impl/StlcCat.v] — the bridge out of Part 2, from the other side:
+intrinsically typed terms, far-end weakening, <a
+href="../coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a>/<a
+href="../coqdoc/Riktig.Impl.StlcCat.html#tid"><code>tid</code></a>/<a
+href="../coqdoc/Riktig.Impl.StlcCat.html#tcomp"><code>tcomp</code></a>,
+the <code>conv</code> relation with its disclosed three-instance scope
+cut, the identity and associativity laws as conversion chains, and the
+<a
+href="../coqdoc/Riktig.Impl.StlcCat.html#Stlc_Category"><code>Stlc_Category</code></a>
+instance. Filename <code>s16-...</code> so it sits between the CCC post
+and the evaluator post. (written: blog/s16)</p>
 <ol start="11" type="1">
-<li><strong>The lambda calculus you can run</strong> [rewrite of #0004]
-— de Bruijn terms, the small-step evaluator, <a
+<li><p><strong>The lambda calculus you can run</strong> [rewrite of
+#0004] — de Bruijn terms, the small-step evaluator, <a
 href="../coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
 sound and complete, running a real term to a normal form in the
-post.</li>
-<li><strong>Program equality is a setoid, and optimizations are
+post.</p></li>
+<li><p><strong>Program equality is a setoid, and optimizations are
 rewrites</strong> [rewrite of #0005] — the <code>conv</code> relation,
 Church booleans, <a
 href="../coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>
-proved and walked exactly like a group-theory proof.</li>
-<li><strong>Combinators: SKI and bracket abstraction</strong> [has code:
-Lambda/SKI.v] — eliminating variables entirely, <a
+proved and walked exactly like a group-theory proof. 12a. <strong>Free
+variables and closed terms</strong> [has code: Lambda/FreeVars.v] — <a
+href="../coqdoc/Riktig.Lambda.FreeVars.html#free_in"><code>free_in</code></a>
+and its boolean mirror with reflection, <a
+href="../coqdoc/Riktig.Lambda.FreeVars.html#closed_above"><code>closed_above</code></a>
+in the positive form the file header argues for, the <a
+href="../coqdoc/Riktig.Lambda.FreeVars.html#free_in_lift"><code>free_in_lift</code></a>/<a
+href="../coqdoc/Riktig.Lambda.FreeVars.html#free_in_subst"><code>free_in_subst</code></a>
+inventories, <a
+href="../coqdoc/Riktig.Lambda.FreeVars.html#subst_not_free"><code>subst_not_free</code></a>
+(the re-lift equation), the closed-term corollaries, and <a
+href="../coqdoc/Riktig.Lambda.FreeVars.html#fv_bound"><code>fv_bound</code></a>
+with its tightness witness, checked by <code>vm_compute</code> on one
+open term. Filename <code>s19-...</code>. (written: blog/s19)</p></li>
+<li><p><strong>Combinators: SKI and bracket abstraction</strong> [has
+code: Lambda/SKI.v] — eliminating variables entirely, <a
 href="../coqdoc/Riktig.Lambda.SKI.html#babs_correct"><code>babs_correct</code></a>
-proved, one term compiled to combinators and run.</li>
-<li><strong>Continuation-passing style, concretely</strong> [has code:
-Lambda/CPS.v] — the transform, why it exists (making control flow into
-data), one real term CPS-translated and its evaluation walked step by
-step.</li>
-<li><strong>Defunctionalization: closures without closures</strong>
+proved, one term compiled to combinators and run.</p></li>
+<li><p><strong>Continuation-passing style, concretely</strong> [has
+code: Lambda/CPS.v] — the transform, why it exists (making control flow
+into data), one real term CPS-translated and its evaluation walked step
+by step.</p></li>
+<li><p><strong>Defunctionalization: closures without closures</strong>
 [needs code] — Reynolds’s original technique (<em>Definitional
 Interpreters for Higher-Order Programming Languages</em>, 1972) and
 Danvy &amp; Nielsen’s modern treatment (<em>Defunctionalization at
 Work</em>, 2001): replace a higher-order function space with a
 first-order datatype plus an <code>apply</code> dispatcher, and prove
 the two programs compute the same thing. Queue the Coq implementation
-before this post is written.</li>
+before this post is written. 14a. <strong>The lambda calculus as an
+algebraic structure</strong> [has code: Structure/Lambda.v,
+Theory/Lambda.v, Lambda/Conv.v] — the <a
+href="../coqdoc/Riktig.Structure.Lambda.html#LambdaModel.LambdaModel"><code>LambdaModel</code></a>
+class: a term carrier and a substitution carrier, the substitution
+computation laws, and value-guarded beta (the guard forced by
+call-by-value conversion, where unguarded <code>K x Ω == x</code> is
+false); why the smaller SKI presentation lost (the measured finding
+recorded in <a
+href="../coqdoc/Riktig.Structure.Lambda.html"><code>Structure/Lambda.v</code></a>’s
+design note: the value guard rejects bracket abstraction’s compounds, so
+the pair benchmarks cost new primitives); the Church-boolean and
+Church-pair facts derived equationally, no induction; <code>tm</code>
+with <code>conv</code> as the instance. The one post that states the
+library’s purpose, briefly: algebraic reasoning about structures and
+eventually about program code, specification and semantics. Filename
+<code>s24a-...</code> so it closes Part 3 after the evaluator post.
+(written: blog/s24a)</p></li>
+</ol>
+<p>14b. <strong>Substitutions compose, and two passes become
+one</strong> [has code: Lambda/Scoped.v, Lambda/EnvAlgebra.v] —
+intrinsically scoped terms (<code>Exp n</code>, scope errors are type
+errors), <a
+href="../coqdoc/Riktig.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>
+as the function-level fusion law, then the defunctionalized substitution
+language <a
+href="../coqdoc/Riktig.Lambda.EnvAlgebra.html#DEnv"><code>DEnv</code></a>
+whose <a
+href="../coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
+computes composition with the shift/cons cancellation running as code,
+<a
+href="../coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>,
+and <a
+href="../coqdoc/Riktig.Lambda.EnvAlgebra.html#dfuse"><code>dfuse</code></a>
+as a two-step calc; <code>vm_compute</code> examples, axiom-free despite
+the index transports. Filename <code>s24b-...</code>. (written:
+blog/s24b)</p>
+<ol start="16" type="1">
 <li><strong>A-normal form: naming every intermediate result</strong>
 [needs code] — Flanagan, Sabry, Duba &amp; Felleisen’s ANF transform
 (<em>The Essence of Compiling with Continuations</em>, 1993): every
@@ -183,24 +262,62 @@ actually <em>for</em>.</li>
 id="part-5--communication-channels-existing-coverage-needs-rewrite--an-honest-self-assessment">Part
 5 — Communication channels (existing coverage, needs rewrite + an honest
 self-assessment)</h2>
+<p>22a. <strong>Subsequence and prefix</strong> [has code:
+Theory/Subseq.v] — the vocabulary the protocol theorems conclude with,
+developed as plain list theory: <a
+href="../coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>,
+transitivity walked (the generalized induction and the packaged
+inversion), <a
+href="../coqdoc/Riktig.Theory.Subseq.html#subseq_length_eq"><code>subseq_length_eq</code></a>
+as full-length-forces-equality, and <a
+href="../coqdoc/Riktig.Theory.Subseq.html#prefix_subseq"><code>prefix_subseq</code></a>
+ordering the two guarantees. Filename <code>s40-...</code> so it opens
+the channels part. (written: blog/s40)</p>
 <ol start="23" type="1">
-<li><strong>What a channel is: relations, not probabilities</strong>
+<li><p><strong>What a channel is: relations, not probabilities</strong>
 [rewrite of #0015] — keep the possibilistic framing (it’s the right
 idea, argued well already), cut every “telecom leg of the work” aside,
 add a fully-worked example of using the fault-class relations as a
 hypothesis in a small toy proof (not just describing the lattice —
-proving something with it, in the post).</li>
-<li><strong>State machines and composing them through a channel</strong>
-[rewrite of whatever currently covers Mealy.v] — a genuinely worked
-example: two toy machines, a channel between them, the composite trace
-relation, proved.</li>
-<li><strong>The alternating-bit protocol: safety,
+proving something with it, in the post).</p></li>
+<li><p><strong>State machines and composing them through a
+channel</strong> [rewrite of whatever currently covers Mealy.v] — a
+genuinely worked example: two toy machines, a channel between them, the
+composite trace relation, proved.</p></li>
+<li><p><strong>The alternating-bit protocol: safety,
 unconditionally</strong> [rewrite of #0016] — the actual safety theorem,
-proved and walked, no liveness mixed in.</li>
-<li><strong>Fairness and liveness</strong> [rewrite of #0017, split from
-its other half] — the fairness hypothesis stated precisely, the liveness
-theorem that needs it, why it’s honest to require it.</li>
+proved and walked, no liveness mixed in. 25a. <strong>A channel
+behaviour splits wherever the sent list does</strong> [has code:
+Channel/Trace.v] — the seam algebra the protocol proofs consume: <a
+href="../coqdoc/Riktig.Channel.Trace.html#lossy_dup_app"><code>lossy_dup_app</code></a>
+(gluing), <a
+href="../coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>
+(cutting, with the stutter-at-the-boundary case walked), and <a
+href="../coqdoc/Riktig.Channel.Trace.html#lossy_dup_nil_l"><code>lossy_dup_nil_l</code></a>
+as the degenerate cut, ending at the exact lines of ABP.v and Fairness.v
+that spend each direction. Filename <code>s44-...</code> so it sits
+between the safety and liveness posts that use it. (written:
+blog/s44)</p></li>
+<li><p><strong>Fairness and liveness</strong> [rewrite of #0017, split
+from its other half] — the fairness hypothesis stated precisely, the
+liveness theorem that needs it, why it’s honest to require it.</p></li>
 </ol>
+<p>26a. <strong>Go-Back-N delivers a prefix</strong> [has code:
+Channel/GoBackN.v] — nat-tagged packets, the per-message tag advance,
+the strict in-order receiver; safety by the same homogeneity engine as
+ABP, then <a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_burst_miss"><code>gbn_burst_miss</code></a>,
+the <a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_nomatch"><code>gbn_deliver_nomatch</code></a>
+calc chain walked, and <a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_prefix"><code>gbn_prefix</code></a>,
+with <a
+href="../coqdoc/Riktig.Theory.Subseq.html#prefix_subseq"><code>prefix_subseq</code></a>
+recovering the subsequence guarantee. The wrapping-header disclosure
+from the file header stays in the post. Filename <code>s46-...</code>.
+(written: blog/s46)</p>
 <h2 id="part-6--decidable-propositions-and-everyday-algorithms">Part 6 —
 Decidable propositions and everyday algorithms</h2>
 <ol start="27" type="1">
@@ -238,6 +355,24 @@ and <a
 href="../coqdoc/Riktig.Theory.Quicksort.html#qsort_frame"><code>qsort_frame</code></a>,
 why the proof stays short.</li>
 </ol>
+<p>31a. <strong>Fusion by delayed monoid actions</strong> [has code:
+Theory/DelayedFusion.v] — the algebra behind lazy propagation: a monoid
+acting on leaf values, the <a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html#DTree"><code>DTree</code></a>
+with a pending operation at the root, <a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html#delay"><code>delay</code></a>
+combining operations in one monoid multiplication with no traversal (<a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html#delay_DDelay"><code>delay_DDelay</code></a>
+by reflexivity), <a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html#force_delay"><code>force_delay</code></a>
+as the bridge, <a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html#delay_delay"><code>delay_delay</code></a>
+as a calc chain, and the classic <code>map</code>-fusion law recovered
+induction-free (<a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html#fusion_via_delay"><code>fusion_via_delay</code></a>);
+<code>Z</code> examples decided by <code>vm_compute</code>. Filename
+<code>s53a-...</code> so it sorts at the end of the everyday-algorithms
+part. (written: blog/s53a)</p>
 <h2 id="part-7--monads-parsers-and-channels-between-programs">Part 7 —
 Monads, parsers, and channels between programs</h2>
 <ol start="32" type="1">
@@ -271,6 +406,22 @@ self-hosting as a real, checkable property.</li>
 </ol>
 <h2 id="part-8--linear-algebra-the-rest-of-it">Part 8 — Linear algebra,
 the rest of it</h2>
+<p>35a. <strong>A finite index type is a duplicate-free
+enumeration</strong> [has code: Structure/Fin.v, Theory/Fin.v,
+Impl/Fin.v, Impl/FinIndex.v] — the <a
+href="../coqdoc/Riktig.Structure.Fin.html#FinIndex.FinIndex"><code>FinIndex</code></a>
+class: one list enumerating the carrier up to <code>==</code>,
+duplicate-free and complete, with <a
+href="../coqdoc/Riktig.Theory.Fin.html#finindex_cardinality_unique"><code>finindex_cardinality_unique</code></a>
+pinning the count; the <a
+href="../coqdoc/Riktig.Theory.Fin.html#Swap.Swap"><code>Swap</code></a>
+class as the equations-first exemplar (three <code>==</code>-guarded
+equations, congruence derived, all transposition laws consequences);
+<code>Fin.t</code> with <a
+href="../coqdoc/Riktig.Impl.Fin.html#fin_all"><code>fin_all</code></a>
+as the instance, and the delta collapse as the payoff. Filename
+<code>s57a-...</code> so it sorts just before the basis post it serves.
+(written: blog/s57a)</p>
 <ol start="36" type="1">
 <li><strong>A basis you can compute with</strong> [extends s05:
 Structure/Basis.v, Theory/Basis.v, Impl/FinVec.v, Impl/FinVecBasis.v] —
@@ -286,7 +437,44 @@ spaces, <a
 href="../coqdoc/Riktig.Impl.StlcCat.html#Hom"><code>Hom</code></a>, and
 a field acting on itself, all vector spaces with zero new code; <a
 href="../coqdoc/Riktig.Theory.VSIso.html#VSIso.VSIso"><code>VSIso</code></a>
-as the right notion of “these are the same vector space.”</li>
+as the right notion of “these are the same vector space.” 37a. <strong>A
+product of vector spaces is a biproduct</strong> [has code:
+Theory/Biproduct.v] — <a
+href="../coqdoc/Riktig.Theory.Biproduct.html#exl"><code>exl</code></a>/<a
+href="../coqdoc/Riktig.Theory.Biproduct.html#exr"><code>exr</code></a>/<a
+href="../coqdoc/Riktig.Theory.Biproduct.html#inl"><code>inl</code></a>/<a
+href="../coqdoc/Riktig.Theory.Biproduct.html#inr"><code>inr</code></a>,
+the two pairings <a
+href="../coqdoc/Riktig.Theory.Biproduct.html#fork"><code>fork</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Biproduct.html#join"><code>join</code></a>,
+their characterizing laws, and <a
+href="../coqdoc/Riktig.Theory.Biproduct.html#join_fork"><code>join_fork</code></a>
+— row times column with no index, the sum carried by <a
+href="../coqdoc/Riktig.Theory.Biproduct.html#join"><code>join</code></a>
+itself; <a
+href="../coqdoc/Riktig.Theory.Biproduct.html#rep"><code>rep</code></a>/<a
+href="../coqdoc/Riktig.Theory.Biproduct.html#rep_comp"><code>rep_comp</code></a>:
+representation as conjugation, the composition law as one round-trip
+cancellation against <a
+href="../coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>’s
+entrywise sum. Filename <code>s60a-...</code> so it sorts after the
+representations post it sharpens. (written: blog/s60a)</li>
+</ol>
+<p>37b. <strong>A subspace is three closure laws</strong> [has code:
+Structure/Subspace.v, Theory/Subspace.v] — <a
+href="../coqdoc/Riktig.Structure.Subspace.html#SubspacePred.SubspacePred"><code>SubspacePred</code></a>
+with no negation-closure assumption (<code>(-1) *:</code> supplies it);
+the <code>Sub</code> carrier as a dependent pair whose <code>==</code>
+goes through <code>proj1_sig</code>, so proofs are never compared; every
+algebraic law inherited by projection, the inverse law the one with
+content; <a
+href="../coqdoc/Riktig.Theory.Subspace.html#sub_inject"><code>sub_inject</code></a>
+and the search-assembled <a
+href="../coqdoc/Riktig.Theory.Subspace.html#subspace_vs_check"><code>subspace_vs_check</code></a>.
+Filename <code>s60b-...</code> so it sorts just before the
+kernels-and-images post that instantiates it. (written: blog/s60b)</p>
+<ol start="38" type="1">
 <li><strong>Kernels, images, and what a linear map forgets</strong> [has
 code: Theory/KerIm.v] — <a
 href="../coqdoc/Riktig.Theory.KerIm.html#Ker"><code>Ker</code></a>/<a
@@ -494,6 +682,22 @@ directly (never re-deriving the judgment from scratch) is the point. All
 three build on entries 6 (polarization/geometric algebra) and 22
 (geometric algebra’s payoff) — recap the geometric product and the
 contraction axiom in your own words, never by bare number.</p>
+<p>57a. <strong>A quadratic form is degree-two homogeneity plus a
+bilinear polar form</strong> [has code: Structure/QuadraticForm.v,
+Theory/QuadraticForm.v] — <a
+href="../coqdoc/Riktig.Structure.QuadraticForm.html#polar"><code>polar</code></a>
+as the additivity defect, the class reusing <a
+href="../coqdoc/Riktig.Props.html#Homogeneous"><code>Homogeneous</code></a>
+at weight <code>a * a</code>; three instances (the field squaring
+itself, <code>norm2</code> recovering the polarization identity, and <a
+href="../coqdoc/Riktig.Theory.QuadraticForm.html#neg_form"><code>neg_form</code></a>
+— the sign flexibility no inner product has); the contraction law of <a
+href="../coqdoc/Riktig.Structure.GeometricAlgebra.html#GeometricAlgebra.GeometricAlgebra"><code>GeometricAlgebra</code></a>
+as the consumer, with <a
+href="../coqdoc/Riktig.Impl.CliffordGrade.html#sig_pq"><code>sig_pq</code></a>
+signatures as the payoff. Filename <code>s91a-...</code> so it sorts
+just before the Part 14 physics posts that lean on mixed signatures.
+(written: blog/s91a)</p>
 <ol start="58" type="1">
 <li><strong>Symmetry groups live inside geometric algebras</strong> [has
 code: Theory/PlaneRotor.v, Theory/SpaceRotor.v, Impl/Clifford.v] — the
@@ -577,6 +781,36 @@ Pauli 1940 — relativistic QFT, unrelated to Cl(3,0)’s rotor structure);
 say this explicitly, do not let the post’s enthusiasm about spin’s
 geometry imply otherwise by omission.</li>
 </ol>
+<p>60a. <strong>Grading is four laws over one projection</strong> [has
+code: Structure/Graded.v, Theory/Graded.v, Impl/CliffordGrade.v,
+Examples/Lecture.v] — the <a
+href="../coqdoc/Riktig.Structure.Graded.html#Graded.Graded"><code>Graded</code></a>
+class: grade projections linear, idempotent, mutually orthogonal, and
+complete; <a
+href="../coqdoc/Riktig.Theory.Graded.html#GradedProducts.GradedProducts"><code>GradedProducts</code></a>
+specifying the wedge and dot as grade selections from the one product;
+<a
+href="../coqdoc/Riktig.Theory.Graded.html#wedge_homogeneous"><code>wedge_homogeneous</code></a>/<a
+href="../coqdoc/Riktig.Theory.Graded.html#dot_homogeneous"><code>dot_homogeneous</code></a>
+by the generic double-sum collapse; <code>Cl F n</code> as the instance
+and <a
+href="../coqdoc/Riktig.Examples.Lecture.html#lecture_graded_split"><code>lecture_graded_split</code></a>
+as the payoff, the graded road to <code>u v == u ⋅ v + u ∧ v</code>
+beside the half-scaled one. Filename <code>s96a-...</code> so it sorts
+after the geometric-product-split post it complements. (written:
+blog/s96a)</p>
+<p>60b. <strong>The Clifford sign cocycle</strong> [has code:
+Impl/Blade.v, Impl/Clifford.v, Impl/CliffordGrade.v; not yet written] —
+both Impl file headers flag this post by name: a blade is the set of
+generators it contains, the sign of a blade product is a mod-2 count of
+merging transpositions, and associativity of <a
+href="../coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>
+is exactly the cocycle identity for that sign. A focused Impl
+walkthrough, to be written from <a
+href="../coqdoc/Riktig.Impl.Clifford.html#bsign"><code>bsign</code></a>/<a
+href="../coqdoc/Riktig.Impl.Blade.html#bparity"><code>bparity</code></a>/<a
+href="../coqdoc/Riktig.Impl.Blade.html#bxor"><code>bxor</code></a> and
+the associativity development, in its own pass.</p>
 <h2 id="notes-for-whoever-writes-these">Notes for whoever writes
 these</h2>
 <ul>
@@ -586,10 +820,10 @@ named in its status marker — never an old blog post as a source, not
 even to “see what’s already been said”).</li>
 <li>Parts 1-2 (entries 1-10) were the first wave: everything there has
 code today, and is written (blog/s01-s10).</li>
-<li>Part 3 splits: entries 11-14 have code and are written (s11-s14);
-entries 15-16 are blocked on new Coq work (a separate, explicitly scoped
-task, not bundled into a writing task) — do not write those two posts
-until that code exists and compiles.</li>
+<li>Part 3 splits: entries 11-14 have code and are written (s17, s18,
+s20, s21); entries 15-16 are blocked on new Coq work (a separate,
+explicitly scoped task, not bundled into a writing task) — do not write
+those two posts until that code exists and compiles.</li>
 <li>Parts 4-10 are the current wave: 4-5 are rewrites of existing posts,
 6-10 are new ground (the parser/monad track, the rest of linear algebra,
 bilinear maps and attention, and specification-only interfaces). Every

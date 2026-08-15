@@ -43,26 +43,59 @@ today’s inductive tm (Syntax.v) and Scoped.v’s Exp become instances; the
 current Lambda track files migrate or move under Impl. PROTOTYPE FIRST
 (LambdaLab): the substitution-law set is the entire
 difficulty.</label></li>
-<li><label><input type="checkbox" />#105 Setoid indices:
+<li><label><input type="checkbox" checked="" />#105 Setoid indices:
 Structure/Theory never assume Leibniz decidability (Lars 2026-08-14:
 structures and theories are abstract, equational; Coq’s computational
-equality is an Impl phenomenon). Migrate FinIndex, Basis,
-Multilinear/upd/famEq, Swap and the enumeration laws from {EqDec I} to
-{eI : EqRel I} {EquDec I}, restating NoDup/completeness up to [==]
-(setoid list membership); Fin.t’s instance recovers the Leibniz case
-since its [==] is [eq]. Large: the enumeration machinery and DetSign’s
-permutation lists sit on Leibniz lists today. Prototype
-first.</label></li>
+equality is an Impl phenomenon). Landed 2026-08-15, prototyped in
+SetoidIndexLab.v (repo root, outside _CoqProject; benchmark numbers in
+its header). FinIndex, Basis, Multilinear/upd, Swap, Alternating,
+Determinant and the enumeration laws now bind {eI : EqRel I} {EquDec I};
+the enumeration speaks the stdlib SetoidList vocabulary
+(InA/NoDupA/removeA/PermutationA — it beat a native spelling on all
+three lab benchmarks), with the missing stdlib lemmas in
+Lib/ListFacts.v. The upd/Swap equations moved to hypothesis form (slot
+selected by [==]), so no Proper instance for either is ever needed;
+swap’s argument properness is DERIVED (swap_proper, Theory/Fin.v). Costs
+accepted knowingly (Lars): support/extract/reindex/delta and mf_swap_neg
+ask Proper of the summand/family; Basis gained vec_proper and
+coords_family_proper fields and a properness hypothesis on
+coords_linear_combination (a non-proper coordinate family cannot
+round-trip through a sum that only reads the enumeration). Fin.t and
+DetSign’s Perm recover the Leibniz faces through Fin_EqRel/Perm_EqRel :=
+eq, finindex_from_leibniz (Impl/FinIndex.v) and leibniz_proper
+(Theory/Pointwise.v). EqDec remains only in the program-track toolbox
+(Theory/Decidable.v’s combinators, Impl, Programs) and as
+DecTotalOrder’s derived instance — the decided scope.</label></li>
 <li><label><input type="checkbox" />#104 Theory-defines-no-functions
 rollout (doctrine set by Lars 2026-08-14; DESIGN rule 1 amended; Swap is
 the exemplar — class in Theory/Fin.v, function + instance in
 Impl/Fin.v). Remaining defined-in-Theory operations to migrate to
-class-with-equations + Impl instance: bigop, bigop_list, bigopI
-(Theory/BigOp.v), lincomb (Theory/Basis.v), upd and famEq
-(Structure/Bilinear.v — spec vocabulary, needs its own shape),
-GramSchmidt’s algorithm, and a ruling on construction definitions
-(linear_map_comp, basis_transport, from_laws builders): constructions of
-data records may be a distinct, permitted category.</label></li>
+class-with-equations + Impl instance: delta and list_lincomb
+(Theory/BigOp.v) and proj (Theory/InnerGeometry.v) — surfaced during the
+migrations, not in the decided list. Constructions ruled on (Lars
+2026-08-15, DESIGN rule 1): instance-witness builders (basis_transport,
+*<em>from_laws) are a permitted category; linear maps are the arrows of
+Vect (Impl/VectCat.v records the identification, linear_map_comp_is_comp
+/ linear_map_id_is_id), and lm_comp_associative now cites Vect’s
+comp_associative law. Landed 2026-08-15: upd is HasUpd/Upd
+(Structure/Bilinear.v), computing instance upd_fun in Impl/FinIndex.v;
+famEq judged spec vocabulary (a Prop relation, nothing computes) and
+stays a Definition — DESIGN rule 1 now says so. lincomb is HasLincomb
+(scalar-flexible Hint Mode, HasScale’s precedent) plus the one-equation
+class Lincomb (Theory/Basis.v); HasLincomb_enum/Lincomb_enum in
+Impl/FinIndex.v compute it as the enumeration fold, generic in the index
+carrier, and Structure/Basis.v now exports Theory.Basis because no Basis
+can be stated without the operation class in scope. bigop, bigop_list
+and bigopI are HasBigop/Bigop, HasBigopList/ BigopList and
+HasBigopI/BigopI (Theory/BigOp.v), fixpoints and instances in
+Impl/FinIndex.v; the two record law classes carry is</em>-prefixed
+fields with plain-lemma faces under the classic names, because a record
+projection cited bare in a calc slot resolves its instance argument
+before rewrite sees the goal. Gram-Schmidt: three operation classes and
+the five-equation GramSchmidt class (Theory/GramSchmidt.v); the
+recursion and its instances in the new Impl/GramSchmidt.v; orthogonal
+gained its Proper instance (Theory/InnerGeometry.v) so rewrite crosses
+the constant.</label></li>
 </ul>
 <p>The assistant’s work queue; the numbers are cited in commit
 discussions and chat. In flight means a background worker owns it.</p>
@@ -70,10 +103,13 @@ discussions and chat. In flight means a background worker owns it.</p>
 <li><label><input type="checkbox" />#66 Strip prose from Theory/ and
 Impl/, move it to per-file blog posts. Held until the code queue below
 is empty.</label></li>
-<li><label><input type="checkbox" />#78 Blog rewrite to the 2026-08-02
-contract, one post per structure/program; includes reviewing recent
-posts against the 2026-08-13 focus amendment. Held with
-#66.</label></li>
+<li><label><input type="checkbox" checked="" />#78 (done 2026-08-15)
+Blog rewrite to the contract: eight new structure posts (s24a/b, s53a,
+s57a, s60a/b, s91a, s96a), six old posts rewritten onto previously
+post-less files, titles repaired. Small remainder for a later grading
+pass: s51/s52 overlap trim, an explicit ruling on s05’s project framing,
+spot-grades for s36/s57/s72/s73, and the queued Clifford sign-cocycle
+post.</label></li>
 <li><label><input type="checkbox" checked="" />#99 (done 2026-08-14, CI
 25029) Justification-minimality sweep over all calc chains (bare general
 projections; smallest pinning prefix otherwise) plus general-names

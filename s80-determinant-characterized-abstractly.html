@@ -44,10 +44,12 @@ every other position held fixed, scales or adds the output the same way
 argument at a time:</p>
 <p>Multilinearity is stated of a plain function on families of vectors,
 as a typeclass indexed by that function. The families are indexed by any
-carrier <code>I</code> with decidable equality — pinning one slot is all
-the laws need, so no finiteness and no arity appears here:</p>
+carrier <code>I</code> whose equality <code>==</code> is decidable —
+pinning one slot is all the laws need, so no finiteness and no arity
+appears here:</p>
 <pre class="coq"><code>Module Multilinear.
-  Class Multilinear (I F V : Type) {Ieq : EqDec I}
+  Class Multilinear (I F V : Type) {eI : EqRel I} {Ieq : EquDec I}
+      {Vu : HasUpd I V}
       {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
       {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
       {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
@@ -64,7 +66,15 @@ End Multilinear.</code></pre>
 <p>The braced binders are the ambient algebra — <code>F</code> a field,
 <code>V</code> a vector space over it — and the content is the last four
 lines. <code>upd vs i x</code> is the family <code>vs</code> with
-position <code>i</code> replaced by <code>x</code>, so
+position <code>i</code> replaced by <code>x</code> — itself an operation
+class, <a
+href="coqdoc/Riktig.Structure.Bilinear.html#HasUpd"><code>HasUpd</code></a>,
+whose two defining equations (<a
+href="coqdoc/Riktig.Structure.Bilinear.html#Upd.upd_at"><code>upd_at</code></a>
+and <a
+href="coqdoc/Riktig.Structure.Bilinear.html#Upd.upd_off"><code>upd_off</code></a>,
+in the same file, selecting the slot by <code>==</code>) are all any
+proof below ever uses of it — so
 <code>fun x =&gt; form (upd vs i x)</code> is the one-argument function
 you get by freezing every position except <code>i</code>. The two laws
 then say that this one-argument function is additive and homogeneous —
@@ -85,7 +95,8 @@ axioms but a family of instances of two laws the tree already had.</p>
 <p>A <em>chosen</em> such function, carrying its proof, is a <a
 href="coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.MultilinearForm"><code>MultilinearForm</code></a>:</p>
 <pre class="coq"><code>Module MultilinearForm.
-  Class MultilinearForm (I F V : Type) {Ieq : EqDec I}
+  Class MultilinearForm (I F V : Type) {eI : EqRel I} {Ieq : EquDec I}
+      {Vu : HasUpd I V}
       {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
       {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
       {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
@@ -108,14 +119,14 @@ two different positions always produces
 compared coincide”. That is a single law, so the class <em>is</em> that
 law, with no fields around it:</p>
 <pre class="coq"><code>Module Alternating.
-  Class Alternating {I F V : Type} {Ieq : EqDec I}
+  Class Alternating {I F V : Type} {eI : EqRel I}
       {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
       {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
       {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
       {VV : VectorSpace F V}
       (form : (I -&gt; V) -&gt; F) :=
     repeat_zero : forall (vs : I -&gt; V) (i j : I),
-      i &lt;&gt; j -&gt; vs i == vs j -&gt; form vs == 0.
+      ~ (i == j) -&gt; vs i == vs j -&gt; form vs == 0.
 End Alternating.</code></pre>
 <p>Because the carriers are implicit and <a
 href="coqdoc/Riktig.Structure.Bilinear.html#MultilinearForm.map"><code>MultilinearForm.map</code></a>
@@ -134,11 +145,11 @@ factor a particular map applies,” the way fixing what
 metre” means turns “a length” into a number you can compare across
 rulers.</p>
 <pre class="coq"><code>Class Determinant (n : nat) (I F V : Type)
-    {Ieq : EqDec I} {IFin : FinIndex n I}
+    {eI : EqRel I} {Ieq : EquDec I} {Vu : HasUpd I V} {IFin : FinIndex n I}
     {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
     {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
     {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
-    {VV : VectorSpace F V} (B : Basis n I F V) := {
+    {VV : VectorSpace F V} {Vl : HasLincomb I F V} (B : Basis n I F V) := {
   determinant_form : MultilinearForm I F V;
   determinant_is_alternating :: Alternating determinant_form;
   determinant_normalization : determinant_form (Basis.vec B) == 1;
@@ -278,81 +289,118 @@ and writing only the two active slots:</p>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
 of the swapped family and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m(v)</annotation></semantics></math>
-itself, and their sum being zero makes each the negative of the
-other.</p>
-<pre class="coq"><code>Theorem mf_swap_neg : forall (vs : I -&gt; V) (i j : I),
-  i &lt;&gt; j -&gt; m (fswap vs i j) == - m vs.
-Proof.
-  intros vs i j Hij.
-  pose (a := vs i). pose (b := vs j).
-  pose (VS&#39; := upd vs i (a + b)).
-  assert (Hji : j &lt;&gt; i) by (intro Heq; apply Hij; symmetry; exact Heq).
-  assert (HW0 : m (upd VS&#39; j a) + m (upd VS&#39; j b) == 0).
-  { assert (HWi : upd VS&#39; j (a + b) i == a + b)
-      by (rewrite (u_off VS&#39; j i (a + b) Hji); unfold VS&#39;; exact (u_at vs i (a+b))).
-    assert (HWj : upd VS&#39; j (a + b) j == a + b) by exact (u_at VS&#39; j (a+b)).
-    assert (HW0&#39; : m (upd VS&#39; j (a + b)) == 0).
-    { apply (alternating_repeat_zero Halt (upd VS&#39; j (a + b)) i j Hij). rewrite HWi, HWj. reflexivity. }
-    rewrite &lt;- HW0&#39;.
-    symmetry.
-    exact (multilinear_form_additive m VS&#39; j a b). }
-  assert (HP2val : m (upd VS&#39; j b) == m vs).
-  { assert (HVS&#39;j : b == VS&#39; j) by (unfold VS&#39;; symmetry; exact (u_off vs i j (a+b) Hij)).
-    assert (HP2 : forall k, upd VS&#39; j b k == VS&#39; k) by (intros k; exact (u_idem VS&#39; j b HVS&#39;j k)).
-    assert (Hm_P2 : m (upd VS&#39; j b) == m VS&#39;) by (apply (multilinear_form_proper m); exact HP2).
-    assert (Hexp2 : m VS&#39; == m (upd vs i a) + m (upd vs i b))
-      by exact (multilinear_form_additive m vs i a b).
-    assert (HVSia : forall k, upd vs i a k == vs k)
-      by (intros k; exact (u_idem vs i a (reflexivity a) k)).
-    assert (Hm1 : m (upd vs i a) == m vs) by (apply (multilinear_form_proper m); exact HVSia).
-    assert (Hm2 : m (upd vs i b) == 0).
-    { apply (alternating_repeat_zero Halt (upd vs i b) i j Hij).
-      rewrite (u_at vs i b), (u_off vs i j b Hij). reflexivity. }
-    calc (m (upd VS&#39; j b))
-      == (m VS&#39;) { Hm_P2 }
-      == (m (upd vs i a) + m (upd vs i b)) { Hexp2 }
-      == (m vs + m (upd vs i b)) { Hm1 }
-      == (m vs + 0) { Hm2 }
-      == (m vs) { (right_identity (m vs)) }. }
-  assert (HP1val : m (upd VS&#39; j a) == m (fswap vs i j)).
-  { assert (Hreorder : forall k, upd VS&#39; j a k == upd (upd vs j a) i (a + b) k).
-    { intros k. unfold VS&#39;. exact (upd_upd_commutes vs i j (a+b) a Hij k). }
-    assert (Hm_P1 : m (upd VS&#39; j a) == m (upd (upd vs j a) i (a + b)))
-      by (apply (multilinear_form_proper m); exact Hreorder).
-    assert (Hexp3 : m (upd (upd vs j a) i (a + b))
-                  == m (upd (upd vs j a) i a) + m (upd (upd vs j a) i b))
-      by exact (multilinear_form_additive m (upd vs j a) i a b).
-    assert (HT1 : m (upd (upd vs j a) i a) == 0).
-    { apply (alternating_repeat_zero Halt (upd (upd vs j a) i a) i j Hij).
-      calc (upd (upd vs j a) i a i)
-        == a { (u_at (upd vs j a) i a) }
-        == (upd vs j a j) { (u_at vs j a) }
-        == (upd (upd vs j a) i a j) { (u_off (upd vs j a) i j a Hij) }. }
-    assert (HT2 : forall k, upd (upd vs j a) i b k == fswap vs i j k).
-    { intros k.
-      destruct (dec (i = k)) as [Hik | Hik].
-      - rewrite &lt;- Hik, (u_at (upd vs j a) i b).
-        symmetry. exact (fswap_at_i vs i j).
-      - destruct (dec (j = k)) as [Hjk | Hjk].
-        + rewrite &lt;- Hjk, (u_off (upd vs j a) i j b Hij), (u_at vs j a).
-          symmetry. exact (fswap_at_j vs i j Hij).
-        + rewrite (u_off (upd vs j a) i k b Hik), (u_off vs j k a Hjk).
-          symmetry. unfold fswap.
-          rewrite (swap_ne swap i j k (fun Heq =&gt; Hik (eq_sym Heq)) (fun Heq =&gt; Hjk (eq_sym Heq))).
-          reflexivity. }
-    assert (HT2m : m (upd (upd vs j a) i b) == m (fswap vs i j))
-      by (apply (multilinear_form_proper m); exact HT2).
-    calc (m (upd VS&#39; j a))
-      == (m (upd (upd vs j a) i (a + b))) { Hm_P1 }
-      == (m (upd (upd vs j a) i a) + m (upd (upd vs j a) i b)) { Hexp3 }
-      == (0 + m (upd (upd vs j a) i b)) { HT1 }
-      == (0 + m (fswap vs i j)) { HT2m }
-      == (m (fswap vs i j)) { (left_identity (m (fswap vs i j))) }. }
-  assert (Hneg : m (upd VS&#39; j a) == - m (upd VS&#39; j b))
-    by exact (neg_unique_l (m (upd VS&#39; j b)) (m (upd VS&#39; j a)) HW0).
-  rewrite HP1val, HP2val in Hneg.
-  exact Hneg.
-Qed.</code></pre>
+itself, and their sum being zero makes each the negative of the other.
+One hypothesis has no counterpart on the blackboard: the family
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+must respect <code>==</code>. The transposition hands back an index only
+<code>==</code>-equal to the one asked for, so reading
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+there is reading
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+through its properness — over a concrete carrier such as
+<code>Fin.t n</code>, where <code>==</code> is <code>=</code>, <a
+href="coqdoc/Riktig.Theory.Pointwise.html#leibniz_proper"><code>leibniz_proper</code></a>
+supplies it for any family at all.</p>
+<pre class="coq"><code>  Theorem mf_swap_neg : forall (vs : I -&gt; V), Proper (equ ==&gt; equ) vs -&gt;
+    forall (i j : I),
+    ~ (i == j) -&gt; m (fswap vs i j) == - m vs.
+  Proof.
+    intros vs Pvs i j Hij.
+    pose (a := vs i). pose (b := vs j).
+    pose (VS&#39; := upd vs i (a + b)).
+    assert (PVS&#39; : Proper (equ ==&gt; equ) VS&#39;)
+      by exact (upd_family_proper vs Pvs i (a + b)).
+    assert (Hji : ~ (j == i)) by (intro Heq; apply Hij; symmetry; exact Heq).
+    assert (HW0 : m (upd VS&#39; j a) + m (upd VS&#39; j b) == 0).
+    { assert (HWi : upd VS&#39; j (a + b) i == a + b).
+      { calc (upd VS&#39; j (a + b) i)
+          == (VS&#39; i)  { (upd_off VS&#39; j i (a + b) Hji) }
+          == (a + b)  { (upd_at vs i (a + b) i (reflexivity i)) }. }
+      assert (HWj : upd VS&#39; j (a + b) j == a + b)
+        by exact (upd_at VS&#39; j (a + b) j (reflexivity j)).
+      assert (HW0&#39; : m (upd VS&#39; j (a + b)) == 0).
+      { apply (alternating_repeat_zero Halt (upd VS&#39; j (a + b)) i j Hij).
+        rewrite HWi, HWj. reflexivity. }
+      rewrite &lt;- HW0&#39;.
+      symmetry.
+      exact (multilinear_form_additive m VS&#39; j a b). }
+    assert (HP2val : m (upd VS&#39; j b) == m vs).
+    { assert (HVS&#39;j : b == VS&#39; j)
+        by (unfold VS&#39;; rewrite (upd_off vs i j (a + b) Hij); reflexivity).
+      assert (HP2 : forall k, upd VS&#39; j b k == VS&#39; k)
+        by (intros k; exact (u_idem VS&#39; PVS&#39; j b HVS&#39;j k)).
+      assert (Hm_P2 : m (upd VS&#39; j b) == m VS&#39;)
+        by (apply (multilinear_form_proper m); exact HP2).
+      assert (Hexp2 : m VS&#39; == m (upd vs i a) + m (upd vs i b))
+        by exact (multilinear_form_additive m vs i a b).
+      assert (HVSia : forall k, upd vs i a k == vs k)
+        by (intros k; exact (u_idem vs Pvs i a (reflexivity a) k)).
+      assert (Hm1 : m (upd vs i a) == m vs)
+        by (apply (multilinear_form_proper m); exact HVSia).
+      assert (Hm2 : m (upd vs i b) == 0).
+      { apply (alternating_repeat_zero Halt (upd vs i b) i j Hij).
+        rewrite (upd_at vs i b i (reflexivity i)),
+          (upd_off vs i j b Hij).
+        reflexivity. }
+      calc (m (upd VS&#39; j b))
+        == (m VS&#39;) { Hm_P2 }
+        == (m (upd vs i a) + m (upd vs i b)) { Hexp2 }
+        == (m vs + m (upd vs i b)) { Hm1 }
+        == (m vs + 0) { Hm2 }
+        == (m vs) { (right_identity (m vs)) }. }
+    assert (HP1val : m (upd VS&#39; j a) == m (fswap vs i j)).
+    { assert (Hreorder : forall k, upd VS&#39; j a k == upd (upd vs j a) i (a + b) k).
+      { intros k. unfold VS&#39;. exact (upd_upd_commutes vs i j (a + b) a Hij k). }
+      assert (Hm_P1 : m (upd VS&#39; j a) == m (upd (upd vs j a) i (a + b)))
+        by (apply (multilinear_form_proper m); exact Hreorder).
+      assert (Hexp3 : m (upd (upd vs j a) i (a + b))
+                    == m (upd (upd vs j a) i a) + m (upd (upd vs j a) i b))
+        by exact (multilinear_form_additive m (upd vs j a) i a b).
+      assert (HT1 : m (upd (upd vs j a) i a) == 0).
+      { apply (alternating_repeat_zero Halt (upd (upd vs j a) i a) i j Hij).
+        calc (upd (upd vs j a) i a i)
+          == a { (upd_at (upd vs j a) i a i (reflexivity i)) }
+          == (upd vs j a j) { (upd_at vs j a j (reflexivity j)) }
+          == (upd (upd vs j a) i a j) { (upd_off (upd vs j a) i j a Hij) }. }
+      assert (HT2 : forall k, upd (upd vs j a) i b k == fswap vs i j k).
+      { intros k.
+        unfold fswap.
+        destruct (dec (k == i)) as [Hki | Hki].
+        - calc (upd (upd vs j a) i b k)
+            == b { (upd_at (upd vs j a) i b k Hki) }
+            == (vs (swap i j k))
+                 { (symmetry (Pvs (swap i j k) j
+                     (swap_at_i swap i j k Hki))) }.
+        - assert (Hik : ~ (i == k))
+            by (intros Hc; exact (Hki (symmetry Hc))).
+          destruct (dec (k == j)) as [Hkj | Hkj].
+          + calc (upd (upd vs j a) i b k)
+              == (upd vs j a k) { (upd_off (upd vs j a) i k b Hik) }
+              == a              { (upd_at vs j a k Hkj) }
+              == (vs (swap i j k))
+                   { (symmetry (Pvs (swap i j k) i
+                       (swap_at_j swap i j k Hij Hkj))) }.
+          + assert (Hjk : ~ (j == k))
+              by (intros Hc; exact (Hkj (symmetry Hc))).
+            calc (upd (upd vs j a) i b k)
+              == (upd vs j a k) { (upd_off (upd vs j a) i k b Hik) }
+              == (vs k)         { (upd_off vs j k a Hjk) }
+              == (vs (swap i j k))
+                   { (symmetry (Pvs (swap i j k) k
+                       (swap_ne swap i j k Hki Hkj))) }. }
+      assert (HT2m : m (upd (upd vs j a) i b) == m (fswap vs i j))
+        by (apply (multilinear_form_proper m); exact HT2).
+      calc (m (upd VS&#39; j a))
+        == (m (upd (upd vs j a) i (a + b))) { Hm_P1 }
+        == (m (upd (upd vs j a) i a) + m (upd (upd vs j a) i b)) { Hexp3 }
+        == (0 + m (upd (upd vs j a) i b)) { HT1 }
+        == (0 + m (fswap vs i j)) { HT2m }
+        == (m (fswap vs i j)) { (left_identity (m (fswap vs i j))) }. }
+    assert (Hneg : m (upd VS&#39; j a) == - m (upd VS&#39; j b))
+      by exact (neg_unique_l (m (upd VS&#39; j b)) (m (upd VS&#39; j a)) HW0).
+    rewrite HP1val, HP2val in Hneg.
+    exact Hneg.
+  Qed.</code></pre>
 <p>Line for line, this is the trick just described: <code>HW0</code>
 records that
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">first summand</mtext><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>m</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">second summand</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m(\text{first summand}) + m(\text{second summand}) = 0</annotation></semantics></math>,
@@ -375,17 +423,21 @@ the two known values back into <code>HW0</code>’s equation to conclude
 Read as a fact about a determinant specifically, this is immediate —
 plug in its own multilinear form and its own alternating witness:</p>
 <pre class="coq"><code>Theorem det_swap_neg : forall (n : nat) (I F V : Type)
-    (Ieq : EqDec I) (IFin : FinIndex n I) `{FF : Field F}
+    (eI : EqRel I) (IE : Equivalence (@equ I eI)) (Ieq : EquDec I)
+    (IFin : FinIndex n I) `{FF : Field F}
     (eV : EqRel V) (zV : Zero V) (aV : HasAdd V) (nV : HasNeg V)
     (sV : HasScale F V) (VV : VectorSpace F V)
+    (Vu : HasUpd I V) (VuL : Upd I V)
     (B : Basis n I F V) (D : Determinant n I F V B)
-    (vs : I -&gt; V) (i j : I),
-  i &lt;&gt; j -&gt; D (fswap swap vs i j) == - D vs.
+    (swap : I -&gt; I -&gt; I -&gt; I) {Sw : Swap swap}
+    (vs : I -&gt; V), Proper (equ ==&gt; equ) vs -&gt;
+    forall (i j : I),
+  ~ (i == j) -&gt; D (fswap swap vs i j) == - D vs.
 Proof.
-  intros n I F V Ieq IFin Fe Fz Fa Fn Fo Fm Fi FF eV zV aV nV sV VV B D
-    swap Sw vs i j Hij.
+  intros n I F V eI IE Ieq IFin Fe Fz Fa Fn Fo Fm Fi FF eV zV aV nV sV VV
+    Vu VuL B D swap Sw vs Pvs i j Hij.
   exact (mf_swap_neg (determinant_multilinear_form D) (determinant_alternating D)
-           swap vs i j Hij).
+           swap vs Pvs i j Hij).
 Qed.</code></pre>
 <p>Nothing about <a
 href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>, no first

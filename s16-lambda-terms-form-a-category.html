@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typed lambda terms form a category, with conversion as arrow
+equality</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="typed-lambda-terms-form-a-category-with-conversion-as-arrow-equality">Typed
+lambda terms form a category, with conversion as arrow equality</h1>
+<p>A category asks very little: arrows between objects, an identity
+arrow at each object, a composition, and three laws — identity on either
+side does nothing, and composition is associative. For
+<em>functions</em>, the laws hold on the nose: <code>id ∘ f</code> and
+<code>f</code> return the same value at every input. For
+<em>programs</em> — pieces of syntax — they do not. The program “apply
+the identity function to the result of <code>f</code>” is a different
+piece of text than <code>f</code>; running it takes one step more. If
+programs are to be the arrows of a category, “equal arrows” cannot mean
+“identical syntax.” It has to mean “the same after computation,” and the
+category’s own definition allows exactly this: arrow equality is a
+field, a chosen <a
+href="https://en.wikipedia.org/wiki/Equivalence_relation">equivalence
+relation</a> per pair of objects, not Coq’s built-in equality. This post
+cashes that freedom in. The objects are the types of the <a
+href="https://en.wikipedia.org/wiki/Simply_typed_lambda_calculus">simply
+typed lambda calculus</a>, the arrows are closed function-terms, and the
+three category laws are proved as <em>conversion</em> facts — chains of
+computation steps under a binder.</p>
+<h2 id="terms-that-cannot-be-ill-typed">Terms that cannot be
+ill-typed</h2>
+<p>The whole development is <a
+href="coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>,
+and it opens with the types: one base type and function types over
+it,</p>
+<pre class="coq"><code>Inductive ty : Type :=
+  | Base : ty
+  | Arr  : ty -&gt; ty -&gt; ty.</code></pre>
+<p>Terms are indexed by a <em>context</em> — the list of types of the
+free variables in scope — and by their own type, so that only well-typed
+terms can be written at all. A variable is a position in the context, in
+<a href="https://en.wikipedia.org/wiki/De_Bruijn_index">de Bruijn</a>
+style: <a
+href="coqdoc/Riktig.Impl.StlcCat.html#here"><code>here</code></a> is the
+nearest binder, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#there"><code>there</code></a>
+skips one.</p>
+<pre class="coq"><code>Inductive var : list ty -&gt; ty -&gt; Type :=
+  | here  : forall G T, var (T :: G) T
+  | there : forall G U T, var G T -&gt; var (U :: G) T.</code></pre>
+<pre class="coq"><code>Inductive tm : list ty -&gt; ty -&gt; Type :=
+  | TVar : forall G T, var G T -&gt; tm G T
+  | TAbs : forall G A B, tm (A :: G) B -&gt; tm G (Arr A B)
+  | TApp : forall G A B, tm G (Arr A B) -&gt; tm G A -&gt; tm G B.</code></pre>
+<p>Read <a
+href="coqdoc/Riktig.Impl.StlcCat.html#TAbs"><code>TAbs</code></a>: the
+body lives in the context extended by the argument type <code>A</code>,
+and the abstraction has type <code>Arr A B</code> — the typing rule for
+λ is the constructor’s type. <a
+href="coqdoc/Riktig.Impl.StlcCat.html#TApp"><code>TApp</code></a>
+likewise demands a function and an argument whose types meet. A scope
+error or a type error is not caught later; it is unwritable.</p>
+<p>One operation on terms is needed before any category appears:
+<em>weakening</em>, which transports a term into a larger context — the
+term does not use the extra variables, it merely tolerates their
+presence. The file extends the context at the far end, so every de
+Bruijn witness is copied unchanged and the recursion stays
+structural:</p>
+<pre class="coq"><code>Fixpoint wkt {G D T} (t : tm G T) : tm (G ++ D) T :=
+  match t in tm G0 T0 return tm (G0 ++ D) T0 with
+  | TVar x   =&gt; TVar (wkvar x)
+  | TAbs b   =&gt; TAbs (wkt b)
+  | TApp f a =&gt; TApp (wkt f) (wkt a)
+  end.
+
+(* Type-correct because nil ++ D is definitionally D. *)
+Definition wk {D T} (t : tm nil T) : tm D T := wkt t.</code></pre>
+<p><a href="coqdoc/Riktig.Impl.StlcCat.html#wk"><code>wk</code></a> is
+the case used below: a closed term dropped into any context.</p>
+<h2 id="arrows-closed-function-terms">Arrows: closed function-terms</h2>
+<p>An arrow from <code>A</code> to <code>B</code> is a closed program of
+type <code>A → B</code>; the identity arrow is <code>λx. x</code>, and
+composition builds <code>λx. g (f x)</code>, weakening the two closed
+terms under the new binder:</p>
+<pre class="coq"><code>Definition Hom (A B : ty) : Type := tm nil (Arr A B).
+
+Definition tid (A : ty) : Hom A A := TAbs (TVar here).
+
+Definition tcomp {A B C} (g : Hom B C) (f : Hom A B) : Hom A C :=
+  TAbs (TApp (wk g) (TApp (wk f) (TVar here))).</code></pre>
+<p>These are ordinary data — <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tcomp"><code>tcomp</code></a>
+really constructs the composite program, as a computation checked by the
+kernel shows:</p>
+<pre class="coq"><code>Example tcomp_computes :
+  tcomp (tid Base) (tid Base)
+  = TAbs (TApp (TAbs (TVar here)) (TApp (TAbs (TVar here)) (TVar here))).
+Proof. reflexivity. Qed.</code></pre>
+<p>Composing two identities yields
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\lambda x.\,(\lambda y.\,y)\,((\lambda y.\,y)\,x)</annotation></semantics></math>
+— visibly <em>not</em> the identity term. The category laws will have to
+say in what sense it is the identity anyway.</p>
+<h2 id="conversion-exactly-the-equations-the-laws-force">Conversion:
+exactly the equations the laws force</h2>
+<p>The equality on arrows is an inductively defined relation <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv"><code>conv</code></a>. Its
+constructors fall into three groups: the equivalence closure (<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_refl"><code>conv_refl</code></a>,
+<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_sym"><code>conv_sym</code></a>,
+<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_trans"><code>conv_trans</code></a>);
+congruence, so a conversion may happen inside an application, under a
+binder, or under weakening (<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_app"><code>conv_app</code></a>,
+<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_abs"><code>conv_abs</code></a>,
+<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_wk"><code>conv_wk</code></a>);
+and three computation rules — the only places anything actually
+reduces:</p>
+<pre class="coq"><code>  | conv_beta_id : forall G A (v : tm G A),
+      conv G A (TApp (TAbs (TVar here)) v) v
+  | conv_beta_comp : forall G A B C (g : Hom B C) (f : Hom A B) (v : tm G A),
+      conv G C (TApp (wk (tcomp g f)) v) (TApp (wk g) (TApp (wk f) v))
+  | conv_eta   : forall A B (f : Hom A B),
+      conv nil (Arr A B) (TAbs (TApp (wk f) (TVar here))) f.</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_beta_id"><code>conv_beta_id</code></a>
+fires the identity redex, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_beta_comp"><code>conv_beta_comp</code></a>
+fires a composite applied to an argument, and <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_eta"><code>conv_eta</code></a>
+is the <a
+href="https://en.wikipedia.org/wiki/Lambda_calculus#%CE%B7-reduction">eta
+rule</a>: a function that only applies <code>f</code> <em>is</em>
+<code>f</code>. The file’s header discloses the scope cut: these are
+exactly the β/η <em>instances</em> the four category laws need, not full
+βη-conversion — the general β rule would need single-variable
+substitution, whose <a
+href="coqdoc/Riktig.Impl.StlcCat.html#TAbs"><code>TAbs</code></a> case
+forces the whole renaming tower, machinery the category laws never ask
+for.</p>
+<h2 id="the-three-laws-as-conversion-chains">The three laws, as
+conversion chains</h2>
+<p>The left identity law says <code>tcomp (tid B) f == f</code>. On the
+blackboard, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>=</mo><annotation encoding="application/x-tex">=</annotation></semantics></math>
+for convertibility, it is a two-step chain — one β step under the
+binder, then η:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>∘</mo><mi>f</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>y</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>β</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> under the binder</mtext></mrow><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>f</mi><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>η</mi><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\mathrm{id} \circ f
+\;=\; \lambda x.\,(\lambda y.\,y)\,(f\,x)
+\;=\; \lambda x.\,f\,x \quad\{\beta \text{ under the binder}\}
+\;=\; f \quad\{\eta\}</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma conv_left_identity : forall A B (f : Hom A B), conv (tcomp (tid B) f) f.
+Proof.
+  intros A B f.
+  apply (conv_trans (t := TAbs (TApp (wk f) (TVar here)))).
+  - apply conv_abs. apply conv_beta_id.
+  - apply conv_eta.
+Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_trans"><code>conv_trans</code></a>
+names the midpoint of the chain, the term
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">\lambda x.\,f\,x</annotation></semantics></math>.
+The first leg reaches it by <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_abs"><code>conv_abs</code></a>
+— step inside the binder — and <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_beta_id"><code>conv_beta_id</code></a>,
+which fires the identity redex on the body. The second leg is <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_eta"><code>conv_eta</code></a>
+verbatim. The right identity law is the same chain with the β step on
+the argument side of the application (<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_app"><code>conv_app</code></a>
+routes it there).</p>
+<p>Associativity is the law with content: <code>f ∘ (g ∘ h)</code> and
+<code>(f ∘ g) ∘ h</code> are different programs — each contains a
+composite as a subterm, applied to an argument — and both β-reduce to
+the same fully spelled-out pipeline:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>∘</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo>∘</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>h</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">f \circ (g \circ h)
+\;=\; \lambda x.\,f\,(g\,(h\,x))
+\;=\; (f \circ g) \circ h,</annotation></semantics></math></p>
+<p>the first equality by firing the composite
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>∘</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">g \circ h</annotation></semantics></math>
+inside the left-hand term, the second by firing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>∘</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">f \circ g</annotation></semantics></math>
+inside the right-hand term and reading the chain backwards.</p>
+<pre class="coq"><code>Lemma conv_associative :
+  forall W X Y Z (f : Hom Y Z) (g : Hom X Y) (h : Hom W X),
+    conv (tcomp f (tcomp g h)) (tcomp (tcomp f g) h).
+Proof.
+  intros W X Y Z f g h.
+  apply (conv_trans
+    (t := TAbs (TApp (wk f) (TApp (wk g) (TApp (wk h) (TVar here)))))).
+  - apply conv_abs. apply conv_app.
+    + apply conv_refl.
+    + apply conv_beta_comp.
+  - apply conv_sym. apply conv_abs. apply conv_beta_comp.
+Qed.</code></pre>
+<p>Again <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_trans"><code>conv_trans</code></a>
+names the meeting point,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>f</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\lambda x.\,f\,(g\,(h\,x))</annotation></semantics></math>.
+The first leg works under the binder: the outer application keeps its
+function <code>wk f</code> (<a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_refl"><code>conv_refl</code></a>)
+while <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_beta_comp"><code>conv_beta_comp</code></a>
+fires the composite <code>g ∘ h</code> on the argument. The second leg
+fires <code>f ∘ g</code> in the <em>other</em> term the same way, and <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_sym"><code>conv_sym</code></a>
+turns that reduction around so the two legs chain.</p>
+<h2 id="the-instance-and-what-it-buys">The instance, and what it
+buys</h2>
+<p>With the laws proved and a <code>Proper</code> instance saying <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tcomp"><code>tcomp</code></a>
+respects conversion on both sides (<a
+href="coqdoc/Riktig.Impl.StlcCat.html#tcomp_proper"><code>tcomp_proper</code></a>
+— congruence, assembled from <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_wk"><code>conv_wk</code></a>
+and <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv_app"><code>conv_app</code></a>),
+the category is filled in field by field:</p>
+<pre class="coq"><code>Instance Stlc_Category : Category ty := {|
+  Category.hom               := Hom;
+  Category.hom_equ           := fun A B =&gt; @conv nil (Arr A B);
+  Category.hom_equiv         := fun A B =&gt; @conv_equivalence nil (Arr A B);
+  Category.id                := tid;
+  Category.comp              := @tcomp;
+  Category.comp_proper       := tcomp_proper;
+  Category.is_left_identity  := conv_left_identity;
+  Category.is_right_identity := conv_right_identity;
+  Category.comp_associative  := conv_associative
+|}.</code></pre>
+<p>The arrow equality field is <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv"><code>conv</code></a> at the
+empty context — this is the hom-setoid choice the opening paragraph
+promised, and it is the entire reason the instance exists: with
+syntactic equality in that field, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tcomp_computes"><code>tcomp_computes</code></a>
+above would refute the left identity law outright.</p>
+<p>Everything proved about categories in general now applies to
+programs. The uniqueness of identities from <a
+href="s12-categories-for-programmers.html">the category post</a> — <a
+href="coqdoc/Riktig.Theory.Category.html#id_unique_l"><code>id_unique_l</code></a>,
+any arrow that leaves every arrow unchanged under composition is the
+identity — holds here word for word: any <em>program</em> that composes
+invisibly with every program is convertible to <code>λx. x</code>. And
+the smallest instance is checked directly in the file:</p>
+<pre class="coq"><code>Example conv_idl_base : conv (tcomp (tid Base) (tid Base)) (tid Base).
+Proof. exact (conv_left_identity Base Base (tid Base)). Qed.</code></pre>
+<p>The composite that <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tcomp_computes"><code>tcomp_computes</code></a>
+displayed as a genuinely different term is, up to conversion, the
+identity — which is the whole distinction between programs-as-text and
+programs-as-arrows, held in one example.</p>
+<p><em>Next: the untyped lambda calculus as a datatype with a running
+evaluator, proved equivalent to its own step relation.</em></p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Impl.StlcCat.html"><code>Impl/StlcCat.v</code></a>
+(the whole development: <a
+href="coqdoc/Riktig.Impl.StlcCat.html#ty"><code>ty</code></a>, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tm"><code>tm</code></a>, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#wk"><code>wk</code></a>, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tid"><code>tid</code></a>, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#tcomp"><code>tcomp</code></a>, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#conv"><code>conv</code></a>, the
+three laws, <a
+href="coqdoc/Riktig.Impl.StlcCat.html#Stlc_Category"><code>Stlc_Category</code></a>)
+· <a
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
+(the <a
+href="coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>
+class being instantiated) · <a
+href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Category.html#id_unique_l"><code>id_unique_l</code></a>
+and the other general theorems this instance inherits).</p>
+</main>
+</body>
+</html>

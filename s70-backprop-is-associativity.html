@@ -63,20 +63,25 @@ check; <code>linear_map_comp g f</code> is literally
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo>∘</mo><mi>h</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mi>k</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo>∘</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(g \circ h) \circ k \;=\; g \circ (h \circ k)</annotation></semantics></math></p>
 <p>holds because both sides are the function
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>↦</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>h</mi><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">u \mapsto g(h(k(u)))</annotation></semantics></math>
-— the same term, not merely equal terms. Equality of linear maps here is
-pointwise, so introducing an argument leaves a goal whose two sides
-reduce to that one term, and the proof is <code>reflexivity</code> (<a
-href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>):</p>
+— the same term, not merely equal terms. That fact is recorded once, as
+the associativity law of the category of vector spaces: linear maps are
+its arrows, and the theorem (<a
+href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>)
+cites the category’s law rather than reproving it:</p>
 <pre class="coq"><code>Theorem lm_comp_associative : forall (g : LinearMap F R S) (h : LinearMap F Q R)
     (k : LinearMap F P Q),
   linear_map_comp (linear_map_comp g h) k == linear_map_comp g (linear_map_comp h k).
 Proof.
-  intros g h k u.
-  reflexivity.
+  intros g h k.
+  symmetry.
+  exact (comp_associative
+             (vectObj F P) (vectObj F Q) (vectObj F R) (vectObj F S) g h k).
 Qed.</code></pre>
-<p><code>intros ... u</code> opens the pointwise equality at an
-arbitrary argument; <code>reflexivity</code> closes it because beta
-reduction takes both sides to the same normal form.</p>
+<p>In the category instance itself (<a
+href="coqdoc/Riktig.Impl.VectCat.html"><code>Impl/VectCat.v</code></a>)
+the law is closed by <code>reflexivity</code>: equality of linear maps
+is pointwise, and beta reduction takes both bracketings to the same
+normal form.</p>
 <p>Getting from there to matrices takes one step. A Jacobian is not a
 new construction: it is the matrix of the derivative in the chosen
 bases, so <a

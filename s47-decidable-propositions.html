@@ -169,14 +169,15 @@ the function that is <code>1</code> at coordinate <code>i</code> and
 <code>0</code> everywhere else:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mn>1</mn></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>=</mo><mi>j</mi></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mn>0</mn></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">if </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>≠</mo><mi>j</mi><mi>.</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">e_i(j) \;=\; \begin{cases} 1 &amp; \text{if } i = j \\ 0 &amp; \text{if } i \neq j. \end{cases}</annotation></semantics></math></p>
 <p>Writing it down needs a branch on “is this coordinate the special
-one?”, and that question, <code>i = j</code>, is an equality of indices
+one?”, and that question, <code>i == j</code>, is an equality of indices
 — a proposition. <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
-states the branch once, for any index type <code>I</code> with decidable
-equality, and <a
+states the branch once, for any index type <code>I</code> whose
+<code>==</code> is decidable, and <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
-reads the standard basis vector off it at <code>I = Fin.t n</code>:</p>
-<pre class="coq"><code>Definition delta (i j : I) : R := if dec (i = j) then 1 else 0.</code></pre>
+reads the standard basis vector off it at <code>I = Fin.t n</code>,
+where <code>==</code> is plain <code>=</code>:</p>
+<pre class="coq"><code>  Definition delta (i j : I) : R := if dec (i == j) then 1 else 0.</code></pre>
 <pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
 <p>This reads exactly like the mathematics: <code>e i</code> at input
 <code>j</code> is <code>if i = j then 1 else 0</code>. It type-checks

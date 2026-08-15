@@ -291,25 +291,41 @@ times
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>,
 where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\lVert v\rVert^2 = \langle v,v\rangle</annotation></semantics></math>.
-The inner loop subtracts one projection per already-processed
-vector:</p>
-<pre class="coq"><code>  Fixpoint gram_schmidt_aux (done : list V) (v : V) : V :=
+The inner loop subtracts one projection per already-processed vector.
+The recursion itself lives in the implementation layer (<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
+is an operation class in the theory, pinned down by two equations; the
+<code>_fix</code> function below is its computing instance):</p>
+<pre class="coq"><code>  Fixpoint gram_schmidt_aux_fix (done : list V) (v : V) : V :=
     match done with
     | nil =&gt; v
-    | cons d done&#39; =&gt; gram_schmidt_aux done&#39; (v + - proj d v)
+    | cons d done&#39; =&gt; gram_schmidt_aux_fix done&#39; (v + - proj d v)
     end.</code></pre>
 <p>and the outer loop folds that over the input, growing an accumulator
 <code>acc</code> of finished vectors and passing each new input through
 <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
-against everything produced so far:</p>
-<pre class="coq"><code>  Fixpoint gram_schmidt_step (acc vs : list V) : list V :=
+against everything produced so far, with <code>gram_schmidt vs</code>
+starting the fold on an empty accumulator:</p>
+<pre class="coq"><code>  Fixpoint gram_schmidt_step_fix (acc vs : list V) : list V :=
     match vs with
     | nil =&gt; acc
-    | cons v vs&#39; =&gt; gram_schmidt_step (acc ++ (gram_schmidt_aux acc v :: nil)) vs&#39;
-    end.
-
-  Definition gram_schmidt (vs : list V) : list V := gram_schmidt_step nil vs.</code></pre>
+    | cons v vs&#39; =&gt;
+        gram_schmidt_step_fix (acc ++ (gram_schmidt_aux_fix acc v :: nil)) vs&#39;
+    end.</code></pre>
+<p>The theory never touches these bodies: it works from the five
+defining equations alone (<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux_nil"><code>gram_schmidt_aux_nil</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux_cons"><code>gram_schmidt_aux_cons</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_step_nil"><code>gram_schmidt_step_nil</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_step_cons"><code>gram_schmidt_step_cons</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_def"><code>gram_schmidt_def</code></a>),
+and the implementation proves each one holds of the recursion by
+<code>reflexivity</code>.</p>
 <h2 id="the-result-with-its-hypotheses-in-plain-sight">The result, with
 its hypotheses in plain sight</h2>
 <p><strong>The claim:</strong> any two distinct vectors in the output
@@ -334,6 +350,7 @@ hidden:</p>
     In d1 (gram_schmidt vs) -&gt; In d2 (gram_schmidt vs) -&gt; d1 &lt;&gt; d2 -&gt; orthogonal d1 d2.
 Proof.
   intros vs Hnz d1 d2 Hd1 Hd2 Hneq.
+  rewrite (gram_schmidt_def vs) in Hnz, Hd1, Hd2.
   destruct (gram_schmidt_step_pairwise vs nil pairwise_orth_nil nonzero_nil Hnz
               d1 d2 Hd1 Hd2) as [Ho | Heq].
   - exact Ho.
@@ -565,6 +582,12 @@ href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></
 href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>,
 <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_pairwise_orthogonal"><code>gram_schmidt_pairwise_orthogonal</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.GramSchmidt.html"><code>Impl/GramSchmidt.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.GramSchmidt.html#gram_schmidt_aux_fix"><code>gram_schmidt_aux_fix</code></a>,
+<a
+href="coqdoc/Riktig.Impl.GramSchmidt.html#gram_schmidt_step_fix"><code>gram_schmidt_step_fix</code></a>)
 · <a
 href="coqdoc/Riktig.Structure.InnerProductSpace.html"><code>Structure/InnerProductSpace.v</code></a>
 (the <a

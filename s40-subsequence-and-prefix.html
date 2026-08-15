@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A subsequence keeps the order; a prefix keeps an unbroken
+front</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="a-subsequence-keeps-the-order-a-prefix-keeps-an-unbroken-front">A
+subsequence keeps the order; a prefix keeps an unbroken front</h1>
+<p>Two lists, one derived from the other by discarding some elements:
+the survivors appear in their original order, none is invented, none is
+repeated, but there may be gaps anywhere. That relation between lists is
+the <strong>subsequence</strong>. Tighten it so that all the discarding
+happens at the tail — the survivors are an unbroken front — and it
+becomes the <strong>prefix</strong>. The pair of them is the vocabulary
+in which “nothing arrived that was not sent” and “everything arrived up
+to some point” are said precisely, and the communication-protocol
+theorems later in this series conclude with exactly these two relations,
+one apiece. This post develops them on their own, as plain list theory:
+definitions, the closure laws, and the two proofs with actual content —
+transitivity, and the fact that a subsequence of full length is the
+whole list.</p>
+<h2 id="two-definitions">Two definitions</h2>
+<p>From <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>
+— generic in the element type, with the arguments in the order (sub,
+super). The subsequence relation is inductive, three ways to build a
+valid pair:</p>
+<pre class="coq"><code>  Inductive subseq : list A -&gt; list A -&gt; Prop :=
+    | subseq_nil : subseq [] []
+    | subseq_keep : forall x r s, subseq r s -&gt; subseq (x :: r) (x :: s)
+    | subseq_drop : forall x r s, subseq r s -&gt; subseq r (x :: s).</code></pre>
+<p>Read the constructors as a walk along the longer list <code>s</code>,
+deciding element by element: <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_keep"><code>subseq_keep</code></a>
+retains the next element (it must then appear, identically, at the head
+of the shorter list), <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_drop"><code>subseq_drop</code></a>
+discards it, and <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_nil"><code>subseq_nil</code></a>
+says a completed walk matches empty against empty. There is no
+constructor that swaps, edits, or repeats — which is the entire content
+of the relation. <code>subseq r s</code> is pronounced “<code>r</code>
+is a subsequence of <code>s</code>”, written
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≼</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">r \preceq s</annotation></semantics></math>
+below.</p>
+<p>The prefix relation needs no induction at all — “the longer list is
+the shorter one with something appended”:</p>
+<pre class="coq"><code>  Definition prefix (p s : list A) : Prop := exists s2, s = p ++ s2.</code></pre>
+<p>Both relations are reflexive, each by the simplest possible argument:
+<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_refl"><code>subseq_refl</code></a>
+keeps every element, <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix_refl"><code>prefix_refl</code></a>
+appends nothing. The empty list is below everything in both (<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_nil_l"><code>subseq_nil_l</code></a>
+drops every element; <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix_nil_l"><code>prefix_nil_l</code></a>
+appends the whole list).</p>
+<h2 id="transitivity">Transitivity</h2>
+<p>A subsequence of a subsequence is a subsequence:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>≼</mo><mi>v</mi><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>v</mi><mo>≼</mo><mi>w</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>u</mi><mo>≼</mo><mi>w</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">u \preceq v \;\wedge\; v \preceq w \;\Longrightarrow\; u \preceq w.</annotation></semantics></math></p>
+<p>The blackboard argument walks the <em>outer</em> derivation, the one
+relating
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>,
+keeping
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+flexible. Look at the last decision that derivation made about the head
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>:</p>
+<ul>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+ended by <strong>dropping</strong> its head
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>:
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>
+ignores
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>,
+so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+does too — drop
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+and continue with the rest of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>.</li>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+ended by <strong>keeping</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>:
+then
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mi>x</mi><mo>:</mo><mo>:</mo><msup><mi>v</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">v = x :: v&#39;</annotation></semantics></math>,
+and the question becomes how
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+relates to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>:</mo><mo>:</mo><msup><mi>v</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">x :: v&#39;</annotation></semantics></math>.
+Inverting that derivation gives two cases: either
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mi>x</mi><mo>:</mo><mo>:</mo><msup><mi>u</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">u = x :: u&#39;</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>u</mi><mo>′</mo></msup><mo>≼</mo><msup><mi>v</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">u&#39; \preceq v&#39;</annotation></semantics></math>
+— keep
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+on both sides and continue — or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
+skipped the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>,
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>≼</mo><msup><mi>v</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">u \preceq v&#39;</annotation></semantics></math>
+directly — then drop
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+and continue.</li>
+</ul>
+<p>The inversion step is packaged as its own lemma, because raw
+<code>inversion</code> on an inductive relation produces the two cases
+in an awkward shape:</p>
+<pre class="coq"><code>  Lemma subseq_cons_r_inv : forall r x s,
+    subseq r (x :: s) -&gt;
+    (exists r&#39;, r = x :: r&#39; /\ subseq r&#39; s) \/ subseq r s.</code></pre>
+<p>And the transitivity proof is the case analysis above, verbatim:</p>
+<pre class="coq"><code>  Lemma subseq_trans : forall u v w,
+    subseq u v -&gt; subseq v w -&gt; subseq u w.
+  Proof.
+    intros u v w Huv Hvw.
+    induction Hvw as [| x v&#39; w&#39; Hvw IH | x v&#39; w&#39; Hvw IH] in u, Huv |- *.
+    - exact Huv.
+    - destruct (subseq_cons_r_inv u x v&#39; Huv) as [[u&#39; [Hequ Hu&#39;]] | Hu].
+      + rewrite Hequ. apply subseq_keep. apply IH. exact Hu&#39;.
+      + apply subseq_drop. apply IH. exact Hu.
+    - apply subseq_drop. apply IH. exact Huv.
+  Qed.</code></pre>
+<p>One Coq detail carries the proof: the <code>in u, Huv |- *</code>
+clause generalizes the induction over <code>u</code> and its derivation,
+so the induction hypothesis <code>IH</code> may be applied to a
+<em>different</em>, shorter <code>u'</code> in the keep case — exactly
+what the blackboard’s “continue with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>u</mi><mo>′</mo></msup><annotation encoding="application/x-tex">u&#39;</annotation></semantics></math>”
+needs. The three bullets are the three cases: base
+(<code>v = w = []</code>, so <code>Huv</code> is already the goal), keep
+(the <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_cons_r_inv"><code>subseq_cons_r_inv</code></a>
+split, each branch re-entering <code>IH</code>), and drop (<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_drop"><code>subseq_drop</code></a>,
+then <code>IH</code> with <code>u</code> unchanged).</p>
+<h2 id="full-length-forces-equality">Full length forces equality</h2>
+<p>The length of a subsequence never exceeds its parent — every step of
+the derivation adds one to the parent’s side and at most one to the
+other (<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_length"><code>subseq_length</code></a>,
+a three-case induction). The sharper fact: if the lengths are
+<em>equal</em>, no drop ever happened, and the two lists are
+identical,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≼</mo><mi>s</mi><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>r</mi><mo stretchy="false" form="prefix">|</mo><mo>=</mo><mo stretchy="false" form="prefix">|</mo><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>r</mi><mo>=</mo><mi>s</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">r \preceq s \;\wedge\; |r| = |s| \;\Longrightarrow\; r = s.</annotation></semantics></math></p>
+<pre class="coq"><code>  Lemma subseq_length_eq : forall r s, subseq r s -&gt; length r = length s -&gt; r = s.
+  Proof.
+    intros r s H.
+    induction H as [| x r s H IH | x r s H IH]; intros Hlen.
+    - reflexivity.
+    - simpl in Hlen.
+      assert (Hlen&#39; : length r = length s) by lia.
+      f_equal. apply IH. exact Hlen&#39;.
+    - exfalso.
+      assert (Hle : length r &lt;= length s) by (apply subseq_length; exact H).
+      simpl in Hlen. lia.
+  Qed.</code></pre>
+<p>Induction on the derivation. The keep case peels one shared head
+(<code>f_equal</code>) and passes equal lengths down. The drop case is
+the point of the lemma: the derivation claims
+<code>subseq r (x :: s)</code> by dropping, so
+<code>length r &lt;= length s</code> by <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_length"><code>subseq_length</code></a>
+— but the hypothesis says <code>length r = S (length s)</code>, a
+contradiction <code>lia</code> refuses. A subsequence has full length
+only when the walk never dropped, and a walk that never drops copies the
+list.</p>
+<p>Read as a specification, this is a useful degenerate check: a
+guarantee of the form “the output is a subsequence of the input”
+collapses to “the output <em>is</em> the input” the moment a length
+count comes out even. Nothing needs to be re-examined element by
+element.</p>
+<h2 id="a-prefix-is-a-subsequence">A prefix is a subsequence</h2>
+<p>The tighter relation implies the looser one — keep the whole front,
+then drop the whole tail:</p>
+<pre class="coq"><code>  Lemma prefix_subseq : forall p s, prefix p s -&gt; subseq p s.
+  Proof.
+    intros p s [s2 Heq]. subst s.
+    induction p as [| x p&#39; IH]; simpl.
+    - apply subseq_nil_l.
+    - apply subseq_keep. exact IH.
+  Qed.</code></pre>
+<p>Destructing the <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>
+hypothesis exposes <code>s</code> as <code>p ++ s2</code>; then
+induction on <code>p</code> emits one <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_keep"><code>subseq_keep</code></a>
+per front element, and <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq_nil_l"><code>subseq_nil_l</code></a>
+drops the appended <code>s2</code> wholesale.</p>
+<h2 id="where-the-two-relations-do-their-work">Where the two relations
+do their work</h2>
+<p>They are the conclusions of the protocol track. The alternating-bit
+safety theorem of <a href="s43-abp-safety.html">the ABP post</a>
+concludes <code>subseq (deliver b0 wire) ms</code> — over a channel that
+drops and duplicates arbitrarily, what a receiver hands the application
+is a subsequence of what was sent, and by this post’s reading that
+single claim rules out corruption, duplication, and reordering at once.
+The Go-Back-N theorem of <a
+href="s46-go-back-n-delivers-a-prefix.html">the sequence-number post</a>
+concludes the stronger <code>prefix (gbn_deliver 0 wire) ms</code>, and
+<a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix_subseq"><code>prefix_subseq</code></a>
+is precisely how its subsequence guarantee follows as a corollary. The
+gap between the two relations — a subsequence that is not a prefix has a
+hole — is a real protocol distinction with a concrete counterexample,
+the subject of <a
+href="s84-prefix-delivery-needs-an-acknowledgement.html">the
+acknowledgement post</a>.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>,
+and every lemma quoted here) · <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> (a
+safety theorem concluding <a
+href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>
+(a delivery theorem concluding <a
+href="coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>).</p>
+</main>
+</body>
+</html>

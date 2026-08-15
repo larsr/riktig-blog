@@ -229,15 +229,19 @@ starting from the input and working toward the output. That they give
 the same answer is, underneath, nothing but the associativity of the
 matrix product. At the level of linear maps it is even more elementary —
 composition is literal function composition, so any two bracketings
-reduce to the same thing by computation alone, and the proof in <a
+reduce to the same thing by computation alone. That fact is recorded
+once, as the associativity law of the category of vector spaces — linear
+maps are its arrows — and the theorem in <a
 href="coqdoc/Riktig.Theory.HomVS.html"><code>Theory/HomVS.v</code></a>
-is one word:</p>
+cites that law rather than reproving it:</p>
 <pre class="coq"><code>Theorem lm_comp_associative : forall (g : LinearMap F R S) (h : LinearMap F Q R)
     (k : LinearMap F P Q),
   linear_map_comp (linear_map_comp g h) k == linear_map_comp g (linear_map_comp h k).
 Proof.
-  intros g h k u.
-  reflexivity.
+  intros g h k.
+  symmetry.
+  exact (comp_associative
+             (vectObj F P) (vectObj F Q) (vectObj F R) (vectObj F S) g h k).
 Qed.</code></pre>
 <p>Lifted to the Jacobian matrices, the statement that backprop and
 forward mode compute the same derivative reads almost exactly like the

@@ -161,8 +161,9 @@ appear</h2>
 <p>Everything above is coordinate-free. Partial derivatives are what you
 get when you <em>choose</em> a basis and feed the derivative one basis
 vector at a time:</p>
-<pre class="coq"><code>  Definition partial_at {n : nat} {I : Type} {Ieq : EqDec I}
-      {IFin : FinIndex n I} (L : LinearMap F U V) (B : Basis n I F U)
+<pre class="coq"><code>  Definition partial_at {n : nat} {I : Type} {eI : EqRel I}
+      {Ieq : EquDec I} {IFin : FinIndex n I} {Vl : HasLincomb I F U}
+      (L : LinearMap F U V) (B : Basis n I F U)
       (i : I) : V :=
     L (Basis.vec B i).</code></pre>
 <p>That is the entire definition — the
@@ -171,13 +172,14 @@ partial derivative is the derivative map applied to the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>-th
 basis vector. It follows immediately that partials do not depend on
 which derivative map you picked, since there is only one:</p>
-<pre class="coq"><code>  Lemma partial_at_welldef : forall {n : nat} {I : Type} {Ieq : EqDec I}
-      {IFin : FinIndex n I} (f : U -&gt; V) (a : U)
+<pre class="coq"><code>  Lemma partial_at_welldef : forall {n : nat} {I : Type} {eI : EqRel I}
+      {Ieq : EquDec I} {IFin : FinIndex n I} {Vl : HasLincomb I F U}
+      (f : U -&gt; V) (a : U)
       (L1 L2 : LinearMap F U V) (B : Basis n I F U) (i : I),
     is_deriv f a L1 -&gt; is_deriv f a L2 -&gt;
     partial_at L1 B i == partial_at L2 B i.
   Proof.
-    intros n I Ieq IFin f a L1 L2 B i HD1 HD2.
+    intros n I eI Ieq IFin Vl f a L1 L2 B i HD1 HD2.
     exact (deriv_unique f a L1 L2 HD1 HD2 (Basis.vec B i)).
   Qed.</code></pre>
 <p>One line, because uniqueness of the derivative was proved first. The

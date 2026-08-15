@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A finite index type is a duplicate-free enumeration, and a
+transposition is three equations</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="a-finite-index-type-is-a-duplicate-free-enumeration-and-a-transposition-is-three-equations">A
+finite index type is a duplicate-free enumeration, and a transposition
+is three equations</h1>
+<p>A sum over coordinates, a basis of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+vectors, a determinant of an
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n \times n</annotation></semantics></math>
+matrix — each needs a type of exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+indices to range over. What should “exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+elements” mean? For a type compared by Coq’s built-in equality the
+answer is folklore, but the types in this library are compared by a
+<em>chosen</em> equality: a <a
+href="https://en.wikipedia.org/wiki/Setoid">setoid</a> pairs the carrier
+with an <a
+href="https://en.wikipedia.org/wiki/Equivalence_relation">equivalence
+relation</a> <code>==</code>, and two elements may be equal for every
+provable purpose while being distinct terms — <a
+href="s04-calc-proof-compiles-to-transitivity.html">the calc post</a>
+sets this machinery up, with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn><mo>=</mo><mo>=</mo><mn>2</mn><mi>/</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">1/2 == 2/4</annotation></semantics></math>
+in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ℚ</mi><annotation encoding="application/x-tex">\mathbb{Q}</annotation></semantics></math>
+as the standing example. Counting must respect that: a carrier with the
+three terms
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>/</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">2/4</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mi>/</mi><mn>6</mn></mrow><annotation encoding="application/x-tex">3/6</annotation></semantics></math>
+has one element, not three.</p>
+<p>The operational answer: a type has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+elements when some list enumerates it — every element occurs, none
+occurs twice, both <em>up to</em> <code>==</code> — and that list has
+length
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
+Two questions follow immediately. Is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+well defined, or could one carrier own both a 3-element and a 4-element
+enumeration? And what do functions on such an index type look like, when
+every definition must respect an equality it did not choose? This post
+answers the first with a theorem and the second with a class of three
+equations.</p>
+<h2 id="the-structure">The structure</h2>
+<p>Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>=</mo><mo stretchy="false" form="prefix">[</mo><msub><mi>i</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>i</mi><mi>n</mi></msub><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">e = [i_1, \dots, i_n]</annotation></semantics></math>
+for the enumeration, the three laws are</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>≠</mo><mi>k</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo>¬</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>i</mi><mi>j</mi></msub><mo>=</mo><mo>=</mo><msub><mi>i</mi><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mo>∀</mo><mi>i</mi><mi>.</mi><mspace width="0.278em"></mspace><mo>∃</mo><mi>j</mi><mi>.</mi><mspace width="0.278em"></mspace><mi>i</mi><mo>=</mo><mo>=</mo><msub><mi>i</mi><mi>j</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">|</mo><mi>e</mi><mo stretchy="false" form="prefix">|</mo><mo>=</mo><mi>n</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">j \neq k \;\Rightarrow\; \neg(i_j == i_k), \qquad
+\forall i.\; \exists j.\; i == i_j, \qquad
+|e| = n,</annotation></semantics></math></p>
+<p>no duplicates, completeness, and the length. From <a
+href="coqdoc/Riktig.Structure.Fin.html"><code>Structure/Fin.v</code></a>:</p>
+<pre class="coq"><code>  Class FinIndex (n : nat) (I : Type) {eI : EqRel I} {Ieq : EquDec I} := {
+    enum_equivalence :: Equivalence (@equ I eI);
+    enum             : list I;
+    enum_NoDup       : NoDupA equ enum;
+    enum_complete    : forall i : I, InA equ i enum;
+    enum_length      : length enum = n;
+  }.</code></pre>
+<p>The vocabulary is the standard library’s <code>SetoidList</code>:
+<code>InA equ i l</code> is membership in <code>l</code> up to
+<code>==</code>, and <code>NoDupA equ l</code> says no two positions of
+<code>l</code> hold <code>==</code>-equal elements — precisely the two
+italicized “up to” clauses above. The two binders are the carrier’s
+equality <a href="coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a>
+and its decision procedure <a
+href="coqdoc/Riktig.Structure.Decidable.html#EquDec"><code>EquDec</code></a>,
+the setoid form of <a
+href="https://en.wikipedia.org/wiki/Decidability_%28logic%29">decidable</a>
+equality from <a href="s47-decidable-propositions.html">the
+decidable-propositions post</a>: <code>dec (a == b)</code> answers every
+equality question with a proof either way. One asymmetry is deliberate.
+<code>Equivalence</code> is a <em>field</em>: an index carrier has no
+algebra whose structure would already own the proof that <code>==</code>
+is reflexive, symmetric and transitive, so the enumeration structure
+carries it. Decidability stays a <em>binder</em>, because <a
+href="coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
+is an operation that definitions over the index type use — making it a
+field would turn an operation into a projection of a proof bundle.</p>
+<h2 id="the-count-is-well-defined">The count is well defined</h2>
+<p>Suppose one carrier had two enumerations,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>
+of length
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>
+of length
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>.
+Each is complete, so each element of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>
+occurs in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>
+and conversely: the two lists have the same elements up to
+<code>==</code>. Two duplicate-free lists with the same elements are <a
+href="https://en.wikipedia.org/wiki/Permutation">permutations</a> of one
+another, and permuting a list does not change its length:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">|</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">|</mo><msub><mi>e</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">|</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>m</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">n \;=\; |e_1| \;=\; |e_2| \;=\; m.</annotation></semantics></math></p>
+<p>The middle step is the content, and the standard library proves it:
+<code>NoDupA_equivlistA_PermutationA</code> turns “duplicate-free, same
+elements” into a <code>PermutationA</code>, the up-to-<code>==</code>
+permutation relation. From <a
+href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>:</p>
+<pre class="coq"><code>Lemma finindex_cardinality_unique : forall (n m : nat) (I : Type)
+    {eI : EqRel I} {Ieq : EquDec I}
+    (F1 : FinIndex n I) (F2 : FinIndex m I),
+  n = m.
+Proof.
+  intros n m I eI Ieq F1 F2.
+  rewrite &lt;- (@enum_length n I eI Ieq F1), &lt;- (@enum_length m I eI Ieq F2).
+  apply (PermutationA_length (eqA := @equ I eI)).
+  apply NoDupA_equivlistA_PermutationA.
+  - exact (@enum_equivalence n I eI Ieq F1).
+  - exact (@enum_NoDup n I eI Ieq F1).
+  - exact (@enum_NoDup m I eI Ieq F2).
+  - intros x.
+    split; intros _.
+    + exact (@enum_complete m I eI Ieq F2 x).
+    + exact (@enum_complete n I eI Ieq F1 x).
+Qed.</code></pre>
+<p>Walking it: the two <code>rewrite &lt;- enum_length</code> steps
+replace <code>n</code> and <code>m</code> by the two list lengths; <a
+href="coqdoc/Riktig.Lib.ListFacts.html#PermutationA_length"><code>PermutationA_length</code></a>
+(from <a
+href="coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>)
+reduces equal lengths to a permutation; the standard library lemma asks
+for the equivalence proof, the two <code>NoDupA</code> facts, and
+elementwise mutual membership — and completeness of each enumeration
+answers the membership question in both directions without even looking
+at <code>x</code>. So the parameter <code>n</code> is a property of the
+carrier, not a choice: <code>FinIndex 3 I</code> and
+<code>FinIndex 4 I</code> cannot coexist.</p>
+<h2 id="a-transposition-is-three-equations">A transposition is three
+equations</h2>
+<p>Functions on a setoid index type must respect <code>==</code>, and
+there is a way to get that respect for free: define the function by
+equations whose hypotheses are <code>==</code>-tests rather than by
+pattern matching on syntax. The exemplar is the <a
+href="https://en.wikipedia.org/wiki/Cyclic_permutation#Transpositions">transposition</a>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">\sigma_{ij}</annotation></semantics></math>,
+the permutation that exchanges
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+and fixes everything else:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mi>j</mi></mtd><mtd columnalign="left" style="text-align: left"><mi>x</mi><mo>=</mo><mo>=</mo><mi>i</mi></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>i</mi></mtd><mtd columnalign="left" style="text-align: left"><mi>x</mi><mo>=</mo><mo>=</mo><mi>j</mi><mo>,</mo><mspace width="0.278em"></mspace><mi>i</mi><mo>≠</mo><mi>j</mi></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mi>x</mi></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">otherwise.</mtext></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\sigma_{ij}(x) = \begin{cases} j &amp; x == i \\ i &amp; x == j,\; i \neq j \\ x &amp; \text{otherwise.} \end{cases}</annotation></semantics></math></p>
+<p>From <a
+href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>,
+those three cases as a class over the operation:</p>
+<pre class="coq"><code>  Class Swap {I : Type} {eI : EqRel I} (swap : I -&gt; I -&gt; I -&gt; I) := {
+    swap_at_i : forall i j x : I, x == i -&gt; swap i j x == j;
+    swap_at_j : forall i j x : I, ~ (i == j) -&gt; x == j -&gt; swap i j x == i;
+    swap_ne   : forall i j x : I, ~ (x == i) -&gt; ~ (x == j) -&gt; swap i j x == x;
+  }.</code></pre>
+<p>Note what is <em>not</em> a field: respect for <code>==</code>. The
+three equations already pin the value of <code>swap i j</code> on every
+<code>==</code>-class of the carrier, so respect is derivable — decide
+where the argument sits with <a
+href="coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>,
+and in each of the three cases both sides reduce by the matching
+equation. That derivation is <a
+href="coqdoc/Riktig.Theory.Fin.html#swap_proper"><code>swap_proper</code></a>
+in the same file, and it is the pattern’s selling point: state the
+equations with <code>==</code> hypotheses, and congruence comes out
+instead of going in.</p>
+<p>Every further law of transpositions is a consequence of the three
+equations, with no access to any implementation: <a
+href="coqdoc/Riktig.Theory.Fin.html#swap_invol"><code>swap_invol</code></a>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">\sigma_{ij}(\sigma_{ij}(x)) == x</annotation></semantics></math>),
+<a
+href="coqdoc/Riktig.Theory.Fin.html#swap_symmetric"><code>swap_symmetric</code></a>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mo>=</mo><msub><mi>σ</mi><mrow><mi>j</mi><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_{ij} == \sigma_{ji}</annotation></semantics></math>
+pointwise), <a
+href="coqdoc/Riktig.Theory.Fin.html#swap_conj"><code>swap_conj</code></a>
+(conjugation by a transposition), and injectivity. Injectivity is the
+shortest and shows the style — on the blackboard it is one chain from
+the involution,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mspace width="0.278em"></mspace><mo>=</mo><mo>=</mo><mspace width="0.278em"></mspace><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mo>=</mo><mspace width="0.278em"></mspace><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mo>=</mo><mspace width="0.278em"></mspace><mi>y</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">x \;==\; \sigma(\sigma(x)) \;==\; \sigma(\sigma(y)) \;==\; y,</annotation></semantics></math></p>
+<p>by the involution law, the hypothesis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>=</mo><mi>σ</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma(x) == \sigma(y)</annotation></semantics></math>
+under
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>’s
+congruence, and the involution law again. In Coq, as a <code>calc</code>
+chain:</p>
+<pre class="coq"><code>  Lemma swap_inj : forall i j x y : I, swap i j x == swap i j y -&gt; x == y.
+  Proof.
+    intros i j x y Heq.
+    calc x
+      == (swap i j (swap i j x))  { (symmetry (swap_invol i j x)) }
+      == (swap i j (swap i j y))  { (swap_proper i j _ _ Heq) }
+      == y                        { (swap_invol i j y) }.
+  Qed.</code></pre>
+<p>The three steps are the three blackboard steps, in order — and the
+middle one uses the derived <a
+href="coqdoc/Riktig.Theory.Fin.html#swap_proper"><code>swap_proper</code></a>,
+the congruence the class never had to assume.</p>
+<h2 id="the-instance-coqs-fin.t">The instance: Coq’s Fin.t</h2>
+<p><code>Fin.t n</code>, the standard library’s type of numbers below
+<code>n</code>, is the canonical carrier. Its equality is Coq’s built-in
+one, and a carrier whose <code>==</code> is built-in equality enters the
+setoid interface through one constructor, <a
+href="coqdoc/Riktig.Impl.FinIndex.html#finindex_from_leibniz"><code>finindex_from_leibniz</code></a>
+in <a
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>,
+which lifts ordinary <code>In</code>/<code>NoDup</code> facts to their
+<code>InA</code>/<code>NoDupA</code> forms. The enumeration is
+structural recursion, from <a
+href="coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a>:</p>
+<pre class="coq"><code>Fixpoint fin_all (n : nat) : list (Fin.t n) :=
+  match n with
+  | O =&gt; nil
+  | S m =&gt; cons Fin.F1 (map Fin.FS (fin_all m))
+  end.</code></pre>
+<p>with <a
+href="coqdoc/Riktig.Impl.Fin.html#fin_all_complete"><code>fin_all_complete</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Fin.html#fin_all_NoDup"><code>fin_all_NoDup</code></a>
+and <a
+href="coqdoc/Riktig.Impl.Fin.html#fin_all_length"><code>fin_all_length</code></a>
+proved by induction, and the instance is their assembly:</p>
+<pre class="coq"><code>Instance FinIndex_Fin (n : nat) : FinIndex n (Fin.t n) :=
+  finindex_from_leibniz (fin_all n) (fin_all_NoDup n)
+    (fin_all_complete n) (fin_all_length n).</code></pre>
+<p>The computing transposition decides against each endpoint — the three
+class equations, read as a program:</p>
+<pre class="coq"><code>Definition swap {I : Type} {eqdec : EqDec I} (i j r : I) : I :=
+  if dec (r = i) then j
+  else if dec (r = j) then i
+  else r.</code></pre>
+<p>Its <a
+href="coqdoc/Riktig.Theory.Fin.html#Swap.Swap"><code>Swap</code></a>
+instance (<a
+href="coqdoc/Riktig.Impl.Fin.html#swap_Swap"><code>swap_Swap</code></a>,
+same file) is the only place this definition is ever unfolded;
+everything downstream — the determinant chain permutes matrix rows with
+it — uses the three equations alone.</p>
+<p>What the enumeration is <em>for</em> is summation:
+<code>bigopI f</code> sums <code>f</code> over <a
+href="coqdoc/Riktig.Structure.Fin.html#FinIndex.enum"><code>enum</code></a>,
+and the <a
+href="https://en.wikipedia.org/wiki/Kronecker_delta">Kronecker delta</a>
+<a href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a> —
+from <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>,
+over any finite index type —</p>
+<pre class="coq"><code>  Definition delta (i j : I) : R := if dec (i == j) then 1 else 0.</code></pre>
+<p>collapses such sums:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>c</mi><mi>i</mi></msub><mspace width="0.167em"></mspace><msub><mi>δ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><msub><mi>c</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i c_i\, \delta_{ij} = c_j</annotation></semantics></math>,
+which is <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_delta"><code>bigopI_delta</code></a>,
+proved once from the enumeration laws. The check that instance search
+assembles the whole chain unaided at the concrete carrier is an
+<code>Example</code> in <a
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>:</p>
+<pre class="coq"><code>Example finindex_delta_check (F : Type) `{FF : Field F} (n : nat)
+    (c : Fin.t n -&gt; F) (j : Fin.t n) :
+  bigopI (fun i =&gt; c i * delta i j) == c j :=
+  bigopI_delta c j (leibniz_proper c).</code></pre>
+<p><a href="s58-a-basis-you-can-compute-with.html">The basis post</a> is
+this collapse at work: coordinates of a vector against a basis are read
+off by exactly this sum.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Structure.Fin.html"><code>Structure/Fin.v</code></a>
+(<a
+href="coqdoc/Riktig.Structure.Fin.html#FinIndex.FinIndex"><code>FinIndex</code></a>)
+· <a href="coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Fin.html#Swap.Swap"><code>Swap</code></a>, <a
+href="coqdoc/Riktig.Theory.Fin.html#swap_proper"><code>swap_proper</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Fin.html#swap_invol"><code>swap_invol</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Fin.html#swap_inj"><code>swap_inj</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Fin.html#finindex_cardinality_unique"><code>finindex_cardinality_unique</code></a>)
+· <a href="coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Fin.html#swap"><code>swap</code></a>, <a
+href="coqdoc/Riktig.Impl.Fin.html#swap_Swap"><code>swap_Swap</code></a>,
+<a href="coqdoc/Riktig.Impl.Fin.html#fin_all"><code>fin_all</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.FinIndex.html#finindex_from_leibniz"><code>finindex_from_leibniz</code></a>,
+<a
+href="coqdoc/Riktig.Impl.FinIndex.html#FinIndex_Fin"><code>FinIndex_Fin</code></a>,
+<a
+href="coqdoc/Riktig.Impl.FinIndex.html#finindex_delta_check"><code>finindex_delta_check</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+(<a href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>,
+<a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_delta"><code>bigopI_delta</code></a>).</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Being isomorphic is an equivalence, because inverses cancel in
+the middle</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="being-isomorphic-is-an-equivalence-because-inverses-cancel-in-the-middle">Being
+isomorphic is an equivalence, because inverses cancel in the middle</h1>
+<p>In a category — objects, arrows between them, an associative
+composition <code>∘</code> with an identity arrow at each object, and
+arrow equality <code>==</code> given per pair of objects — you are not
+allowed to ask what an object contains, only how it connects. So when
+should two objects count as <em>the same</em>? Literal equality of
+objects is the wrong currency: nothing in the arrow language can even
+state it. The arrow-level answer is a pair of arrows that undo each
+other — a trip from <code>x</code> to <code>y</code> and back that loses
+nothing, in either order. That is an <a
+href="https://en.wikipedia.org/wiki/Isomorphism">isomorphism</a>, and
+this post develops its small algebra: what the data is, what the laws
+are, and the theorem that makes “isomorphic” behave like an equality —
+any object is isomorphic to itself, isomorphisms reverse, and they
+compose. The composition step is the one with content: it needs a
+cancellation argument, proved once and used twice.</p>
+<h2 id="the-data-and-the-laws-separated">The data and the laws,
+separated</h2>
+<p>From <a
+href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>.
+The two round-trip laws are stated first, on their own, about any pair
+of arrows:</p>
+<pre class="coq"><code>Module TwoSidedInverse.
+  Class TwoSidedInverse {O : Type} `{Category O} {x y : O}
+      (f : x ~&gt; y) (g : y ~&gt; x) := {
+    from_to : g ∘ f == cat_id;
+    to_from : f ∘ g == cat_id;
+  }.
+End TwoSidedInverse.</code></pre>
+<p><code>TwoSidedInverse f g</code> says the two composites are the
+identities on their respective ends — going and coming back is a no-op,
+both ways around. An isomorphism then carries the two arrows as data,
+with one field holding the proof that they are mutually inverse:</p>
+<pre class="coq"><code>  Class Iso (x y : O) := {
+    iso_to : x ~&gt; y;
+    iso_from : y ~&gt; x;
+    iso_inverse :: TwoSidedInverse iso_to iso_from;
+  }.</code></pre>
+<p>The file is deliberate about which of these instance search may
+supply on its own — the comment above <a
+href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a> says
+which isomorphism one has is data, so search must never invent it, and
+the hint above <a
+href="coqdoc/Riktig.Theory.Category.html#TwoSidedInverse.TwoSidedInverse"><code>TwoSidedInverse</code></a>
+restricts search to <em>checking</em> a given pair of morphisms. The two
+laws are available under the names a caller expects, <a
+href="coqdoc/Riktig.Theory.Category.html#iso_fromto"><code>iso_fromto</code></a>
+and <a
+href="coqdoc/Riktig.Theory.Category.html#iso_tofrom"><code>iso_tofrom</code></a>,
+projected out of <a
+href="coqdoc/Riktig.Theory.Category.html#iso_inverse"><code>iso_inverse</code></a>;
+and <code>iso_from_laws to from fromto tofrom</code> assembles an <a
+href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a> from
+the two arrows and the two laws, in that order.</p>
+<h2 id="reflexive-and-symmetric-for-free">Reflexive and symmetric, for
+free</h2>
+<p>Every object is isomorphic to itself: both arrows are the identity,
+and both round-trip laws are the same fact,
+<code>cat_id ∘ cat_id == cat_id</code>, an instance of the left identity
+law.</p>
+<pre class="coq"><code>  Definition iso_refl (x : O) : Iso x x :=
+    iso_from_laws cat_id cat_id
+      (comp_left_identity x x cat_id)
+      (comp_left_identity x x cat_id).</code></pre>
+<p>And an isomorphism reverses by swapping its two arrows, which swaps
+the two laws with them:</p>
+<pre class="coq"><code>  Definition iso_sym {x y : O} (f : Iso x y) : Iso y x :=
+    iso_from_laws (iso_from f) (iso_to f) (iso_tofrom f) (iso_fromto f).</code></pre>
+<p>Neither needed a proof script — both isomorphisms are
+<em>constructed</em>, each law filled by a law already in hand.</p>
+<h2 id="the-cancellation-in-the-middle">The cancellation in the
+middle</h2>
+<p>Transitivity is where something has to be computed. Compose the
+forward arrows, compose the backward arrows in the opposite order, and
+the round trip through the middle object must vanish:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>∘</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>b</mi><mo>′</mo></msup><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(a \circ b) \circ (b&#39; \circ a&#39;)</annotation></semantics></math>
+should be the identity whenever
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>∘</mo><msup><mi>b</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">b \circ b&#39;</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">a \circ a&#39;</annotation></semantics></math>
+are. On the blackboard, five steps, each justified by a named law or
+hypothesis:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>∘</mo><mi>b</mi><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>b</mi><mo>′</mo></msup><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><msup><mi>b</mi><mo>′</mo></msup><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
+(a \circ b) \circ (b&#39; \circ a&#39;)
+\;=\; a \circ (b \circ (b&#39; \circ a&#39;)) \quad\{\text{associativity}\}
+</annotation></semantics></math>
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>∘</mo><msup><mi>b</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">associativity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>∘</mo><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>b</mi><mo>∘</mo><msup><mi>b</mi><mo>′</mo></msup><mo>=</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
+\;=\; a \circ ((b \circ b&#39;) \circ a&#39;) \quad\{\text{associativity}\}
+\;=\; a \circ (\mathrm{id} \circ a&#39;) \quad\{b \circ b&#39; = \mathrm{id}\}
+</annotation></semantics></math>
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">left identity</mtext><mo stretchy="false" form="postfix">}</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mi>a</mi><mo>∘</mo><msup><mi>a</mi><mo>′</mo></msup><mo>=</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
+\;=\; a \circ a&#39; \quad\{\text{left identity}\}
+\;=\; \mathrm{id} \quad\{a \circ a&#39; = \mathrm{id}\}
+</annotation></semantics></math></p>
+<p>The Coq proof is that chain, written as a <code>calc</code> block
+whose braces name the justification of each step:</p>
+<pre class="coq"><code>  Lemma comp_cancel :
+    forall (x y z : O) (a : y ~&gt; z) (b : x ~&gt; y) (b&#39; : y ~&gt; x) (a&#39; : z ~&gt; y),
+      b ∘ b&#39; == cat_id -&gt; a ∘ a&#39; == cat_id -&gt; (a ∘ b) ∘ (b&#39; ∘ a&#39;) == cat_id.
+  Proof.
+    intros x y z a b b&#39; a&#39; Hb Ha.
+    calc ((a ∘ b) ∘ (b&#39; ∘ a&#39;))
+      == (a ∘ (b ∘ (b&#39; ∘ a&#39;)))  { comp_associative }
+      == (a ∘ ((b ∘ b&#39;) ∘ a&#39;))  { comp_associative }
+      == (a ∘ (cat_id ∘ a&#39;))    { Hb }
+      == (a ∘ a&#39;)               { comp_left_identity }
+      == (cat_id : z ~&gt; z)      { Ha }.
+  Qed.</code></pre>
+<p>The two associativity steps regroup the four arrows so that the inner
+pair <code>b ∘ b'</code> sits together; the hypothesis <code>Hb</code>
+collapses it to the identity; the left identity law removes it; the
+hypothesis <code>Ha</code> finishes. Nothing here mentions isomorphisms
+— it is a fact about any four arrows with the two stated cancellations,
+and it is the group-theory cancellation shape played on typed
+arrows.</p>
+<p>Transitivity is now assembly. The composite isomorphism runs
+<code>f</code> then <code>g</code> forward, <code>g</code> then
+<code>f</code> backward, and <a
+href="coqdoc/Riktig.Theory.Category.html#comp_cancel"><code>comp_cancel</code></a>
+proves both round trips — once with the roles of the two isomorphisms
+one way, once the other:</p>
+<pre class="coq"><code>  Definition iso_trans {x y z : O} (f : Iso x y) (g : Iso y z) : Iso x z :=
+    iso_from_laws (iso_to g ∘ iso_to f) (iso_from f ∘ iso_from g)
+      (comp_cancel _ _ _ _ _ _ _ (iso_fromto g) (iso_fromto f))
+      (comp_cancel _ _ _ _ _ _ _ (iso_tofrom f) (iso_tofrom g)).</code></pre>
+<h2 id="from-data-to-a-relation">From data to a relation</h2>
+<p><code>Iso x y</code> is data — it says <em>which</em> pair of arrows
+witnesses the isomorphism, and two different pairs are two different
+values. So <a
+href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>
+itself cannot be an equivalence relation; its transitivity above
+<em>chooses</em> a witness. The relation is its propositional truncation
+— “some isomorphism exists”, with the witness forgotten:</p>
+<pre class="coq"><code>  Definition Isomorphic (x y : O) : Prop := inhabited (Iso x y).
+
+  #[export] Instance Isomorphic_Equivalence : Equivalence Isomorphic.
+  Proof.
+    split.
+    - intros x; exact (inhabits (iso_refl x)).
+    - intros x y [f]; exact (inhabits (iso_sym f)).
+    - intros x y z [f] [g]; exact (inhabits (iso_trans f g)).
+  Qed.</code></pre>
+<p>The three constructions of this post are exactly the three fields of
+<code>Equivalence</code>: reflexivity is <a
+href="coqdoc/Riktig.Theory.Category.html#iso_refl"><code>iso_refl</code></a>,
+symmetry is <a
+href="coqdoc/Riktig.Theory.Category.html#iso_sym"><code>iso_sym</code></a>
+applied to the unpacked witness, transitivity is <a
+href="coqdoc/Riktig.Theory.Category.html#iso_trans"><code>iso_trans</code></a>
+applied to both. The registered instance is what lets
+<code>reflexivity</code>, <code>symmetry</code> and <code>calc</code>
+chains operate on goals of the form <code>x ≅ y</code> — the infix the
+file gives <a
+href="coqdoc/Riktig.Theory.Category.html#Isomorphic"><code>Isomorphic</code></a>.</p>
+<h2 id="what-the-relation-is-for">What the relation is for</h2>
+<p><code>≅</code> is category theory’s working notion of “the same
+object,” and the next theorems in this series conclude with it. Any two
+terminal objects are isomorphic, and dually for initial ones — proved in
+<a href="s14-initial-terminal-and-products.html">the universal-property
+post</a> by handing <a
+href="coqdoc/Riktig.Theory.Category.html#iso_from_laws"><code>iso_from_laws</code></a>
+the only arrows the definitions permit — which is what entitles the
+phrase <em>the</em> terminal object. And because the whole development
+sits over an arbitrary <a
+href="coqdoc/Riktig.Structure.Category.html"><code>Category</code></a>
+instance, it lands on every instance at once: in the category of Coq
+types and functions, <a
+href="coqdoc/Riktig.Theory.Category.html#iso_trans"><code>iso_trans</code></a>
+composes bijections; in the category of typed lambda terms of <a
+href="s16-lambda-terms-form-a-category.html">the syntax-category
+post</a>, it composes programs whose round trips are convertible to the
+identity — one proof, every world with arrows.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Category.html#TwoSidedInverse.TwoSidedInverse"><code>TwoSidedInverse</code></a>,
+<a href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Category.html#comp_cancel"><code>comp_cancel</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Category.html#iso_trans"><code>iso_trans</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Category.html#Isomorphic"><code>Isomorphic</code></a>)
+· <a
+href="coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
+(the <a
+href="coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>
+class it all sits over) · <a
+href="coqdoc/Riktig.Theory.InitialTerminal.html"><code>Theory/InitialTerminal.v</code></a>
+(the first theorems that conclude with <code>≅</code>).</p>
+</main>
+</body>
+</html>

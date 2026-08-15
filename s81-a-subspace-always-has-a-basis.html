@@ -174,10 +174,13 @@ for kernels and images in general. The file goes on to prove, by the
 same drop-the-first-coordinate idea as the blackboard sketch, that the
 tail basis vectors give an actual <code>Basis m</code> of
 <code>H</code>:</p>
-<pre class="coq"><code>Definition hyperplane_basis : Basis m (Fin.t m) F (Sub V H) :=
-  {| Basis.vec := hp_sub_vec; Basis.coords := hp_coords;
-     Basis.reconstruction := hp_recon;
-     Basis.coords_linear_combination := hp_coords_lincomb |}.</code></pre>
+<pre class="coq"><code>  Definition hyperplane_basis : Basis m (Fin.t m) F (Sub V H) :=
+    {| Basis.vec := hp_sub_vec;
+       Basis.vec_proper := leibniz_proper hp_sub_vec;
+       Basis.coords := hp_coords;
+       Basis.coords_family_proper := fun v =&gt; leibniz_proper (hp_coords v);
+       Basis.reconstruction := hp_recon;
+       Basis.coords_linear_combination := fun c _ =&gt; hp_coords_lincomb c |}.</code></pre>
 <p>(<a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_sub_vec"><code>hp_sub_vec</code></a>,
 <a
@@ -187,8 +190,16 @@ href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_recon"><code>hp_recon</code></a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#hp_coords_lincomb"><code>hp_coords_lincomb</code></a>
 follow the same delta-collapse argument as building the standard basis
 vector, applied to a dropped coordinate rather than a coordinate
-function on the nose. The part of the file worth walking in detail is
-the induction that uses them, below.)</p>
+function on the nose. <a
+href="coqdoc/Riktig.Structure.Basis.html#Basis.vec_proper"><code>vec_proper</code></a>
+and <a
+href="coqdoc/Riktig.Structure.Basis.html#Basis.coords_family_proper"><code>coords_family_proper</code></a>
+are the setoid bookkeeping a basis over an abstract index carrier asks
+for; on <code>Fin.t</code>, where index equality is plain
+<code>=</code>, <a
+href="coqdoc/Riktig.Theory.Pointwise.html#leibniz_proper"><code>leibniz_proper</code></a>
+discharges them for free. The part of the file worth walking in detail
+is the induction that uses them, below.)</p>
 <p>The mirror move — turning a basis of a kernel plus one vector with
 <code>phi w1 == 1</code> into a basis one dimension bigger — is built
 the same way, generically, for any linear functional
@@ -198,10 +209,13 @@ the same way, generically, for any linear functional
 <p>and, after the round-trip proofs for the extended coordinate map (a
 few hundred lines of the same delta-collapse bookkeeping), the assembled
 basis:</p>
-<pre class="coq"><code>Definition extend_basis_by_vector : Basis (S k) (Fin.t (S k)) F W :=
-  {| Basis.vec := eb_vec; Basis.coords := eb_coords;
-     Basis.reconstruction := eb_recon;
-     Basis.coords_linear_combination := eb_coords_lincomb |}.</code></pre>
+<pre class="coq"><code>  Definition extend_basis_by_vector : Basis (S k) (Fin.t (S k)) F W :=
+    {| Basis.vec := eb_vec;
+       Basis.vec_proper := leibniz_proper eb_vec;
+       Basis.coords := eb_coords;
+       Basis.coords_family_proper := fun v =&gt; leibniz_proper (eb_coords v);
+       Basis.reconstruction := eb_recon;
+       Basis.coords_linear_combination := fun c _ =&gt; eb_coords_lincomb c |}.</code></pre>
 <p><a
 href="coqdoc/Riktig.Theory.SubspaceBasis.html#eb_vec"><code>eb_vec</code></a>
 is exactly “prepend <code>w1</code>, keep the old basis vectors after

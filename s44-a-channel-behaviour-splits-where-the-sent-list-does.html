@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A channel behaviour splits wherever the sent list does</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="a-channel-behaviour-splits-wherever-the-sent-list-does">A
+channel behaviour splits wherever the sent list does</h1>
+<p>A faulty communication channel can be described as a <a
+href="https://en.wikipedia.org/wiki/Binary_relation">relation</a>: a
+pair of finite lists — what a sender put in, what a receiver got out —
+is in the relation exactly when the channel could have turned the one
+into the other. The class this post works in allows dropping messages
+and delivering a message more than once, in any interleaving, and its
+facts always concern <em>whole</em> runs: one sent list, one received
+list, one yes.</p>
+<p>A protocol proof wants something finer. A retransmission protocol
+lays its wire traffic out in segments — one burst of copies per
+application message — and its correctness argument goes segment by
+segment: what the channel did to <em>this</em> burst, then what it did
+to the rest. So the whole-run fact has to be cut at the segment
+boundary, and per-segment facts have to be glued back into a whole-run
+fact. Neither direction is automatic. Cutting is the delicate one: a
+channel that duplicates does its duplicating on the <em>received</em>
+side without consuming anything on the sent side, so a run of duplicates
+sitting exactly at the boundary belongs, on the face of it, to neither
+half. This post states the two directions as lemmas about the relation
+alone — no protocol in sight — and walks both proofs, including the
+boundary case that makes cutting interesting.</p>
+<h2 id="the-relation-being-cut">The relation being cut</h2>
+<p>From <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>,
+the lossy-and-duplicating class is an inductively defined relation
+between a sent list and a received list — four ways to extend a valid
+pair:</p>
+<pre class="coq"><code>Inductive lossy_dup : list M -&gt; list M -&gt; Prop :=
+  | lossy_dup_nil : lossy_dup [] []
+  | lossy_dup_keep : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) (x :: r)
+  | lossy_dup_drop : forall x s r,
+      lossy_dup s r -&gt; lossy_dup (x :: s) r
+  | lossy_dup_stutter : forall x s r,
+      lossy_dup s (x :: r) -&gt; lossy_dup s (x :: x :: r).</code></pre>
+<p><a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_keep"><code>lossy_dup_keep</code></a>
+delivers the next sent message once; <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_drop"><code>lossy_dup_drop</code></a>
+swallows it; <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_stutter"><code>lossy_dup_stutter</code></a>
+re-emits the message currently at the head of the received list,
+consuming nothing from the sent side. That last constructor is the one
+to watch: it is the only one whose action is invisible from the sent
+list, and it is why splitting a behaviour takes a proof.</p>
+<h2 id="gluing-behaviours-compose-across-a-seam">Gluing: behaviours
+compose across a seam</h2>
+<p>The easy direction first. If the channel could turn <code>s1</code>
+into <code>r1</code> and could turn <code>s2</code> into
+<code>r2</code>, it could turn the <a
+href="https://en.wikipedia.org/wiki/Concatenation">concatenation</a>
+<code>s1 ++ s2</code> into <code>r1 ++ r2</code> — run the first
+behaviour, then the second. Writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><annotation encoding="application/x-tex">\mathrm{ld}</annotation></semantics></math>
+for the relation and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><annotation encoding="application/x-tex">+\!\!+</annotation></semantics></math>
+for concatenation:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>r</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>s</mi><mn>2</mn></msub><mo>,</mo><msub><mi>r</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>s</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>s</mi><mn>2</mn></msub><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>r</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>r</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{ld}(s_1, r_1) \;\wedge\; \mathrm{ld}(s_2, r_2)
+\;\Longrightarrow\;
+\mathrm{ld}(s_1 \mathbin{+\!\!+} s_2,\; r_1 \mathbin{+\!\!+} r_2).</annotation></semantics></math></p>
+<p>The proof is an induction on the first behaviour’s derivation: each
+constructor used to build
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>r</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{ld}(s_1, r_1)</annotation></semantics></math>
+is replayed at the front of the combined run, and when the first
+derivation is exhausted, the second behaviour is exactly what
+remains.</p>
+<pre class="coq"><code>Lemma lossy_dup_app : forall s1 r1 s2 r2 : list M,
+  lossy_dup s1 r1 -&gt; lossy_dup s2 r2 -&gt; lossy_dup (s1 ++ s2) (r1 ++ r2).
+Proof.
+  intros s1 r1 s2 r2 H1.
+  induction H1 as [| x s1&#39; r1&#39; H1&#39; IH | x s1&#39; r1&#39; H1&#39; IH | x s1&#39; r1&#39; H1&#39; IH]; intros H2.
+  - simpl. exact H2.
+  - simpl. apply lossy_dup_keep. apply IH. exact H2.
+  - simpl. apply lossy_dup_drop. apply IH. exact H2.
+  - simpl. apply lossy_dup_stutter. apply IH. exact H2.
+Qed.</code></pre>
+<p>Four cases, one per constructor. The base case: <code>s1</code> and
+<code>r1</code> are both empty, the concatenations are <code>s2</code>
+and <code>r2</code>, and the hypothesis <code>H2</code> is the goal. In
+each of the other three, <code>simpl</code> exposes the head of the
+concatenation, the same constructor is applied to the combined run, and
+the induction hypothesis <code>IH</code> finishes — the derivation for
+the pair <code>(s1, r1)</code> is replayed verbatim with <code>s2</code>
+and <code>r2</code> appended behind it.</p>
+<h2
+id="cutting-a-behaviour-splits-at-every-seam-of-the-sent-list">Cutting:
+a behaviour splits at every seam of the sent list</h2>
+<p>Now the converse. The channel acted once, on the whole list — but if
+that list happens to be a concatenation <code>l1 ++ l2</code>, the
+received list must split to match:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>l</mi><mn>2</mn></msub><mo>,</mo><mspace width="0.278em"></mspace><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo>∃</mo><mspace width="0.167em"></mspace><msub><mi>r</mi><mn>1</mn></msub><mspace width="0.167em"></mspace><msub><mi>r</mi><mn>2</mn></msub><mi>.</mi><mspace width="0.278em"></mspace><mspace width="0.278em"></mspace><mi>r</mi><mo>=</mo><msub><mi>r</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>r</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mo>,</mo><msub><mi>r</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo>,</mo><msub><mi>r</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{ld}(l_1 \mathbin{+\!\!+} l_2,\; r)
+\;\Longrightarrow\;
+\exists\, r_1\, r_2.\;\; r = r_1 \mathbin{+\!\!+} r_2
+\;\wedge\; \mathrm{ld}(l_1, r_1) \;\wedge\; \mathrm{ld}(l_2, r_2).</annotation></semantics></math></p>
+<p>On the blackboard the argument is an induction on the
+<em>derivation</em> of the behaviour, not on the lists, and the file’s
+comment says why in one sentence:</p>
+<pre class="coq"><code>(* Induction on the lossy_dup DERIVATION, not on the lists: stutter
+   duplicates the front of the received list without consuming
+   anything from the sent side, and can occur arbitrarily deep on
+   either side of the split. *)</code></pre>
+<p>Consider the last rule used to build
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo>,</mo><mi>r</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{ld}(s, r)</annotation></semantics></math>,
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><msub><mi>l</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>l</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">s = l_1 \mathbin{+\!\!+} l_2</annotation></semantics></math>.</p>
+<ul>
+<li><strong>nil</strong>: both lists are empty, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>l</mi><mn>1</mn></msub><mo>=</mo><msub><mi>l</mi><mn>2</mn></msub><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">l_1 = l_2 = [\,]</annotation></semantics></math>,
+and the empty split works.</li>
+<li><strong>keep</strong> on a message
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>:
+if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>l</mi><mn>1</mn></msub><annotation encoding="application/x-tex">l_1</annotation></semantics></math>
+is empty the whole run belongs to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>l</mi><mn>2</mn></msub><annotation encoding="application/x-tex">l_2</annotation></semantics></math>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mn>1</mn></msub><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">r_1 = [\,]</annotation></semantics></math>).
+If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>l</mi><mn>1</mn></msub><mo>=</mo><mi>x</mi><mo>:</mo><mo>:</mo><msub><mi>l</mi><msup><mn>1</mn><mo>′</mo></msup></msub></mrow><annotation encoding="application/x-tex">l_1 = x :: l_1&#39;</annotation></semantics></math>,
+the sub-derivation splits by the induction hypothesis, and the kept
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+is put back at the front of the first fragment.</li>
+<li><strong>drop</strong>: the same two cases, except the dropped
+message adds nothing to either fragment.</li>
+<li><strong>stutter</strong> — the boundary case. The sub-derivation
+ends in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mi>x</mi><mo>:</mo><mo>:</mo><msup><mi>r</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">r = x :: r&#39;</annotation></semantics></math>
+and, by the induction hypothesis, splits as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>r</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">r_1 \mathbin{+\!\!+} r_2</annotation></semantics></math>.
+Where does the <em>duplicate</em> of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+go? It must join whichever fragment contains the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+being duplicated: if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>r</mi><mn>1</mn></msub><annotation encoding="application/x-tex">r_1</annotation></semantics></math>
+is empty, the head
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+lives in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>r</mi><mn>2</mn></msub><annotation encoding="application/x-tex">r_2</annotation></semantics></math>,
+so the duplicate goes to the second fragment; if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mn>1</mn></msub><mo>=</mo><mi>x</mi><mo>:</mo><mo>:</mo><msub><mi>r</mi><msup><mn>1</mn><mo>″</mo></msup></msub></mrow><annotation encoding="application/x-tex">r_1 = x :: r_1&#39;&#39;</annotation></semantics></math>,
+it goes to the first. The case split on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>r</mi><mn>1</mn></msub><annotation encoding="application/x-tex">r_1</annotation></semantics></math>
+is exactly the “straddling the boundary” possibility, resolved.</li>
+</ul>
+<p>The Coq proof, verbatim:</p>
+<pre class="coq"><code>Lemma lossy_dup_app_split : forall (s r : list M),
+  lossy_dup s r -&gt; forall l1 l2 : list M, s = l1 ++ l2 -&gt;
+  exists r1 r2, r = r1 ++ r2 /\ lossy_dup l1 r1 /\ lossy_dup l2 r2.
+Proof.
+  intros s r H.
+  induction H as [| x s0 r0 H0 IH0 | x s0 r0 H0 IH0 | x s0 r0 H0 IH0];
+    intros l1 l2 Heq.
+  - destruct l1 as [| y l1&#39;].
+    + destruct l2 as [| z l2&#39;].
+      * exists [], []. split.
+        -- reflexivity.
+        -- split; apply lossy_dup_nil.
+      * simpl in Heq. discriminate Heq.
+    + simpl in Heq. discriminate Heq.
+  - destruct l1 as [| y l1&#39;].
+    + simpl in Heq.
+      exists [], (x :: r0). split.
+      * reflexivity.
+      * split.
+        -- apply lossy_dup_nil.
+        -- rewrite &lt;- Heq. apply lossy_dup_keep. exact H0.
+    + simpl in Heq.
+      assert (Heqx : x = y). { apply (cons_eq_head x y s0 (l1&#39; ++ l2)). exact Heq. }
+      assert (Heqs0 : s0 = l1&#39; ++ l2). { apply (cons_eq_tail x y s0 (l1&#39; ++ l2)). exact Heq. }
+      destruct (IH0 l1&#39; l2 Heqs0) as [r1&#39; [r2&#39; [Hr [Hl1 Hl2]]]].
+      exists (x :: r1&#39;), r2&#39;. split.
+      * simpl. rewrite Hr. reflexivity.
+      * split.
+        -- rewrite Heqx. apply lossy_dup_keep. exact Hl1.
+        -- exact Hl2.
+  - destruct l1 as [| y l1&#39;].
+    + simpl in Heq.
+      exists [], r0. split.
+      * reflexivity.
+      * split.
+        -- apply lossy_dup_nil.
+        -- rewrite &lt;- Heq. apply lossy_dup_drop. exact H0.
+    + simpl in Heq.
+      assert (Heqs0 : s0 = l1&#39; ++ l2). { apply (cons_eq_tail x y s0 (l1&#39; ++ l2)). exact Heq. }
+      destruct (IH0 l1&#39; l2 Heqs0) as [r1&#39; [r2&#39; [Hr [Hl1 Hl2]]]].
+      exists r1&#39;, r2&#39;. split.
+      * exact Hr.
+      * split.
+        -- apply lossy_dup_drop. exact Hl1.
+        -- exact Hl2.
+  - destruct (IH0 l1 l2 Heq) as [r1&#39; [r2&#39; [Hr [Hl1 Hl2]]]].
+    destruct r1&#39; as [| y r1&#39;&#39;].
+    + simpl in Hr.
+      exists [], (x :: x :: r0). split.
+      * reflexivity.
+      * split.
+        -- exact Hl1.
+        -- rewrite &lt;- Hr in Hl2.
+           apply lossy_dup_stutter. exact Hl2.
+    + simpl in Hr.
+      assert (Heqxy : x = y). { apply (cons_eq_head x y r0 (r1&#39;&#39; ++ r2&#39;)). exact Hr. }
+      assert (Heqr0 : r0 = r1&#39;&#39; ++ r2&#39;). { apply (cons_eq_tail x y r0 (r1&#39;&#39; ++ r2&#39;)). exact Hr. }
+      exists (x :: x :: r1&#39;&#39;), r2&#39;. split.
+      * simpl. rewrite Heqr0. reflexivity.
+      * split.
+        -- assert (Hl1&#39; : lossy_dup l1 (x :: r1&#39;&#39;)).
+           { rewrite Heqxy. exact Hl1. }
+           apply lossy_dup_stutter. exact Hl1&#39;.
+        -- exact Hl2.
+Qed.</code></pre>
+<p>Reading it against the blackboard cases. <code>induction H</code>
+produces the four cases in constructor order; in each, <code>l1</code>
+is destructed to decide which side of the seam the constructor’s action
+lands on. The two helper facts <a
+href="coqdoc/Riktig.Channel.Trace.html#cons_eq_head"><code>cons_eq_head</code></a>
+and <a
+href="coqdoc/Riktig.Channel.Trace.html#cons_eq_tail"><code>cons_eq_tail</code></a>
+extract, from an equality of nonempty lists, the equality of heads and
+of tails — they are how the pattern <code>y :: l1'</code> on the seam
+side is matched up with the constructor’s own <code>x</code>. The final
+case is the stutter case: <code>IH0</code> splits the sub-derivation
+first, then <code>destruct r1'</code> asks whether the first received
+fragment is empty, and the duplicate <code>x</code> is prepended to
+<code>r2'</code> (via <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_stutter"><code>lossy_dup_stutter</code></a>
+on the second fragment) or to <code>r1''</code> (via <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_stutter"><code>lossy_dup_stutter</code></a>
+on the first) — never invented, never lost.</p>
+<p>One degenerate companion gets used just as often: a channel given
+nothing produces nothing,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>r</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>r</mi><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{ld}([\,],\, r) \;\Longrightarrow\; r = [\,],</annotation></semantics></math></p>
+<p>because <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_keep"><code>lossy_dup_keep</code></a>
+and <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_drop"><code>lossy_dup_drop</code></a>
+need a nonempty sent list and <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_stutter"><code>lossy_dup_stutter</code></a>
+needs something already received to duplicate:</p>
+<pre class="coq"><code>Lemma lossy_dup_nil_l : forall s r, lossy_dup s r -&gt; s = [] -&gt; r = [].
+Proof.
+  intros s r H.
+  induction H as [| x s0 r0 H0 IH0 | x s0 r0 H0 IH0 | x s0 r0 H0 IH0]; intros Hs.
+  - reflexivity.
+  - discriminate Hs.
+  - discriminate Hs.
+  - assert (Hcontra : x :: r0 = []). { apply IH0. exact Hs. }
+    discriminate Hcontra.
+Qed.</code></pre>
+<p>The keep and drop cases refute the hypothesis <code>s = []</code>
+outright (<code>discriminate</code>); the stutter case asks its
+sub-derivation for <code>x :: r0 = []</code>, which is equally
+impossible.</p>
+<h2 id="where-the-two-directions-are-spent">Where the two directions are
+spent</h2>
+<p>The consumers live one file over, in the protocol proofs. The safety
+theorem of <a href="s43-abp-safety.html">the alternating-bit protocol
+post</a> inducts over the message list, and its step case opens by
+cutting the wire at the current burst’s boundary — this line of <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_deliver_subseq"><code>abp_deliver_subseq</code></a>
+in <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> is
+the split lemma at work, aimed at the seam between the burst for
+<code>m</code> and the stream for the remaining messages:</p>
+<pre class="coq"><code>    destruct (lossy_dup_app_split _ _ H
+                (sender_burst b_stream m k) (sender_stream (negb b_stream) ms&#39; k)
+                eq_refl) as [w1 [w2 [Hwire [H1 H2]]]].</code></pre>
+<p>Its base case is <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_nil_l"><code>lossy_dup_nil_l</code></a>:
+no messages sent, so the wire is empty. The gluing direction is spent in
+<a href="s45-fairness-and-liveness.html">the liveness post</a>’s <a
+href="coqdoc/Riktig.Channel.Fairness.html#fair_wire_lossy_dup"><code>fair_wire_lossy_dup</code></a>,
+which reassembles per-burst fragments into one behaviour of the whole
+sender stream — the inductive step of that proof is a single
+<code>apply lossy_dup_app</code>. And the sequence numbers of <a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_subseq"><code>gbn_deliver_subseq</code></a>
+in <a
+href="coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>
+reuse <a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>
+verbatim: the lemma never mentions a packet type, so a new
+retransmission scheme owes only its own delivery argument, not a new
+proof that behaviours split.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>
+(<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app"><code>lossy_dup_app</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>,
+<a
+href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_nil_l"><code>lossy_dup_nil_l</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
+(the safety proof that cuts at burst boundaries) · <a
+href="coqdoc/Riktig.Channel.Fairness.html"><code>Channel/Fairness.v</code></a>
+(the liveness hypothesis that glues them back).</p>
+</main>
+</body>
+</html>
