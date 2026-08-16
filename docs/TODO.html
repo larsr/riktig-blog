@@ -32,38 +32,198 @@ Everything else is closed under the global context.</p>
 <p>The Euler/rotor track, designed 2026-08-16. Layer order is the work
 order; each layer is useful before the next lands.</p>
 <ul class="task-list">
-<li><p><label><input type="checkbox" />#108 Impl/CliffordComplex.v: the
-complex numbers ARE the even subalgebra of Cl(2) — commutativity from
-e12<em>e12 == -(1) on the two-term form, inverses by the conjugate over
-a</em>a+b*b (nonzero exactly by MinusOneNotASquare, which exists for
-this reason), so Field (even (Cl F 2)); PlaneRotor’s even_to_complex
-ring iso upgrades to a field iso and Impl/Complex.v’s record becomes the
-coordinate presentation, not an independent
-construction.</label></p></li>
-<li><p><label><input type="checkbox" />#109 Structure/Circular.v +
-Impl/CircleModel.v: the trig laws as a class (cexp_add for commuting
-arguments, pythagoras, euler stated for ANY e with e<em>e == -(1), cos
-even / sin odd) together with the analysis-free consistency witness
-(pairs with c</em>c+s*s == 1 under the rotation product). The witness is
-the guard against a law set that admits only s == 0.</label></p></li>
-<li><p><label><input type="checkbox" />#110 Theory/Circular.v:
-consequences equationally — angle addition, cexp(theta e) invertible,
-rotor composition as angle addition in PlaneRotor, and u<em>v == ‖u‖‖v‖
-</em>: cexp(theta *: e12) with cos/sin identified as the normalized
-grade-0 and grade-2 parts through Graded (so no arccos is
-needed).</label></p></li>
+<li><p><label><input type="checkbox" checked="" />#108
+Impl/CliffordComplex.v: the complex numbers ARE the even subalgebra of
+Cl(2) — commutativity from e12<em>e12 == -(1) on the two-term form,
+inverses by the conjugate over a</em>a+b*b (nonzero exactly by
+MinusOneNotASquare, which exists for this reason), so Field (even (Cl F
+2)); PlaneRotor’s even_to_complex ring iso upgrades to a field iso and
+Impl/Complex.v’s record becomes the coordinate presentation, not an
+independent construction.</label></p></li>
+<li><p><label><input type="checkbox" checked="" />#109
+Structure/Circular.v + Impl/CircleModel.v: the trig laws as a class
+(cexp_add for commuting arguments, pythagoras, euler stated for ANY e
+with e<em>e == -(1), cos even / sin odd) together with the analysis-free
+consistency witness (pairs with c</em>c+s<em>s == 1 under the rotation
+product). The witness is the guard against a law set that admits only s
+== 0. Landed 2026-08-16. Three operation classes (HasCexp on the
+algebra, HasCos/HasSin on the scalars) and the law class over an
+F-algebra; the five laws asked for admit the constant assignment cexp _
+:= 1, cos _ := 1, sin _ := 0 (Impl/CircleModel.v proves that assignment
+satisfies each of them over EVERY algebra), so the class carries a sixth
+field, <code>sin_nontrivial : exists t : F,     sin t =/= 0</code> — the
+weakest statement that excludes it, and the only one true of real
+trigonometry (<a
+href="../coqdoc/Riktig.Structure.Circular.html#sin"><code>sin</code></a>
+injective, or <a
+href="../coqdoc/Riktig.Structure.Circular.html#cos"><code>cos</code></a>
+and <a
+href="../coqdoc/Riktig.Structure.Circular.html#sin"><code>sin</code></a>
+jointly injective, would be false there by periodicity). Scalars are
+central by two <a
+href="../coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
+fields in the GeometricAlgebra spelling: without them nothing discharges
+the commutation guard of cexp_add on the Euler line, and with them angle
+addition follows from the class alone (verified in DesignExample.v
+before landing; it is #110’s to state). The witness is characteristic
+two, which is where a non-degenerate model can be analysis-free at all:
+cexp_add plus euler force t |-&gt; (cos t, sin t) to be a group
+homomorphism from (F, +) into the circle group, whose image is then a
+divisible subgroup; over a field of characteristic p the circle group
+has no p-torsion unless p == 2, and over Q or any finitely generated
+field of characteristic zero the circle group has no nontrivial
+divisible subgroup at all, so <a
+href="../coqdoc/Riktig.Structure.Circular.html#sin"><code>sin</code></a>
+collapses to zero there. In characteristic two, <code>C F</code> is the
+dual numbers, the circle c</em>c + s*s == 1 is the line s == 1 + c, the
+rotation product is addition of s, and t |-&gt; (1 + t, t) parameterizes
+it: cos t == 1 + t, sin t == t, sin injective. Impl/TwoElementField.v is
+the concrete field it stands on (<code>bool</code>), and Theory/Field.v
+gained <a
+href="../coqdoc/Riktig.Theory.Field.html#square_zero"><code>square_zero</code></a>
+(a field with decidable equality has no square root of zero but zero)
+and the characteristic-two arithmetic the model runs on. A
+characteristic-zero witness is an exponential field and stays #111’s
+analytic obligation.</label></p></li>
+<li><p><label><input type="checkbox" checked="" />#110
+Theory/Circular.v: consequences equationally — angle addition,
+cexp(theta e) invertible, rotor composition as angle addition in
+PlaneRotor, and u<em>v == ‖u‖‖v‖ </em>: cexp(theta *: e12) with cos/sin
+identified as the normalized grade-0 and grade-2 parts through Graded
+(so no arccos is needed). Landed 2026-08-16. From the class alone: the
+two Linear fields give <code>scale_mul_scale</code> (scalars are
+central), which discharges the commutation guard along a line (<a
+href="../coqdoc/Riktig.Theory.Circular.html#cexp_collinear_add"><code>cexp_collinear_add</code></a>);
+the multiplication table of the plane spanned by <code>1</code> and any
+square root of <code>- (1)</code> is <a
+href="../coqdoc/Riktig.Theory.Circular.html#two_term_product"><code>two_term_product</code></a>;
+angle addition is then ONE equation in the algebra, <a
+href="../coqdoc/Riktig.Theory.Circular.html#cexp_angle_addition"><code>cexp_angle_addition</code></a>,
+and comparing it with <a
+href="../coqdoc/Riktig.Structure.Circular.html#Circular.euler"><code>euler</code></a>
+on the left gives <a
+href="../coqdoc/Riktig.Theory.Circular.html#euler_angle_addition"><code>euler_angle_addition</code></a>;
+the exponential of an angle is invertible with inverse the exponential
+of the negated angle (<a
+href="../coqdoc/Riktig.Theory.Circular.html#cexp_scale_invertible"><code>cexp_scale_invertible</code></a>,
+by cos even, sin odd and pythagoras), whence
+<code>cexp ((0 : F) *: e) == 1</code>. What the laws do NOT give: the
+split of that one equation into <code>cos (t + u) == …</code> and
+<code>sin (t + u) == …</code>. They hold in the one-element algebra,
+where every element is <code>0</code>, so no independence of
+<code>1</code> and <code>e</code> follows from them; <a
+href="../coqdoc/Riktig.Theory.Circular.html#independent_from_one"><code>independent_from_one</code></a>
+names the hypothesis, and <a
+href="../coqdoc/Riktig.Theory.Circular.html#independent_separates"><code>independent_separates</code></a>
+turns it into uniqueness of coordinates. <a
+href="../coqdoc/Riktig.Theory.Circular.html#cos_angle_addition"><code>cos_angle_addition</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Circular.html#sin_angle_addition"><code>sin_angle_addition</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Circular.html#cos_zero"><code>cos_zero</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Circular.html#sin_zero"><code>sin_zero</code></a>
+carry it. It is a real hypothesis, not a vacuous one: <a
+href="../coqdoc/Riktig.Theory.Circular.html#plane_independent_from_one"><code>plane_independent_from_one</code></a>
+discharges it for the plane algebra’s own bivector
+(<code>rotor 0 1</code>, a square root of <code>- (1)</code> by <a
+href="../coqdoc/Riktig.Theory.Circular.html#plane_bivector_square"><code>plane_bivector_square</code></a>)
+and <a
+href="../coqdoc/Riktig.Impl.CircleModel.html#bool_circle_i_independent"><code>bool_circle_i_independent</code></a>
+discharges it at the characteristic-two model, where the separated
+identities are then examples in Impl/CircleModel.v. Rotors: <a
+href="../coqdoc/Riktig.Theory.Circular.html#rotor_angle_unit"><code>rotor_angle_unit</code></a>
+is pythagoras, <a
+href="../coqdoc/Riktig.Theory.Circular.html#rotor_angle_reverse"><code>rotor_angle_reverse</code></a>
+is the parity pair, and <a
+href="../coqdoc/Riktig.Theory.Circular.html#rotor_angle_addition"><code>rotor_angle_addition</code></a>
+(with <a
+href="../coqdoc/Riktig.Theory.Circular.html#rotor_angle_zero"><code>rotor_angle_zero</code></a>)
+is composition by adding angles — the plane algebra’s unit and product
+are re-declared with <code>#[local] Existing Instance</code>, not
+re-instantiated, so Theory/PlaneRotor.v’s lemmas rewrite (the #108
+finding). Polar form: <a
+href="../coqdoc/Riktig.Theory.Circular.html#polar_product"><code>polar_product</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Circular.html#polar_product_normalized"><code>polar_product_normalized</code></a>
+identify <code>cos t</code> and <code>sin t</code> as the grade-0 and
+grade-2 parts of <code>u * v</code> divided by <code>‖u‖ * ‖v‖</code>,
+through Graded; the hypotheses are that the grade-1 part vanishes (true
+of a product of vectors in the plane algebra, not derivable from a
+grading in general), that the norms have nonzero product, and that such
+a <code>t</code> exists — the existence is analysis and stays #111’s. No
+law of Structure/Norm.v is used, only the two scalars, so the statement
+asks for <a
+href="../coqdoc/Riktig.Structure.Norm.html#HasNorm"><code>HasNorm</code></a>
+alone. <a
+href="../coqdoc/Riktig.Theory.Circular.html#polar_modulus"><code>polar_modulus</code></a>
+checks the identification against pythagoras. Needed on the way:
+Theory/VectorSpace.v’s scaling theorems generalized from the VectorSpace
+bundle to AbGroup + ScaleLaws (#109’s note), which retires
+Theory/GAWedgeDot.v’s duplicate <code>sc_*</code> mixin, and <a
+href="../coqdoc/Riktig.Theory.Graded.html#grade_decomposition_two"><code>grade_decomposition_two</code></a>
+/ <a
+href="../coqdoc/Riktig.Theory.Graded.html#grade_decomposition_two_even"><code>grade_decomposition_two_even</code></a>
+in Theory/Graded.v.</label></p></li>
 <li><p><label><input type="checkbox" />#111 Structure/Series.v +
-Impl/TrigSeries.v: summation as equations (linearity, Cauchy product,
-parity split, reindex, each carrying its Summable side conditions), then
-the trig instance defined by the usual series — cexp_add is Cauchy plus
-the binomial identity, euler is the parity split plus e^(2k) == (-1)^k,
-pythagoras follows from euler. The instance must never unfold ssum: it
-depends on the Series CLASS, so no epsilon appears in it. PROTOTYPE
-FIRST (the Summable side-condition shape is the thing to settle). The
-analytic obligation — convergence and Mertens over a Reals carrier —
-lands here and is the only analysis in the track; the tree has seq_lim
-but no series machinery and no Reals Impl, so the instance stays
-parameterized by Reals R.</label></p></li>
+Impl/TrigSeries.v: summation as equations, then the trig instance
+defined by the usual series. The class and the trig instance LANDED
+2026-08-16; the Series instance over a Reals carrier remains, and is
+what keeps the box open.</label></p>
+<pre><code>Prototyped in SeriesLab.v (repo root, outside _CoqProject;
+measurements in its header).  Verdict: a plain `summable`
+predicate with every law taking it as an explicit hypothesis.
+On the fragments the trig file is made of, the predicate, the
+searched-class and the partial-operation shapes cost the same,
+and the predicate&#39;s whole side-condition budget is one term
+inside the existing calc slot — every family the trig file sums
+is one of its three analytic hypotheses instantiated.  Reaching
+the predicate through a class buys that term back only where the
+family is a hypothesis or a rigid application: when the proof
+BUILDS the family, `rewrite` leaves the instance argument open
+and `calc_by`&#39;s `easy` cannot close it, so the chain fails at
+the chain rather than at the missing summability (F3: 8 lines
+-&gt; 11).  The partial operation needs a congruence heterogeneous
+in the proof argument and triples that same fragment (20 lines).
+Laws with no side condition are refuted, not judged
+(`unconditional_parity_is_false`): the constant family is its
+own even part and its own odd part.
+
+Landed: Structure/Series.v (Series over a ring — sum_supported,
+sum_add, sum_neg, sum_parity, sum_cauchy, and the four closure
+laws; ScaleSeries for the two scaling laws across the algebra
+and its scalars) and Impl/TrigSeries.v (exp_term, cos_term,
+sin_term by their recursions, and Circular from the CLASS: 889
+lines, of which the divided-power binomial identity is about
+half).  The elegance condition holds: the file never unfolds
+ssum, and no epsilon, partial sum or limit appears in it.  Two
+hypotheses beyond summability, both discharged by every rotation
+algebra of the track: the algebra has a square root of - (1) and
+embeds its scalars faithfully (`a *: 1 == b *: 1 -&gt; a == b`).
+Without them pythagoras — a statement about the SCALARS — has no
+route from euler, which is vacuous over an algebra with no
+square root of - (1).  `sin_nontrivial` is a hypothesis of the
+instance, as #109 predicted: it needs an estimate.
+
+Remains, in order.  (1) Existence: a nonnegative family with
+bounded finite sections has a sum.  The lub gives the value; the
+proof then has to turn `~ (forall n, bigop n f &lt;= s + - eps)`
+into an index, which needs `Classical_Prop.classic` — the axiom
+Theory/SubspaceBasis.v already discloses.  (2) The Cauchy
+criterion, carrying (1) to families of mixed sign, and with it
+absolute summability as the `summable` of the instance.  (3) The
+parity split (a reindexing, given (2)) and Mertens (the
+substantial one).  (4) Packaging: a total `ssum` is DATA, so it
+needs the limit extracted from an existence proof —
+`constructive_indefinite_description`, the second axiom of that
+disclosure.  Impl/SeriesReals.v holds everything that needs
+NEITHER axiom: SumTo over seq_lim (through a local `abs` norm),
+uniqueness, the three linearity laws, the sum of a family with
+finite support, and the monotonicity of the sections of a
+nonnegative family.  Nothing there uses completeness, and Coq&#39;s
+generalization records it — every statement is proved for an
+arbitrary ordered field.  (5) `sin_nontrivial`: `0 &lt; sin 1` by
+the alternating-series estimate, once (1) exists.</code></pre></li>
 <li><p><label><input type="checkbox" />#106 Lambda as a structure (Lars
 2026-08-15, doctrine at full strength: no inductive types or function
 definitions outside Impl). Structure/: a class over an abstract carrier
