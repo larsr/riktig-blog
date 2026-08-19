@@ -882,17 +882,44 @@ beside the half-scaled one. Filename <code>s96a-...</code> so it sorts
 after the geometric-product-split post it complements. (written:
 blog/s96a)</p>
 <p>60b. <strong>The Clifford sign cocycle</strong> [has code:
-Impl/Blade.v, Impl/Clifford.v, Impl/CliffordGrade.v; not yet written] —
-both Impl file headers flag this post by name: a blade is the set of
-generators it contains, the sign of a blade product is a mod-2 count of
-merging transpositions, and associativity of <a
-href="../coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>
-is exactly the cocycle identity for that sign. A focused Impl
-walkthrough, to be written from <a
-href="../coqdoc/Riktig.Impl.Clifford.html#bsign"><code>bsign</code></a>/<a
-href="../coqdoc/Riktig.Impl.Blade.html#bparity"><code>bparity</code></a>/<a
-href="../coqdoc/Riktig.Impl.Blade.html#bxor"><code>bxor</code></a> and
-the associativity development, in its own pass.</p>
+Structure/Cocycle.v, Impl/BladeSign.v, Impl/TwistedAlgebra.v,
+Impl/Clifford.v, Impl/BladeCocycle.v] — written 2026-08-19 as
+<code>blog/s102-the-clifford-sign-is-a-cocycle.md</code>. The problem:
+multiplying two products of distinct basis vectors slides equal
+generators together, one sign per transposition, then replaces each
+matched pair by its square — so a blade times a blade is the symmetric
+difference of the two sets, times a sign, times the signature over the
+shared generators. Bracketing a triple two ways counts different
+transpositions, and associativity is the claim that the two countings
+agree. The formalization: that claim IS the two-cocycle equation, so <a
+href="../coqdoc/Riktig.Structure.Cocycle.html"><code>Structure/Cocycle.v</code></a>
+states it with the function as a parameter and nothing about basis
+vectors in sight, and <a
+href="../coqdoc/Riktig.Impl.TwistedAlgebra.html#twist"><code>twist</code></a>
+multiplies coefficient families over any group with any cocycle in
+front. The proof: <a
+href="../coqdoc/Riktig.Impl.BladeSign.html#bsign_cocycle"><code>bsign_cocycle</code></a>,
+where the sign half becomes a parity count via <a
+href="../coqdoc/Riktig.Impl.BladeSign.html#parity_sign_xor"><code>parity_sign_xor</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Blade.html#bpar_cocycle"><code>bpar_cocycle</code></a>;
+then <a
+href="../coqdoc/Riktig.Impl.BladeSign.html#blade_cocycle_equation"><code>blade_cocycle_equation</code></a>,
+where <a
+href="../coqdoc/Riktig.Impl.BladeSign.html#pair_mul"><code>pair_mul</code></a>
+splits the sign half from the signature half so neither proof sees the
+other. The usage: <a
+href="../coqdoc/Riktig.Impl.Clifford.html#cl_mul_assoc"><code>cl_mul_assoc</code></a>,
+five calc steps citing <a
+href="../coqdoc/Riktig.Impl.Clifford.html#twist_is_cl_mul"><code>twist_is_cl_mul</code></a>
+twice each way around the general <a
+href="../coqdoc/Riktig.Impl.TwistedAlgebra.html#twist_assoc"><code>twist_assoc</code></a>,
+with no induction and no transposition mentioned — it was 53 lines of
+induction on rows until the same day — and the cocycle computing at Q,
+where <code>e1 e2</code> costs no sign and <code>e2 e1</code> costs one.
+The entry above said both Impl file headers flag this post by name; what
+changed before writing it is that the code now says what the post
+claims, rather than proving associativity a second way.</p>
 <p>60c. <strong>Cosine and sine are six laws over one
 exponential</strong> [has code: Impl/CliffordComplex.v,
 Structure/Circular.v, Impl/CircleModel.v, Theory/Circular.v,
