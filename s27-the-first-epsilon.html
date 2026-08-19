@@ -33,13 +33,31 @@ when it eventually stays inside every ε-ball around
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
 (<a
 href="coqdoc/Riktig.Theory.Limits.html"><code>Theory/Limits.v</code></a>):</p>
-<pre class="coq"><code>Definition seq_lim (x : nat -&gt; V) (L : V) : Prop :=
-  forall eps : F, 0 &lt; eps -&gt;
-    exists N : nat, forall n : nat, (N &lt;= n)%nat -&gt; ‖ x n + - L ‖ &lt; eps.</code></pre>
-<p>Read it aloud and it is the sentence from your first analysis course.
-The distance from <code>x n</code> to <code>L</code> is the norm of
-their difference, and the ε it is compared against is a scalar of the
-same field the norm takes its values in.</p>
+<pre class="coq"><code>  Definition tendsto (Ev : (I -&gt; Prop) -&gt; Prop) (x : I -&gt; V) (L : V) : Prop :=
+    forall eps : F, 0 &lt; eps -&gt; Ev (fun i : I =&gt; ‖ x i + - L ‖ &lt; eps).
+
+  Definition seq_eventually (P : nat -&gt; Prop) : Prop :=
+    exists N : nat, forall n : nat, (N &lt;= n)%nat -&gt; P n.
+
+  Definition seq_lim (x : nat -&gt; V) (L : V) : Prop :=
+    tendsto seq_eventually x L.</code></pre>
+<p>Unfold the two definitions into each other and it is the sentence
+from your first analysis course: for every positive <code>eps</code>
+there is an <code>N</code> past which
+<code>‖ x n + - L ‖ &lt; eps</code>. The distance from <code>x n</code>
+to <code>L</code> is the norm of their difference, and the ε it is
+compared against is a scalar of the same field the norm takes its values
+in.</p>
+<p>The reason for the seam in the middle is that the ε–N sentence has
+two independent halves. “<code>‖ x i + - L ‖ &lt; eps</code>” is about
+the norm, and is the same whatever the index is. “Eventually” — here
+“from some <code>N</code> on” — is about the index, and is the only
+thing that changes when <a
+href="s28-continuity-and-the-derivative.html">the next post</a> replaces
+the sequence by a function and <code>N</code> by a radius <a
+href="coqdoc/Riktig.Impl.FinIndex.html#delta"><code>delta</code></a>.
+Splitting there means the theorems below are proved once against
+<code>Ev</code> and used twice.</p>
 <h2 id="theorem-limits-are-unique-the-ε2-argument">Theorem: limits are
 unique — the ε/2 argument</h2>
 <p><strong>Blackboard.</strong> Suppose
@@ -157,43 +175,65 @@ href="coqdoc/Riktig.Theory.AbGroup.html#sub_pair"><code>sub_pair</code></a>
 —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mi>L</mi><mo>+</mo><mi>M</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>−</mo><mi>L</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>−</mo><mi>M</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(x+y)-(L+M) = (x-L)+(y-M)</annotation></semantics></math>
 — followed by the triangle inequality. In Coq:</p>
-<pre class="coq"><code>  Theorem lim_add : forall (x y : nat -&gt; V) (L M : V),
-    seq_lim x L -&gt; seq_lim y M -&gt; seq_lim (fun n =&gt; x n + y n) (L + M).
+<pre class="coq"><code>  Theorem tendsto_add : forall Ev : (I -&gt; Prop) -&gt; Prop,
+    ev_weakens Ev -&gt; ev_meets Ev -&gt;
+    forall (x y : I -&gt; V) (L M : V),
+      tendsto Ev x L -&gt; tendsto Ev y M -&gt;
+      tendsto Ev (fun i : I =&gt; x i + y i) (L + M).
   Proof.
-    intros x y L M Hx Hy eps Heps.
-    destruct (Hx (half eps) (half_pos eps Heps)) as [N1 HN1].
-    destruct (Hy (half eps) (half_pos eps Heps)) as [N2 HN2].
-    exists (Nat.max N1 N2).
-    intros n Hn.
-    apply (le_lt_trans _ (‖ x n + - L ‖ + ‖ y n + - M ‖) eps).
-    - apply norm_sub_pair.
-    - apply (lt_le_trans _ (half eps + half eps) eps).
-      + apply add_lt_mono.
-        * apply HN1. apply (max_le_l N1 N2 n). exact Hn.
-        * apply HN2. apply (max_le_r N1 N2 n). exact Hn.
-      + apply eq_le. apply half_sum.
+    intros Ev Hweak Hmeets x y L M Hx Hy eps Heps.
+    apply (Hweak (fun i : I =&gt;
+      ‖ x i + - L ‖ &lt; half eps /\ ‖ y i + - M ‖ &lt; half eps)).
+    - intros i [Hi1 Hi2].
+      apply (le_lt_trans _ (‖ x i + - L ‖ + ‖ y i + - M ‖) eps).
+      + apply norm_sub_pair.
+      + apply add_half_lt.
+        * exact Hi1.
+        * exact Hi2.
+    - exact (Hmeets _ _ (Hx (half eps) (half_pos eps Heps))
+               (Hy (half eps) (half_pos eps Heps))).
   Qed.</code></pre>
-<p>The two <code>destruct</code>s are “go far enough”: each hypothesis
-is applied at the tolerance <code>half eps</code>, yielding an index
-<code>N1</code>, <code>N2</code> and the bound past it.
-<code>exists (Nat.max N1 N2)</code> is the choice of a single index that
-clears both, and <a
-href="coqdoc/Riktig.Lib.NatFacts.html#max_le_l"><code>max_le_l</code></a>
-/ <a
-href="coqdoc/Riktig.Lib.NatFacts.html#max_le_r"><code>max_le_r</code></a>
-are what turn <code>n</code> beyond that maximum into <code>n</code>
-beyond each of <code>N1</code> and <code>N2</code>. The rest is the
-displayed chain read left to right: <a
+<p><code>ev_meets Ev</code> is “two conditions that each hold eventually
+hold eventually together,” and <code>ev_weakens Ev</code> is “a weaker
+condition still holds eventually.” Those two names are all that survives
+of “go far enough that both”. The last line applies each hypothesis at
+the tolerance <code>half eps</code> and meets the two results; the
+bullets above it are the displayed chain read left to right, at a single
+index <code>i</code> where both bounds hold: <a
 href="coqdoc/Riktig.Theory.Order.html#le_lt_trans"><code>le_lt_trans</code></a>
 inserts the componentwise bound, discharged by <a
 href="coqdoc/Riktig.Theory.Norm.html#norm_sub_pair"><code>norm_sub_pair</code></a>;
 <a
-href="coqdoc/Riktig.Theory.Order.html#lt_le_trans"><code>lt_le_trans</code></a>
-inserts <code>half eps + half eps</code>, with <a
+href="coqdoc/Riktig.Theory.Order.html#add_half_lt"><code>add_half_lt</code></a>
+is the two-epsilon split itself — “under half each, so under the whole”
+— named once in <a
+href="coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
+from <a
 href="coqdoc/Riktig.Theory.Order.html#add_lt_mono"><code>add_lt_mono</code></a>
-adding the two strict bounds and <a
+and <a
 href="coqdoc/Riktig.Theory.Order.html#half_sum"><code>half_sum</code></a>
-closing the final equality.</p>
+rather than rebuilt at each of the estimates that want it.</p>
+<p><code>Nat.max</code> has not disappeared; it has moved to the one
+place it belongs, the proof that the sequence’s “eventually” does
+meet:</p>
+<pre class="coq"><code>  Lemma seq_ev_meets : ev_meets seq_eventually.
+  Proof.
+    intros P Q [N1 HN1] [N2 HN2].
+    exists (Nat.max N1 N2).
+    intros n Hn.
+    split.
+    - exact (HN1 n (max_le_l N1 N2 n Hn)).
+    - exact (HN2 n (max_le_r N1 N2 n Hn)).
+  Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Lib.NatFacts.html#max_le_l"><code>max_le_l</code></a>
+and <a
+href="coqdoc/Riktig.Lib.NatFacts.html#max_le_r"><code>max_le_r</code></a>
+are what turn <code>n</code> beyond the maximum into <code>n</code>
+beyond each of <code>N1</code> and <code>N2</code>, and <a
+href="coqdoc/Riktig.Theory.Limits.html#lim_add"><code>lim_add</code></a>
+is then one line:
+<code>exact (tendsto_add seq_eventually seq_ev_weakens seq_ev_meets)</code>.</p>
 <p>Scaling has a classic trap. For
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mspace width="0.167em"></mspace><msub><mi>x</mi><mi>n</mi></msub><mo>→</mo><mi>a</mi><mspace width="0.167em"></mspace><mi>L</mi></mrow><annotation encoding="application/x-tex">a\,x_n \to a\,L</annotation></semantics></math>
 you want
@@ -203,18 +243,19 @@ but
 might be zero, and “is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
 zero?” is again not decidable. <a
-href="coqdoc/Riktig.Theory.Limits.html#lim_scale"><code>lim_scale</code></a>
+href="coqdoc/Riktig.Theory.Limits.html#tendsto_scale"><code>tendsto_scale</code></a>
 pads the denominator instead —
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>ε</mi><mi>/</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\delta = \varepsilon / (1 + |a|)</annotation></semantics></math>,
-positive <em>unconditionally</em> — and strictness comes out of the
-padding itself:
+positive <em>unconditionally</em>, which is <a
+href="coqdoc/Riktig.Theory.Order.html#pad_div_pos"><code>pad_div_pos</code></a>
+— and strictness comes out of the padding itself:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mi>⋅</mi><mi>t</mi><mo>&lt;</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mo stretchy="false" form="prefix">|</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>δ</mi><mo>=</mo><mi>ε</mi></mrow><annotation encoding="application/x-tex">|a| \cdot t &lt; (1+|a|)\,\delta = \varepsilon</annotation></semantics></math>
 whenever
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>&lt;</mo><mi>δ</mi></mrow><annotation encoding="application/x-tex">t &lt; \delta</annotation></semantics></math>,
 which is <a
-href="coqdoc/Riktig.Theory.Order.html#mul_lt_pad"><code>mul_lt_pad</code></a>.
+href="coqdoc/Riktig.Theory.Order.html#mul_lt_of_lt_pad_div"><code>mul_lt_of_lt_pad_div</code></a>.
 No case split, no classical axiom. <a
-href="coqdoc/Riktig.Theory.Limits.html#lim_neg"><code>lim_neg</code></a>
+href="coqdoc/Riktig.Theory.Limits.html#tendsto_neg"><code>tendsto_neg</code></a>
 needs no new ε at all: <a
 href="coqdoc/Riktig.Theory.Norm.html#norm_neg_add"><code>norm_neg_add</code></a>,
 the law <code>‖ - u + - v ‖ == ‖ u + v ‖</code>, says the distance from

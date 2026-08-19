@@ -58,23 +58,38 @@ zero; and the parts sum back to the element:</p>
 \sum_{k=0}^{n} \langle a \rangle_k = a.</annotation></semantics></math></p>
 <pre class="coq"><code>  Class Graded (n : nat) (F A : Type)
       {Ae : EqRel A} {Az : Zero A} {Aa : HasAdd A} {As : HasScale F A}
-      {AM : Monoid A} {Ab : HasBigop A} {Ag : HasGrade A} := {
+      {AM : Monoid A} {Ag : HasGrade A}
+      (bigop_list : forall J : Type, (J -&gt; A) -&gt; list J -&gt; A)
+      {BL : BigOp A bigop_list} := {
     grade_linear     :: forall k : nat, Linear F A A (grade_part k);
     grade_idempotent : forall (k : nat) (a : A), ⟨ ⟨ a ⟩_ k ⟩_ k == ⟨ a ⟩_ k;
     grade_orthogonal : forall (k l : nat) (a : A),
                          k &lt;&gt; l -&gt; ⟨ ⟨ a ⟩_ l ⟩_ k == 0;
-    grade_complete   : forall a : A, bigop (S n) (fun k =&gt; ⟨ a ⟩_ k) == a;
+    grade_complete   : forall a : A,
+      bigop_list _ (fun k =&gt; ⟨ a ⟩_ k) (seq 0 (S n)) == a;
   }.</code></pre>
-<p><code>bigop (S n) f</code> is the bounded sum
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>⋯</mi><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(0) + \cdots + f(n)</annotation></semantics></math>,
-an operation class with defining equations of its own; the parameter
-<code>n</code> is the top grade, so the completeness law sums over the
+<p><code>bigop_list f (seq 0 (S n))</code> is the bounded sum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>⋯</mi><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(0) + \cdots + f(n)</annotation></semantics></math>:
+the sum of <code>f</code> over the list of the first
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n + 1</annotation></semantics></math>
+naturals, which is why it needs no operation class of its own; the
+parameter <code>n</code> is the top grade, so the completeness law sums
+over the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n + 1</annotation></semantics></math>
 grades
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 through
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
-<a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.</p>
+<p>The sum is a parameter of the class, not a fixed function, and that
+is deliberate. A law that named one particular summation would be a law
+no second summation could satisfy — so nothing proved from it would
+carry over to a sum computed some other way. What the class asks of <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+is only <a
+href="coqdoc/Riktig.Structure.BigOp.html#BigOp.BigOp"><code>BigOp</code></a>,
+the two equations an empty sum and a cons obey. Where the grading is
+<em>computed</em>, <code>bigop n f</code> abbreviates this same term at
+the fold. <a
 href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 packages the first law together with homogeneity,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>c</mi><mspace width="0.167em"></mspace><mi>a</mi><msub><mo stretchy="false" form="postfix">⟩</mo><mi>k</mi></msub><mo>=</mo><mi>c</mi><mo stretchy="false" form="prefix">⟨</mo><mi>a</mi><msub><mo stretchy="false" form="postfix">⟩</mo><mi>k</mi></msub></mrow><annotation encoding="application/x-tex">\langle c \,a \rangle_k = c \langle a \rangle_k</annotation></semantics></math>
@@ -92,10 +107,8 @@ href="coqdoc/Riktig.Theory.Graded.html"><code>Theory/Graded.v</code></a>:</p>
 <pre class="coq"><code>  Theorem grade_decomposition_three : forall a : A,
     a == ⟨ a ⟩_ 0 + ⟨ a ⟩_ 1 + ⟨ a ⟩_ 2 + ⟨ a ⟩_ 3.</code></pre>
 <p>scalar, vector, bivector, trivector. The proof peels the bounded sum
-four times with <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigop"><code>bigop</code></a>’s
-equations and cleans up with the monoid laws; nothing else is available,
-and nothing else is needed.</p>
+four times with <code>bigop</code>’s equations and cleans up with the
+monoid laws; nothing else is available, and nothing else is needed.</p>
 <h2 id="the-wedge-and-the-dot-are-grade-selections">The wedge and the
 dot are grade selections</h2>
 <p>A geometric algebra has one product. The <a
@@ -128,15 +141,18 @@ href="coqdoc/Riktig.Theory.Graded.html"><code>Theory/Graded.v</code></a>
 satisfies them inherits every theorem below:</p>
 <pre class="coq"><code>  Class GradedProducts (n : nat) (F A : Type)
       {Ae : EqRel A} {Az : Zero A} {Aa : HasAdd A} {Am : HasMult A}
-      {As : HasScale F A} {AM : Monoid A} {Ab : HasBigop A}
-      {Ag : HasGrade A}
-      {Aw : HasGradedWedge A} {Ad : HasGradedDot A} := {
+      {As : HasScale F A} {AM : Monoid A} {Ag : HasGrade A}
+      {Aw : HasGradedWedge A} {Ad : HasGradedDot A}
+      (bigop_list : forall J : Type, (J -&gt; A) -&gt; list J -&gt; A)
+      {BL : BigOp A bigop_list} := {
     wedge_from_grade_parts : forall x y : A,
-      x ∧ y == bigop (S n) (fun r =&gt; bigop (S n) (fun s =&gt;
-                 ⟨ ⟨ x ⟩_ r * ⟨ y ⟩_ s ⟩_ (r + s)));
+      x ∧ y == bigop_list _ (fun r =&gt; bigop_list _ (fun s =&gt;
+                 ⟨ ⟨ x ⟩_ r * ⟨ y ⟩_ s ⟩_ (r + s)) (seq 0 (S n)))
+                 (seq 0 (S n));
     dot_from_grade_parts   : forall x y : A,
-      x ⋅ y == bigop (S n) (fun r =&gt; bigop (S n) (fun s =&gt;
-                 ⟨ ⟨ x ⟩_ r * ⟨ y ⟩_ s ⟩_ ((r - s) + (s - r))));
+      x ⋅ y == bigop_list _ (fun r =&gt; bigop_list _ (fun s =&gt;
+                 ⟨ ⟨ x ⟩_ r * ⟨ y ⟩_ s ⟩_ ((r - s) + (s - r))) (seq 0 (S n)))
+                 (seq 0 (S n));
   }.</code></pre>
 <p>One spelling note: subtraction on <code>nat</code> is <a
 href="https://en.wikipedia.org/wiki/Monus">truncated</a> —
@@ -206,8 +222,7 @@ proves the collapse once, generic in the grade bookkeeping
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
 (<a
 href="coqdoc/Riktig.Theory.Graded.html#graded_double_sum_collapse"><code>graded_double_sum_collapse</code></a>,
-whose two support-collapse steps are <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigop"><code>bigop</code></a>’s <a
+whose two support-collapse steps are <code>bigop</code>’s <a
 href="coqdoc/Riktig.Theory.BigOp.html#bigop_support_singleton"><code>bigop_support_singleton</code></a>),
 and instantiates it twice. The wedge case, in full from <a
 href="coqdoc/Riktig.Theory.Graded.html"><code>Theory/Graded.v</code></a>:</p>
@@ -258,7 +273,7 @@ instance. That the whole tower is reachable by instance search alone is
 an <code>Example</code> in the file — the <code>_</code> asks Coq to
 fill in everything:</p>
 <pre class="coq"><code>Example cl_graded_check (F : Type) `{FF : Field F} (n : nat) :
-  Graded n F (Cl F n) := _.</code></pre>
+  Graded n F (Cl F n) (@bigop_list (Cl F n) _ _) := _.</code></pre>
 <p>The two products are computed by their own defining equations (<a
 href="coqdoc/Riktig.Impl.CliffordGrade.html#cl_wedge"><code>cl_wedge</code></a>,
 <a
@@ -307,7 +322,7 @@ href="coqdoc/Riktig.Theory.Graded.html"><code>Theory/Graded.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Graded.html#grade_decomposition_three"><code>grade_decomposition_three</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Graded.html#GradedProducts.GradedProducts"><code>GradedProducts</code></a>,
+href="coqdoc/Riktig.Structure.GradedProducts.html#GradedProducts.GradedProducts"><code>GradedProducts</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Graded.html#homogeneous_grade_other"><code>homogeneous_grade_other</code></a>,
 <a

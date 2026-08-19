@@ -30,7 +30,7 @@ law back as a corollary, without its induction.</p>
 <h2 id="trees-actions-and-the-delayed-tree">Trees, actions, and the
 delayed tree</h2>
 <p>Two datatypes, from <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html"><code>Theory/DelayedFusion.v</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html"><code>Impl/DelayedTree.v</code></a>
 — the plain binary tree with values at the leaves, and the same tree
 with one extra constructor holding a pending operation:</p>
 <pre class="coq"><code>Inductive Tree (A : Type) : Type :=
@@ -53,6 +53,17 @@ applying two in sequence is applying their product,</p>
   Context (act_unit : forall a : A, act 0 a == a).
   Context (act_compose : forall (m n : M) (a : A),
     act m (act n a) == act (m + n) a).</code></pre>
+<p>Only the first two of those are needed to write the code down: an
+action that respects leaf equality is enough to define the functions and
+to rewrite under the constructors. The two laws proper —
+<code>act_unit</code> and <code>act_compose</code> — are needed only to
+prove things, and that is where the development splits. The datatypes,
+the five functions and the equations that hold by
+<code>reflexivity</code> are <a
+href="coqdoc/Riktig.Impl.DelayedTree.html"><code>Impl/DelayedTree.v</code></a>;
+everything below is <a
+href="coqdoc/Riktig.Theory.DelayedFusion.html"><code>Theory/DelayedFusion.v</code></a>,
+which adds the two laws as hypotheses.</p>
 <p>The traversing map applies the action at every leaf:</p>
 <pre class="coq"><code>  Fixpoint map_act (m : M) (t : Tree A) : Tree A :=
     match t with
@@ -60,19 +71,19 @@ applying two in sequence is applying their product,</p>
     | Node l r =&gt; Node (map_act m l) (map_act m r)
     end.</code></pre>
 <p>On the delayed side, three functions. <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#force"><code>force</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html#force"><code>force</code></a>
 turns a <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#DTree"><code>DTree</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html#DTree"><code>DTree</code></a>
 back into a <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#Tree"><code>Tree</code></a>
-by pushing the accumulated operation down (its worker <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#force_acc"><code>force_acc</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html#Tree"><code>Tree</code></a> by
+pushing the accumulated operation down (its worker <a
+href="coqdoc/Riktig.Impl.DelayedTree.html#force_acc"><code>force_acc</code></a>
 carries the accumulator, composing with each <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#DDelay"><code>DDelay</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html#DDelay"><code>DDelay</code></a>
 it passes); <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#lift"><code>lift</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html#lift"><code>lift</code></a>
 embeds a plain tree with no pending operation; and <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#delay"><code>delay</code></a>
+href="coqdoc/Riktig.Impl.DelayedTree.html#delay"><code>delay</code></a>
 is the whole point —</p>
 <pre class="coq"><code>  Definition delay (m : M) (t : DTree M A) : DTree M A :=
     match t with
@@ -81,9 +92,9 @@ is the whole point —</p>
     end.</code></pre>
 <p>it wraps the root, and if the root is already a pending operation it
 <em>combines with it instead of nesting</em>. That case is the zero-cost
-claim, and the file states it with Coq’s structural equality
-<code>=</code> and proves it by <code>reflexivity</code> — one monoid
-operation happens and no tree is inspected:</p>
+claim, and it is stated with Coq’s structural equality <code>=</code>
+and proved by <code>reflexivity</code> — one monoid operation happens
+and no tree is inspected:</p>
 <pre class="coq"><code>  Lemma delay_DDelay : forall (m n : M) (t : DTree M A),
     delay m (DDelay n t) = DDelay (m + n) t.
   Proof.
@@ -91,7 +102,7 @@ operation happens and no tree is inspected:</p>
   Qed.</code></pre>
 <h2 id="the-correctness-laws">The correctness laws</h2>
 <p>Trees are compared leafwise up to <code>A</code>’s equality (<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#tree_equiv"><code>tree_equiv</code></a>).
+href="coqdoc/Riktig.Impl.DelayedTree.html#tree_equiv"><code>tree_equiv</code></a>).
 The bridge law says a delayed operation means what the traversal means —
 writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>⋅</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">m \cdot u</annotation></semantics></math>
@@ -130,7 +141,7 @@ explains the notation):</p>
 <p>And the dependency can be turned around: the classic fusion law for
 the <em>traversing</em> map falls out of the delayed apparatus with no
 induction of its own — round-trip through <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#lift"><code>lift</code></a>,
+href="coqdoc/Riktig.Impl.DelayedTree.html#lift"><code>lift</code></a>,
 combine the two delays at the root, and come back:</p>
 <pre class="coq"><code>  Corollary fusion_via_delay : forall (m n : M) (u : Tree A),
     tree_equiv (map_act m (map_act n u)) (map_act (m + n) u).
@@ -165,7 +176,7 @@ untouched:</p>
     vm_compute. reflexivity.
   Qed.</code></pre>
 <p>and <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#zfuse"><code>zfuse</code></a>
+href="coqdoc/Riktig.Programs.DelayedFusion.html#zfuse"><code>zfuse</code></a>
 checks that the two-traversal program lands on the same tree. The file
 closes with <code>Print Assumptions</code> on the three main theorems,
 confirming the action laws entered as hypotheses of the section, not as
@@ -173,23 +184,27 @@ axioms of the development — the whole soundness of the zero-traversal
 trick is exactly the two laws a monoid action satisfies, no more.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Impl.DelayedTree.html"><code>Impl/DelayedTree.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#Tree"><code>Tree</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#DTree"><code>DTree</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#tree_equiv"><code>tree_equiv</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#map_act"><code>map_act</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#force"><code>force</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#delay"><code>delay</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#lift"><code>lift</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DelayedTree.html#delay_DDelay"><code>delay_DDelay</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.DelayedFusion.html"><code>Theory/DelayedFusion.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#Tree"><code>Tree</code></a>,
-<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#DTree"><code>DTree</code></a>,
-<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#map_act"><code>map_act</code></a>,
-<a
 href="coqdoc/Riktig.Theory.DelayedFusion.html#map_act_fuse"><code>map_act_fuse</code></a>,
-<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#force"><code>force</code></a>,
-<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#delay"><code>delay</code></a>,
-<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#lift"><code>lift</code></a>,
-<a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#delay_DDelay"><code>delay_DDelay</code></a>,
 <a
 href="coqdoc/Riktig.Theory.DelayedFusion.html#force_delay"><code>force_delay</code></a>,
 <a
@@ -197,11 +212,11 @@ href="coqdoc/Riktig.Theory.DelayedFusion.html#delay_delay"><code>delay_delay</co
 <a
 href="coqdoc/Riktig.Theory.DelayedFusion.html#fusion_via_delay"><code>fusion_via_delay</code></a>,
 <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#zdelay_combines"><code>zdelay_combines</code></a>,
+href="coqdoc/Riktig.Programs.DelayedFusion.html#zdelay_combines"><code>zdelay_combines</code></a>,
 <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#zforce"><code>zforce</code></a>,
+href="coqdoc/Riktig.Programs.DelayedFusion.html#zforce"><code>zforce</code></a>,
 <a
-href="coqdoc/Riktig.Theory.DelayedFusion.html#zfuse"><code>zfuse</code></a>)
+href="coqdoc/Riktig.Programs.DelayedFusion.html#zfuse"><code>zfuse</code></a>)
 · <a
 href="coqdoc/Riktig.Structure.Monoid.html"><code>Structure/Monoid.v</code></a>
 (<a

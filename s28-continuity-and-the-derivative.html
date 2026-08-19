@@ -39,10 +39,21 @@ of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∀</mo><mi>ε</mi><mo>&gt;</mo><mn>0</mn><mo>,</mo><mspace width="0.222em"></mspace><mo>∃</mo><mi>δ</mi><mo>&gt;</mo><mn>0</mn><mo>,</mo><mspace width="0.222em"></mspace><mo>∀</mo><mi>u</mi><mo>:</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>δ</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>L</mi><mo stretchy="false" form="postfix">∥</mo><mo>&lt;</mo><mi>ε</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\forall \varepsilon &gt; 0,\ \exists \delta &gt; 0,\ \forall u: \quad
 \|u - a\| &lt; \delta \;\Rightarrow\; \|f(u) - L\| &lt; \varepsilon.</annotation></semantics></math></p>
-<pre class="coq"><code>  Definition limit_at (f : U -&gt; V) (a : U) (L : V) : Prop :=
-    forall eps : F, 0 &lt; eps -&gt;
-      exists delta : F, 0 &lt; delta /\
-        forall u : U, ‖ u + - a ‖ &lt; delta -&gt; ‖ f u + - L ‖ &lt; eps.</code></pre>
+<pre class="coq"><code>  Definition near (a : U) (P : U -&gt; Prop) : Prop :=
+    exists delta : F, 0 &lt; delta /\ forall u : U, ‖ u + - a ‖ &lt; delta -&gt; P u.
+
+  Definition limit_at (f : U -&gt; V) (a : U) (L : V) : Prop :=
+    tendsto (near a) f L.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.Limits.html#tendsto"><code>tendsto</code></a>
+is <a href="s27-the-first-epsilon.html">the previous post</a>’s
+<code>forall eps, 0 &lt; eps -&gt; Ev (fun i =&gt; ‖ x i + - L ‖ &lt; eps)</code>,
+and <code>near a</code> is this post’s “eventually”: a property holds
+near <code>a</code> when it holds throughout some ball around
+<code>a</code>. Unfold the two and the displayed ε–δ sentence is back,
+character for character. What the seam buys is that the four theorems
+below are already proved — they are the sequence’s four, at a different
+<code>Ev</code>.</p>
 <p>Continuity at a point is then not a new definition but a special case
 — the limit is the value:</p>
 <pre class="coq"><code>  Definition continuous_at (f : U -&gt; V) (a : U) : Prop :=
@@ -52,21 +63,31 @@ of
     forall a : U, continuous_at f a.</code></pre>
 <p>That is the whole idea of continuity: the function does not jump,
 because the value it approaches is the value it takes.</p>
-<p>Uniqueness of these limits repeats the sequence argument almost word
-for word — go within
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>
-of both candidates, use the triangle inequality, conclude the distance
-is below every positive number:</p>
+<p>Uniqueness of these limits does not repeat the sequence argument — it
+<em>is</em> the sequence argument, applied at <code>near a</code>:</p>
 <pre class="coq"><code>  Theorem limit_at_unique : forall (f : U -&gt; V) (a : U) (L1 L2 : V),
-    limit_at f a L1 -&gt; limit_at f a L2 -&gt; L1 == L2.</code></pre>
-<p>and <a
+    limit_at f a L1 -&gt; limit_at f a L2 -&gt; L1 == L2.
+  Proof.
+    intros f a.
+    exact (tendsto_unique (near a) (near_meets a) (near_inhabited a) f).
+  Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Theory.Continuity.html#near_meets"><code>near_meets</code></a>
+is where two radii become one, by <a
+href="coqdoc/Riktig.Theory.Order.html#pos_min_exists"><code>pos_min_exists</code></a>
+instead of the sequence’s <code>Nat.max</code>; <a
+href="coqdoc/Riktig.Theory.Continuity.html#near_inhabited"><code>near_inhabited</code></a>
+is the observation that a property holding throughout a ball around
+<code>a</code> holds at <code>a</code> itself, which is what supplies
+the single point the ε/2 estimate is read at. <a
 href="coqdoc/Riktig.Theory.Continuity.html#limit_at_add"><code>limit_at_add</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Continuity.html#limit_at_scale"><code>limit_at_scale</code></a>,
-<a
+href="coqdoc/Riktig.Theory.Continuity.html#limit_at_scale"><code>limit_at_scale</code></a>
+and <a
 href="coqdoc/Riktig.Theory.Continuity.html#limit_at_neg"><code>limit_at_neg</code></a>
-mirror their sequence counterparts. The pattern is deliberate: two
-notions of limit, the same three closure theorems, the same
+are one line each in the same way. The pattern is not merely deliberate
+— after factoring, the two notions of limit share one copy of the four
+closure theorems and one copy of the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\varepsilon/2</annotation></semantics></math>
 device.</p>
 <h2 id="linear-does-not-imply-continuous">Linear does not imply

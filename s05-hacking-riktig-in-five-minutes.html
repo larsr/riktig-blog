@@ -3,138 +3,380 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hacking on riktig in five minutes</title>
+<title>Hacking on riktig in five minutes: a lemma with no carrier, then
+a determinant</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
 <main>
-<h1 id="hacking-on-riktig-in-five-minutes">Hacking on riktig in five
-minutes</h1>
-<p>A proof project has a bootstrapping problem: Coq, the right Coq
-<em>version</em>, coq-lsp matched to that version, GHC for the Haskell
-side, and an editor that speaks to all of them. Ask a colleague to “just
-install” that stack and you have lost them for an afternoon — and their
-build still won’t match yours.</p>
-<p>Our answer is a <strong>dev container</strong>: the repository
-carries a complete description of its own development environment, and
-VS Code builds and enters it for you. The recipe:</p>
+<h1
+id="hacking-on-riktig-in-five-minutes-a-lemma-with-no-carrier-then-a-determinant">Hacking
+on riktig in five minutes: a lemma with no carrier, then a
+determinant</h1>
+<p>Everything in this post is one checked-in file, <a
+href="coqdoc/Riktig.Examples.GettingStarted.html"><code>Examples/GettingStarted.v</code></a>,
+rebuilt with the tree. It is in two halves, because using the library is
+two activities. In the first you state and prove something over a
+<em>structure</em> — a set of operations together with the laws they
+obey — and no type is ever named. In the second you name a type, and Coq
+assembles the structure over it for you, at which point things
+compute.</p>
+<h2 id="getting-a-toolchain">Getting a toolchain</h2>
+<p>Coq 8.20, coq-lsp matched to that version, GHC for the extracted
+Haskell, and an editor that speaks to all three. The repository carries
+a description of that environment, and VS Code builds it:</p>
 <pre><code>git clone git@git.ri.se:lars.rasmusson/riktig.git
 code riktig            # open the folder in VS Code</code></pre>
-<p>VS Code notices <code>.devcontainer/</code> and offers
-<strong>“Reopen in Container”</strong>. Click it. The first launch takes
-a few minutes (it is building the environment); every launch after that
-is seconds. That is the whole tutorial. You now have:</p>
-<ul>
-<li><strong>Coq 8.20 with coq-lsp</strong>, so opening any
-<code>theories/*.v</code> file gives you live proof goals — put the
-cursor after a tactic and see the goal change (the
-<code>ejgallego.coq-lsp</code> extension is preinstalled; of the two Coq
-plugins that exist it is the one that checks the file continuously
-instead of stepping a fragile focus point).</li>
-<li><strong>The Haskell extension</strong>, for the hand-written Haskell
-under <code>programs/</code> that drives the code Coq extracts.</li>
-<li><strong>direnv + nix pre-wired</strong>: any terminal you open
-inside the container is already in the project’s Nix shell —
-<code>make</code> builds all the theories, <code>coqc</code> is the
-right version, no activation commands.</li>
-</ul>
-<h2 id="whats-in-the-box-and-why-it-just-works">What’s in the box, and
-why it “just works”</h2>
-<p>Three pieces of <a
+<p>VS Code notices <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/.devcontainer"><code>.devcontainer/</code></a>
-do all the work, and each one solves one specific failure mode of shared
-dev environments:</p>
-<p><strong><a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/Dockerfile"><code>Dockerfile</code></a>
-— the proof environment is pinned.</strong> A Debian base with a
-non-root <code>vscode</code> user, plus the <a
-href="https://determinate.systems">Determinate Nix</a> installer. The
-Coq toolchain — Coq 8.20 and its matching coq-lsp — is fixed by the
-repository’s <a
+and offers <strong>“Reopen in Container”</strong>. The first launch
+builds the image; later ones take seconds. Inside, <code>make</code>
+builds the theories, opening any <code>theories/*.v</code> file gives
+live proof goals through <code>ejgallego.coq-lsp</code>, and every
+terminal is already in the project’s Nix shell — the toolchain is pinned
+by <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/flake.nix"><code>flake.nix</code></a>
-and <code>flake.lock</code>, so your container and mine resolve to
-bit-identical <em>proof</em> toolchains: if the theories check here,
-they check there. “Works on my machine” becomes a theorem with a proof.
-(One deliberate exception: GHC is <em>not</em> pinned — the Makefile
-builds the one Haskell demo with a plain
-<code>nix shell nixpkgs#ghc</code>. Haskell only runs extracted code; no
-proof depends on it, so it doesn’t get the reproducibility
-ceremony.)</p>
-<p><strong>A named volume for <code>/nix</code> — rebuilds don’t
-recompile the world.</strong> Coq and GHC toolchains are gigabytes. The
-container mounts a Docker volume (<code>riktig-nix-store</code>) at
-<code>/nix</code>, so everything Nix ever downloads or builds survives
-container rebuilds. Delete the container, change the Dockerfile, reopen
-— the cache is still there. This is the single most important line in
-the setup; without it, every rebuild costs you the afternoon we were
-trying to save.</p>
-<p><strong><a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/start-nix-daemon.sh"><code>start-nix-daemon.sh</code></a>
-+ <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/devcontainer.json">lifecycle
-hooks</a> — no ceremony.</strong> The Nix daemon starts when the
-container starts (<code>postStartCommand</code>), VS Code waits for it
-(<code>waitFor</code>), and the first-ever launch pre-warms the
-development shell (<code>onCreateCommand</code>) so that by the time you
-see a terminal, <code>coqc</code> answers. direnv is pre-trusted for
-<code>/workspaces</code>, so there is no <code>direnv allow</code>
-ritual either.</p>
-<p>Without VS Code the same environment is one script away: <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/dev.sh"><code>dev.sh</code></a>
-builds the image, creates the container against the same named volume,
-and runs the build inside the flake shell over plain Docker —
-<code>.devcontainer/dev.sh build</code> to compile the theories,
-<code>.devcontainer/dev.sh shell</code> for an interactive one.</p>
-<h2 id="try-it-your-first-proof-interaction">Try it: your first proof
-interaction</h2>
-<p>Open <a
-href="coqdoc/Riktig.Theory.Group.html"><code>theories/Theory/Group.v</code></a>.
-Find <a
-href="coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>
-— in a group, <code>a + b == a + c</code> forces
-<code>b == c</code>:</p>
-<pre class="coq"><code>  Theorem cancel_l : forall a b c : G, a + b == a + c -&gt; b == c.
+and <code>flake.lock</code>, so a proof that checks in one container
+checks in every other. A Docker volume named
+<code>riktig-nix-store</code> is mounted at <code>/nix</code>, so
+rebuilding the container does not re-download the toolchain. Without VS
+Code, <a
+href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/.devcontainer/dev.sh"><code>.devcontainer/dev.sh</code></a>
+does the same over plain Docker: <code>dev.sh build</code> compiles the
+theories, <code>dev.sh shell</code> gives an interactive one.</p>
+<h2 id="half-one-a-proof-that-names-no-type">Half one: a proof that
+names no type</h2>
+<p>Two import lines put five theories in scope:</p>
+<pre class="coq"><code>From Riktig.Structure Require Import Basis.
+From Riktig.Theory Require Import InnerProductSpace InnerGeometry LinearMap.</code></pre>
+<p>A section opens by asking for the structure it works over. The binder
+below says: let <code>F</code> be a field of scalars, <code>V</code> any
+type of vectors over it, with the four vector-space laws available.</p>
+<pre class="coq"><code>Section AbstractVectors.
+  Context {F V : Type} `{VV : VectorSpace F V}.</code></pre>
+<p><code>F</code> and <code>V</code> are variables. Nothing in the
+section can mention how a vector is stored, because there is nothing to
+mention. What the binder does bring is notation — <code>+</code> for
+addition, <code>- v</code> for negation, <code>*:</code> for scaling a
+vector by a scalar, <code>==</code> for the equality of the type at hand
+— and the names of the laws.</p>
+<p>Here is a small regrouping. On the blackboard,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>−</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mi>u</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>v</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">a(u - v) + bv \;=\; au + (b - a)v,</annotation></semantics></math></p>
+<p>reached in four steps — distribute the scaling over the difference,
+move the subtracted term to the end, reassociate, collect the two
+scalings of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>−</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>u</mi><mo>−</mo><mi>a</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>b</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mi>u</mi><mo>+</mo><mi>b</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><mi>a</mi><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mi>u</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mi>v</mi><mo>−</mo><mi>a</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>a</mi><mi>u</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false" form="postfix">)</mo><mi>v</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">a(u-v)+bv \;=\; (au - av) + bv
+ \;=\; (au + bv) - av
+ \;=\; au + (bv - av)
+ \;=\; au + (b-a)v.</annotation></semantics></math></p>
+<p>In Coq, with <code>u + - v</code> for the difference — the structure
+has one addition and a negation, and subtraction is their composite:</p>
+<pre class="coq"><code>  Lemma scale_regroup : forall (a b : F) (u v : V),
+    a *: (u + - v) + b *: v == a *: u + (b + - a) *: v.
   Proof.
-    intros a b c Heq.
-    calc b
-      == (0 + b)          { left_identity  }
-      == ((- a + a) + b)  { left_inverse }
-      == (- a + (a + b))  { associative }
-      == (- a + (a + c))  { Heq  }
-      == ((- a + a) + c)  { associative }
-      == (0 + c)          { left_inverse }
-      == c                { left_identity  }.
+    intros a b u v.
+    calc (a *: (u + - v) + b *: v)
+      == ((a *: u + - (a *: v)) + b *: v)  { scale_sub }
+      == ((a *: u + b *: v) + - (a *: v))  { add_swap_r }
+      == (a *: u + (b *: v + - (a *: v)))  { associative }
+      == (a *: u + (b + - a) *: v)         { sub_scale }.
   Qed.</code></pre>
-<p>Put the cursor just after <code>intros a b c Heq.</code>: the coq-lsp
-panel shows the goal <code>b == c</code> with
-<code>Heq : a + b == a + c</code> in the context, and the chain below is
-the derivation of exactly that goal. Each line names the next term and,
-in braces, the single law that gets you there — the identity law
-<code>idl</code>, the left-inverse law <code>invl</code>, associativity
-<code>assoc</code>, and the hypothesis itself at the one step that uses
-it. The chain is checked rather than decorative: change one
-justification — <code>invl</code> to <code>invr</code> in the second
-step, say — and Coq rejects the <code>calc</code>. What makes it
-pleasant to read back is that every intermediate term is spelled out, so
-the algebraic state between two steps is on the page instead of in a
-goal display you have to summon.</p>
-<p>If it builds in the container, it builds for everyone. That property
-— the environment as a checked, versioned artifact — is the same
-philosophy as the proofs themselves, applied to the toolchain: make the
-implicit explicit, and let a machine verify it.</p>
-<p><em>Next: what happens when addition is required to commute — abelian
-groups, and the rings you get by adding a second operation on
-top.</em></p>
-<hr />
-<p><strong>Follow along in the code:</strong> <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/.devcontainer"><code>.devcontainer/</code></a>
-· <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/flake.nix"><code>flake.nix</code></a>
-· <a
-href="https://git.ri.se/lars.rasmusson/riktig/-/blob/main/Makefile"><code>Makefile</code></a>
-· <a href="https://git.ri.se/lars.rasmusson/riktig">the
-repository</a>.</p>
+<p>A <code>calc</code> chain writes every intermediate term out and
+names, in braces, the one law that gets from the previous line to this
+one. The four justifications are general names, each a theorem or a law
+class of its own: <a
+href="coqdoc/Riktig.Theory.VectorSpace.html#scale_sub"><code>scale_sub</code></a>
+and <a
+href="coqdoc/Riktig.Theory.VectorSpace.html#sub_scale"><code>sub_scale</code></a>
+distribute a scaling over a difference (<a
+href="coqdoc/Riktig.Theory.VectorSpace.html"><code>Theory/VectorSpace.v</code></a>),
+<a
+href="coqdoc/Riktig.Theory.AbGroup.html#add_swap_r"><code>add_swap_r</code></a>
+is the abelian-group reshuffle <code>(a + b) + c == (a + c) + b</code>
+(<a
+href="coqdoc/Riktig.Theory.AbGroup.html"><code>Theory/AbGroup.v</code></a>),
+and <a
+href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+is the law class in <a
+href="coqdoc/Riktig.Props.html"><code>Props.v</code></a> that every
+associative operation in the library instantiates. None of them mentions
+a type.</p>
+<h3 id="orthogonality-in-the-same-style">Orthogonality, in the same
+style</h3>
+<p>An <a href="https://en.wikipedia.org/wiki/Inner_product_space">inner
+product</a> <code>⟪ u , v ⟫</code> is a symmetric form, linear in each
+argument, and <a
+href="coqdoc/Riktig.Structure.InnerProductSpace.html#norm2"><code>norm2</code></a>
+is the squared length <code>⟪ u , u ⟫</code>. Squared, because a square
+root would need an order on the scalars and a completeness assumption,
+and none of the facts below need either.</p>
+<p><a
+href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</code></a>
+proves Pythagoras once, over any inner product space, where
+<code>orthogonal u v</code> abbreviates <code>⟪ u , v ⟫ == 0</code>:</p>
+<pre class="coq"><code>  Theorem pythagoras : forall u v : V,
+    orthogonal u v -&gt; norm2 (u + v) == norm2 u + norm2 v.</code></pre>
+<p>One consequence is that the two diagonals of a rectangle have the
+same length. If
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>⟂</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u \perp v</annotation></semantics></math>
+then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>−</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mrow><mi>−</mi><mi>v</mi></mrow><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mi>+</mi><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo>+</mo><mi>v</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">\|u-v\|^2 = \|u\|^2 + \|{-v}\|^2 = \|u\|^2 + \|v\|^2 = \|u+v\|^2,</annotation></semantics></math></p>
+<p>Pythagoras at each end and <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#norm2_neg"><code>norm2_neg</code></a>
+— negating a vector does not change its squared length — in the
+middle:</p>
+<pre class="coq"><code>  Theorem norm2_orthogonal_diagonals : forall u v : V,
+    ⟪ u , v ⟫ == 0 -&gt; norm2 (u + - v) == norm2 (u + v).
+  Proof.
+    intros u v Huv.
+    calc (norm2 (u + - v))
+      == (norm2 u + norm2 (- v))
+           { (pythagoras u (- v) (orthogonal_neg_r u v Huv)) }
+      == (norm2 u + norm2 v)
+           { norm2_neg }
+      == (norm2 (u + v))
+           { (pythagoras u v (orthogonal_def u v Huv)) }.
+  Qed.</code></pre>
+<p>The first step needs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>⟂</mo><mi>−</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">u \perp -v</annotation></semantics></math>,
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>−</mi><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">⟨</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo><mo>=</mo><mi>−</mi><mn>0</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\langle u, -v\rangle = -\langle u,v\rangle = -0 = 0</annotation></semantics></math>
+gives it, one law per step again:</p>
+<pre class="coq"><code>  Lemma orthogonal_neg_r : forall u v : V,
+    ⟪ u , v ⟫ == 0 -&gt; orthogonal u (- v).
+  Proof.
+    intros u v Huv.
+    apply orthogonal_def.
+    calc (⟪ u , - v ⟫)
+      == (- ⟪ u , v ⟫)  { inner_right_neg }
+      == (- (0 : F))    { Huv }
+      == (0 : F)        { neg_zero }.
+  Qed.</code></pre>
+<h3 id="coordinates-with-a-basis-in-the-binder">Coordinates, with a
+basis in the binder</h3>
+<p>A <a
+href="https://en.wikipedia.org/wiki/Basis_%28linear_algebra%29">basis</a>
+in this library is a pair of inverse maps: a family of vectors indexed
+by a finite type <code>I</code>, and a linear map sending a vector to
+its coordinates. <a
+href="coqdoc/Riktig.Structure.Basis.html#Basis.reconstruction"><code>Basis.reconstruction</code></a>
+is one half of that inverse pair — a vector is the combination <a
+href="coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>
+of the family with its own coordinates — and <a
+href="coqdoc/Riktig.Theory.Basis.html#lincomb_proper"><code>lincomb_proper</code></a>
+says the combination only reads the coefficients, so equal coefficients
+give equal combinations. From the two, coordinates determine the
+vector:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>c</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>e</mi><mi>i</mi></msub><mo>=</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>c</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msub><mi>e</mi><mi>i</mi></msub><mo>=</mo><mi>v</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">u = \sum_i c_i(u)\, e_i = \sum_i c_i(v)\, e_i = v.</annotation></semantics></math></p>
+<pre class="coq"><code>  Context {n : nat} {I F V : Type} `{B : Basis n I F V}.</code></pre>
+<pre class="coq"><code>  Theorem coords_determine : forall u v : V,
+    (forall i : I, Basis.coords B u i == Basis.coords B v i) -&gt; u == v.
+  Proof.
+    intros u v Hc.
+    calc u
+      == (lincomb (Basis.vec B) (Basis.coords B u))
+           { (Basis.reconstruction B u) }
+      == (lincomb (Basis.vec B) (Basis.coords B v))
+           { (lincomb_proper (Basis.vec B) (Basis.coords B u)
+                (Basis.coords B v) Hc) }
+      == v
+           { (Basis.reconstruction B v) }.
+  Qed.</code></pre>
+<p>Three steps: expand <code>u</code>, swap coefficients, contract to
+<code>v</code>. The index type <code>I</code> is a variable too — the
+basis is <code>n</code>-dimensional because <code>I</code> has
+<code>n</code> elements, not because anything is a tuple.</p>
+<h2 id="half-two-name-a-type-and-it-computes">Half two: name a type, and
+it computes</h2>
+<p>One import line brings the implementations:</p>
+<pre class="coq"><code>From Riktig.Impl Require Import Fin Det.</code></pre>
+<p><a href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a>
+exports <a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>,
+which exports <a
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a> and
+<a href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a>. Between
+them they register the rationals as a field, the functions
+<code>Fin.t n -&gt; F</code> as a vector space with an inner product,
+and square matrices as a ring. Registered means: Coq finds them by
+search, and the underscore below is a request to do so.</p>
+<pre class="coq"><code>Example q_is_a_field : Field Q := _.
+Example q4_is_a_vector_space : VectorSpace Q (Fin.t 4 -&gt; Q) := _.
+Example q4_has_an_inner_product : InnerProductSpace Q (Fin.t 4 -&gt; Q) := _.
+Example q4_matrices_form_a_ring : Ring (Matrix 4 4 Q) := _.</code></pre>
+<p>Four structures over three carriers, none written by hand.
+<code>Q</code> is the standard library’s rationals, a pair of integers
+compared by cross-multiplication, so <code>1#2</code> and
+<code>2#4</code> are different terms and equal scalars — the reason the
+library’s <code>==</code> is a chosen equivalence relation per type
+rather than Coq’s built-in <code>=</code>.</p>
+<p>A vector in <code>Fin.t 4 -&gt; Q</code> is a function from a
+four-element index type, and a matrix is a function of two such indices,
+so writing one down means writing a function. <a
+href="coqdoc/Riktig.Impl.Fin.html#fin_to_nat"><code>fin_to_nat</code></a>
+turns an index into its position:</p>
+<pre class="coq"><code>Definition vec4 (a b c d : Q) : Fin.t 4 -&gt; Q :=
+  fun i =&gt; match fin_to_nat i with
+           | O =&gt; a
+           | 1%nat =&gt; b
+           | 2%nat =&gt; c
+           | _ =&gt; d
+           end.</code></pre>
+<pre class="coq"><code>Definition u4 : Fin.t 4 -&gt; Q := vec4 (1#1) (2#1) (3#1) (4#1).
+Definition v4 : Fin.t 4 -&gt; Q := vec4 (2#1) (-1#1) (4#1) (-3#1).</code></pre>
+<p>The inner product on <code>Fin.t n -&gt; F</code> is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>u</mi><mi>i</mi></msub><msub><mi>v</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i u_i v_i</annotation></semantics></math>,
+so over <code>Q</code> it runs. <code>Qred</code> puts a rational in
+lowest terms; each line below is an equation between closed terms,
+proved by <code>eq_refl</code> — that is, checked by the kernel
+evaluating both sides, so the build checks the numbers:</p>
+<pre class="coq"><code>Example inner_u4_v4 : Qred ⟪ u4 , v4 ⟫ = 0 # 1 := eq_refl.
+Example inner_u4_u4 : Qred ⟪ u4 , u4 ⟫ = 30 # 1 := eq_refl.
+Example inner_v4_v4 : Qred ⟪ v4 , v4 ⟫ = 30 # 1 := eq_refl.
+Example norm2_sum_u4_v4 : Qred (norm2 (u4 + v4)) = 60 # 1 := eq_refl.
+Example norm2_diff_u4_v4 : Qred (norm2 (u4 + - v4)) = 60 # 1 := eq_refl.</code></pre>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>⋅</mo><mn>2</mn><mo>+</mo><mn>2</mn><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mn>3</mn><mo>⋅</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>3</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">1 \cdot 2 + 2 \cdot (-1) + 3 \cdot 4 + 4 \cdot (-3) = 0</annotation></semantics></math>,
+so the two vectors are orthogonal; both have squared length
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>30</mn><annotation encoding="application/x-tex">30</annotation></semantics></math>;
+and both diagonals come out
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>60</mn><annotation encoding="application/x-tex">60</annotation></semantics></math>.
+Those last two numbers are what the abstract theorems predict, and the
+theorems apply here as they stand — the proof terms are the general
+ones, nothing is re-proved at <code>Q</code>:</p>
+<pre class="coq"><code>Example u4_orth_v4 : ⟪ u4 , v4 ⟫ == 0.
+Proof. vm_compute. reflexivity. Qed.</code></pre>
+<pre class="coq"><code>Example pythagoras_at_Q4 :
+  norm2 (u4 + v4) == norm2 u4 + norm2 v4 :=
+  pythagoras u4 v4 (orthogonal_def u4 v4 u4_orth_v4).
+
+Example diagonals_at_Q4 :
+  norm2 (u4 + - v4) == norm2 (u4 + v4) :=
+  norm2_orthogonal_diagonals u4 v4 u4_orth_v4.</code></pre>
+<h3 id="a-determinant-that-runs">A determinant that runs</h3>
+<p><a href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a> is
+the cofactor expansion along the first column, written for an arbitrary
+field. Give it a matrix over <code>Q</code> and it is a program. Two
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">4 \times 4</annotation></semantics></math>
+matrices, one whose rows count
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>16</mn><annotation encoding="application/x-tex">16</annotation></semantics></math>
+and one with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>
+on the diagonal and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math>
+everywhere else:</p>
+<pre class="coq"><code>Definition counting : Matrix 4 4 Q :=
+  mat4 (vec4 (1#1) (2#1) (3#1) (4#1))
+       (vec4 (5#1) (6#1) (7#1) (8#1))
+       (vec4 (9#1) (10#1) (11#1) (12#1))
+       (vec4 (13#1) (14#1) (15#1) (16#1)).
+
+Definition two_on_the_diagonal : Matrix 4 4 Q :=
+  mat4 (vec4 (2#1) (1#3) (1#3) (1#3))
+       (vec4 (1#3) (2#1) (1#3) (1#3))
+       (vec4 (1#3) (1#3) (2#1) (1#3))
+       (vec4 (1#3) (1#3) (1#3) (2#1)).</code></pre>
+<pre class="coq"><code>Example det_counting : Qred (detM counting) = 0 # 1 := eq_refl.
+Example det_two_on_the_diagonal :
+  Qred (detM two_on_the_diagonal) = 125 # 9 := eq_refl.</code></pre>
+<p>The first is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>:
+consecutive rows differ by the same vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>4</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>4</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(4,4,4,4)</annotation></semantics></math>,
+so all four rows lie in the plane spanned by the first row and that
+difference, and four vectors in a plane are dependent. The second is
+exact rather than rounded —
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>125</mn><mi>/</mi><mn>9</mn><mo>=</mo><mn>3</mn><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mn>5</mn><mi>/</mi><mn>3</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>3</mn></msup></mrow><annotation encoding="application/x-tex">125/9 = 3 \cdot (5/3)^3</annotation></semantics></math>,
+which is what the eigenvalues give: the all-ones vector has eigenvalue
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>+</mo><mn>3</mn><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mn>1</mn><mn>3</mn></mfrac></mstyle><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2 + 3 \cdot \tfrac13 = 3</annotation></semantics></math>,
+and the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>3</mn><annotation encoding="application/x-tex">3</annotation></semantics></math>-dimensional
+space orthogonal to it has eigenvalue
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>−</mo><mstyle displaystyle="false"><mfrac><mn>1</mn><mn>3</mn></mfrac></mstyle><mo>=</mo><mstyle displaystyle="false"><mfrac><mn>5</mn><mn>3</mn></mfrac></mstyle></mrow><annotation encoding="application/x-tex">2 - \tfrac13 = \tfrac53</annotation></semantics></math>.
+Nothing rounds, because the entries are pairs of integers.</p>
+<p>The standard basis of <code>Fin.t 4 -&gt; Q</code> is in <a
+href="coqdoc/Riktig.Impl.FinVecBasis.html"><code>Impl/FinVecBasis.v</code></a>,
+and coordinates in it compute as well:</p>
+<pre class="coq"><code>Definition B4 : Basis 4 (Fin.t 4) Q (Fin.t 4 -&gt; Q) := FinVec_Basis 4.</code></pre>
+<pre class="coq"><code>Example coords_of_u4 :
+  Qred (Basis.coords B4 u4 (Fin.FS Fin.F1)) = 2 # 1 := eq_refl.</code></pre>
+<p>Coordinates go one way, the linear combination goes back, and over
+<code>Q</code> the round trip is a number the build checks:</p>
+<pre class="coq"><code>Example reconstruct_u4_at_1 :
+  Qred (lincomb (Basis.vec B4) (Basis.coords B4 u4) (Fin.FS Fin.F1))
+  = 2 # 1 := eq_refl.</code></pre>
+<pre class="coq"><code>Example coords_determine_at_Q4 : forall u v : Fin.t 4 -&gt; Q,
+  (forall i : Fin.t 4, Basis.coords B4 u i == Basis.coords B4 v i) -&gt; u == v :=
+  coords_determine (B := B4).</code></pre>
+<p>The last line is the abstract theorem again, its basis argument
+filled in with this one.</p>
+<p>The <code>2</code> above is worth a sentence, because <code>0</code>
+used to come out of it. <code>Fin.t 4 -&gt; Q</code> carries a pointwise
+additive monoid and a pointwise multiplicative one, both built by the
+same instance from the two monoids on <code>Q</code>, and <a
+href="coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>
+is a fold over one of them. Which one is not visible in
+<code>HasLincomb I F V</code>: the class names the index, the scalars
+and the vectors, and no operation. So an instance for it that asks for a
+<code>Monoid V</code> hands search a free choice, and search took the
+multiplicative reading — under which the sum above is a product with a
+zero factor. The instance now asks for <code>Zero V</code> and
+<code>HasAdd V</code>, which is all the fold uses, and those two goals
+have one solution each at this carrier. The <a
+href="coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
+stays one level up, on the instance of the equation
+<code>lincomb b c == bigopI (fun i =&gt; c i *: b i)</code>, where the
+operation is a parameter of the class and shows up in the type.</p>
+<h2 id="where-things-live">Where things live</h2>
+<p>Three directories, one job each, one import prefix each.</p>
+<ul>
+<li><code>Structure/</code> — the classes and the laws they bundle. <a
+href="coqdoc/Riktig.Structure.VectorSpace.html#VectorSpace.VectorSpace"><code>VectorSpace</code></a>
+in <a
+href="coqdoc/Riktig.Structure.VectorSpace.html"><code>Structure/VectorSpace.v</code></a>
+is four laws over a scalar action; <a
+href="coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
+in <a
+href="coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
+is two round-trip equations. Nothing here is proved; these are the
+definitions.
+<code>From Riktig.Structure Require Import Basis.</code></li>
+<li><code>Theory/</code> — what follows from those laws, over anonymous
+carriers. <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</code></a>
+has Pythagoras, Cauchy–Schwarz and projections; <a
+href="coqdoc/Riktig.Theory.Basis.html"><code>Theory/Basis.v</code></a>
+has the linear-combination lemmas.
+<code>From Riktig.Theory Require Import InnerGeometry.</code></li>
+<li><code>Impl/</code> — a type to compute with, and its instances. <a
+href="coqdoc/Riktig.Impl.Qf.html"><code>Impl/Qf.v</code></a> registers
+<code>Q</code>, <a
+href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a> the
+space <code>Fin.t n -&gt; F</code>, <a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> the
+matrix ring, <a
+href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a> the
+determinant. <code>From Riktig.Impl Require Import Det.</code></li>
+</ul>
+<p><code>Require Export</code> passes a file’s own imports on to whoever
+asks for it, <code>Require Import</code> keeps them private, which is
+why two lines sufficed above and why <a
+href="coqdoc/Riktig.Theory.InnerProductSpace.html"><code>Theory/InnerProductSpace.v</code></a>
+still had to be named: <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</code></a>
+imports it without exporting it.</p>
+<p>The split is what makes the first half of this post possible. A law
+that mentioned <code>Fin.t</code> or <code>Q</code> would make those
+types part of the meaning of the structure, and a proof about them would
+not survive a change of representation. Instead the operations are class
+parameters, the laws are equations, and a concrete type shows up in
+<code>Impl/</code> as an instance — so <a
+href="coqdoc/Riktig.Theory.InnerGeometry.html#pythagoras"><code>pythagoras</code></a>
+is proved once and holds for the rationals, for the reals, for
+polynomials, and for whatever gets registered next.</p>
 </main>
 </body>
 </html>

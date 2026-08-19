@@ -287,7 +287,8 @@ gives the theorem.</p>
       + exact Hg.
       + exact (mul_commutative (detM (mat_mul mat_id B)) (detM A)).
       + apply op_proper; [reflexivity |].
-        apply detM_proper. exact (mat_mul_left_identity (S p0) (S p0) B).
+        apply detM_proper.
+        exact (mat_mul_left_identity B (leibniz_proper_first B)).
   Qed.</code></pre>
 <p>The empty matrix is handled separately because its determinant is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
@@ -335,34 +336,28 @@ field.</p>
 <p>The coordinate-free determinant of an endomorphism,
 <code>det B f := detM (mat_of B B f)</code>, lives in <a
 href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>.
-Two of its theorems — that it is multiplicative under composition, and
-that it does not depend on the basis — are stated there under a named
-local hypothesis rather than proved, because matrix multiplicativity is
-not in scope at that point in the development:</p>
-<pre class="coq"><code>  Context (detM_mul : forall (m : nat) (A A&#39; : Matrix m m F),
-    detM (mat_mul A A&#39;) == detM A * detM A&#39;).</code></pre>
-<p>That is a parameter, not an axiom: every caller of <a
-href="coqdoc/Riktig.Theory.Determinant.html#det_comp"><code>det_comp</code></a>
-or <a
-href="coqdoc/Riktig.Theory.Determinant.html#det_basis_independent"><code>det_basis_independent</code></a>
-must hand it over. <a
-href="coqdoc/Riktig.Impl.DetMulGeneral.html#detM_mul"><code>detM_mul</code></a>
-above hands it over for any field, so those two theorems hold
-unconditionally wherever it is in scope. <a
-href="coqdoc/Riktig.Impl.DetMul.html"><code>Impl/DetMul.v</code></a>
-also records the rational instances explicitly, discharged through the
-elimination route:</p>
-<pre class="coq"><code>Corollary det_comp_Q : forall (U : Type)
-    (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
-    (sU : HasScale Q U) (VU : VectorSpace Q U) (n : nat)
-    (B : Basis n (Fin.t n) Q U) (f g : LinearMap Q U U),
-  det B (linear_map_comp f g) == det B f * det B g.
-
-Corollary det_basis_indep_Q : forall (U : Type)
-    (eU : EqRel U) (zU : Zero U) (aU : HasAdd U) (nU : HasNeg U)
-    (sU : HasScale Q U) (VU : VectorSpace Q U)
-    (n : nat) (B B&#39; : Basis n (Fin.t n) Q U) (f : LinearMap Q U U),
-  det B&#39; f == det B f.</code></pre>
+Two of its theorems stand on the product law and nothing else: that the
+determinant is multiplicative under composition, and that it does not
+depend on the basis. Both are now stated for any field, with no
+hypothesis to discharge:</p>
+<pre class="coq"><code>  Theorem det_comp : forall (B : Basis n (Fin.t n) F U) (f g : LinearMap F U U),
+    det B (linear_map_comp f g) == det B f * det B g.</code></pre>
+<pre class="coq"><code>  Theorem det_basis_independent : forall (B B&#39; : Basis n (Fin.t n) F U) (f : LinearMap F U U),
+    det B&#39; f == det B f.</code></pre>
+<p>Basis-independence is the one worth pausing on. <code>det B f</code>
+is computed by choosing a basis and writing down a matrix — a coordinate
+choice on both sides — and the theorem says the number does not remember
+the choice. Its proof is three uses of the product law: the two matrices
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>P</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">P^{-1}</annotation></semantics></math>
+that translate between the bases have reciprocal determinants, and
+conjugation moves that pair together so it cancels.</p>
+<p>The same fact holds for the volume element built from a basis:
+applying a map to every vector of a family scales the volume by the
+determinant of the map, over any field.</p>
+<pre class="coq"><code>  Theorem omega_B_lm : forall (f : LinearMap F V V) (vs : Fin.t (S p) -&gt; V),
+    omega_B B (fun k =&gt; f (vs k)) == det B f * omega_B B vs.</code></pre>
 <h2 id="on-numbers">On numbers</h2>
 <p>The product law is also run. With the matrix
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>3</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>4</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>5</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>6</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>7</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>8</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>10</mn></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{smallmatrix}1&amp;2&amp;3\\4&amp;5&amp;6\\7&amp;8&amp;10\end{smallmatrix}</annotation></semantics></math>,
@@ -405,11 +400,7 @@ href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_dec"><code>detM_mul_dec</code></a>
 <a
 href="coqdoc/Riktig.Impl.DetMul.html#det_upper_triangular"><code>det_upper_triangular</code></a>,
 <a
-href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_Q"><code>detM_mul_Q</code></a>,
-<a
-href="coqdoc/Riktig.Impl.DetMul.html#det_comp_Q"><code>det_comp_Q</code></a>,
-<a
-href="coqdoc/Riktig.Impl.DetMul.html#det_basis_indep_Q"><code>det_basis_indep_Q</code></a>)
+href="coqdoc/Riktig.Impl.DetMul.html#detM_mul_Q"><code>detM_mul_Q</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.DetAlternating.html"><code>Impl/DetAlternating.v</code></a>
 (<a

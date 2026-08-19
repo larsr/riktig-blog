@@ -161,7 +161,7 @@ x :: y :: r &amp;\sim l_1 \mathbin{+\!\!+} l_2
 <p>The two “loses nothing” facts are separate lemmas about the two
 helper programs.
 <code>split_perm : Permutation l (fst (split l) ++ snd (split l))</code>
-is an induction on a bound (<a
+is an induction on the measure <code>length</code> (<a
 href="coqdoc/Riktig.Programs.MergeSort.html#split"><code>split</code></a>
 consumes two elements at a time, so structural induction does not fit
 its shape), and
@@ -175,8 +175,8 @@ written order. The Coq proof of the theorem is the chain above, read
 downwards:</p>
 <pre class="coq"><code>Theorem msort_perm : forall l : list nat, Permutation l (msort l).
 Proof.
-  induction l as [l IH]
-    using (well_founded_ind (well_founded_ltof (list nat) (@length nat))).
+  apply (measure_ind (@length nat)).
+  intros l IH.
   destruct l as [|x [|y rest]].
   - rewrite msort_nil. constructor.
   - rewrite msort_single. apply Permutation_refl.
@@ -229,8 +229,8 @@ href="coqdoc/Riktig.Programs.MergeSort.html#merge"><code>merge</code></a>
 and reused here:</p>
 <pre class="coq"><code>Theorem msort_sorted : forall l : list nat, Sorted le (msort l).
 Proof.
-  induction l as [l IH]
-    using (well_founded_ind (well_founded_ltof (list nat) (@length nat))).
+  apply (measure_ind (@length nat)).
+  intros l IH.
   destruct l as [|x [|y rest]].
   - rewrite msort_nil. constructor.
   - rewrite msort_single. constructor; constructor.

@@ -225,9 +225,9 @@ Qed.</code></pre>
 produces the four cases in constructor order; in each, <code>l1</code>
 is destructed to decide which side of the seam the constructor’s action
 lands on. The two helper facts <a
-href="coqdoc/Riktig.Channel.Trace.html#cons_eq_head"><code>cons_eq_head</code></a>
+href="coqdoc/Riktig.Lib.ListFacts.html#cons_eq_head"><code>cons_eq_head</code></a>
 and <a
-href="coqdoc/Riktig.Channel.Trace.html#cons_eq_tail"><code>cons_eq_tail</code></a>
+href="coqdoc/Riktig.Lib.ListFacts.html#cons_eq_tail"><code>cons_eq_tail</code></a>
 extract, from an equality of nonempty lists, the equality of heads and
 of tails — they are how the pattern <code>y :: l1'</code> on the seam
 side is matched up with the constructor’s own <code>x</code>. The final
@@ -266,17 +266,17 @@ impossible.</p>
 <h2 id="where-the-two-directions-are-spent">Where the two directions are
 spent</h2>
 <p>The consumers live one file over, in the protocol proofs. The safety
-theorem of <a href="s43-abp-safety.html">the alternating-bit protocol
-post</a> inducts over the message list, and its step case opens by
-cutting the wire at the current burst’s boundary — this line of <a
-href="coqdoc/Riktig.Channel.ABP.html#abp_deliver_subseq"><code>abp_deliver_subseq</code></a>
+theorem behind <a href="s43-abp-safety.html">the alternating-bit
+protocol post</a> inducts over the message list, and its step case opens
+by cutting the wire at the current burst’s boundary — this line of <a
+href="coqdoc/Riktig.Channel.ARQ.html#deliver_subseq"><code>deliver_subseq</code></a>
 in <a
-href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> is
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a> is
 the split lemma at work, aimed at the seam between the burst for
 <code>m</code> and the stream for the remaining messages:</p>
-<pre class="coq"><code>    destruct (lossy_dup_app_split _ _ H
-                (sender_burst b_stream m k) (sender_stream (negb b_stream) ms&#39; k)
-                eq_refl) as [w1 [w2 [Hwire [H1 H2]]]].</code></pre>
+<pre class="coq"><code>      destruct (lossy_dup_app_split _ _ H
+                  (burst t0 m k) (stream (tag_next pro t0) ms&#39; k)
+                  eq_refl) as [w1 [w2 [Hwire [H1 H2]]]].</code></pre>
 <p>Its base case is <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_nil_l"><code>lossy_dup_nil_l</code></a>:
 no messages sent, so the wire is empty. The gluing direction is spent in
@@ -284,15 +284,15 @@ no messages sent, so the wire is empty. The gluing direction is spent in
 href="coqdoc/Riktig.Channel.Fairness.html#fair_wire_lossy_dup"><code>fair_wire_lossy_dup</code></a>,
 which reassembles per-burst fragments into one behaviour of the whole
 sender stream — the inductive step of that proof is a single
-<code>apply lossy_dup_app</code>. And the sequence numbers of <a
-href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_subseq"><code>gbn_deliver_subseq</code></a>
-in <a
+<code>apply lossy_dup_app</code>. That the lemma never mentions a packet
+type is why the split above could be written against an abstract tag at
+all: <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a>
+proves the delivery argument once, and both the alternating bit of <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> and
+the sequence numbers of <a
 href="coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>
-reuse <a
-href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>
-verbatim: the lemma never mentions a packet type, so a new
-retransmission scheme owes only its own delivery argument, not a new
-proof that behaviours split.</p>
+cite it. A new retransmission scheme owes an alphabet, not a proof.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Channel.Trace.html"><code>Channel/Trace.v</code></a>

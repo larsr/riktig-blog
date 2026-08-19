@@ -72,11 +72,11 @@ one per direction:</p>
 End KleisliInverse.
 Notation KleisliInverse := KleisliInverse.KleisliInverse.</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.from_to"><code>KleisliInverse.from_to</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#KleisliInverse.from_to"><code>KleisliInverse.from_to</code></a>
 says: encode any <code>a</code>, then bind the result through
 <code>g</code> to decode it, and you are back to <code>ret a</code> —
 the original value, no effect left over. <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.to_from"><code>KleisliInverse.to_from</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#KleisliInverse.to_from"><code>KleisliInverse.to_from</code></a>
 is the same round trip started from the other side. These two
 <code>bind ... == ret ...</code> equations are the entire content of
 “lossless.” (The round trips land on <a
@@ -93,12 +93,12 @@ that class about them:</p>
   ki_inverse :: KleisliInverse ki_to ki_from;
 }.</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#ki_to"><code>ki_to</code></a>
 is the forward arrow and <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#ki_from"><code>ki_from</code></a>
 the backward one. The <code>::</code> on the third field declares it as
 a typeclass instance rather than a plain projection, so from any <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
 in scope Coq can find the round-trip laws for its two arrows by instance
 search, without being handed the bundle by name.</p>
 <p>The two laws also get direct names, so that a caller who does hold
@@ -126,9 +126,9 @@ for the two programs and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
 for the codec’s encode (<a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_to"><code>ki_to</code></a>)
+href="coqdoc/Riktig.Structure.KleisliIso.html#ki_to"><code>ki_to</code></a>)
 and decode (<a
-href="coqdoc/Riktig.Theory.KleisliIso.html#ki_from"><code>ki_from</code></a>)
+href="coqdoc/Riktig.Structure.KleisliIso.html#ki_from"><code>ki_from</code></a>)
 arrows:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>1</mn></msub><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><msub><mi>p</mi><mn>2</mn></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>p</mi><mn>1</mn></msub><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><mi>e</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><mi>d</mi><mrow><mo>&gt;</mo><mspace width="-0.167em"></mspace><mo>=</mo><mspace width="-0.167em"></mspace><mo>&gt;</mo></mrow><msub><mi>p</mi><mn>2</mn></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">p_1 \mathbin{&gt;\!=\!&gt;} p_2
   \;=\;
@@ -244,7 +244,7 @@ a single natural, <code>of_nat</code> unpacks it, and the standard
 library already proves the two round trips <code>cancel_of_to</code> and
 <code>cancel_to_of</code>. Wrapping each direction in <code>Some</code>
 gives a <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
 for the <code>option</code> monad — the two round-trip laws are exactly
 those cancellation facts:</p>
 <pre class="coq"><code>Lemma nat_pair_fromto : forall p : nat * nat,
@@ -282,9 +282,9 @@ either side of it — one producing a pair, one consuming it:</p>
 <pre class="coq"><code>Definition split_n (n : nat) : option (nat * nat) := Some (n, n).
 Definition sum_pair (p : nat * nat) : option nat := Some (Nat.add (fst p) (snd p)).</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.KleisliIso.html#split_n"><code>split_n</code></a>
+href="coqdoc/Riktig.Programs.NatPairCodec.html#split_n"><code>split_n</code></a>
 duplicates its input into a pair; <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#sum_pair"><code>sum_pair</code></a>
+href="coqdoc/Riktig.Programs.NatPairCodec.html#sum_pair"><code>sum_pair</code></a>
 adds the two components back together. The pipeline
 <code>split_n &gt;=&gt; sum_pair</code> takes <code>n</code> to
 <code>n + n</code>. Applying the theorem to exactly this pipeline and
@@ -293,7 +293,7 @@ up:</p>
 <pre class="coq"><code>Example channel_insertion_nat_pair_check :=
   channel_insertion split_n sum_pair nat_pair_codec.</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.KleisliIso.html#channel_insertion_nat_pair_check"><code>channel_insertion_nat_pair_check</code></a>
+href="coqdoc/Riktig.Programs.NatPairCodec.html#channel_insertion_nat_pair_check"><code>channel_insertion_nat_pair_check</code></a>
 is a proof that <code>split_n &gt;=&gt; sum_pair</code> and
 <code>split_n &gt;=&gt; ki_to nat_pair_codec &gt;=&gt; ki_from nat_pair_codec &gt;=&gt; sum_pair</code>
 agree on every input. The serialization channel is invisible to the
@@ -307,9 +307,9 @@ equality.</em></p>
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
 (the <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliInverse.KleisliInverse"><code>KleisliInverse</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#KleisliInverse.KleisliInverse"><code>KleisliInverse</code></a>
 class, the <a
-href="coqdoc/Riktig.Theory.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
+href="coqdoc/Riktig.Structure.KleisliIso.html#KleisliIso"><code>KleisliIso</code></a>
 record, <a
 href="coqdoc/Riktig.Theory.KleisliIso.html#kleisli_iso_from_laws"><code>kleisli_iso_from_laws</code></a>,
 <a

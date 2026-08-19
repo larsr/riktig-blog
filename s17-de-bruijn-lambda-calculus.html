@@ -35,7 +35,7 @@ part, so we remove them</h2>
 the functions — it is the variables. Consider substitution, the
 operation at the heart of evaluation: to apply
 <code>(\x. body) a</code>, you replace every free <code>x</code> in <a
-href="coqdoc/Riktig.Lambda.FirstOrder.html#body"><code>body</code></a>
+href="coqdoc/Riktig.Programs.Lambda.FirstOrder.html#body"><code>body</code></a>
 by <code>a</code>. If you do this naively with names, you can capture a
 variable by accident. Substituting <code>y</code> into
 <code>\y. x</code> for <code>x</code> would give <code>\y. y</code>,
@@ -76,7 +76,7 @@ identity function <code>\x. x</code> is <code>Abs (Var 0)</code>.</p>
 <p>Because variables are numbers counting binders, moving a term
 underneath a binder means shifting its free indices up by one, so they
 keep pointing at the same outer lambdas. That shift is <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>:</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>:</p>
 <pre class="coq"><code>Fixpoint lift (d k : nat) (t : tm) : tm :=
   match t with
   | Var n =&gt; Var (if Nat.leb k n then d + n else n)
@@ -88,9 +88,9 @@ href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>:</p>
 <code>k</code> counts binders crossed so far: variables below
 <code>k</code> are bound inside <code>t</code> and must not move;
 crossing an <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> raises
-the threshold to <code>S k</code>. Substitution then replaces one index
-and closes the gap the consumed binder leaves behind:</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Abs"><code>Abs</code></a>
+raises the threshold to <code>S k</code>. Substitution then replaces one
+index and closes the gap the consumed binder leaves behind:</p>
 <pre class="coq"><code>Fixpoint subst (k : nat) (u : tm) (t : tm) : tm :=
   match t with
   | Var n =&gt;
@@ -101,13 +101,13 @@ and closes the gap the consumed binder leaves behind:</p>
   | App f a =&gt; App (subst k u f) (subst k u a)
   end.</code></pre>
 <p>Reading the <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Var"><code>Var</code></a> case:
-an index below <code>k</code> is bound locally and stays; an index equal
-to <code>k</code> is the variable being replaced, so it becomes
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Var"><code>Var</code></a>
+case: an index below <code>k</code> is bound locally and stays; an index
+equal to <code>k</code> is the variable being replaced, so it becomes
 <code>u</code> lifted to survive the <code>k</code> binders it now sits
 under; an index above <code>k</code> was pointing past the binder that
 is being consumed, so it drops by one. Under an <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>, the
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Abs"><code>Abs</code></a>, the
 target index grows to <code>S k</code>. No names, no renaming — just
 comparisons on <code>nat</code>.</p>
 <p>The source states and proves this is capture-free on a concrete term.
@@ -164,12 +164,12 @@ at index
 \qquad
 \frac{v\ \text{value}\quad a \to a&#39;}{v\;a \;\to\; v\;a&#39;}</annotation></semantics></math></p>
 <p><a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_beta"><code>step_beta</code></a>
 is the actual reduction: an abstraction applied to a value substitutes
 that value for index <code>0</code> in the body. <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_app1"><code>step_app1</code></a>
 reduces the function position while it is still not a value; <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_app2"><code>step_app2</code></a>
 waits until the function is a value, then reduces the argument. Together
 they pin down a unique place to reduce at each stage.</p>
 <h2 id="the-evaluator-and-why-it-is-trustworthy">The evaluator, and why
@@ -192,9 +192,9 @@ one exists:</p>
   | _ =&gt; None
   end.</code></pre>
 <p>Now there are two descriptions of a step: the relation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> and
-the function <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>.
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>
+and the function <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>.
 A separate evaluator would be worthless if it disagreed with the
 definition, so the source proves the two agree in both directions.
 <em>Soundness</em>: every step the function takes is a genuine step
@@ -227,28 +227,29 @@ Proof.
       injection H as &lt;-. constructor. apply IHf; reflexivity.
 Qed.</code></pre>
 <p>The proof is an induction on the term, following <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>’s
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>’s
 own shape. A <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Var"><code>Var</code></a> or an
-<a href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Var"><code>Var</code></a> or
+an <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Abs"><code>Abs</code></a>
 makes <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>
 return <code>None</code>, so the hypothesis
 <code>step_fn t = Some t'</code> is contradictory and
 <code>discriminate</code> closes both. For <code>App f a</code>, split
 on whether <code>f</code> is a value: if it is and <code>a</code> is
 too, <code>f</code> must be an <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> for a
-step to exist, and the result is a <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Abs"><code>Abs</code></a> for
+a step to exist, and the result is a <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_beta"><code>step_beta</code></a>
 by <code>constructor</code>. If <code>f</code> is a value but
 <code>a</code> is not, the function recursed into <code>a</code>, and
 the induction hypothesis <code>IHa</code> turns that recursive step into
 a <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>.
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_app2"><code>step_app2</code></a>.
 If <code>f</code> is not a value, it recursed into <code>f</code>, and
 <code>IHf</code> gives a <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>.
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_app1"><code>step_app1</code></a>.
 Every branch that could return <code>Some</code> is matched to the
 constructor that justifies it.</p>
 <p>Completeness is the shorter of the two — it inducts on the derivation
@@ -262,29 +263,29 @@ Proof.
     rewrite (step_not_value _ _ H0). rewrite IHstep. reflexivity.
 Qed.</code></pre>
 <p>One case per rule of <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>. For
-<a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_beta"><code>step_beta</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>.
+For <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_beta"><code>step_beta</code></a>,
 the argument is a value, so <a
-href="coqdoc/Riktig.Lambda.Syntax.html#value_is_value"><code>value_is_value</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#value_is_value"><code>value_is_value</code></a>
 rewrites the inner test to <code>true</code> and the function returns
 the same substitution <code>subst 0 v b</code>. For <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_app1"><code>step_app1</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_app1"><code>step_app1</code></a>,
 the function position is mid-reduction, hence not a value; <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_not_value"><code>step_not_value</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_not_value"><code>step_not_value</code></a>
 rewrites that test to <code>false</code>, and the induction hypothesis
 <code>IHstep</code> supplies the recursive answer. For <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_app2"><code>step_app2</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_app2"><code>step_app2</code></a>,
 both facts are needed — the function is a value, the argument is not —
 and again <code>IHstep</code> finishes. The two directions together
 license using <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>
 wherever <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> was
-meant.</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>
+was meant.</p>
 <h2 id="running-a-real-term">Running a real term</h2>
 <p>Iterating <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>
 with a fuel bound gives a driver, <code>eval fuel t</code>, that takes
 up to <code>fuel</code> steps or stops early at a value. Because it is
 an ordinary Coq function, terms reduce inside the proof assistant. Two
@@ -296,20 +297,20 @@ Proof. reflexivity. Qed.
 Example eval_k : eval 10 (App (App k idt) (Abs (Abs (Var 0)))) = idt.
 Proof. reflexivity. Qed.</code></pre>
 <p>Here <a
-href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a> is
+href="coqdoc/Riktig.Impl.Lambda.Term.html#idt"><code>idt</code></a> is
 <code>Abs (Var 0)</code>, the identity <code>\x. x</code>, and
 <code>k</code> is <code>Abs (Abs (Var 1))</code>, our
 <code>\x. \y. x</code> from the start. The first applies the identity to
 itself and gets the identity back. The second applies <code>k</code> to
-<a href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a> and
-a throwaway argument and recovers <a
-href="coqdoc/Riktig.Lambda.Syntax.html#idt"><code>idt</code></a> —
+<a href="coqdoc/Riktig.Impl.Lambda.Term.html#idt"><code>idt</code></a>
+and a throwaway argument and recovers <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#idt"><code>idt</code></a> —
 <code>k</code> keeps its first argument and drops its second, exactly as
 its de Bruijn index <code>1</code> said it would.</p>
 <p>The same evaluator, extracted to Haskell, drives a command-line tool
 that parses ordinary named syntax, converts to de Bruijn form, runs <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>, and
-prints the result back with names. From the tool’s README, a real
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>,
+and prints the result back with names. From the tool’s README, a real
 transcript:</p>
 <pre><code>$ ./programs/lambda-eval/lambda-eval &quot;(\x. x x) (\y. y)&quot;
 \x. x
@@ -322,20 +323,21 @@ arguments <code>a</code> and <code>b</code>: it returns <code>a</code>.
 The evaluator you just watched agree with its defining relation is the
 same one producing this output — line for line the extraction of the Coq
 <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>.</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>.</p>
 <p><em>Next: this same <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>
 relation, closed under symmetry and congruence, turns <a
-href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a> into a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a> into a
 setoid on which program optimizations are rewrites.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html"><code>Impl/Lambda/Term.v</code></a>
 (the datatype, substitution, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>,
 the examples) · <a
-href="coqdoc/Riktig.Lambda.Extract.html"><code>Lambda/Extract.v</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Extract.html"><code>Programs/Lambda/Extract.v</code></a>
 (extraction to Haskell) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/programs/lambda-eval"><code>programs/lambda-eval/</code></a>
 (the command-line evaluator).</p>

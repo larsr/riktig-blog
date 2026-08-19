@@ -76,9 +76,9 @@ injection <code>Fin.t p -&gt; Fin.t (S p)</code> that misses
       : Matrix p p F :=
     fun r c =&gt; A (skip i r) (Fin.FS c).</code></pre>
 <p>Making <a
-href="coqdoc/Riktig.Impl.Fin.html#skip"><code>skip</code></a> behave —
-proving it is injective, that it never hits the deleted point, and that
-it composes the way the recursion needs — is real work, but it is
+href="coqdoc/Riktig.Impl.FinSkip.html#skip"><code>skip</code></a> behave
+— proving it is injective, that it never hits the deleted point, and
+that it composes the way the recursion needs — is real work, but it is
 bookkeeping about finite index types, not about fields or matrices. What
 it buys is a type that records the size correctly: a minor really is one
 row and one column smaller, so the recursion is structural and <a
@@ -280,12 +280,12 @@ transporters, drop the identity factor.</p>
     - exact (matrix_trace_proper n
                (mat_mul (mat_mul (mat_of B B f) (change_of_basis B B&#39;)) (change_of_basis B&#39; B))
                (mat_mul (mat_of B B f) (mat_mul (change_of_basis B B&#39;) (change_of_basis B&#39; B)))
-               (mat_mul_assoc n n n n (mat_of B B f)
+               (mat_mul_assoc (mat_of B B f)
                   (change_of_basis B B&#39;) (change_of_basis B&#39; B))).
     - exact (matrix_trace_proper n
                (mat_mul (mat_of B B f) (mat_mul (change_of_basis B B&#39;) (change_of_basis B&#39; B)))
                (mat_mul (mat_of B B f) (@mat_id F _ _ n))
-               (mat_mul_proper n n n
+               (mat_mul_proper
                   (mat_of B B f) (mat_of B B f)
                   (reflexivity (mat_of B B f))
                   (mat_mul (change_of_basis B B&#39;) (change_of_basis B&#39; B)) (@mat_id F _ _ n)
@@ -293,7 +293,8 @@ transporters, drop the identity factor.</p>
     - exact (matrix_trace_proper n
                (mat_mul (mat_of B B f) (@mat_id F _ _ n))
                (mat_of B B f)
-               (mat_mul_right_identity n n (mat_of B B f))).
+               (mat_mul_right_identity (mat_of B B f)
+                  (leibniz_proper_second (mat_of B B f)))).
   Qed.</code></pre>
 <p>The <code>calc</code> chain is the blackboard chain, line for line,
 and each link is discharged by a lemma that already exists: <a
@@ -301,17 +302,24 @@ href="coqdoc/Riktig.Theory.Trace.html#mat_of_conj"><code>mat_of_conj</code></a>
 for the conjugation, <a
 href="coqdoc/Riktig.Theory.Trace.html#trace_mul_commutes"><code>trace_mul_commutes</code></a>
 for the rotation, <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
 for the regrouping, <a
 href="coqdoc/Riktig.Theory.Trace.html#change_of_basis_inv"><code>change_of_basis_inv</code></a>
 for the cancellation, <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_right_identity"><code>mat_mul_right_identity</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_right_identity"><code>mat_mul_right_identity</code></a>
 for the last step. What surrounds them is only plumbing — <a
 href="coqdoc/Riktig.Theory.Trace.html#matrix_trace_proper"><code>matrix_trace_proper</code></a>
 and <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_proper"><code>mat_mul_proper</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_proper"><code>mat_mul_proper</code></a>
 carry a rewrite under the trace and under a product, since equality of
-matrices is pointwise and has to be transported explicitly. No new
+matrices is pointwise and has to be transported explicitly, and <a
+href="coqdoc/Riktig.Theory.Pointwise.html#leibniz_proper_second"><code>leibniz_proper_second</code></a>
+supplies the one side condition the unit law carries. That side
+condition is worth a sentence: the unit law holds over any finite index
+carrier, whose equality may be a setoid <code>==</code> rather than
+<code>=</code>, and it needs the matrix to give <code>==</code>-equal
+indices <code>==</code>-equal entries. At <code>Fin.t</code>, where
+<code>==</code> <em>is</em> <code>=</code>, that is free. No new
 machinery.</p>
 <h2 id="using-it">Using it</h2>
 <p>With independence proved, the trace of an <em>endomorphism</em> can

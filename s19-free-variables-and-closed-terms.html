@@ -27,8 +27,9 @@ Does index <code>k</code> occur <a
 href="https://en.wikipedia.org/wiki/Free_variables_and_bound_variables">free</a>
 in <code>t</code>? Is <code>t</code> closed — no free variables at all?
 And if <code>t</code> does <em>not</em> mention <code>k</code>, do <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> and
-<a href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>
+and <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst"><code>subst</code></a>
 leave it alone, as they obviously should? The last question is less
 obvious than it sounds: substitution at an absent index still renumbers
 everything above it, so “leaves it alone” is an equation that needs
@@ -36,7 +37,7 @@ stating with care. This post is the metatheory file that answers all
 three, with answers that compute.</p>
 <h2 id="free-occurrence-twice">Free occurrence, twice</h2>
 <p><a
-href="coqdoc/Riktig.Lambda.FreeVars.html"><code>Lambda/FreeVars.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html"><code>Impl/Lambda/FreeVars.v</code></a>
 defines the occurrence predicate by recursion on the term — under a
 binder, the index in question grows by one, because the variable that
 was <code>k</code> outside is <code>S k</code> inside:</p>
@@ -61,7 +62,7 @@ equivalence
 is a structural induction whose application case is a three-step
 <code>calc</code> chain through <code>orb_true_iff</code> and the two
 induction hypotheses. Packaged as <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#free_in_reflect"><code>free_in_reflect</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#free_in_reflect"><code>free_in_reflect</code></a>,
 it lets a proof branch on the boolean and receive the proposition in the
 taken branch — and it makes freeness a fact <code>vm_compute</code> can
 settle:</p>
@@ -73,7 +74,7 @@ Proof. vm_compute. reflexivity. Qed.
 Example free_inb_open_1 : free_inb 1 open_tm = false.
 Proof. vm_compute. reflexivity. Qed.</code></pre>
 <p>In <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#open_tm"><code>open_tm</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#open_tm"><code>open_tm</code></a>,
 index <code>0</code> is free at the head of the application; inside the
 abstraction, <code>Var 0</code> is <em>bound</em> (it points at that
 abstraction) while <code>Var 3</code> reaches out to what is index
@@ -84,7 +85,7 @@ and <code>1</code> is not.</p>
 index lies below the cutoff. The file states it positively, and its
 header says why — the positive form feeds <code>lia</code> directly and
 composes without double negation, and <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_above_spec"><code>closed_above_spec</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_above_spec"><code>closed_above_spec</code></a>
 proves it equivalent to the negative reading “no index at or above
 <code>c</code> is free”:</p>
 <pre class="coq"><code>Definition closed_above (c : nat) (t : tm) : Prop :=
@@ -94,24 +95,24 @@ Definition closed (t : tm) : Prop := closed_above 0 t.</code></pre>
 <p>One characterization per constructor turns the quantified definition
 into structural pieces — a variable is closed above <code>c</code>
 exactly when its index is below <code>c</code> (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_above_var"><code>closed_above_var</code></a>),
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_above_var"><code>closed_above_var</code></a>),
 an abstraction when its body is closed above <code>S c</code> (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_above_abs"><code>closed_above_abs</code></a>),
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_above_abs"><code>closed_above_abs</code></a>),
 an application when both halves are (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_above_app"><code>closed_above_app</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_above_app"><code>closed_above_app</code></a>)
 — and a boolean mirror <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_aboveb"><code>closed_aboveb</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_aboveb"><code>closed_aboveb</code></a>
 with <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_aboveb_spec"><code>closed_aboveb_spec</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_aboveb_spec"><code>closed_aboveb_spec</code></a>
 makes closedness computable too, so <code>closedb k = true</code> is a
 <code>vm_compute</code> fact about the two-argument constant function
 <code>k</code>.</p>
 <h2 id="what-lift-does-to-free-indices-exactly">What lift does to free
 indices, exactly</h2>
 <p>The renumbering operations now get their inventories. For <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> the
-statement is a single equivalence, covering every index <code>j</code>
-of the lifted term. Writing
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>
+the statement is a single equivalence, covering every index
+<code>j</code> of the lifted term. Writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>∈</mo><mrow><mi mathvariant="normal">F</mi><mi mathvariant="normal">V</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">j \in \mathrm{FV}(t)</annotation></semantics></math>
 for <code>free_in j t</code> and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mo>↑</mo><mi>c</mi><mi>d</mi></msubsup><mi>t</mi></mrow><annotation encoding="application/x-tex">\uparrow^{d}_{c} t</annotation></semantics></math>
@@ -130,20 +131,20 @@ moved up by <code>d</code>; and — the part transforms rely on — the band
 is <em>empty</em>, freshly opened and mentioning nothing. The proof is a
 structural induction: the variable case is a case split on the
 <code>Nat.leb</code> test inside <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>,
 closed by <code>lia</code>; the binder case re-indexes the equivalence
 at <code>S c</code> and <code>S j</code>, with <code>lia</code>-sized
 arithmetic to move the <code>S</code> through the subtraction; the
 application case is <code>tauto</code> over the two induction
 hypotheses. Three directional corollaries (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#free_in_lift_lo"><code>free_in_lift_lo</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#free_in_lift_lo"><code>free_in_lift_lo</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#free_in_lift_hi"><code>free_in_lift_hi</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#free_in_lift_hi"><code>free_in_lift_hi</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#free_in_lift_gap"><code>free_in_lift_gap</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#free_in_lift_gap"><code>free_in_lift_gap</code></a>)
 package the shapes a proof actually reaches for. The matching inventory
 for substitution, <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#free_in_subst"><code>free_in_subst</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#free_in_subst"><code>free_in_subst</code></a>,
 has three disjuncts instead of two — an index of
 <code>subst c u t</code> is a low index of <code>t</code>, a high index
 of <code>t</code> shifted down past the consumed binder, or an index
@@ -183,34 +184,34 @@ Proof.
     + apply IHa. intros Ha. apply H. right. exact Ha.
 Qed.</code></pre>
 <p>The variable case walks the three arms of <a
-href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>’s
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst"><code>subst</code></a>’s
 comparison. An index below <code>k</code> is left by <a
-href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a> and
-left by <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a> — the
-inner <code>Nat.leb</code> test comes out false,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst"><code>subst</code></a>
+and left by <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a> —
+the inner <code>Nat.leb</code> test comes out false,
 <code>reflexivity</code>. An index equal to <code>k</code> contradicts
 the hypothesis <code>H</code> outright. An index above <code>k</code>
 was lowered to <code>Nat.pred n</code> by <a
-href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst"><code>subst</code></a>,
 the <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>
 raises it back, and <code>f_equal</code> plus <code>lia</code> confirm
 the round trip is the identity. The binder and application cases just
 thread the hypothesis through — under a binder, “not free at
 <code>k</code>” <em>is</em> “not free at <code>S k</code>” by
 definition, so <code>IH</code> applies as it stands. A companion, <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#subst_not_free_irrelevant"><code>subst_not_free_irrelevant</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#subst_not_free_irrelevant"><code>subst_not_free_irrelevant</code></a>,
 states the other consequence: at an absent index, what is being
 substituted cannot matter, <code>subst k u t = subst k v t</code>.</p>
 <p>For closed terms the equations lose their side conditions and their
 re-lifts. A term closed above <code>c</code> is fixed by any lift at
 cutoff <code>c</code> (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#lift_closed_above"><code>lift_closed_above</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#lift_closed_above"><code>lift_closed_above</code></a>)
 and by any substitution there (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#subst_closed_above"><code>subst_closed_above</code></a>),
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#subst_closed_above"><code>subst_closed_above</code></a>),
 and with monotonicity (<a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_above_mono"><code>closed_above_mono</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_above_mono"><code>closed_above_mono</code></a>)
 the fully closed case quantifies over everything:</p>
 <pre class="coq"><code>Lemma subst_closed : forall (t u : tm) (k : nat),
   closed t -&gt; subst k u t = t.</code></pre>
@@ -228,12 +229,12 @@ is a strict upper bound on the free indices of <code>t</code>,</p>
   | App f a =&gt; Nat.max (fv_bound f) (fv_bound a)
   end.</code></pre>
 <p>with the bound proved in <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#fv_bound_spec"><code>fv_bound_spec</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#fv_bound_spec"><code>fv_bound_spec</code></a>
 (every free index is below it, so
 <code>closed_above (fv_bound t) t</code> always holds — <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#fv_bound_closed_above"><code>fv_bound_closed_above</code></a>),
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#fv_bound_closed_above"><code>fv_bound_closed_above</code></a>),
 and proved <em>tight</em> in <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#fv_bound_tight"><code>fv_bound_tight</code></a>:
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#fv_bound_tight"><code>fv_bound_tight</code></a>:
 a nonzero bound <code>S m</code> is witnessed, index <code>m</code>
 really is free. So <code>fv_bound t = 0</code> is a complete, computable
 test for closedness, and on the running example the numbers come out
@@ -248,18 +249,20 @@ Example closed_aboveb_open_2 : closed_aboveb 2 open_tm = false.
 Proof. vm_compute. reflexivity. Qed.</code></pre>
 <p>The bound is <code>3</code> because index <code>2</code> is free and
 nothing higher is — <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#closed_aboveb"><code>closed_aboveb</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#closed_aboveb"><code>closed_aboveb</code></a>
 confirms both facts by computation, and <a
-href="coqdoc/Riktig.Lambda.FreeVars.html#fv_bound_tight"><code>fv_bound_tight</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html#fv_bound_tight"><code>fv_bound_tight</code></a>
 is what guarantees the boundary case is never slack.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.FreeVars.html"><code>Lambda/FreeVars.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.FreeVars.html"><code>Impl/Lambda/FreeVars.v</code></a>
 (everything quoted here) · <a
-href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
-(<a href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a>, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#subst"><code>subst</code></a>).</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html"><code>Impl/Lambda/Term.v</code></a>
+(<a href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst"><code>subst</code></a>).</p>
 </main>
 </body>
 </html>

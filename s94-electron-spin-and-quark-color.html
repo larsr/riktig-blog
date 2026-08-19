@@ -130,58 +130,60 @@ contraction at the first basis vector, and anticommutation comes from
 which vanishes here because the two directions are orthogonal:</p>
 <pre class="coq"><code>  Example e1_squared : e1 * e1 == 1.</code></pre>
 <pre class="coq"><code>  Example e1_e2_anticommute : e1 * e2 == - (e2 * e1).</code></pre>
-<p>Then the square itself, the blackboard chain above verbatim:</p>
-<pre class="coq"><code>  Example e12_squared : (e1 * e2) * (e1 * e2) == - (1).
+<p>Then the square itself. The blackboard chain above is written once,
+over two anticommuting elements of any algebra whose squares lie on the
+scalar line — no dimension, no blades, nothing about
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>
+in particular:</p>
+<pre class="coq"><code>  Theorem anticommuting_square : forall (x y : A) (p q : F),
+    x * y == - (y * x) -&gt; x * x == p *: 1 -&gt; y * y == q *: 1 -&gt;
+    (x * y) * (x * y) == (- (p * q)) *: 1.
   Proof.
-    transitivity ((e1 * (- e1)) : Cl F 2).
-    - calc ((e1 * e2) * (e1 * e2))
-        == ((e1 * (e2 * (e1 * e2))) : Cl F 2)
-           { associative }
-        == ((e1 * ((e2 * e1) * e2)) : Cl F 2)
-           { associative }
-        == ((e1 * ((- (e1 * e2)) * e2)) : Cl F 2)
-           { e2_e1_anticommute }
-        == ((e1 * (- ((e1 * e2) * e2))) : Cl F 2)
-           { mul_neg_l }
-        == ((e1 * (- (e1 * (e2 * e2)))) : Cl F 2)
-           { associative }
-        == ((e1 * (- (e1 * (1 : Cl F 2)))) : Cl F 2)
-           { e2_squared }
-        == ((e1 * (- e1)) : Cl F 2)
-           { right_identity }.
-    - calc ((e1 * (- e1)) : Cl F 2)
-        == ((- (e1 * e1)) : Cl F 2)
-           { mul_neg_r }
-        == ((- (1)) : Cl F 2)
-           { e1_squared }.
-  Qed.</code></pre>
-<p>The <code>calc</code> chain is the blackboard proof step for step,
-each equation justified in braces: two regroupings by <a
+    intros x y p q Hanti Hx Hy.
+    (* The hypothesis the other way round: negation undoes itself. *)
+    assert (Hanti&#39; : y * x == - (x * y)).
+    { rewrite Hanti. symmetry. exact (neg_involutive (y * x)). }
+    assert (Hinner : (x * y) * (x * y) == - ((x * x) * (y * y))).
+    { calc (((x * y) * (x * y)) : A)
+        == ((x * (y * (x * y))) : A)      { associative }
+        == ((x * ((y * x) * y)) : A)      { associative }
+        == ((x * ((- (x * y)) * y)) : A)  { Hanti&#39; }
+        == ((x * (- ((x * y) * y))) : A)  { mul_neg_l }
+        == ((x * (- (x * (y * y)))) : A)  { associative }
+        == ((- (x * (x * (y * y)))) : A)  { mul_neg_r }
+        == ((- ((x * x) * (y * y))) : A)  { associative }. }</code></pre>
+<p>The inner <code>calc</code> chain is the blackboard proof step for
+step, each equation justified in braces: two regroupings by <a
 href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
 bring
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>2</mn></msub><annotation encoding="application/x-tex">e_2</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>y</mi><annotation encoding="application/x-tex">y</annotation></semantics></math>
 and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>e</mi><mn>1</mn></msub><annotation encoding="application/x-tex">e_1</annotation></semantics></math>
-together; <a
-href="coqdoc/Riktig.Impl.Clifford.html#e2_e1_anticommute"><code>e2_e1_anticommute</code></a>
-swaps them at the cost of one minus sign; the sign is pulled out (<a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+together; <code>Hanti'</code> swaps them at the cost of one minus sign;
+the sign is pulled out (<a
 href="coqdoc/Riktig.Theory.Ring.html#mul_neg_l"><code>mul_neg_l</code></a>),
 one more regrouping exposes
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_2e_2</annotation></semantics></math>,
-which <a
-href="coqdoc/Riktig.Impl.Clifford.html#e2_squared"><code>e2_squared</code></a>
-collapses to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>;
-what remains is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>−</mi><msub><mi>e</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">e_1(-e_1)</annotation></semantics></math>,
-and the second chain pulls the sign out (<a
-href="coqdoc/Riktig.Theory.Ring.html#mul_neg_r"><code>mul_neg_r</code></a>)
-and closes with <a
-href="coqdoc/Riktig.Impl.Clifford.html#e1_squared"><code>e1_squared</code></a>.
-A square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mi>y</mi></mrow><annotation encoding="application/x-tex">yy</annotation></semantics></math>,
+and two more moves put the minus sign outside the whole product. The
+rest of the theorem replaces the two squares by their scalars and
+multiplies them.</p>
+<p>The bivector’s square is then that theorem at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mi>q</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">p = q = 1</annotation></semantics></math>:</p>
+<pre class="coq"><code>  Example e12_squared : (e1 * e2) * (e1 * e2) == - (1).
+  Proof.
+    assert (H1 : e1 * e1 == (1 : F) *: (1 : Cl F 2)).
+    { rewrite e1_squared. symmetry. apply left_identity. }
+    assert (H2 : e2 * e2 == (1 : F) *: (1 : Cl F 2)).
+    { rewrite e2_squared. symmetry. apply left_identity. }
+    pose proof (anticommuting_square e1 e2 1 1 e1_e2_anticommute H1 H2)
+      as Hsq.</code></pre>
+<p>A square root of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
-built out of two real, perpendicular unit directions and nothing
-else.</p>
+built out of two real, perpendicular unit directions and nothing else —
+and, as the general theorem shows, out of any two anticommuting elements
+with scalar squares, whether or not they came from a geometry.</p>
 <p>With a real, geometric square root of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
 available, a spin state can be represented without complex numbers at
@@ -213,39 +215,58 @@ built from perpendicular directions rather than postulated.</p>
 charge as an abstract Lie algebra, and why rank two</h2>
 <p>A Lie algebra is a vector space with an extra operation, a bracket
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[x,y]</annotation></semantics></math>,
-that is bilinear in each argument, antisymmetric
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">[</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[x,y]=-[y,x]</annotation></semantics></math>),
-and satisfies the Jacobi identity,
+that is bilinear in each argument, vanishes on a repeated argument
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">[x,x]=0</annotation></semantics></math>,
+which gives antisymmetry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">[</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[x,y]=-[y,x]</annotation></semantics></math>
+back), and satisfies the Jacobi identity,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mo stretchy="false" form="prefix">[</mo><mi>y</mi><mo>,</mo><mi>z</mi><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">]</mo><mo>+</mo><mo stretchy="false" form="prefix">[</mo><mi>y</mi><mo>,</mo><mo stretchy="false" form="prefix">[</mo><mi>z</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">]</mo><mo>+</mo><mo stretchy="false" form="prefix">[</mo><mi>z</mi><mo>,</mo><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">[x,[y,z]]+[y,[z,x]]+[z,[x,y]]=0</annotation></semantics></math>
 for every
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mi>z</mi></mrow><annotation encoding="application/x-tex">x,y,z</annotation></semantics></math>.
-Quark color charge is organized by one particular 8-dimensional Lie
-algebra,
+Those three laws, and nothing else, are <a
+href="coqdoc/Riktig.Structure.LieAlgebra.html"><code>Structure/LieAlgebra.v</code></a>.
+Vanishing on a repeat is the primitive rather than antisymmetry because
+the two are equivalent only away from characteristic two: expanding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo>+</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">[x+y,x+y]=0</annotation></semantics></math>
+gives
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo><mo>+</mo><mo stretchy="false" form="prefix">[</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">[x,y]+[y,x]=0</annotation></semantics></math>
+in any field, while getting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">[x,x]=0</annotation></semantics></math>
+back out of antisymmetry needs to divide
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo><mo>=</mo><mi>−</mi><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[x,x]=-[x,x]</annotation></semantics></math>
+by two. Quark color charge is organized by one particular 8-dimensional
+Lie algebra,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝔰</mi><mi>𝔲</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathfrak{su}(3)</annotation></semantics></math>:
 eight generators
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>T</mi><mn>8</mn></msub></mrow><annotation encoding="application/x-tex">T_1,\dots,T_8</annotation></semantics></math>,
 and a bracket fixed by nine numbers, the structure constants:</p>
 <p>The table is written out as a <code>match</code> on the three
-indices, one line per ordered triple, with everything not listed sent to
-zero. Here are the nine increasing-index representatives, one per
-unordered triple that carries a nonzero value:</p>
-<pre class="coq"><code>  Definition sc (a b c : nat) : F :=
-    match a, b, c with
-  | 1, 2, 3 =&gt; 1
+indices, with everything not listed sent to zero, and its entries are
+constructors of a seven-element type rather than field elements:</p>
+<pre class="coq"><code>Inductive sv : Set :=
+  | Szero | Spos1 | Sneg1 | Sposh | Snegh | Sposr | Snegr.</code></pre>
+<p>— zero, plus or minus one, plus or minus a half, plus or minus half a
+square root of three. Only the entries whose first index is below its
+second are enumerated, twenty-seven lines, of which these nine are the
+increasing-index representatives, one per unordered triple carrying a
+nonzero value:</p>
+<pre class="coq"><code>Definition scLT (a b c : nat) : sv :=
+  match a, b, c with
+  | 1, 2, 3 =&gt; Spos1
   …
-  | 1, 4, 7 =&gt; half 1
-  | 1, 5, 6 =&gt; - (half 1)
-  | 2, 4, 6 =&gt; half 1
-  | 2, 5, 7 =&gt; half 1
-  | 3, 4, 5 =&gt; half 1
-  | 3, 6, 7 =&gt; - (half 1)
-  | 4, 5, 8 =&gt; half sqrt3
-  | 6, 7, 8 =&gt; half sqrt3
+  | 1, 4, 7 =&gt; Sposh
+  | 1, 5, 6 =&gt; Snegh
+  | 2, 4, 6 =&gt; Sposh
+  | 2, 5, 7 =&gt; Sposh
+  | 3, 4, 5 =&gt; Sposh
+  | 3, 6, 7 =&gt; Snegh
+  | 4, 5, 8 =&gt; Sposr
+  | 6, 7, 8 =&gt; Sposr
   …
-    | _, _, _ =&gt; 0
-    end.</code></pre>
-<p>This is the standard table (Georgi, <em>Lie Algebras in Particle
-Physics</em>):
+  | _, _, _ =&gt; Szero
+  end.</code></pre>
+<p>This is the standard table, as Georgi’s <em>Lie Algebras in Particle
+Physics</em> prints it:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>123</mn></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">f_{123}=1</annotation></semantics></math>,
 four entries equal to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>,
@@ -256,19 +277,79 @@ and two equal to
 Every other nonzero value of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
 is one of these nine with its sign changed by however many swaps it
-takes to sort its three indices into increasing order, and each of those
-permuted entries is spelled out as its own <code>match</code> line
-rather than derived, so that the table computes. <code>half 1</code> is
-the field’s
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>;
-<code>sqrt3</code> is not a real number here but a section hypothesis,
-an element of the field satisfying
+takes to sort its three indices into increasing order. The twenty-seven
+lines spell out those variants that keep the first index below the
+second; the other half of the table — every reading with the first two
+indices the other way round — is not enumerated at all, because a
+wrapper produces it:</p>
+<pre class="coq"><code>Definition scv (a b c : nat) : sv :=
+  if Nat.ltb a b then scLT a b c
+  else if Nat.ltb b a then svneg (scLT b a c)
+  else Szero.</code></pre>
+<p>That wrapper is what makes antisymmetry a fact about the construction
+instead of a fact about the numbers. Reading
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mrow><mi>a</mi><mi>b</mi><mi>c</mi></mrow></msub><annotation encoding="application/x-tex">f_{abc}</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mrow><mi>b</mi><mi>a</mi><mi>c</mi></mrow></msub><annotation encoding="application/x-tex">f_{bac}</annotation></semantics></math>
+reaches the same line of <a
+href="coqdoc/Riktig.Impl.SU3.html#scLT"><code>scLT</code></a> and
+negates exactly one of the two readings, so</p>
+<pre class="coq"><code>Theorem scv_antisym : forall a b c : nat, scv a b c = svneg (scv b a c).</code></pre>
+<p>holds whatever those twenty-seven lines say, and its proof is a
+three-way split on how
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
+compares with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
+— not, as it once was, a nine-way case analysis in each of three
+arguments, 729 branches, closed by rewriting.</p>
+<p>An entry becomes a field element one step later, through <a
+href="coqdoc/Riktig.Impl.SU3.html#sden"><code>sden</code></a>: <a
+href="coqdoc/Riktig.Impl.SU3.html#Sposh"><code>Sposh</code></a> is
+<code>half 1</code>, the field’s
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>,
+and <a href="coqdoc/Riktig.Impl.SU3.html#Sposr"><code>Sposr</code></a>
+is <code>half sqrt3</code>, where <code>sqrt3</code> is not a real
+number here but a section hypothesis, an element of the field satisfying
 <code>sqrt3 * sqrt3 == 1 + 1 + 1</code> — any ordered field admitting
-such an element instantiates everything below. The bracket itself is
-built directly from the table, as a double sum over the eight
-generators:</p>
-<pre class="coq"><code>  Definition bracket (x y : Fin.t 8 -&gt; F) : Fin.t 8 -&gt; F :=
-    fun c =&gt; bigopF (fun a =&gt; bigopF (fun b =&gt; x a * y b * f a b c)).</code></pre>
+such an element instantiates everything below. The structure constants
+are the composite of the two:</p>
+<pre class="coq"><code>  Definition f (a b c : Fin.t 8) : F := sden (scf a b c).</code></pre>
+<p>The bracket itself is built directly from the table, as a double sum
+over the eight generators, and is registered as <em>the</em> bracket of
+this carrier — <a
+href="coqdoc/Riktig.Structure.LieAlgebra.html#HasBracket"><code>HasBracket</code></a>
+is the operation class that the notation
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[x,y]</annotation></semantics></math>
+reads, and a Lie algebra is a vector space carrying one:</p>
+<pre class="coq"><code>  #[local] Instance SU3_HasBracket : HasBracket (Fin.t 8 -&gt; F) :=
+    fun x y c =&gt; bigopF (fun a =&gt; bigopF (fun b =&gt; x a * y b * f a b c)).</code></pre>
+<p>Nothing proved about the bracket below is proved from that
+definition, though. What the proofs use is the <em>equation</em> it
+satisfies, which is a class with two fields — the double sum, and the
+table’s antisymmetry:</p>
+<pre class="coq"><code>  Class StructureBracket {F : Type} {eF : EqRel F} {zF : Zero F}
+    …
+      (bigop_list : forall J : Type, (J -&gt; F) -&gt; list J -&gt; F)
+      {BL : BigOp F bigop_list}
+    …
+    bracket_table : forall (x y : Fin.t n -&gt; F) (c : Fin.t n),
+      [ x , y ] c == bigop_list _ (fun a =&gt;
+        bigop_list _ (fun b =&gt; x a * y b * f a b c) enum) enum;
+
+    table_antisym : forall a b c : Fin.t n, f a b c == - f b a c;
+  }.</code></pre>
+<p>The sum is a parameter of the class, carrying the two equations that
+say what a big sum is, rather than the <a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
+the definition above happens to be written with. Otherwise the law would
+read “the bracket is what <em>this</em> fold computes”, and a bracket
+built from the same table by any other summation would fail to be a
+bracket by this definition — the mistake a specification exists to
+avoid.</p>
+<p>Bilinearity, antisymmetry, and the passage from generators to
+arbitrary elements are then proved for <em>any</em> table satisfying
+those two, with no reference to nine numbers or eight generators; the
+su(3) table is the instance.</p>
 <p>Where does the number three, and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mi>U</mi><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">SU(3)</annotation></semantics></math>’s
 particular shape, actually enter? Not by finding a literal “3” anywhere
@@ -284,9 +365,8 @@ do:</p>
 <pre class="coq"><code>  Lemma su3_cartan_38 : bracket (e g3) (e g8) == 0.
   Proof.
     intros d.
-    rewrite (bracket_e_e g3 g8 d).
-    unfold f, gnum, fin_to_nat, sc; cbn.
-    reflexivity.
+    rewrite (bracket_e_e f g3 g8 d).
+    revert d. apply fin8_rect; reflexivity.
   Qed.</code></pre>
 <p>(<code>e i</code> is the standard basis vector,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
@@ -294,19 +374,17 @@ at coordinate
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-elsewhere; <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#g3"><code>g3</code></a>, <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#g8"><code>g8</code></a> name
-the third and eighth of the eight basis directions.) <a
+elsewhere; <a href="coqdoc/Riktig.Impl.SU3.html#g3"><code>g3</code></a>,
+<a href="coqdoc/Riktig.Impl.SU3.html#g8"><code>g8</code></a> name the
+third and eighth of the eight basis directions.) <a
 href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_e_e"><code>bracket_e_e</code></a>
-(<code>bracket (e i) (e j) d == f i j d</code>) turns the bracket of two
-basis generators directly into a single structure-constant lookup;
-unfolding the table at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>3</mn><annotation encoding="application/x-tex">3</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>8</mn><annotation encoding="application/x-tex">8</annotation></semantics></math>
-then finds nothing but zeros, for every output coordinate, closed by
-<code>reflexivity</code>.</p>
+(<code>[ e i , e j ] d == f i j d</code>) turns the bracket of two basis
+generators directly into a single structure-constant lookup; <a
+href="coqdoc/Riktig.Impl.SU3.html#fin8_rect"><code>fin8_rect</code></a>
+splits the output coordinate into its eight cases, and each lookup
+computes to <a
+href="coqdoc/Riktig.Impl.SU3.html#Szero"><code>Szero</code></a> on its
+own, closed by <code>reflexivity</code>.</p>
 <p>A maximal set of mutually commuting generators is called a Cartan
 subalgebra, and its size is the algebra’s rank.
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>3</mn></msub><annotation encoding="application/x-tex">T_3</annotation></semantics></math>
@@ -351,7 +429,7 @@ exactly when
 and leaves the scalar and vector parts alone. The general definition
 applies that sign blade by blade, and at three generators it does
 exactly what the transposition count says, writing <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#mk3"><code>mk3</code></a> for
+href="coqdoc/Riktig.Impl.SpaceRotor.html#mk3"><code>mk3</code></a> for
 the element with the eight listed coefficients:</p>
 <pre class="coq"><code>  Lemma reverse_mk3 : forall c a1 a2 a3 p12 p13 p23 t : F,
     cl_reverse (mk3 c a1 a2 a3 p12 p13 p23 t)
@@ -359,7 +437,7 @@ the element with the eight listed coefficients:</p>
 <p>Reversal turns a product around,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mrow><mi>x</mi><mi>y</mi></mrow><mo accent="true">̃</mo></mover><mo>=</mo><mover><mi>y</mi><mo accent="true">̃</mo></mover><mspace width="0.167em"></mspace><mover><mi>x</mi><mo accent="true">̃</mo></mover></mrow><annotation encoding="application/x-tex">\widetilde{xy}=\tilde y\,\tilde x</annotation></semantics></math>
 (<a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>)
+href="coqdoc/Riktig.Impl.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>)
 — the one property that makes the next definition behave like a
 conjugation rather than an arbitrary sandwich. An element of the even
 subalgebra — scalar plus the three bivectors — is called a
@@ -452,8 +530,8 @@ instead, and only a second
 turn,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>720</mn><mi>°</mi></mrow><annotation encoding="application/x-tex">720°</annotation></semantics></math>
 total, is guaranteed to close the loop.</p>
-<h2 id="the-jacobi-identity-checked-one-basis-triple-at-a-time">The
-Jacobi identity, checked one basis triple at a time</h2>
+<h2 id="the-jacobi-identity-checked-by-evaluating-the-table">The Jacobi
+identity, checked by evaluating the table</h2>
 <p>The bracket above is built directly from nine numbers, with no
 guarantee from that construction alone that it satisfies a Lie algebra’s
 defining laws. Bilinearity is a matter of distributing the double sum
@@ -469,12 +547,12 @@ and antisymmetry follows from the table’s own antisymmetry under
 swapping its first two indices (<a
 href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_antisym"><code>bracket_antisym</code></a>,
 via <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#f_antisym"><code>f_antisym</code></a>);
-both hold for arbitrary elements, not only basis vectors. The Jacobi
-identity is the one law that does not fall out so directly; whether
-these particular nine numbers genuinely combine into a consistent Lie
-algebra has to be checked. Define the Jacobiator of three elements
-as</p>
+href="coqdoc/Riktig.Structure.StructureBracket.html#StructureBracket.table_antisym"><code>table_antisym</code></a>);
+both hold for arbitrary elements, not only basis vectors, and both are
+proved once, for any structure-constant table. The Jacobi identity is
+the one law that does not fall out so directly; whether these particular
+nine numbers genuinely combine into a consistent Lie algebra has to be
+checked. Define the Jacobiator of three elements as</p>
 <pre class="coq"><code>  Definition jacobiator (x y z : Fin.t 8 -&gt; F) : Fin.t 8 -&gt; F :=
     bracket x (bracket y z) + bracket y (bracket z x) + bracket z (bracket x y).</code></pre>
 <p>and, for basis generators, <a
@@ -483,12 +561,9 @@ rewrites each double bracket using the structure constants, turning the
 Jacobiator’s value at output coordinate
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
 into a sum of three single sums, one per cyclic pair.</p>
-<p><strong>Theorem</strong> (<a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_123"><code>jacobi_123</code></a>).
-The Jacobiator of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mn>1</mn></msub><mo>,</mo><msub><mi>T</mi><mn>2</mn></msub><mo>,</mo><msub><mi>T</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">T_1,T_2,T_3</annotation></semantics></math>
-vanishes at every output coordinate.</p>
-<p>On the blackboard: the only nonzero value of
+<p>Take
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mn>1</mn></msub><mo>,</mo><msub><mi>T</mi><mn>2</mn></msub><mo>,</mo><msub><mi>T</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">T_1,T_2,T_3</annotation></semantics></math>.
+On the blackboard: the only nonzero value of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>f</mi><annotation encoding="application/x-tex">f</annotation></semantics></math>
 with first two indices
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>,</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2,3</annotation></semantics></math>
@@ -510,55 +585,116 @@ antisymmetry under swapping its first two arguments forces
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mrow><mi>a</mi><mi>a</mi><mi>d</mi></mrow></msub><mo>=</mo><mi>−</mi><msub><mi>f</mi><mrow><mi>a</mi><mi>a</mi><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_{aad}=-f_{aad}</annotation></semantics></math>,
 hence
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mrow><mi>a</mi><mi>a</mi><mi>d</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f_{aad}=0</annotation></semantics></math>
-— so all three terms are individually zero, and the Jacobiator vanishes
-at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mn>1</mn></msub><mo>,</mo><msub><mi>T</mi><mn>2</mn></msub><mo>,</mo><msub><mi>T</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">T_1,T_2,T_3</annotation></semantics></math>
-not by a cancellation among several nonzero numbers but because each
-term is zero on its own. The Coq proof, verbatim:</p>
-<pre class="coq"><code>  Lemma jacobi_123 : jacobiator (e g1) (e g2) (e g3) == 0.
-  Proof. su3_jacobi g1 g2 g3. Qed.</code></pre>
-<p><code>su3_jacobi</code> case-splits on the output coordinate
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>
-(<a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#fin8_rect"><code>fin8_rect</code></a>,
-an eight-way case analysis standing in for
-<code>forall d : Fin.t 8</code>), rewrites by <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_basis_expand"><code>jacobi_basis_expand</code></a>
-to produce the three-term sum above, unfolds the table (<a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#sc"><code>sc</code></a>) and
-the numbering (<a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#gnum"><code>gnum</code></a>),
-and simplifies (<code>cbn</code>) — turning the abstract sum into the
-concrete numbers the table actually stores. <code>su3_step</code> then
-clears the resulting zero terms with the ring facts <a
-href="coqdoc/Riktig.Theory.Ring.html#mul_0_l"><code>mul_0_l</code></a>/<a
-href="coqdoc/Riktig.Theory.Ring.html#mul_0_r"><code>mul_0_r</code></a>
-and closes each of the eight resulting goals, one per output coordinate,
-by <code>reflexivity</code>.</p>
-<p>The same check is repeated, <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_124"><code>jacobi_124</code></a>
-through <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_678"><code>jacobi_678</code></a>,
-for all
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mfrac linethickness="0"><mn>8</mn><mn>3</mn></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>56</mn></mrow><annotation encoding="application/x-tex">\binom{8}{3}=56</annotation></semantics></math>
-strictly increasing basis triples — every one closed, none
-<code>Admitted</code>. Fifty-two of them close on the table’s zeros and
-ordinary ring rearrangement, as <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_123"><code>jacobi_123</code></a>
-does. The remaining four are the triples drawn from
+— so all three terms are individually zero. Other triples are not so
+obliging: the four drawn from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>4</mn></msub><annotation encoding="application/x-tex">T_4</annotation></semantics></math>
 through
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>7</mn></msub><annotation encoding="application/x-tex">T_7</annotation></semantics></math>,
-whose internal sums run through the two irrational entries
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>458</mn></msub><mo>=</mo><msub><mi>f</mi><mn>678</mn></msub><mo>=</mo><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">f_{458}=f_{678}=\sqrt3/2</annotation></semantics></math>;
-they need one fact beyond the zeros, <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#half_sqrt3_sq"><code>half_sqrt3_sq</code></a>,
-that
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(\sqrt3/2)^2</annotation></semantics></math>
-is three copies of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mi>/</mi><mn>2</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(1/2)^2</annotation></semantics></math>,
-since
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><msqrt><mn>3</mn></msqrt><mn>2</mn></msup><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sqrt3^2=3</annotation></semantics></math>.</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mn>7</mn></msub><annotation encoding="application/x-tex">T_7</annotation></semantics></math>
+run through the two irrational entries
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mn>458</mn></msub><mo>=</mo><msub><mi>f</mi><mn>678</mn></msub><mo>=</mo><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">f_{458}=f_{678}=\sqrt3/2</annotation></semantics></math>,
+and there the three sums cancel against one another rather than
+vanishing term by term, using
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>=</mo><mn>3</mn><mo>⋅</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mi>/</mi><mn>2</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(\sqrt3/2)^2 = 3\cdot(1/2)^2</annotation></semantics></math>.</p>
+<p>Doing that in the field, one triple at a time, is what this file used
+to do: fifty-six named lemmas, one per strictly increasing basis triple,
+each an eight-way case split on the output coordinate closed by
+rewriting with ring facts. It worked, and it cost 353 seconds of
+compilation, the single most expensive file in the development.
+Computing the check instead costs eight.</p>
+<p>The trick is that the arithmetic never leaves a small lattice. Every
+product of two table entries is one of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">\pm1</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>1</mn><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\pm1/2</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>1</mn><mi>/</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">\pm1/4</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>3</mn><mi>/</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">\pm3/4</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">\pm\sqrt3/4</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><msqrt><mn>3</mn></msqrt><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\pm\sqrt3/2</annotation></semantics></math>
+— all of them whole numbers of quarters of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+and of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mn>3</mn></msqrt><annotation encoding="application/x-tex">\sqrt3</annotation></semantics></math>
+— and sums of such products stay there. So a value is four counters:</p>
+<pre class="coq"><code>Record quad : Set := Quad { qa : nat; qb : nat; qc : nat; qd : nat }.</code></pre>
+<p>how many quarters of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+to add, how many to subtract, and the same for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mn>3</mn></msqrt><annotation encoding="application/x-tex">\sqrt3</annotation></semantics></math>.
+Two counters per component rather than one integer, because then adding
+is <code>Nat.add</code> and vanishing is <code>qa = qb</code>: nothing
+in the proof has to reason about subtraction. The Jacobiator’s three
+sums are computed over <a
+href="coqdoc/Riktig.Impl.SU3.html#quad"><code>quad</code></a>,</p>
+<pre class="coq"><code>Definition jacq (i j k d : Fin.t 8) : quad :=</code></pre>
+<p>and the whole check is one boolean over the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>8</mn><mn>4</mn></msup><mo>=</mo><mn>4096</mn></mrow><annotation encoding="application/x-tex">8^4 = 4096</annotation></semantics></math>
+index quadruples — every triple of generators, at every output
+coordinate:</p>
+<pre class="coq"><code>Lemma jacobi_check_true : jacobi_check = true.
+Proof. vm_compute. reflexivity. Qed.</code></pre>
+<p>Nothing in that computation mentions a field. <a
+href="coqdoc/Riktig.Impl.SU3.html#scv"><code>scv</code></a> returns
+constructors, <a
+href="coqdoc/Riktig.Impl.SU3.html#jacq"><code>jacq</code></a> adds
+naturals, and <code>vm_compute</code> runs the whole thing in
+milliseconds. What carries it back to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝔰</mi><mi>𝔲</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathfrak{su}(3)</annotation></semantics></math>
+is a denotation <a
+href="coqdoc/Riktig.Impl.SU3.html#qden"><code>qden</code></a>, sending a
+quad to the field element it counts, together with three facts about it:
+that it turns quad addition into field addition, that it sends a quad
+with equal counters to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+and that the denotation of a product of two table entries is the
+denotation of their product as quads. The last is the only place
+<code>sqrt3 * sqrt3 == 1 + 1 + 1</code> is used — in the single case
+where half a root of three meets itself.</p>
+<p>Put together, that is</p>
+<pre class="coq"><code>  Theorem jacobi_basis : forall i j k : Fin.t 8,
+    jacobiator (e i) (e j) (e k) == 0.</code></pre>
+<p>for all
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>8</mn><mn>3</mn></msup><mo>=</mo><mn>512</mn></mrow><annotation encoding="application/x-tex">8^3 = 512</annotation></semantics></math>
+triples of generators at once, with no case analysis in the field
+anywhere in the proof.</p>
+<h2 id="from-the-generators-to-every-element">From the generators to
+every element</h2>
+<p>Five hundred and twelve checks are still not the Jacobi identity:
+that is a statement about all
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mi>z</mi></mrow><annotation encoding="application/x-tex">x,y,z</annotation></semantics></math>,
+not about basis triples. The step that closes the gap knows nothing
+about
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝔰</mi><mi>𝔲</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathfrak{su}(3)</annotation></semantics></math>
+— it holds for any bilinear alternating bracket, so it lives with the
+laws, in <a
+href="coqdoc/Riktig.Theory.LieAlgebra.html"><code>Theory/LieAlgebra.v</code></a>,
+and not with the table.</p>
+<p>The step is linearity. Read as a function of its first argument with
+the other two fixed, the Jacobiator is a linear map (<a
+href="coqdoc/Riktig.Theory.LieAlgebra.html#jacobi_map"><code>jacobi_map</code></a>),
+and a linear map that vanishes on a basis vanishes everywhere (<a
+href="coqdoc/Riktig.Theory.MatRep.html#linear_map_zero_on_basis"><code>linear_map_zero_on_basis</code></a>).
+Applying that three times, once per argument, turns the 512 basis
+triples into the identity for arbitrary vectors, which is <a
+href="coqdoc/Riktig.Theory.LieAlgebra.html#lie_algebra_from_basis"><code>lie_algebra_from_basis</code></a>:
+the builder that takes a bilinear alternating bracket, a basis, and the
+Jacobi identity on that basis, and returns a <a
+href="coqdoc/Riktig.Structure.LieAlgebra.html#LieAlgebra.LieAlgebra"><code>LieAlgebra</code></a>.
+<a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#lie_algebra_of_table"><code>lie_algebra_of_table</code></a>
+packages it for structure constants, so that a table which is
+antisymmetric and passes the basis check gets a Lie algebra for free;
+feeding it this table and <a
+href="coqdoc/Riktig.Impl.SU3.html#jacobi_basis"><code>jacobi_basis</code></a>
+gives <a
+href="coqdoc/Riktig.Impl.SU3.html#su3_lie_algebra"><code>su3_lie_algebra</code></a>,
+and with it <a
+href="coqdoc/Riktig.Impl.SU3.html#su3_jacobi_identity"><code>su3_jacobi_identity</code></a>
+for every
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mi>z</mi></mrow><annotation encoding="application/x-tex">x,y,z</annotation></semantics></math>
+—
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝔰</mi><mi>𝔲</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathfrak{su}(3)</annotation></semantics></math>
+as an instance of the structure, not as a file that resembles one.</p>
 <h2 id="what-this-does-not-explain">What this does not explain</h2>
 <p>Geometric algebra does not explain the Pauli exclusion principle. The
 fact that two electrons cannot occupy the same quantum state — the
@@ -584,7 +720,7 @@ state built as
 is arithmetic in the eight real coordinates of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{Cl}(3,0)</annotation></semantics></math>
 — no complex matrices, and every operation above (<a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate"><code>rotate</code></a>,
 <a
 href="coqdoc/Riktig.Impl.Clifford.html#cl_reverse"><code>cl_reverse</code></a>,
 the double cover) computes the same way for any field, not only the
@@ -593,7 +729,7 @@ coordinates of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>𝔰</mi><mi>𝔲</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>3</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathfrak{su}(3)</annotation></semantics></math>:
 given any two color states as vectors in <code>Fin.t 8 -&gt; F</code>,
 <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket"><code>bracket</code></a>
+href="coqdoc/Riktig.Structure.LieAlgebra.html#bracket"><code>bracket</code></a>
 returns their commutator’s eight coordinates directly from the nine
 structure constants — a Lie bracket checked against its own defining
 laws, not assumed to satisfy them.</p>
@@ -613,31 +749,73 @@ href="coqdoc/Riktig.Impl.Clifford.html#cl_reverse"><code>cl_reverse</code></a>,
 <a
 href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>)
 · <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html"><code>Theory/SpaceRotor.v</code></a>
+href="coqdoc/Riktig.Theory.Algebra.html"><code>Theory/Algebra.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_mk3"><code>reverse_mk3</code></a>,
+href="coqdoc/Riktig.Theory.Algebra.html#anticommuting_square"><code>anticommuting_square</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#orthogonal_anticommute"><code>orthogonal_anticommute</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.SpaceRotor.html"><code>Impl/SpaceRotor.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.SpaceRotor.html#reverse_mk3"><code>reverse_mk3</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#reverse_anti3"><code>reverse_anti3</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor"><code>spinor</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#spinor"><code>spinor</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate"><code>rotate</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_coordinates_correct"><code>rotate_coordinates_correct</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate_coordinates_correct"><code>rotate_coordinates_correct</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_spinor_vec"><code>rotate_spinor_vec</code></a>)
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate_spinor_vec"><code>rotate_spinor_vec</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.SU3Algebra.html"><code>Theory/SU3Algebra.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket"><code>bracket</code></a>,
+href="coqdoc/Riktig.Structure.StructureBracket.html#StructureBracket.StructureBracket"><code>StructureBracket</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#su3_cartan_38"><code>su3_cartan_38</code></a>,
+href="coqdoc/Riktig.Structure.StructureBracket.html#StructureBracket.bracket_table"><code>bracket_table</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobiator"><code>jacobiator</code></a>,
+href="coqdoc/Riktig.Structure.StructureBracket.html#StructureBracket.table_antisym"><code>table_antisym</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_antisym"><code>bracket_antisym</code></a>,
+<a
+href="coqdoc/Riktig.Theory.SU3Algebra.html#bracket_e_e"><code>bracket_e_e</code></a>,
 <a
 href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_basis_expand"><code>jacobi_basis_expand</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SU3Algebra.html#jacobi_123"><code>jacobi_123</code></a>)
+href="coqdoc/Riktig.Theory.SU3Algebra.html#lie_algebra_of_table"><code>lie_algebra_of_table</code></a>)
+· <a href="coqdoc/Riktig.Impl.SU3.html"><code>Impl/SU3.v</code></a> (<a
+href="coqdoc/Riktig.Impl.SU3.html#sv"><code>sv</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#scLT"><code>scLT</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#scv"><code>scv</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#scv_antisym"><code>scv_antisym</code></a>,
+<a href="coqdoc/Riktig.Impl.SU3.html#sden"><code>sden</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#SU3_HasBracket"><code>SU3_HasBracket</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SU3.html#su3_cartan_38"><code>su3_cartan_38</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SU3.html#jacobiator"><code>jacobiator</code></a>,
+<a href="coqdoc/Riktig.Impl.SU3.html#quad"><code>quad</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#jacq"><code>jacq</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#jacobi_check_true"><code>jacobi_check_true</code></a>,
+<a href="coqdoc/Riktig.Impl.SU3.html#qden"><code>qden</code></a>, <a
+href="coqdoc/Riktig.Impl.SU3.html#jacobi_basis"><code>jacobi_basis</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SU3.html#su3_lie_algebra"><code>su3_lie_algebra</code></a>)
+· <a
+href="coqdoc/Riktig.Structure.LieAlgebra.html"><code>Structure/LieAlgebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Structure.LieAlgebra.html#HasBracket"><code>HasBracket</code></a>,
+the class and its three laws) · <a
+href="coqdoc/Riktig.Theory.LieAlgebra.html"><code>Theory/LieAlgebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.LieAlgebra.html#bracket_antisymmetric"><code>bracket_antisymmetric</code></a>,
+<a
+href="coqdoc/Riktig.Theory.LieAlgebra.html#jacobi_map"><code>jacobi_map</code></a>,
+<a
+href="coqdoc/Riktig.Theory.LieAlgebra.html#lie_algebra_from_basis"><code>lie_algebra_from_basis</code></a>)
 · <a
 href="coqdoc/Riktig.Structure.GeometricAlgebra.html"><code>Structure/GeometricAlgebra.v</code></a>
 (<a

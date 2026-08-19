@@ -170,17 +170,16 @@ assembly:</p>
       intros eps Heps.
       exists (eps * inv (1 + C)).
       split.
-      + apply mul_pos.
-        * exact Heps.
-        * apply pos_inv. apply one_plus_nonneg_pos. exact HC.
+      + exact (pad_div_pos eps C Heps HC).
       + intros [du dv] Hh.
+        rewrite (prod_norm_at du dv) in Hh.
         simpl.
         unfold LinearMap.map, bilinear_deriv_lm, bilinear_deriv_fun; simpl.
         calc (‖ B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)) ‖)
           == (‖ B du dv ‖)
           == (eps * ‖ (du, dv) ‖).
         * apply eq_le. apply vnorm_proper. exact (bilinear_remainder_eq du dv).
-        * unfold vnorm, Prod_HasNorm, prod_norm; simpl.
+        * rewrite (prod_norm_at du dv).
           exact (bilinear_remainder_bound C HC HCb eps Heps du dv Hh).
   Qed.</code></pre>
 <p>Walking it: <a
@@ -196,18 +195,20 @@ with the constant
 — one term per slot. For the second half, <code>destruct</code> names
 the bound <code>C</code> and <code>intros eps Heps</code> fixes a
 tolerance; <code>exists (eps * inv (1 + C))</code> offers the padded
-radius, and the <code>apply mul_pos</code> branch checks it is positive
-without any test on <code>C</code>. Then <code>intros [du dv] Hh</code>
-takes an arbitrary short step, split into its two components. The
-<code>calc</code> chain has exactly two steps, one per half of the
-argument: <a
+radius, and the <a
+href="coqdoc/Riktig.Theory.Order.html#pad_div_pos"><code>pad_div_pos</code></a>
+branch checks it is positive without any test on <code>C</code>. Then
+<code>intros [du dv] Hh</code> takes an arbitrary short step, split into
+its two components. The <code>calc</code> chain has exactly two steps,
+one per half of the argument: <a
 href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_eq"><code>bilinear_remainder_eq</code></a>
 rewrites the remainder to the cross term (under the norm, via <a
 href="coqdoc/Riktig.Structure.Norm.html#NormedSpace.vnorm_proper"><code>NormedSpace.vnorm_proper</code></a>),
 and <a
 href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_bound"><code>bilinear_remainder_bound</code></a>
-bounds the cross term by <code>eps * ‖ (du, dv) ‖</code> once the sum
-norm is unfolded.</p>
+bounds the cross term by <code>eps * ‖ (du, dv) ‖</code> once <a
+href="coqdoc/Riktig.Theory.ProdVS.html#prod_norm_at"><code>prod_norm_at</code></a>
+has read the sum norm off the pair.</p>
 <p>Nothing in the statement mentions a dimension, a basis, or a
 particular kind of product. It holds for every bounded bilinear map into
 every normed space.</p>

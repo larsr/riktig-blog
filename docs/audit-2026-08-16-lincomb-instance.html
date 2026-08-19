@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finding: `lincomb` at a concrete carrier resolves to the
+multiplicative monoid</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="finding-lincomb-at-a-concrete-carrier-resolves-to-the-multiplicative-monoid">Finding:
+<a
+href="../coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>
+at a concrete carrier resolves to the multiplicative monoid</h1>
+<p>Severity: <strong>high</strong>. Found 2026-08-16 while writing <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html"><code>Examples/GettingStarted.v</code></a>
+for the getting-started post; recorded here with the sweep’s other
+findings.</p>
+<h2 id="what-happens">What happens</h2>
+<p><a
+href="../coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
+binds <code>{HasLincomb I F V}</code>, and <a
+href="../coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+supplies <a
+href="../coqdoc/Riktig.Impl.FinIndex.html#HasLincomb_enum"><code>HasLincomb_enum</code></a>,
+whose sum is a <code>bigopI</code> over a <a
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>.
+At <code>V := Fin.t n -&gt; Q</code>, instance search fills that <a
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
+argument with the pointwise <strong>multiplicative</strong> monoid
+(<code>@PW_Monoid (t 4) Q Q_EqRel Q_One Q_Mult Q_MulMonoid</code>)
+rather than the additive one. Two consequences, both silent:</p>
+<ul>
+<li><code>Definition B4 : Basis 4 (Fin.t 4) Q (Fin.t 4 -&gt; Q) := FinVec_Basis 4.</code>
+does not typecheck, though the term is the intended basis; the
+workaround is to let the type be read off the term
+(<code>Definition B4 := FinVec_Basis (F := Q) 4.</code>).</li>
+<li>Worse, a statement written by hand elaborates against the wrong
+monoid and then computes the wrong number: reconstruction at <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html#u4"><code>u4</code></a>
+reduced to <code>0</code> at index 1 (a product one of whose factors is
+zero) where the intended sum is <code>2</code>.</li>
+</ul>
+<p>Nothing fails loudly: the build is green, the wrong reading is a
+well-typed statement about a different monoid.</p>
+<h2 id="why-it-matters">Why it matters</h2>
+<p>Every <a
+href="../coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>
+statement instantiated at a concrete carrier is exposed to this. The
+abstract theory is unaffected — over an anonymous carrier the binder is
+whatever the caller supplied — so the defect appears exactly where a
+reader is most likely to be: writing their first concrete example.</p>
+<h2 id="fix-one-sentence">Fix, one sentence</h2>
+<p>Give <a
+href="../coqdoc/Riktig.Impl.FinIndex.html#HasLincomb_enum"><code>HasLincomb_enum</code></a>
+(and the <code>bigopI</code> layer beneath it) a <code>Hint Mode</code>
+or a pinned additive-monoid argument so the additive reading is the only
+one search can produce at a carrier with both.</p>
+<h2 id="fixed">Fixed</h2>
+<p><a
+href="../coqdoc/Riktig.Impl.FinIndex.html#HasLincomb_enum"><code>HasLincomb_enum</code></a>
+no longer takes a <code>Monoid V</code>. The fold it defines uses
+<code>Zero V</code> and <code>HasAdd V</code> and nothing else — the
+same division <a
+href="../coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+already states for <code>bigop</code>, where the operation classes carry
+the fold and the law instances carry the monoid — and those two goals
+have one solution each once the carrier is known, so the additive
+reading is the only one search can produce. The <a
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
+stays on <a
+href="../coqdoc/Riktig.Impl.FinIndex.html#Lincomb_enum"><code>Lincomb_enum</code></a>,
+whose class does take the operation as a parameter, so a reader sees
+which monoid an equation is about.</p>
+<p>Tightening <a
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>’s
+own <code>Hint Mode</code> to <code>! - ! !</code> was tried first and
+rejected: <code>Equivalence (@equ M _)</code> is reached through
+<code>Monoid -&gt; Semigroup -&gt; Magma</code>, so the flexible mode is
+what lets a <code>calc</code> chain in a monoid section find its own
+transitivity, and the tree stops building at
+<code>Theory/Monoid.v:10</code>.</p>
+<p>Both consequences are regression <code>Example</code>s in <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html"><code>theories/Examples/GettingStarted.v</code></a>:
+<a
+href="../coqdoc/Riktig.Examples.GettingStarted.html#B4"><code>B4</code></a>
+is ascribed <code>Basis 4 (Fin.t 4) Q (Fin.t 4 -&gt; Q)</code> again,
+and <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html#reconstruct_u4_at_1"><code>reconstruct_u4_at_1</code></a>
+computes the reconstruction at index 1 and asks for <code>2</code>,
+which the multiplicative reading answers with <code>0</code>.</p>
+</main>
+</body>
+</html>

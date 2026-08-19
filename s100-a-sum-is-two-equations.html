@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A sum is two equations, not a fold</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="a-sum-is-two-equations-not-a-fold">A sum is two equations, not a
+fold</h1>
+<p>Write down what it means to add up a list of numbers. Most people
+reach for a recursion:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2.0em"></mspace><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo>:</mo><mi>x</mi><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>x</mi><mo>+</mo><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\Sigma(\,[\,]\,) = 0, \qquad \Sigma(x : xs) = x + \Sigma(xs)</annotation></semantics></math></p>
+<p>Read those two lines as a <em>program</em> and you get one particular
+function: it walks the list from the right, opening the whole list
+before adding anything. Read them as <em>equations</em> and you get
+something much larger — the set of all functions that satisfy them. The
+right-to-left walk is one. So is a left-to-right walk that carries a
+running total, and a balanced tree that halves the list and adds the
+halves, and a circuit that adds four numbers per clock tick.</p>
+<p>The distinction sounds pedantic until you prove something. Suppose
+you want the fact that a sum splits at a concatenation:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\Sigma(l_1 \mathbin{+\!\!+} l_2) = \Sigma(l_1) + \Sigma(l_2)</annotation></semantics></math></p>
+<p>If your
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="normal">Σ</mi><annotation encoding="application/x-tex">\Sigma</annotation></semantics></math>
+is the right-to-left program, you can prove this by induction, and what
+you have proved is a fact about that program. Hand someone the
+left-to-right sum and your theorem says nothing about it, even though it
+is just as true there — because your theorem’s subject was a particular
+recursion, not addition-over-a-list. Every law you prove has to be
+proved again for each new way of summing.</p>
+<h2 id="making-the-equations-the-definition">Making the equations the
+definition</h2>
+<p>Nothing forces that. The two equations can be the definition, with
+the operation left open. In Coq that is a type class: a parameter for
+the operation, and the equations as its fields.</p>
+<pre class="coq"><code>  Class BigOp (M : Type) {Me : EqRel M} {Mz : Zero M} {Ma : HasAdd M}
+      (bigop_list : forall J : Type, (J -&gt; M) -&gt; list J -&gt; M) := {
+    bigop_list_nil : forall (J : Type) (f : J -&gt; M),
+      bigop_list J f nil == 0;
+    bigop_list_cons : forall (J : Type) (f : J -&gt; M) (j : J) (l : list J),
+      bigop_list J f (j :: l) == f j + bigop_list J f l;
+  }.</code></pre>
+<p>Read it back into English: <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+takes a family <code>f</code> — a function from index to value — and a
+list of indices, and returns a value; the empty list gives
+<code>0</code>, and a list with head <code>j</code> gives
+<code>f j</code> added to the sum of the rest. <code>M</code> is the
+carrier being summed in, and <code>==</code> is its equality, which need
+not be Coq’s built-in one. <code>HasAdd M</code> and <code>Zero M</code>
+say that <code>M</code> has the <code>+</code> and <code>0</code> the
+two equations mention.</p>
+<p>The operation is a <em>parameter</em> of the class, in round
+brackets, not a field. That is the whole design decision. A field would
+mean “there is a distinguished sum, and here are its laws”; a parameter
+means “here is what it takes for something to be a sum”, and different
+things can qualify.</p>
+<h2 id="a-law-proved-once">A law, proved once</h2>
+<p>Here is the concatenation fact, proved from the two equations and
+nothing else. In the file this sits in a section that has fixed a
+carrier <code>M</code> with its monoid laws and has taken <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+with its <a
+href="coqdoc/Riktig.Structure.BigOp.html#BigOp.BigOp"><code>BigOp</code></a>
+instance as parameters, so <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+here is <em>any</em> lawful sum.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mn>0</mn><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">left identity</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">the nil equation</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\Sigma_f([\,] \mathbin{+\!\!+} l_2)
+  &amp;= 0 + \Sigma_f(l_2)  &amp;&amp; \text{left identity} \\
+  &amp;= \Sigma_f([\,]) + \Sigma_f(l_2) &amp;&amp; \text{the nil equation}
+\end{aligned}
+</annotation></semantics></math></p>
+<p>and for a non-empty left list, writing
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>:</mo><msub><mi>l</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">j : l_1</annotation></semantics></math>
+for its head and tail,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo>:</mo><msub><mi>l</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">the cons equation</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">induction hypothesis</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">associativity</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo>:</mo><msub><mi>l</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mi>f</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>l</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">the cons equation</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\Sigma_f((j : l_1) \mathbin{+\!\!+} l_2)
+  &amp;= f(j) + \Sigma_f(l_1 \mathbin{+\!\!+} l_2) &amp;&amp; \text{the cons equation} \\
+  &amp;= f(j) + (\Sigma_f(l_1) + \Sigma_f(l_2)) &amp;&amp; \text{induction hypothesis} \\
+  &amp;= (f(j) + \Sigma_f(l_1)) + \Sigma_f(l_2) &amp;&amp; \text{associativity} \\
+  &amp;= \Sigma_f(j : l_1) + \Sigma_f(l_2) &amp;&amp; \text{the cons equation}
+\end{aligned}
+</annotation></semantics></math></p>
+<p>The Coq is the same two chains:</p>
+<pre class="coq"><code>  Lemma bigop_list_append : forall {J : Type} (f : J -&gt; M) (l1 l2 : list J),
+    bigop_list f (l1 ++ l2) == bigop_list f l1 + bigop_list f l2.
+  Proof.
+    intros J f l1 l2; induction l1 as [| a l1 IH].
+    - calc (bigop_list f (nil ++ l2))
+        == (0 + bigop_list f l2)                    { left_identity }
+        == (bigop_list f nil + bigop_list f l2)     { (bigop_list_nil f) }.
+    - calc (bigop_list f ((a :: l1) ++ l2))
+        == (f a + bigop_list f (l1 ++ l2))             { (bigop_list_cons f a (l1 ++ l2)) }
+        == (f a + (bigop_list f l1 + bigop_list f l2)) { IH }
+        == ((f a + bigop_list f l1) + bigop_list f l2) { associative }
+        == (bigop_list f (a :: l1) + bigop_list f l2)  { (bigop_list_cons f a l1) }.
+  Qed.</code></pre>
+<p><code>calc</code> is a small tactic for writing a chain of equalities
+the way you would on a blackboard: each <code>==</code> line is the next
+expression, and the <code>{ ... }</code> after it is the law that
+justifies that one step. The induction is on the left list, and the base
+case is not <code>reflexivity</code> — <code>bigop_list f nil</code> is
+not <em>computed</em> to <code>0</code> here, because there is nothing
+to compute. It is turned into <code>0</code> by citing the nil equation,
+which is the only thing known about it.</p>
+<p>That is the whole difference. The proof never mentions a recursion,
+so it is not about one.</p>
+<h2 id="two-sums-that-satisfy-it">Two sums that satisfy it</h2>
+<p>An abstraction with one instance is a rename. Here are two.</p>
+<p>The first is the obvious one, the right fold:</p>
+<pre class="coq"><code>Definition bigop_list {M : Type} {Mz : Zero M} {Ma : HasAdd M}
+    {J : Type} (f : J -&gt; M) (l : list J) : M :=
+  fold_right (fun j acc =&gt; f j + acc) 0 l.</code></pre>
+<p>Its two equations hold by computation — <code>fold_right</code>
+<em>is</em> the recursion the equations describe, so both sides of each
+equation are the same term:</p>
+<pre class="coq"><code>Instance BigOp_fold {M : Type} {Me : EqRel M} {Mz : Zero M} {Ma : HasAdd M}
+    {MR : Reflexive (@equ M Me)} : BigOp M (@bigop_list M _ _).
+Proof.
+  split; intros; reflexivity.
+Qed.</code></pre>
+<p>The second walks the other way, carrying a running total:</p>
+<pre class="coq"><code>  Fixpoint bigop_go {J : Type} (a : M) (f : J -&gt; M) (l : list J) : M :=
+    match l with
+    | nil =&gt; a
+    | j :: l&#39; =&gt; bigop_go (a + f j) f l&#39;
+    end.
+
+  Definition bigop_acc {J : Type} (f : J -&gt; M) (l : list J) : M :=
+    bigop_go 0 f l.</code></pre>
+<p>For this one the equations are not free. The empty list still gives
+<code>0</code> on the nose, but the cons equation says</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo>:</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi mathvariant="normal">Σ</mi><mo stretchy="false" form="prefix">(</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\Sigma(j : l) = f(j) + \Sigma(l)</annotation></semantics></math></p>
+<p>while the program produces
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{go}(0 + f(j), l)</annotation></semantics></math>
+— the head has been added <em>into the accumulator</em>, and everything
+in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>l</mi><annotation encoding="application/x-tex">l</annotation></semantics></math>
+gets added after it. Getting from one to the other means pulling the
+accumulator back out in front, and that is a small induction of its
+own:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo>+</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{go}(a, l) = a + \mathrm{go}(0, l)</annotation></semantics></math></p>
+<p>With that lemma the cons equation is four steps:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><msub><mi mathvariant="normal">Σ</mi><mrow><mi mathvariant="normal">a</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">c</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo>:</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">unfolding</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">the accumulator lemma</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mrow><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">left identity</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mrow><mi mathvariant="normal">a</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">c</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>l</mi><mo stretchy="false" form="postfix">)</mo></mtd><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mtext mathvariant="normal">unfolding</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\Sigma_{\mathrm{acc}}(j : l)
+  &amp;= \mathrm{go}(0 + f(j),\, l) &amp;&amp; \text{unfolding} \\
+  &amp;= (0 + f(j)) + \mathrm{go}(0, l) &amp;&amp; \text{the accumulator lemma} \\
+  &amp;= f(j) + \mathrm{go}(0, l) &amp;&amp; \text{left identity} \\
+  &amp;= f(j) + \Sigma_{\mathrm{acc}}(l) &amp;&amp; \text{unfolding}
+\end{aligned}
+</annotation></semantics></math></p>
+<pre class="coq"><code>  #[export] Instance BigOp_acc : BigOp M (@bigop_acc).
+  Proof.
+    split.
+    - intros J f. exact (reflexivity (0 : M)).
+    - intros J f j l.
+      calc (bigop_acc f (j :: l))
+        == (bigop_go ((0 : M) + f j) f l)
+             { (reflexivity (bigop_go ((0 : M) + f j) f l)) }
+        == (((0 : M) + f j) + bigop_go 0 f l)
+             { (bigop_go_shift f l ((0 : M) + f j)) }
+        == (f j + bigop_go 0 f l)
+             { (op_proper _ _ (left_identity (f j)) _ _
+                 (reflexivity (bigop_go 0 f l))) }
+        == (f j + bigop_acc f l)
+             { (reflexivity (f j + bigop_go 0 f l)) }.
+  Qed.</code></pre>
+<p>The two <code>reflexivity</code> steps are the two unfoldings; <a
+href="coqdoc/Riktig.Impl.BigopAcc.html#bigop_go_shift"><code>bigop_go_shift</code></a>
+is the accumulator lemma; <a
+href="coqdoc/Riktig.Structure.Magma.html#Magma.op_proper"><code>op_proper</code></a>
+is the fact that <code>+</code> respects <code>==</code>, used to
+rewrite inside the right-hand summand.</p>
+<p>Notice what the accumulator sum needed that the fold did not:
+associativity. The accumulator was added first and has to be moved past
+everything the walk adds after it. So the two equations really are a
+constraint — they are not satisfied by any old traversal.</p>
+<h2 id="what-the-second-instance-gets-for-free">What the second instance
+gets for free</h2>
+<p>Everything. The concatenation law was proved about <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+the parameter, so it applies to the accumulator sum by citation:</p>
+<pre class="coq"><code>Example acc_append (M : Type) `{Monoid M} (J : Type) (f : J -&gt; M)
+    (l1 l2 : list J) :
+  bigop_acc f (l1 ++ l2) == bigop_acc f l1 + bigop_acc f l2 :=
+  bigop_list_append (bigop_list := @bigop_acc M _ _) f l1 l2.</code></pre>
+<p>There is no proof there — the body <em>is</em> the earlier lemma,
+with the operation supplied by name. The same holds for every other law
+proved from the two equations: extensionality, the sum of a sum, the
+interchange
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mo>∑</mo><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mo>∑</mo><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i \sum_j = \sum_j \sum_i</annotation></semantics></math>,
+the collapse of a sum against a Kronecker delta.</p>
+<p>And it runs. Adding
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mn>2</mn><mo>+</mo><mn>3</mn><mo>+</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">1 + 2 + 3 + 4</annotation></semantics></math>
+over the integers, left to right where the fold goes right to left:</p>
+<pre class="coq"><code>Example acc_computes_on_Z :
+  bigop_acc (fun i : Z =&gt; i) (1 :: 2 :: 3 :: 4 :: nil)%Z = 10%Z.
+Proof. reflexivity. Qed.</code></pre>
+<h2 id="the-mistake-this-prevents">The mistake this prevents</h2>
+<p>The reason to care is not tidiness. It is that a law which names one
+sum is a law no other sum can satisfy, and that is easy to do by
+accident — you write the specification of something else, a matrix
+product say, and reach for the summation you have:</p>
+<pre class="coq"><code>    mat_mul_def : forall {I K : Type} (A : I -&gt; J -&gt; F) (B : J -&gt; K -&gt; F)
+                        (i : I) (k : K),
+      mat_mul A B i k == bigop_list (fun j =&gt; A i j * B j k) enum.</code></pre>
+<p>Here <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+is a parameter of the class this equation belongs to, carried along with
+its <a
+href="coqdoc/Riktig.Structure.BigOp.html#BigOp.BigOp"><code>BigOp</code></a>
+laws, exactly as above. Had it been the fold instead, this would say
+“entry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>i</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(i,k)</annotation></semantics></math>
+is what <em>this recursion</em> computes” — and a matrix product built
+on any other summation, however correct, would fail to be a matrix
+product by this definition. Nothing proved from it would transfer, which
+is the opposite of what a specification is for.</p>
+<p>The rule of thumb that falls out: when a specification needs an
+operation it does not itself define, take it as a parameter with its
+laws attached, and never name a term that computes. The test is whether
+a second implementation can satisfy what you wrote. If it cannot, you
+have specified an implementation.</p>
+</main>
+</body>
+</html>

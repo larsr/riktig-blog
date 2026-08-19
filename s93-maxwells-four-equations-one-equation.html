@@ -323,7 +323,7 @@ though neither is symmetric or antisymmetric the way those are:</p>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>∇</mi><annotation encoding="application/x-tex">\nabla</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>F</mi><annotation encoding="application/x-tex">F</annotation></semantics></math>
-— eight statements, one per blade of grade
+— first as eight statements, one per blade of grade
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>,
 or
@@ -368,6 +368,29 @@ output coefficient is bilinear expansion, exactly what <code
 class="nolink">ring</code> normalizes — nothing about the
 electromagnetic field is used yet, only the shape of the
 multiplication.</p>
+<p>Eight blade coefficients are not, however, what the displayed
+equation above says. It says three <em>grades</em> vanish, and a grade
+is a projection the algebra carries in its own right —
+<code>⟨ x ⟩_ k</code> keeps the coefficients on blades of exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
+generators and zeroes the rest, subject to four laws (linear,
+idempotent, mutually orthogonal, summing back to the element) that hold
+in every dimension. The three claims in that vocabulary are:</p>
+<pre class="coq"><code>  Theorem F_nabla_grade_0 : ⟨ F_field * Nabla ⟩_ 0 == 0.
+  Proof. by_grade. Qed.
+
+  Theorem F_nabla_grade_2 : ⟨ F_field * Nabla ⟩_ 2 == 0.
+  Proof. by_grade. Qed.
+
+  Theorem F_nabla_grade_4 : ⟨ F_field * Nabla ⟩_ 4 == 0.
+  Proof. by_grade. Qed.</code></pre>
+<p><code>by_grade</code> is the same blade computation with one case
+split in front of it: at a blade of the grade in question the projection
+is the coefficient, and that coefficient is one of the eight identities
+above; at every other blade the projection is zero on both sides and
+nothing is left to prove. The statements are about the grading and the
+proofs are about the blades, which is the arrangement this whole file is
+after.</p>
 <h2 id="reading-the-four-laws-off-f">Reading the four laws off ∇F</h2>
 <p>The four-current
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>J</mi><annotation encoding="application/x-tex">J</annotation></semantics></math>
@@ -493,26 +516,40 @@ explicit hypothesis, not a conclusion:</p>
       (d0 * E3 + (- (d1 * B2) + d2 * B1))).
 
   Theorem F_nabla_eq_J :
-    (F_field * Nabla) (fb false true true true) == 0 -&gt;
-    (F_field * Nabla) (fb true true true false) == 0 -&gt;
-    (F_field * Nabla) (fb true true false true) == 0 -&gt;
-    (F_field * Nabla) (fb true false true true) == 0 -&gt;
-    F_field * Nabla == J.</code></pre>
+    ⟨ F_field * Nabla ⟩_ 3 == 0 -&gt; F_field * Nabla == J.</code></pre>
 <p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>J</mi><annotation encoding="application/x-tex">J</annotation></semantics></math>’s
 four components are read directly off <a
 href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_0"><code>F_nabla_0</code></a>..<a
 href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_3"><code>F_nabla_3</code></a>
 — that is what “the vector part of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∇</mi><mi>F</mi></mrow><annotation encoding="application/x-tex">\nabla F</annotation></semantics></math>”
-means. The four premises state that all four trivector coefficients
-vanish: no monopoles and Faraday’s law, component by component. The
-theorem does not derive these four facts from <a
+means, and <a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_grade_1"><code>F_nabla_grade_1</code></a>
+says it in the grading’s own words:</p>
+<pre class="coq"><code>  Theorem F_nabla_grade_1 : ⟨ F_field * Nabla ⟩_ 1 == J.</code></pre>
+<p>The premise states that the trivector part vanishes: no monopoles and
+Faraday’s law. In coefficients that is the four trivector blades, and <a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_trivector_vanishes"><code>F_nabla_trivector_vanishes</code></a>
+converts the four coefficient equations into the one grade equation for
+a reader who has them separately. The proof of the theorem itself is
+then arithmetic in the grading and nothing else — <a
+href="coqdoc/Riktig.Theory.Graded.html#grade_decomposition_four"><code>grade_decomposition_four</code></a>
+writes any element of a top-grade-4 algebra as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⟨</mo><mi>x</mi><msub><mo stretchy="false" form="postfix">⟩</mo><mn>0</mn></msub><mo>+</mo><mi>⋯</mi><mo>+</mo><mo stretchy="false" form="prefix">⟨</mo><mi>x</mi><msub><mo stretchy="false" form="postfix">⟩</mo><mn>4</mn></msub></mrow><annotation encoding="application/x-tex">\langle x\rangle_0+\cdots+\langle x\rangle_4</annotation></semantics></math>,
+four of those five summands are known to be zero and the fifth is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>J</mi><annotation encoding="application/x-tex">J</annotation></semantics></math>:</p>
+<pre class="coq"><code>    calc ((F_field * Nabla) : Cl F 4)
+      == ((⟨ F_field * Nabla ⟩_ 0 + ⟨ F_field * Nabla ⟩_ 1
+           + ⟨ F_field * Nabla ⟩_ 2 + ⟨ F_field * Nabla ⟩_ 3
+           + ⟨ F_field * Nabla ⟩_ 4) : Cl F 4)
+         { (grade_decomposition_four (F_field * Nabla)) }</code></pre>
+<p>The theorem does not derive the vanishing trivector from <a
 href="coqdoc/Riktig.Theory.Maxwell.html#F_field"><code>F_field</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Maxwell.html#Nabla"><code>Nabla</code></a>,
-or the grade-decomposition theorem — it assumes them, because they are
-not algebraic consequences of the field bivector’s shape alone.
-Classically, a field bivector built from a four-potential
+or the grade computations — it assumes it, because it is not an
+algebraic consequence of the field bivector’s shape alone. Classically,
+a field bivector built from a four-potential
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
 via
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>=</mo><mi>∇</mi><mo>∧</mo><mi>A</mi></mrow><annotation encoding="application/x-tex">F=\nabla\wedge A</annotation></semantics></math>
@@ -542,12 +579,28 @@ href="coqdoc/Riktig.Theory.Maxwell.html#F_field"><code>F_field</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Maxwell.html#Nabla"><code>Nabla</code></a>,
 <a
+href="coqdoc/Riktig.Theory.Maxwell.html#nabla_square"><code>nabla_square</code></a>,
+<a
 href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_grade_decomposition"><code>F_nabla_grade_decomposition</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_grade_0"><code>F_nabla_grade_0</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_grade_2"><code>F_nabla_grade_2</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_grade_4"><code>F_nabla_grade_4</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_0"><code>F_nabla_0</code></a>..<a
 href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_023"><code>F_nabla_023</code></a>,
 <code>J</code>, <a
-href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_eq_J"><code>F_nabla_eq_J</code></a>).</p>
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_grade_1"><code>F_nabla_grade_1</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_trivector_vanishes"><code>F_nabla_trivector_vanishes</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Maxwell.html#F_nabla_eq_J"><code>F_nabla_eq_J</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Graded.html"><code>Theory/Graded.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Graded.html#grade_decomposition_four"><code>grade_decomposition_four</code></a>).</p>
 </main>
 </body>
 </html>

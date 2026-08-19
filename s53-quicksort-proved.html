@@ -45,22 +45,27 @@ over a well-founded measure. Here is the Lomuto partition, verbatim from
 <a
 href="coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>.
 It works over an abstract memory — a type <a
-href="coqdoc/Riktig.Lambda.FirstOrder.html#mem"><code>mem</code></a>
+href="coqdoc/Riktig.Programs.Lambda.FirstOrder.html#mem"><code>mem</code></a>
 with <code>read : mem -&gt; nat -&gt; V</code> and
 <code>swap : mem -&gt; nat -&gt; nat -&gt; mem</code> — so nothing below
 depends on how the memory is actually represented:</p>
-<pre class="coq"><code>  (* Lomuto partition via Fix on i with measure hi - i.
-     pivot = m[hi], scan i from lo to hi-1. *)
+<pre class="coq"><code>  (* Lomuto partition: pivot = m[hi], scan i from lo to hi-1,
+     measure hi - i on the packed state (m, (store, i)). *)
   Definition part (m0 : mem) (store0 i0 hi : nat) : mem * nat.
-  refine (Fix (well_founded_ltof _ (fun i =&gt; hi - i)) (fun _ =&gt; mem -&gt; nat -&gt; mem * nat)
-    (fun i rec m store =&gt;
-      if dec (i &lt; hi)
-      then if dec (leb (read m i) (read m hi) = true)
-           then rec (S i) _ (swap m i store) (S store)
-           else rec (S i) _ m store
-      else (swap m store hi, store))
-    i0 m0 store0).
-  all: unfold ltof; abstract lia.
+  refine (Fix (well_founded_ltof (mem * (nat * nat)) (fun q =&gt; hi - snd (snd q)))
+              (fun _ =&gt; (mem * nat)%type)
+    (fun q rec =&gt;
+      match q as x return q = x -&gt; mem * nat with
+      | (m, (store, i)) =&gt;
+          fun e =&gt;
+          if dec (i &lt; hi)
+          then if dec (leb (read m i) (read m hi) = true)
+               then rec (swap m i store, (S store, S i)) _
+               else rec (m, (store, S i)) _
+          else (swap m store hi, store)
+      end eq_refl)
+    (m0, (store0, i0))).
+  all: subst q; unfold ltof; cbn [fst snd]; abstract lia.
   Defined.</code></pre>
 <p>The pivot is the value at the top index <code>hi</code>. A cursor
 <code>i</code> scans upward from <code>lo</code>; the measure
@@ -73,6 +78,15 @@ the element is swapped down to <code>store</code> and <code>store</code>
 advances; otherwise the cursor moves on alone. When the scan reaches
 <code>hi</code>, the pivot is swapped into place at <code>store</code>,
 and <code>store</code> is returned as its final index.</p>
+<p>Only the cursor drives the measure, yet the memory and the store
+boundary travel inside the recursion argument too, as one tuple
+<code>(m, (store, i))</code> matched once. Carrying them as ordinary
+arguments after the <code>Fix</code> would work just as well as a
+program — but it would make what <code>Fix</code> computes a
+<em>function</em> of two more arguments, and the next lemma would then
+have to compare two functions. Packed, everything <code>Fix</code>
+computes is a <code>mem * nat</code> pair, and the comparison is between
+values.</p>
 <p>Applying <code>Fix</code> has one consequence:
 <code>part m store i hi</code> does not reduce by <code>simpl</code> the
 way a plain <code>Fixpoint</code> would, because the recursion is
@@ -89,15 +103,29 @@ proof afterwards rewrites with this equation instead:</p>
   Proof.
     unfold part at 1. rewrite Fix_eq.
     - reflexivity.
-    - intros x f g Hfg.
-      do 2 (apply functional_extensionality; intro).
-      destruct (dec (x &lt; hi)); [|reflexivity].
+    - intros [m1 [store1 i1]] f g Hfg.
+      destruct (dec (i1 &lt; hi)); [|reflexivity].
       destruct (dec (_ = true)); rewrite Hfg; reflexivity.
   Qed.</code></pre>
 <p><code>rewrite Fix_eq</code> replaces one layer of the fixpoint by its
 body; the second bullet is the obligation that the body uses its
 recursive argument in the same way whichever function is plugged in,
-which is what <code>Fix_eq</code> demands before it will unfold.</p>
+which is what <code>Fix_eq</code> demands before it will unfold. It is
+handed <code>Hfg</code>, the hypothesis that the two candidate recursive
+calls <code>f</code> and <code>g</code> agree at every argument, and
+must conclude that the body built from <code>f</code> equals the body
+built from <code>g</code>. That is where the packing pays: the two
+bodies are pairs, so splitting on the same two <a
+href="coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
+tests the program splits on and rewriting with <code>Hfg</code> finishes
+it. Had the body been a function of <code>m</code> and
+<code>store</code>, “these two functions are equal” would not follow
+from “they agree at every argument” — that step is functional
+extensionality, an axiom, and it would then appear in
+<code>Print Assumptions</code> of every theorem below. Nothing in this
+file needs it: <a
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>
+is closed under the global context.</p>
 <h2 id="why-partition-needs-an-invariant-at-all">Why partition needs an
 invariant at all</h2>
 <p>Partition promises something precise: when it finishes, the pivot
@@ -282,11 +310,16 @@ writing:</p>
 <code>3</code> is <code>[0;2;3;4]</code>, and Coq accepts the
 reflexivity proof, so the two sides really are equal by computation. The
 correctness theorem needs a memory whose <code>read</code>/<a
-href="coqdoc/Riktig.Impl.Fin.html#swap"><code>swap</code></a> laws hold
+href="coqdoc/Riktig.Impl.Swap.html#swap"><code>swap</code></a> laws hold
 at <em>every</em> index; a list only satisfies them when both indices
 are in range, so the correctness file instantiates the abstract section
 at a total function memory <code>nat -&gt; nat</code> instead, where the
-laws hold unconditionally:</p>
+laws hold unconditionally. That memory — <a
+href="coqdoc/Riktig.Impl.FunMem.html#fread"><code>fread</code></a>, <a
+href="coqdoc/Riktig.Impl.FunMem.html#fswap"><code>fswap</code></a> and
+the three laws about them — is <a
+href="coqdoc/Riktig.Impl.FunMem.html"><code>Impl/FunMem.v</code></a>;
+what the correctness file does with it is the instantiation:</p>
 <pre class="coq"><code>  Example fun_qsort_correct (m : nat -&gt; nat) (lo hi : nat) :
     let m&#39; := qsort nat Nat.leb (nat -&gt; nat) fread fswap m lo hi in
     Permutation (slice nat (nat -&gt; nat) fread m lo (S hi - lo))
@@ -314,6 +347,15 @@ href="coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a
 <a
 href="coqdoc/Riktig.Programs.Quicksort.html#qsort"><code>qsort</code></a>)
 · <a
+href="coqdoc/Riktig.Impl.FunMem.html"><code>Impl/FunMem.v</code></a> (<a
+href="coqdoc/Riktig.Impl.FunMem.html#fread"><code>fread</code></a>, <a
+href="coqdoc/Riktig.Impl.FunMem.html#fswap"><code>fswap</code></a>, <a
+href="coqdoc/Riktig.Impl.FunMem.html#fswap_l"><code>fswap_l</code></a>,
+<a
+href="coqdoc/Riktig.Impl.FunMem.html#fswap_r"><code>fswap_r</code></a>,
+<a
+href="coqdoc/Riktig.Impl.FunMem.html#fswap_other"><code>fswap_other</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Quicksort.html#scan_inv"><code>scan_inv</code></a>,
@@ -326,7 +368,9 @@ href="coqdoc/Riktig.Theory.Quicksort.html#qsort_perm"><code>qsort_perm</code></a
 <a
 href="coqdoc/Riktig.Theory.Quicksort.html#qsort_sorted"><code>qsort_sorted</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>).</p>
+href="coqdoc/Riktig.Theory.Quicksort.html#qsort_correct"><code>qsort_correct</code></a>,
+<a
+href="coqdoc/Riktig.Programs.QuicksortFunMem.html#fun_qsort_correct"><code>fun_qsort_correct</code></a>).</p>
 </main>
 </body>
 </html>

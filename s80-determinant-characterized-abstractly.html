@@ -492,7 +492,7 @@ with the other two terms sent to zero along the way by the same
 repeated-row rule — the same
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>+</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(u+v)</annotation></semantics></math>-in-both-slots
 chain displayed for <a
-href="coqdoc/Riktig.Theory.Determinant.html#mf_swap_neg"><code>mf_swap_neg</code></a>
+href="coqdoc/Riktig.Theory.AlternatingForm.html#mf_swap_neg"><code>mf_swap_neg</code></a>
 above, now stated directly for row surgery on matrices rather than for
 the positions of an abstract form. In compressed form:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>M</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> with rows </mtext><mspace width="0.333em"></mspace></mrow><mi>i</mi><mo>,</mo><mi>j</mi><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> swapped</mtext></mrow><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">swapped</mtext><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>−</mi><mspace width="0.167em"></mspace><mi>g</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">0 \;=\; g(M_1) \;=\; g(A) + g(A \text{ with rows } i,j \text{ swapped})
@@ -768,7 +768,7 @@ alternating property — equal rows in, equal rows out:</p>
 Proof.
   intros N B A i j Hij Heq. unfold g_mulB.
   apply (detM_alternating N (mat_mul A B) i j Hij).
-  intros c. unfold mat_mul. apply bigopF_ext. intros l.
+  intros c. unfold mat_mul. apply bigopI_ext. intros l.
   apply op_proper; [exact (Heq l) | reflexivity].
 Qed.</code></pre>
 <p>Uniqueness then finishes it in three steps:</p>
@@ -798,7 +798,8 @@ Proof.
     + exact Hg.
     + exact (mul_commutative (detM (mat_mul mat_id B)) (detM A)).
     + apply op_proper; [reflexivity |].
-      apply detM_proper. exact (mat_mul_left_identity (S p0) (S p0) B).
+      apply detM_proper.
+      exact (mat_mul_left_identity B (leibniz_proper_first B)).
 Qed.</code></pre>
 <p>Dimension
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
@@ -812,7 +813,7 @@ href="coqdoc/Riktig.Impl.DetMulGeneral.html#g_row_expand_eq"><code>g_row_expand_
 read at <code>g_mulB B</code>: it says
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>I</mi><mo>⋅</mo><mi>B</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mrow><mi>det</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\det(AB) = \det(I\cdot B)\cdot\det(A)</annotation></semantics></math>
 directly. <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
 erases the leftover identity, and <a
 href="coqdoc/Riktig.Theory.Field.html#mul_commutative"><code>mul_commutative</code></a>
 puts the two factors in the expected order. No decidable equality
@@ -844,6 +845,19 @@ either computation:</p>
 <pre class="coq"><code>Example detM_mulGeneral_Q :
   detM (mat_mul mat3_ns_g mat3_b_g) == detM mat3_ns_g * detM mat3_b_g.
 Proof. exact (detM_mul 3 mat3_ns_g mat3_b_g). Qed.</code></pre>
+<h2 id="the-assumption-paid-back">The assumption, paid back</h2>
+<p>The argument this post opened with — that the determinant of a map
+does not depend on the basis it is read in — used the product law before
+there was a proof of it, and carried it as a hypothesis its callers had
+to supply. There is nothing left to supply. The determinant of an
+endomorphism composes and ignores the basis, and the volume element
+scales by the determinant, for every field:</p>
+<pre class="coq"><code>  Theorem det_comp : forall (B : Basis n (Fin.t n) F U) (f g : LinearMap F U U),
+    det B (linear_map_comp f g) == det B f * det B g.</code></pre>
+<pre class="coq"><code>  Theorem det_basis_independent : forall (B B&#39; : Basis n (Fin.t n) F U) (f : LinearMap F U U),
+    det B&#39; f == det B f.</code></pre>
+<pre class="coq"><code>  Theorem omega_B_lm : forall (f : LinearMap F V V) (vs : Fin.t (S p) -&gt; V),
+    omega_B B (fun k =&gt; f (vs k)) == det B f * omega_B B vs.</code></pre>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>
@@ -872,7 +886,7 @@ href="coqdoc/Riktig.Impl.DetInterface.html#detM_determinant_check"><code>detM_de
 · <a
 href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Determinant.html#mf_swap_neg"><code>mf_swap_neg</code></a>,
+href="coqdoc/Riktig.Theory.AlternatingForm.html#mf_swap_neg"><code>mf_swap_neg</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Determinant.html#det_swap_neg"><code>det_swap_neg</code></a>)
 · <a

@@ -214,6 +214,20 @@ theories/Theory/Memprog/
   Equiv.v       the per-level observational equivalences (===) as
                 setoids; Proper instances for bind/seq so rewrite
                 works under binds  ← the keystone file
+  Combinators.v one Eval introduction rule per Expr.v combinator, so a
+                proof about a program written with them never unfolds
+                bind_mem
+  While.v       the loop rule, both directions: eval_while_measure
+                (invariant + machine measure, builds the derivation)
+                and while_eval_invariant (invariant preservation, uses
+                one) — the piece everything with a loop waits on
+  Sum.v         sum_l1_correct: the sum of the window, for every list
+                and every length, with the window still readable
+  Swap.v        what swap_cells does to the memory window, for every
+                input: swap_cells_eval (arbitrary index computations),
+                swap_cells_correct / swap_l1_correct (the window view),
+                and the seven-step fuel bound that lets a run at a
+                fixed fuel be discharged from the theorem
   MemLaws.v     the within-level rewrite algebra: read-after-write,
                 write-write at distinct addresses commutes, bind
                 associativity, dead-read elimination, ...
@@ -456,6 +470,154 @@ href="../coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>’s
 own monad laws (left/right identity, associativity) — those are
 within-level rewrite <em>algebra</em>, not setoid plumbing, and the file
 layout (§4) assigns them to MemLaws.v.</p>
+<p><strong>Swap.v — DONE 2026-08-17.</strong> The track’s first theorem
+about a program’s <em>effect</em> rather than a chain link between two
+levels: for every list <code>l</code> a memory window holds and every
+pair of positions <code>i, j</code> inside it, running <a
+href="../coqdoc/Riktig.Programs.Memprog.Expr.html#swap_cells"><code>swap_cells</code></a>
+leaves the window holding <code>l</code> with <code>i</code> and
+<code>j</code> exchanged (<a
+href="../coqdoc/Riktig.Theory.Memprog.Swap.html#swap_cells_correct"><code>swap_cells_correct</code></a>,
+and its machine-integer face <a
+href="../coqdoc/Riktig.Theory.Memprog.Swap.html#swap_l1_correct"><code>swap_l1_correct</code></a>).
+Three hypotheses, no redundant range condition: <a
+href="../coqdoc/Riktig.Programs.Memprog.Machine.html#mem_read_cells"><code>mem_read_cells</code></a>
+fixes <code>length l = n</code>, so <code>nth_error l i = Some vi</code>
+both names the value and puts <code>i</code> in range. At <code>Z</code>
+the lower bound <code>0 &lt;= i</code> is a real hypothesis, since
+<code>Z.to_nat</code> truncates a negative index to 0 and the list
+position named would then not be the cell the program reads. The general
+form <a
+href="../coqdoc/Riktig.Theory.Memprog.Swap.html#swap_cells_eval"><code>swap_cells_eval</code></a>
+takes the two indices as arbitrary computations, which is the generality
+partition needs, since its calls are
+<code>swap_cells base (read_m iv) (read_m jv)</code>. Everything is
+stated over <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#Eval"><code>Eval</code></a>,
+so no fuel appears; the one fuel statement, <a
+href="../coqdoc/Riktig.Theory.Memprog.Swap.html#interp_swap_cells_ret"><code>interp_swap_cells_ret</code></a>,
+says the swap costs seven interpreter steps whatever the input is, and
+that constant is what lets a run at a FIXED fuel be settled by the
+theorem — <a
+href="../coqdoc/Riktig.Programs.Memprog.Swap.html"><code>Programs/Memprog/Swap.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Swap.html#swap_l1_cells"><code>swap_l1_cells</code></a>
+is now a corollary at n = 5, with only the <a
+href="../coqdoc/Riktig.Programs.Memprog.Expr.html#list_to_mem"><code>list_to_mem</code></a>
+setup still computed. <code>View.v</code> acquired its first importer in
+the process. Zero Admitted, zero Axiom.</p>
+<p><strong>While.v — DONE 2026-08-17.</strong> The loop reasoning rule,
+in both directions, and they are different proofs. <a
+href="../coqdoc/Riktig.Theory.Memprog.While.html#eval_while_measure"><code>eval_while_measure</code></a>
+BUILDS a derivation: given an invariant on machines, a measure into
+<code>nat</code>, and one hypothesis (<a
+href="../coqdoc/Riktig.Theory.Memprog.While.html#while_invariant_step"><code>while_invariant_step</code></a>)
+saying that from an invariant machine the condition runs to a boolean, a
+false one exits and a true one runs the body back into the invariant
+with a strictly smaller measure, the loop reaches an exit machine — by
+well-founded recursion on the measure over <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#EvWhileTrue"><code>EvWhileTrue</code></a>/<a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#EvWhileFalse"><code>EvWhileFalse</code></a>,
+with no fuel and no interpreter anywhere in the proof. The continuation
+is quantified INSIDE the conclusion
+(<code>forall b k r m', Eval k m1 r m' -&gt; Eval (While c body k) m r m'</code>),
+because the loop’s own execution does not depend on what follows it, so
+one exit machine serves every continuation. <a
+href="../coqdoc/Riktig.Theory.Memprog.While.html#while_eval_invariant"><code>while_eval_invariant</code></a>
+USES a derivation: preservation of the invariant across one turn plus a
+completed run gives the exit machine and the continuation’s run, with no
+measure, since the derivation is the termination proof. That direction
+cannot go by inversion — <code>inversion</code> on
+<code>Eval (While c body k) …</code> does run, but leaves
+<code>existT (fun a : Type =&gt; Mem Z Z a) (option b) k0 = existT … k</code>
+and the same equation for the result, so the sub-derivation it produces
+is about an unrelated <code>k0</code> until <code>inj_pair2</code>
+(i.e. <code>JMeq_eq</code>) relates them — so it goes through
+<code>eval_interpZ</code> and an induction on fuel, the shape
+<code>Equiv.v</code>’s <a
+href="../coqdoc/Riktig.Theory.Memprog.Equiv.html#interp_while_cong"><code>interp_while_cong</code></a>
+already uses. <strong>Neither rule asks the condition to be
+pure</strong>: the condition runs from the loop head’s machine and hands
+the body a machine of its own choosing. <a
+href="../coqdoc/Riktig.Programs.Memprog.Quicksort.html#partition_l1"><code>partition_l1</code></a>’s
+condition reads two cells, and a purity side condition would have made
+the rule inapplicable to the one caller the track is aiming at.
+<strong>The measure is a function of the machine</strong>, not ghost
+state threaded alongside: a loop’s index variables live in memory — <a
+href="../coqdoc/Riktig.Programs.Memprog.Sum.html#sum_l1"><code>sum_l1</code></a>’s
+counter and <a
+href="../coqdoc/Riktig.Programs.Memprog.Quicksort.html#partition_l1"><code>partition_l1</code></a>’s
+i and j are stack cells — so the machine already carries the counter,
+and a caller reads it out of the store instead of inventing a ghost and
+proving it tracks memory. It is taken at loop heads only, so the
+condition and the body may move it freely in between. <a
+href="../coqdoc/Riktig.Theory.Memprog.While.html#then_while_m"><code>then_while_m</code></a>
+records the conversion that makes the rules apply to a loop followed by
+more program: <code>then_t (while_m c body) k = While c body k</code> by
+delta and iota, since <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#bind_mem"><code>bind_mem</code></a>
+extends a loop’s continuation and leaves its condition and body alone.
+<code>Combinators.v</code> is the file the rules needed to have a
+caller: one <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#Eval"><code>Eval</code></a>
+introduction rule per Expr.v combinator (<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_at_"><code>eval_at_</code></a>,
+moved here from Swap.v, plus <a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_read_arr"><code>eval_read_arr</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_plus_"><code>eval_plus_</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_minus_"><code>eval_minus_</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_lt_"><code>eval_lt_</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_leq_"><code>eval_leq_</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_gt_"><code>eval_gt_</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_if_m"><code>eval_if_m</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Combinators.html#eval_when_m"><code>eval_when_m</code></a>),
+and <code>Semantics.v</code> gained <a
+href="../coqdoc/Riktig.Theory.Memprog.Semantics.html#eval_stack_alloc_m"><code>eval_stack_alloc_m</code></a>
+alongside its other six. Zero Admitted, zero Axiom.</p>
+<p><strong>Sum.v — DONE 2026-08-17.</strong> The rule’s first caller,
+and the track’s first theorem about a loop. <a
+href="../coqdoc/Riktig.Theory.Memprog.Sum.html#sum_l1_correct"><code>sum_l1_correct</code></a>:
+for every list <code>l</code> a window of <code>len</code> cells at
+<code>base</code> holds, running <code>sum_l1 base (Z.of_nat len)</code>
+returns <code>fold_left Z.add l 0</code> and leaves the window still
+holding <code>l</code>. Not for <code>[1;2;3;4;5]</code> — for every
+list and every length. Three side conditions, and all three are the
+machine’s rather than the algorithm’s: the stack must have room for two
+cells (<code>sp &lt;= hp</code> and <code>sp + 1 &lt;= hp</code>, the
+two <a
+href="../coqdoc/Riktig.Programs.Memprog.Syntax.html#stack_alloc_m"><code>stack_alloc_m</code></a>
+guards), and those two cells must lie outside the window. That last one
+is the frame condition in the only form this proof needs it: the loop
+writes exactly two addresses, and the invariant carries “the window
+still reads as <code>l</code>” through every turn by <a
+href="../coqdoc/Riktig.Theory.Memprog.View.html#mem_read_cells_insert_outside"><code>mem_read_cells_insert_outside</code></a>.
+<a
+href="../coqdoc/Riktig.Theory.Memprog.Sum.html#sum_loop_eval"><code>sum_loop_eval</code></a>
+states the loop alone, with the accumulator and counter as arbitrary
+addresses, which is why <a
+href="../coqdoc/Riktig.Programs.Memprog.Sum.html"><code>Programs/Memprog/Sum.v</code></a>
+now names <a
+href="../coqdoc/Riktig.Programs.Memprog.Sum.html#sum_l1_body"><code>sum_l1_body</code></a>.
+The invariant is “the counter cell holds how many elements have been
+folded in, the accumulator holds their sum, and the window still holds
+<code>l</code>”; the measure is
+<code>Z.to_nat (Z.of_nat len - counter)</code>, read out of the counter
+cell. What this does NOT give: a fuel bound, so <a
+href="../coqdoc/Riktig.Programs.Memprog.Sum.html#sum_l1_result"><code>sum_l1_result</code></a>’s
+<code>run_z 3000</code> stays a <code>vm_compute</code> rather than
+becoming a corollary the way <a
+href="../coqdoc/Riktig.Theory.Memprog.Swap.html#swap_l1_cells"><code>swap_l1_cells</code></a>
+did — the swap costs a constant seven steps and a loop’s cost is
+proportional to <code>len</code>, so a fuel corollary needs a second
+induction producing <code>interp_enough : F(len) suffices</code>. Zero
+Admitted, zero Axiom.</p>
 <p><strong>Phase 3 — the rewriting rules</strong>: MemLaws.v proved (the
 within-level algebra, each law a Qed); Refines.v proved (composition);
 then convert obligations to Qed smallest-first: the L1≈L2 links are pure

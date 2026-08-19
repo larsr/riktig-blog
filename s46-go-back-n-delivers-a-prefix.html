@@ -42,38 +42,50 @@ A wire packet is a message together with its tag, now a natural number
 rather than a bit:</p>
 <pre class="coq"><code>Record Packet := { pkt_seq : nat; pkt_msg : M }.</code></pre>
 <p>The sender emits a burst of <code>k</code> identical copies per
-message and advances the tag once per message, not per copy:</p>
-<pre class="coq"><code>Fixpoint sender_burst_gbn (seqn : nat) (m : M) (k : nat) : list Packet :=
-  match k with
-  | O =&gt; []
-  | S k&#39; =&gt; {| pkt_seq := seqn; pkt_msg := m |} :: sender_burst_gbn seqn m k&#39;
-  end.
+message and advances the tag once per message, not per copy; the
+receiver accepts strictly in order and buffers nothing. Neither is
+written in this file. Both are the functions <a
+href="s43-abp-safety.html">the alternating-bit post</a> showed, in <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a>,
+written over an abstract tag with a comparison and a successor — and
+supplying those is all a protocol has to do:</p>
+<pre class="coq"><code>  Definition gbn_protocol : Protocol nat M Packet :=
+    {| tag_eqb := Nat.eqb;
+       tag_next := S;
+       mk := fun s m =&gt; {| pkt_seq := s; pkt_msg := m |};
+       tag_of := pkt_seq;
+       msg_of := pkt_msg;
+       tag_eqb_true := fun s1 s2 =&gt; proj2 (Nat.eqb_eq s1 s2);
+       tag_eqb_false := fun s1 s2 =&gt; proj2 (Nat.eqb_neq s1 s2);
+       tag_dec := Nat.eq_dec;
+       tag_next_neq := fun s Hs =&gt; Nat.neq_succ_diag_l s (eq_sym Hs);
+       tag_of_mk := fun _ _ =&gt; eq_refl;
+       msg_of_mk := fun _ _ =&gt; eq_refl |}.</code></pre>
+<p>Every law is the standard library’s: <code>Nat.eqb</code> reflects
+equality both ways, equality on <code>nat</code> is decidable, and no
+number is its own successor. That last one is where the alternating bit
+had <code>no_fixpoint_negb</code>. Sender and receiver are that
+instance:</p>
+<pre class="coq"><code>  Definition sender_burst_gbn (seqn : nat) (m : M) (k : nat) : list Packet :=
+    ARQ.burst gbn_protocol seqn m k.
 
-Fixpoint gbn_stream_from (seqn : nat) (ms : list M) (k : nat) : list Packet :=
-  match ms with
-  | [] =&gt; []
-  | m :: ms&#39; =&gt; sender_burst_gbn seqn m k ++ gbn_stream_from (S seqn) ms&#39; k
-  end.
+  Definition gbn_stream_from (seqn : nat) (ms : list M) (k : nat) : list Packet :=
+    ARQ.stream gbn_protocol seqn ms k.
 
-Definition gbn_stream (ms : list M) (k : nat) : list Packet :=
-  gbn_stream_from 0 ms k.</code></pre>
+  Definition gbn_stream (ms : list M) (k : nat) : list Packet :=
+    gbn_stream_from 0 ms k.
+
+  Definition gbn_deliver (expect : nat) (ps : list Packet) : list M :=
+    ARQ.deliver gbn_protocol expect ps.
+
+  Definition gbn_next (expect : nat) (ps : list Packet) : nat :=
+    ARQ.next gbn_protocol expect ps.</code></pre>
 <p>Every packet of one burst is literally the same record, and
 successive bursts carry successive tags — <code>S seqn</code>, never
-<code>seqn</code> again. The receiver accepts strictly in order and
-buffers nothing: a packet whose tag matches the expected number is
-delivered and the expectation advances; anything else is discarded:</p>
-<pre class="coq"><code>Fixpoint gbn_deliver (expect : nat) (ps : list Packet) : list M :=
-  match ps with
-  | [] =&gt; []
-  | p :: ps&#39; =&gt;
-      if Nat.eqb (pkt_seq p) expect
-      then pkt_msg p :: gbn_deliver (S expect) ps&#39;
-      else gbn_deliver expect ps&#39;
-  end.</code></pre>
-<p>A companion <a
+<code>seqn</code> again. <a
 href="coqdoc/Riktig.Channel.GoBackN.html#gbn_next"><code>gbn_next</code></a>
 computes only the final expectation, so a proof can split a run at a
-burst boundary — <a
+burst boundary: <a
 href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_app"><code>gbn_deliver_app</code></a>
 states that delivering over <code>w1 ++ w2</code> is delivering over
 <code>w1</code>, then over <a
@@ -81,8 +93,8 @@ href="coqdoc/Riktig.Impl.Attention.html#w2"><code>w2</code></a> from
 wherever <code>w1</code> left the expectation.</p>
 <p>The one modeling disclosure, from the file’s own header: these tags
 are plain, never-wrapping naturals. A real Go-Back-N header field is
-fixed-width and wraps around; the argument below needs only a totally
-ordered alphabet with decidable equality and a successor, so the
+fixed-width and wraps around; the safety argument needs only a decidable
+equality and a successor that never returns where it started, so the
 window-size-versus-header-width refinement is a separate piece of work,
 deliberately not attempted here.</p>
 <h2
@@ -90,26 +102,35 @@ id="safety-inherited-from-the-same-engine-as-the-alternating-bit">Safety,
 inherited from the same engine as the alternating bit</h2>
 <p>The channel is <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
-the drop-and-duplicate relation, and the burst-level fact is the same
-homogeneity argument that carried <a href="s43-abp-safety.html">the
-alternating-bit safety post</a>: every packet the channel produces from
-one burst is the same record, so the receiver delivers either nothing
-from it or exactly its one message:</p>
-<pre class="coq"><code>Lemma burst_delivery_gbn : forall (seqn : nat) (m : M) (k : nat) (w : list Packet) (expect : nat),
-  lossy_dup (sender_burst_gbn seqn m k) w -&gt;
-  (gbn_deliver expect w = [] /\ gbn_next expect w = expect) \/
-  (gbn_deliver expect w = [m] /\ gbn_next expect w = S expect).</code></pre>
+the drop-and-duplicate relation, and the burst-level fact is not merely
+the same <em>argument</em> that carried <a
+href="s43-abp-safety.html">the alternating-bit safety post</a> — it is
+the same lemma. Every packet the channel produces from one burst is the
+same record, so the receiver delivers either nothing from it or exactly
+its one message, and neither the statement nor its proof mentions what a
+tag is:</p>
+<pre class="coq"><code>  Lemma burst_delivery_gbn : forall (seqn : nat) (m : M) (k : nat) (w : list Packet) (expect : nat),
+    lossy_dup (sender_burst_gbn seqn m k) w -&gt;
+    (gbn_deliver expect w = [] /\ gbn_next expect w = expect) \/
+    (gbn_deliver expect w = [m] /\ gbn_next expect w = S expect).
+  Proof. exact (ARQ.burst_delivery gbn_protocol). Qed.</code></pre>
 <p>Inducting over the message list with that fact — cutting the wire at
 each burst boundary with <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>,
 exactly as <a
 href="s44-a-channel-behaviour-splits-where-the-sent-list-does.html">the
-seam post</a> set up — gives the safety theorem, the same conclusion the
-alternating bit earns:</p>
-<pre class="coq"><code>Theorem gbn_safety : forall (k : nat) (ms : list M) (wire : list Packet),
-  lossy_dup (gbn_stream ms k) wire -&gt; subseq (gbn_deliver 0 wire) ms.</code></pre>
-<p>So far the sequence number has bought nothing the bit did not have.
-Its value shows up in the next section, which the bit cannot follow.</p>
+seam post</a> set up — gives the safety theorem, and that induction is
+shared too:</p>
+<pre class="coq"><code>  Lemma gbn_deliver_subseq : forall (k : nat) (ms : list M)
+      (seq0 expect : nat) (wire : list Packet),
+    lossy_dup (gbn_stream_from seq0 ms k) wire -&gt; subseq (gbn_deliver expect wire) ms.
+  Proof. exact (ARQ.deliver_subseq gbn_protocol). Qed.</code></pre>
+<pre class="coq"><code>  Theorem gbn_safety : forall (k : nat) (ms : list M) (wire : list Packet),
+    lossy_dup (gbn_stream ms k) wire -&gt; subseq (gbn_deliver 0 wire) ms.</code></pre>
+<p>So far the sequence number has bought nothing the bit did not have —
+which is exactly why the file up to this point is a page of citations.
+Its value shows up in the next section, which the bit cannot follow, and
+which is therefore the one part of the protocol written here.</p>
 <h2 id="a-stale-expectation-accepts-nothing-ever">A stale expectation
 accepts nothing, ever</h2>
 <p>Suppose the receiver expects tag <code>expect</code> while the
@@ -128,13 +149,14 @@ when expecting
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N_e(w)</annotation></semantics></math>
 for its final expectation:</p>
-<pre class="coq"><code>Lemma gbn_burst_miss : forall (seqn : nat) (m : M) (k : nat) (w : list Packet) (expect : nat),
-  lossy_dup (sender_burst_gbn seqn m k) w -&gt; seqn &lt;&gt; expect -&gt;
-  gbn_deliver expect w = [] /\ gbn_next expect w = expect.</code></pre>
-<p>(The proof is the homogeneity fact again: all of <code>w</code> is
+<pre class="coq"><code>  Lemma gbn_burst_miss : forall (seqn : nat) (m : M) (k : nat) (w : list Packet) (expect : nat),
+    lossy_dup (sender_burst_gbn seqn m k) w -&gt; seqn &lt;&gt; expect -&gt;
+    gbn_deliver expect w = [] /\ gbn_next expect w = expect.
+  Proof. exact (ARQ.burst_miss gbn_protocol). Qed.</code></pre>
+<p>(The proof is the homogeneity fact again — all of <code>w</code> is
 one record whose tag is <code>seqn</code>, and <code>seqn</code> never
-equals <code>expect</code>.) Then the whole-stream version, by induction
-over the messages. On the blackboard, with
+equals <code>expect</code> — so it too is shared.) Then the whole-stream
+version, by induction over the messages. On the blackboard, with
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>&lt;</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">e &lt; n</annotation></semantics></math>
 and one burst split off the stream:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>D</mi><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mrow><mi>+</mi><mspace width="-0.167em"></mspace><mspace width="-0.167em"></mspace><mo>+</mo></mrow><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>w</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">
@@ -290,8 +312,19 @@ acknowledgement post</a>, together with the concrete counterexample
 showing the bit alone really does deliver holes.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a> (<a
+href="coqdoc/Riktig.Channel.ARQ.html#Protocol"><code>Protocol</code></a>,
+the shared sender and receiver, <a
+href="coqdoc/Riktig.Channel.ARQ.html#burst_delivery"><code>burst_delivery</code></a>,
+<a
+href="coqdoc/Riktig.Channel.ARQ.html#burst_miss"><code>burst_miss</code></a>,
+<a
+href="coqdoc/Riktig.Channel.ARQ.html#deliver_subseq"><code>deliver_subseq</code></a>)
+· <a
 href="coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>
-(the sender, the receiver, <a
+(<a
+href="coqdoc/Riktig.Channel.GoBackN.html#gbn_protocol"><code>gbn_protocol</code></a>,
+<a
 href="coqdoc/Riktig.Channel.GoBackN.html#gbn_safety"><code>gbn_safety</code></a>,
 <a
 href="coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_nomatch"><code>gbn_deliver_nomatch</code></a>,

@@ -154,9 +154,16 @@ the standard non-terminating term, unguarded beta would prove
 but no call-by-value computation ever identifies them, because the
 argument
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="normal">Ω</mi><annotation encoding="application/x-tex">\Omega</annotation></semantics></math>
-never becomes a value. An algebraic presentation of a programming
-language must build the evaluation strategy into its equations or prove
-things that are not true of it.</p>
+never becomes a value. An algebraic presentation of a language with an
+evaluation strategy has to record that strategy somewhere, or it proves
+things that are not true of the language: here it is recorded in <a
+href="coqdoc/Riktig.Structure.Lambda.html#val"><code>val</code></a>, and
+the guard on <a
+href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>
+is where it takes effect. A model whose equality is not tied to a
+strategy can put every term in <a
+href="coqdoc/Riktig.Structure.Lambda.html#val"><code>val</code></a>, and
+the second model below is one.</p>
 <h2 id="why-ski-lost">Why SKI lost</h2>
 <p>There is a famous smaller candidate. <a
 href="https://en.wikipedia.org/wiki/Combinatory_logic">Combinatory
@@ -291,15 +298,15 @@ laws.</p>
 <h2 id="the-instance-and-what-this-is-for">The instance, and what this
 is for</h2>
 <p>The laws earn their keep only if something real satisfies them. <a
-href="coqdoc/Riktig.Lambda.Conv.html"><code>Lambda/Conv.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html"><code>Impl/Lambda/Conv.v</code></a>
 proves that the concrete de Bruijn terms <a
-href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a> of <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a> of <a
 href="s17-de-bruijn-lambda-calculus.html">the evaluator post</a>, with
 call-by-value conversion <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a> as
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a> as
 <code>==</code>, functions <code>nat -&gt; tm</code> as the substitution
 carrier, and the evaluator’s <a
-href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#value"><code>value</code></a>
 predicate as <a
 href="coqdoc/Riktig.Structure.Lambda.html#val"><code>val</code></a>, are
 a model:</p>
@@ -307,7 +314,7 @@ a model:</p>
 <p>The instance proof is where the presentation’s cost is paid, once:
 nine of the fifteen obligations are plain structural identities of the
 parallel-substitution function <a
-href="coqdoc/Riktig.Lambda.Syntax.html#psub"><code>psub</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#psub"><code>psub</code></a>
 (several hold by <code>reflexivity</code>), and only three — <a
 href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>,
 <a
@@ -323,6 +330,97 @@ substitution. Every abstract theorem then specializes for free:</p>
 Proof.
   intros g h Hg Hh. exact (church_if_true g h Hg Hh).
 Qed.</code></pre>
+<h2 id="a-second-model-where-the-guard-does-nothing">A second model,
+where the guard does nothing</h2>
+<p>The guard is a <em>parameter</em>, not a decision the law list makes:
+<a href="coqdoc/Riktig.Structure.Lambda.html#val"><code>val</code></a>
+is an operation like the others, and <a
+href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>
+is stated for whatever a model calls a value. A second model shows what
+a different choice looks like.</p>
+<p>Its carrier is de Bruijn terms once more, but with substitution as a
+term constructor rather than an operation carried out on the spot —
+<code>XSub t s</code> is the unevaluated term “<code>t</code> with
+<code>s</code> still to apply” — and its substitutions are a
+four-constructor datatype rather than functions
+<code>nat -&gt; tm</code>:</p>
+<pre class="coq"><code>Inductive xtm : Type :=
+  | XVar : nat -&gt; xtm
+  | XLam : xtm -&gt; xtm
+  | XApp : xtm -&gt; xtm -&gt; xtm
+  | XSub : xtm -&gt; xsub -&gt; xtm
+with xsub : Type :=
+  | XId : xsub
+  | XShift : xsub
+  | XCons : xtm -&gt; xsub -&gt; xsub
+  | XUp : xsub -&gt; xsub.</code></pre>
+<p>Two such terms count as equal when the plain terms they flatten to —
+every pending substitution carried out — are beta convertible, with no
+restriction on the argument of a beta step. So every term may be
+consumed as an argument, and <a
+href="coqdoc/Riktig.Structure.Lambda.html#val"><code>val</code></a> says
+so:</p>
+<pre class="coq"><code>Instance Xtm_HasVal : HasVal xtm := fun _ : xtm =&gt; True.</code></pre>
+<p>The fifteen laws still hold: <a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#Xtm_LambdaModel"><code>Xtm_LambdaModel</code></a>
+in <a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html"><code>Impl/Lambda/Explicit.v</code></a>
+discharges nine of them as plain identities of <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#psub"><code>psub</code></a>,
+and <a
+href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>
+is now the unrestricted law, its hypothesis met by every term.</p>
+<p>Try that against the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi mathvariant="normal">Ω</mi></mrow><annotation encoding="application/x-tex">K\,x\,\Omega</annotation></semantics></math>
+counterexample above. Write
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="normal">Ω</mi><annotation encoding="application/x-tex">\Omega</annotation></semantics></math>
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\lambda x.\,x\,x)(\lambda x.\,x\,x)</annotation></semantics></math>,
+which reduces to nothing but itself, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda.\,1</annotation></semantics></math>
+for the function that ignores its argument and returns the variable one
+binder further out. Beta discards the argument, and substitution
+renumbers the surviving variable down:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>.</mi><mspace width="0.167em"></mspace><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mi mathvariant="normal">Ω</mi><mspace width="0.278em"></mspace><mo>=</mo><mo>=</mo><mspace width="0.278em"></mspace><mn>1</mn><mo stretchy="false" form="prefix">[</mo><mi mathvariant="normal">Ω</mi><mo>⋅</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">d</mi></mrow><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mo>=</mo><mspace width="0.278em"></mspace><mn>0</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">(\lambda.\,1)\;\Omega \;==\; 1[\Omega \cdot \mathrm{id}] \;==\; 0.</annotation></semantics></math></p>
+<pre class="coq"><code>Theorem beta_discards_omega : app (lam (var 1)) xomega == (var 0 : xtm).
+Proof.
+  calc (app (lam (var 1)) xomega : xtm)
+    == ((var 1).[xomega .: sub_id] : xtm) { (xtm_beta (var 1) xomega) }
+    == (var 0 : xtm)                      { (flat_eq_conv _ _ eq_refl) }.
+Qed.</code></pre>
+<p>Step one is <a
+href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>
+with nothing to prove about the argument (<a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#xtm_beta"><code>xtm_beta</code></a>
+is the law with its guard already fed the trivial proof). Step two is
+not a conversion at all: both sides flatten to the same plain term,
+which <a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#flat_eq_conv"><code>flat_eq_conv</code></a>
+turns into an equality.</p>
+<p>An equality that held of <em>everything</em> would make this and
+every other theorem above vacuous, so the model owes a pair of terms it
+keeps apart. The discarded argument and the result are such a pair:</p>
+<pre class="coq"><code>Theorem xomega_not_var_zero : xomega =/= (var 0 : xtm).</code></pre>
+<p>Ruling a conversion out takes <a
+href="https://en.wikipedia.org/wiki/Confluence_(abstract_rewriting)">confluence</a>,
+the Church–Rosser property: convertible terms always have a common
+reduct, so terms with no common reduct are not convertible. <a
+href="coqdoc/Riktig.Impl.Lambda.Beta.html"><code>Impl/Lambda/Beta.v</code></a>
+proves it by <a
+href="https://en.wikipedia.org/wiki/Lambda_calculus#Confluence">parallel
+reduction</a>, contracting any set of the redexes present in a term in
+one step;
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="normal">Ω</mi><annotation encoding="application/x-tex">\Omega</annotation></semantics></math>
+steps only to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="normal">Ω</mi><annotation encoding="application/x-tex">\Omega</annotation></semantics></math>
+and a variable steps only to itself, so the two never meet.</p>
+<p>The same fifteen laws are therefore satisfied by call-by-value
+conversion, where the guard rules out arguments like
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="normal">Ω</mi><annotation encoding="application/x-tex">\Omega</annotation></semantics></math>,
+and by full beta conversion, where it rules out nothing. The guard is
+the slot in which a model declares which arguments its evaluation
+strategy consumes, and a model that has no strategy fills the slot with
+everything.</p>
 <p>This post is the point where two halves of this library meet. The
 tools built so far are for algebraic reasoning about mathematical
 structures; the aim they serve is to reason the same way about program
@@ -362,16 +460,40 @@ href="coqdoc/Riktig.Theory.Lambda.html#church_fst_pair"><code>church_fst_pair</c
 <a
 href="coqdoc/Riktig.Theory.Lambda.html#church_snd_pair"><code>church_snd_pair</code></a>)
 · <a
-href="coqdoc/Riktig.Lambda.Conv.html"><code>Lambda/Conv.v</code></a> (<a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a>, <a
-href="coqdoc/Riktig.Lambda.Conv.html#Tm_LambdaModel"><code>Tm_LambdaModel</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Conv.html"><code>Impl/Lambda/Conv.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.Conv.html#tm_church_if_true"><code>tm_church_if_true</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#Tm_LambdaModel"><code>Tm_LambdaModel</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#tm_church_if_true"><code>tm_church_if_true</code></a>)
 · <a
-href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
-(<a href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a>, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#psub"><code>psub</code></a>, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#value"><code>value</code></a>).</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html"><code>Impl/Lambda/Term.v</code></a>
+(<a href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#psub"><code>psub</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#value"><code>value</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html"><code>Impl/Lambda/Explicit.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#xtm"><code>xtm</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#xsub"><code>xsub</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#Xtm_LambdaModel"><code>Xtm_LambdaModel</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#beta_discards_omega"><code>beta_discards_omega</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Explicit.html#xomega_not_var_zero"><code>xomega_not_var_zero</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.Lambda.Beta.html"><code>Impl/Lambda/Beta.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.Lambda.Beta.html#beta_conv"><code>beta_conv</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Beta.html#par_step"><code>par_step</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Beta.html#church_rosser"><code>church_rosser</code></a>).</p>
 </main>
 </body>
 </html>

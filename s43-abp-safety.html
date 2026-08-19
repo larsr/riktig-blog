@@ -83,18 +83,49 @@ href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
 Record Packet := { pkt_bit : bit; pkt_msg : M }.</code></pre>
 <p>The sender emits, for each application message, a <em>burst</em> of
 <code>k</code> identical copies — its retransmission budget — and flips
-the bit once per logical message, not once per copy:</p>
-<pre class="coq"><code>Fixpoint sender_burst (b : bit) (m : M) (k : nat) : list Packet :=
-  match k with
-  | O =&gt; []
-  | S k&#39; =&gt; {| pkt_bit := b; pkt_msg := m |} :: sender_burst b m k&#39;
-  end.
+the bit once per logical message, not once per copy. It is not written
+here, though. Nothing about a burst, or about flipping, cares that the
+tag is a bit rather than a counter, so both functions are written once
+in <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a>
+over an abstract tag:</p>
+<pre class="coq"><code>  Fixpoint burst (t : Tag) (m : M) (k : nat) : list Packet :=
+    match k with
+    | O =&gt; []
+    | S k&#39; =&gt; mk pro t m :: burst t m k&#39;
+    end.
 
-Fixpoint sender_stream (b : bit) (ms : list M) (k : nat) : list Packet :=
-  match ms with
-  | [] =&gt; []
-  | m :: ms&#39; =&gt; sender_burst b m k ++ sender_stream (negb b) ms&#39; k
-  end.</code></pre>
+  Fixpoint stream (t : Tag) (ms : list M) (k : nat) : list Packet :=
+    match ms with
+    | [] =&gt; []
+    | m :: ms&#39; =&gt; burst t m k ++ stream (tag_next pro t) ms&#39; k
+    end.</code></pre>
+<p><code>pro</code> is the protocol: what a tag is, how a packet is
+assembled from a tag and a message and taken apart again, how tags are
+compared and advanced, and the six laws the safety argument will spend.
+For the alternating bit every one of them is the standard library’s,
+which is the honest measure of how little this protocol assumes:</p>
+<pre class="coq"><code>  Definition abp_protocol : Protocol bit M Packet :=
+    {| tag_eqb := Bool.eqb;
+       tag_next := negb;
+       mk := fun b m =&gt; {| pkt_bit := b; pkt_msg := m |};
+       tag_of := pkt_bit;
+       msg_of := pkt_msg;
+       tag_eqb_true := fun b1 b2 =&gt; proj2 (Bool.eqb_true_iff b1 b2);
+       tag_eqb_false := fun b1 b2 =&gt; proj2 (Bool.eqb_false_iff b1 b2);
+       tag_dec := Bool.bool_dec;
+       tag_next_neq := fun b Hb =&gt; Bool.no_fixpoint_negb b (eq_sym Hb);
+       tag_of_mk := fun _ _ =&gt; eq_refl;
+       msg_of_mk := fun _ _ =&gt; eq_refl |}.</code></pre>
+<p>The last law is the one that makes the alternating bit work at all:
+<code>negb b</code> is never <code>b</code>, so the tag the receiver
+moves on to cannot be matched again by the copies still arriving. The
+sender is that instance:</p>
+<pre class="coq"><code>  Definition sender_burst (b : bit) (m : M) (k : nat) : list Packet :=
+    ARQ.burst abp_protocol b m k.
+
+  Definition sender_stream (b : bit) (ms : list M) (k : nat) : list Packet :=
+    ARQ.stream abp_protocol b ms k.</code></pre>
 <p><code>sender_burst b m k</code> is <code>k</code> copies of the same
 packet <code>{| pkt_bit := b; pkt_msg := m |}</code>. <a
 href="coqdoc/Riktig.Channel.ABP.html#sender_stream"><code>sender_stream</code></a>
@@ -107,26 +138,36 @@ receiver: accept on a match, flip, and drop the rest</h2>
 <p>The receiver folds over the packets that reach it, carrying its
 expected bit. On a match it delivers the message and flips; otherwise it
 discards and keeps waiting:</p>
-<pre class="coq"><code>Fixpoint deliver (expect : bit) (ps : list Packet) : list M :=
-  match ps with
-  | [] =&gt; []
-  | p :: ps&#39; =&gt;
-      if Bool.eqb (pkt_bit p) expect
-      then pkt_msg p :: deliver (negb expect) ps&#39;
-      else deliver expect ps&#39;
-  end.</code></pre>
-<p>A companion function records only the <em>final</em> expected bit
+<pre class="coq"><code>  Fixpoint deliver (expect : Tag) (ps : list Packet) : list M :=
+    match ps with
+    | [] =&gt; []
+    | p :: ps&#39; =&gt;
+        if tag_eqb pro (tag_of pro p) expect
+        then msg_of pro p :: deliver (tag_next pro expect) ps&#39;
+        else deliver expect ps&#39;
+    end.</code></pre>
+<p>A companion function records only the <em>final</em> expected tag
 after processing a list of packets, with no delivery — the state at the
 split point, which we will need to reason about a stream one burst at a
 time:</p>
-<pre class="coq"><code>Fixpoint next_bit (expect : bit) (ps : list Packet) : bit :=
-  match ps with
-  | [] =&gt; expect
-  | p :: ps&#39; =&gt;
-      if Bool.eqb (pkt_bit p) expect
-      then next_bit (negb expect) ps&#39;
-      else next_bit expect ps&#39;
-  end.</code></pre>
+<pre class="coq"><code>  Fixpoint next (expect : Tag) (ps : list Packet) : Tag :=
+    match ps with
+    | [] =&gt; expect
+    | p :: ps&#39; =&gt;
+        if tag_eqb pro (tag_of pro p) expect
+        then next (tag_next pro expect) ps&#39;
+        else next expect ps&#39;
+    end.</code></pre>
+<p>Both are <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a>’s
+again, and the alternating-bit receiver is the pair of them at <a
+href="coqdoc/Riktig.Channel.ABP.html#abp_protocol"><code>abp_protocol</code></a>,
+under the names this protocol speaks:</p>
+<pre class="coq"><code>  Definition deliver (expect : bit) (ps : list Packet) : list M :=
+    ARQ.deliver abp_protocol expect ps.
+
+  Definition next_bit (expect : bit) (ps : list Packet) : bit :=
+    ARQ.next abp_protocol expect ps.</code></pre>
 <h2 id="what-safety-says-a-subsequence-nothing-more">What safety says: a
 subsequence, nothing more</h2>
 <p>“The receiver never delivers anything wrong” is made precise by the
@@ -175,53 +216,63 @@ and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N_e(w)</annotation></semantics></math>
 for its final expectation:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>∧</mo><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>e</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∨</mo><mspace width="0.278em"></mspace><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>D</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mi>m</mi><mo stretchy="false" form="postfix">]</mo><mo>∧</mo><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>¬</mo><mi>e</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy\_dup}\bigl(\mathrm{burst}_b(m,k),\, w\bigr) \;\Longrightarrow\; \bigl(D_e(w) = [\,] \wedge N_e(w) = e\bigr) \;\vee\; \bigl(D_e(w) = [m] \wedge N_e(w) = \neg e\bigr).</annotation></semantics></math></p>
-<p>Here is the lemma and its proof from <a
-href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>:</p>
-<pre class="coq"><code>Lemma burst_delivery : forall (b : bit) (m : M) (k : nat) (w : list Packet) (expect : bit),
-  lossy_dup (sender_burst b m k) w -&gt;
-  (deliver expect w = [] /\ next_bit expect w = expect) \/
-  (deliver expect w = [m] /\ next_bit expect w = negb expect).
-Proof.
-  intros b m k w expect H.
-  assert (Hall : forall p, In p w -&gt; p = {| pkt_bit := b; pkt_msg := m |}).
-  { apply (lossy_dup_preserves_all_eq {| pkt_bit := b; pkt_msg := m |}
-             (sender_burst b m k) w H).
-    intros p Hp. apply (sender_burst_all_eq b m k p Hp). }
-  destruct (bit_dec (pkt_bit ({| pkt_bit := b; pkt_msg := m |})) expect) as [Heq | Hneq].
-  - destruct (deliver_homog_eq {| pkt_bit := b; pkt_msg := m |} w expect Hall Heq)
-      as [[Hd Hn] | [Hd Hn]].
-    + left. split.
-      * exact Hd.
-      * exact Hn.
-    + right. split.
-      * exact Hd.
-      * exact Hn.
-  - left. apply (deliver_homog_neq {| pkt_bit := b; pkt_msg := m |} w expect Hall Hneq).
-Qed.</code></pre>
+<p>Nothing in that reason mentioned the bit either — only that the tag
+of every packet in the fragment is one and the same, and that the
+successor of the matched tag differs from it. So the lemma is <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a>’s,
+at an arbitrary tag:</p>
+<pre class="coq"><code>  Lemma burst_delivery : forall (t : Tag) (m : M) (k : nat) (w : list Packet)
+      (expect : Tag),
+    lossy_dup (burst t m k) w -&gt;
+    (deliver expect w = [] /\ next expect w = expect) \/
+    (deliver expect w = [m] /\ next expect w = tag_next pro expect).
+  Proof.
+    intros t m k w expect H.
+    assert (Hall : forall p, In p w -&gt; p = mk pro t m).
+    { apply (lossy_dup_preserves_all_eq (mk pro t m) (burst t m k) w H).
+      intros p Hp. apply (burst_all_eq t m k p Hp). }
+    destruct (tag_dec pro (tag_of pro (mk pro t m)) expect) as [Heq | Hneq].
+    - destruct (deliver_homog_eq (mk pro t m) w expect Hall Heq)
+        as [[Hd Hn] | [Hd Hn]].
+      + left. split; [exact Hd | exact Hn].
+      + right. rewrite (msg_of_mk pro t m) in Hd. split; [exact Hd | exact Hn].
+    - left. apply (deliver_homog_neq (mk pro t m) w expect Hall Hneq).
+  Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
 <li>The <code>Hall</code> assertion is the homogeneity fact: every
 packet <code>p</code> in the received burst <code>w</code> equals the
-record <code>{| pkt_bit := b; pkt_msg := m |}</code>. It is discharged
-by <a
+packet <code>mk pro t m</code> the sender built. It is discharged by <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_preserves_all_eq"><code>lossy_dup_preserves_all_eq</code></a>
 — the channel keeps every received item equal to something sent — fed
 the fact <a
-href="coqdoc/Riktig.Channel.ABP.html#sender_burst_all_eq"><code>sender_burst_all_eq</code></a>,
-that every <em>sent</em> packet in the burst is that record.</li>
-<li><code>destruct (bit_dec ...)</code> splits on whether the burst’s
-bit matches the receiver’s <code>expect</code>.</li>
+href="coqdoc/Riktig.Channel.ARQ.html#burst_all_eq"><code>burst_all_eq</code></a>,
+that every <em>sent</em> packet in the burst is that packet.</li>
+<li><code>destruct (tag_dec pro ...)</code> splits on whether the
+burst’s tag matches the receiver’s <code>expect</code>; this is the one
+place the alphabet’s decidable equality is spent.</li>
 <li>In the matching case (<code>Heq</code>), <a
 href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_eq"><code>deliver_homog_eq</code></a>
-says a homogeneous list whose bit matches delivers either
-<code>[]</code> (if the channel left the burst empty) or exactly
-<code>[pkt_msg x0] = [m]</code> and flips the bit; both sub-cases are
-packaged into the left/right disjuncts.</li>
+says a homogeneous list whose tag matches delivers either
+<code>[]</code> (if the channel left the burst empty) or exactly one
+message and advances the tag; both sub-cases are packaged into the
+left/right disjuncts, and <a
+href="coqdoc/Riktig.Channel.ARQ.html#msg_of_mk"><code>msg_of_mk</code></a>
+turns “the message inside the packet the sender built” back into
+<code>m</code>.</li>
 <li>In the non-matching case (<code>Hneq</code>), <a
 href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_neq"><code>deliver_homog_neq</code></a>
 says nothing is delivered and the expectation is unmoved — the left
 disjunct.</li>
 </ul>
+<p>At the alternating bit the lemma this post set out to prove is that
+theorem cited once, with <code>negb</code> for <a
+href="coqdoc/Riktig.Channel.ARQ.html#tag_next"><code>tag_next</code></a>:</p>
+<pre class="coq"><code>  Lemma burst_delivery : forall (b : bit) (m : M) (k : nat) (w : list Packet) (expect : bit),
+    lossy_dup (sender_burst b m k) w -&gt;
+    (deliver expect w = [] /\ next_bit expect w = expect) \/
+    (deliver expect w = [m] /\ next_bit expect w = negb expect).
+  Proof. exact (ARQ.burst_delivery abp_protocol). Qed.</code></pre>
 <p>Notice the budget <code>k</code> never constrains anything here. It
 holds for <code>k = 0</code> (an empty burst, delivering nothing) just
 as for a large <code>k</code>. The size of a burst affects
@@ -245,30 +296,30 @@ href="coqdoc/Riktig.Channel.ABP.html#deliver_app"><code>deliver_app</code></a>
 lemma, and it is why <a
 href="coqdoc/Riktig.Channel.ABP.html#next_bit"><code>next_bit</code></a>
 exists. The induction runs on the message list <code>ms</code>:</p>
-<pre class="coq"><code>Lemma abp_deliver_subseq : forall (k : nat) (ms : list M)
-    (b_stream expect : bit) (wire : list Packet),
-  lossy_dup (sender_stream b_stream ms k) wire -&gt; subseq (deliver expect wire) ms.
-Proof.
-  intros k ms.
-  induction ms as [| m ms&#39; IH]; intros b_stream expect wire H.
-  - simpl in H.
-    assert (Hnil : wire = []).
-    { apply (lossy_dup_nil_l [] wire H). reflexivity. }
-    rewrite Hnil. simpl. apply subseq_nil.
-  - simpl in H.
-    destruct (lossy_dup_app_split _ _ H
-                (sender_burst b_stream m k) (sender_stream (negb b_stream) ms&#39; k)
-                eq_refl) as [w1 [w2 [Hwire [H1 H2]]]].
-    rewrite Hwire.
-    rewrite (deliver_app w1 w2 expect).
-    destruct (burst_delivery b_stream m k w1 expect H1) as [[Hd1 Hn1] | [Hd1 Hn1]].
-    + rewrite Hd1. rewrite Hn1. simpl.
-      apply subseq_drop.
-      apply (IH (negb b_stream) expect w2 H2).
-    + rewrite Hd1. rewrite Hn1. simpl.
-      apply subseq_keep.
-      apply (IH (negb b_stream) (negb expect) w2 H2).
-Qed.</code></pre>
+<pre class="coq"><code>  Lemma deliver_subseq : forall (k : nat) (ms : list M) (t0 expect : Tag)
+      (wire : list Packet),
+    lossy_dup (stream t0 ms k) wire -&gt; subseq (deliver expect wire) ms.
+  Proof.
+    intros k ms.
+    induction ms as [| m ms&#39; IH]; intros t0 expect wire H.
+    - simpl in H.
+      assert (Hnil : wire = []).
+      { apply (lossy_dup_nil_l [] wire H). reflexivity. }
+      rewrite Hnil. simpl. apply subseq_nil.
+    - simpl in H.
+      destruct (lossy_dup_app_split _ _ H
+                  (burst t0 m k) (stream (tag_next pro t0) ms&#39; k)
+                  eq_refl) as [w1 [w2 [Hwire [H1 H2]]]].
+      rewrite Hwire.
+      rewrite (deliver_app w1 w2 expect).
+      destruct (burst_delivery t0 m k w1 expect H1) as [[Hd1 Hn1] | [Hd1 Hn1]].
+      + rewrite Hd1. rewrite Hn1. simpl.
+        apply subseq_drop.
+        apply (IH (tag_next pro t0) expect w2 H2).
+      + rewrite Hd1. rewrite Hn1. simpl.
+        apply subseq_keep.
+        apply (IH (tag_next pro t0) (tag_next pro expect) w2 H2).
+  Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
 <li><strong>Base case, <code>ms = []</code>.</strong> The sender emitted
@@ -291,13 +342,13 @@ rendering of the rest (<code>H2</code>).</li>
 identity above: what the receiver delivers over the whole wire is what
 it delivers over <code>w1</code>, then what it delivers over <a
 href="coqdoc/Riktig.Impl.Attention.html#w2"><code>w2</code></a> starting
-from the bit <code>next_bit expect w1</code>.</li>
+from the tag <code>next expect w1</code>.</li>
 <li><code>destruct (burst_delivery ...)</code> invokes the crux lemma on
 <code>w1</code>, giving the two cases.</li>
 <li><strong>Burst lost</strong>
 (<code>Hd1 : deliver expect w1 = []</code>,
-<code>Hn1 : next_bit expect w1 = expect</code>): the delivered list is
-just <code>deliver expect w2</code>. Rewriting leaves the goal
+<code>Hn1 : next expect w1 = expect</code>): the delivered list is just
+<code>deliver expect w2</code>. Rewriting leaves the goal
 <code>subseq (deliver expect w2) (m :: ms')</code>; <a
 href="coqdoc/Riktig.Theory.Subseq.html#subseq_drop"><code>subseq_drop</code></a>
 reduces it to <code>subseq (deliver expect w2) ms'</code>, closed by the
@@ -306,24 +357,22 @@ induction hypothesis on <code>ms'</code> — with the <em>same</em>
 expectation.</li>
 <li><strong>Burst delivered</strong>
 (<code>Hd1 : deliver expect w1 = [m]</code>,
-<code>Hn1 : next_bit expect w1 = negb expect</code>): the delivered list
-is <code>m :: deliver (negb expect) w2</code>. Rewriting leaves
-<code>subseq (m :: deliver (negb expect) w2) (m :: ms')</code>; <a
+<code>Hn1 : next expect w1 = tag_next pro expect</code>): the delivered
+list is <code>m :: deliver (tag_next pro expect) w2</code>. Rewriting
+leaves a goal whose head is the shared <code>m</code>; <a
 href="coqdoc/Riktig.Theory.Subseq.html#subseq_keep"><code>subseq_keep</code></a>
-strips the shared head <code>m</code> and reduces it to
-<code>subseq (deliver (negb expect) w2) ms'</code>, closed by the
-induction hypothesis — this time with the flipped
-<code>negb expect</code>, because the delivery moved the
-expectation.</li>
+strips it and reduces the rest to
+<code>subseq (deliver (tag_next pro expect) w2) ms'</code>, closed by
+the induction hypothesis — this time with the advanced tag, because the
+delivery moved the expectation. At the alternating bit, “advanced” is
+<code>negb expect</code>.</li>
 </ul>
 <p>The theorem actually wanted is the instance where the receiver starts
-by expecting the sender’s starting bit. It is a one-line corollary:</p>
-<pre class="coq"><code>Theorem abp_safety : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
-  lossy_dup (sender_stream b0 ms k) wire -&gt; subseq (deliver b0 wire) ms.
-Proof.
-  intros k b0 ms wire H.
-  apply (abp_deliver_subseq k ms b0 b0 wire H).
-Qed.</code></pre>
+by expecting the sender’s starting tag, and at the alternating bit it is
+that instance cited once more:</p>
+<pre class="coq"><code>  Theorem abp_safety : forall (k : nat) (b0 : bit) (ms : list M) (wire : list Packet),
+    lossy_dup (sender_stream b0 ms k) wire -&gt; subseq (deliver b0 wire) ms.
+  Proof. exact (ARQ.safety abp_protocol). Qed.</code></pre>
 <p>In words: for any budget <code>k</code>, any starting bit
 <code>b0</code>, any list of application messages <code>ms</code>, and
 any wire trace the lossy-and-duplicating channel could produce from the
@@ -369,10 +418,16 @@ href="coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>
 (the <a
 href="coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
 relation) · <a
-href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
-(the sender, receiver, <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a> (<a
+href="coqdoc/Riktig.Channel.ARQ.html#Protocol"><code>Protocol</code></a>,
+the shared sender and receiver, <a
 href="coqdoc/Riktig.Channel.ABP.html#burst_delivery"><code>burst_delivery</code></a>,
 <a
+href="coqdoc/Riktig.Channel.ARQ.html#deliver_subseq"><code>deliver_subseq</code></a>)
+· <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> (<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_protocol"><code>abp_protocol</code></a>,
+the alternating-bit names, <a
 href="coqdoc/Riktig.Channel.ABP.html#abp_safety"><code>abp_safety</code></a>).</p>
 </main>
 </body>

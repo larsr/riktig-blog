@@ -97,8 +97,9 @@ Qed.</code></pre>
 \;\Longleftrightarrow\; a &lt; b
 \qquad \{\exp \text{ reflects } &lt;;\ \exp(\log y) = y\}.</annotation></semantics></math></p>
 <p><a
-href="coqdoc/Riktig.Theory.Log.html#exp_lt_reflect"><code>exp_lt_reflect</code></a>
-is a small lemma one page earlier —
+href="coqdoc/Riktig.Theory.Exp.html#exp_lt_reflect"><code>exp_lt_reflect</code></a>
+is a small lemma in <a
+href="coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a> —
 <code>exp a &lt; exp b -&gt; a &lt; b</code>, “exp reflects the order,”
 essentially <a
 href="coqdoc/Riktig.Structure.Exp.html#Exp.monotone"><code>Exp.monotone</code></a>
@@ -212,11 +213,14 @@ fact about <em>any</em> function that happens to behave like ReLU on one
 side, which is both more general and reusable by whatever concrete
 <code>relu</code> eventually gets built. The tool that makes this
 possible is a lemma saying that a derivative only depends on a
-function’s behavior in a neighborhood of the point in question:</p>
-<pre class="coq"><code>Lemma is_deriv_of_local_eq : forall (f g : F -&gt; F),
+function’s behavior in a neighborhood of the point in question, stated
+in <a
+href="coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
+between any two normed spaces <code>U</code> and <code>V</code>:</p>
+<pre class="coq"><code>Lemma is_deriv_of_local_eq : forall (f g : U -&gt; V),
     Proper (equ ==&gt; equ) f -&gt; Proper (equ ==&gt; equ) g -&gt;
-    forall (a : F) (L : LinearMap F F F) (d : F),
-    0 &lt; d -&gt; (forall h : F, ‖ h ‖ &lt; d -&gt; f (a + h) == g (a + h)) -&gt;
+    forall (a : U) (L : LinearMap F U V) (d : F),
+    0 &lt; d -&gt; (forall h : U, ‖ h ‖ &lt; d -&gt; f (a + h) == g (a + h)) -&gt;
     is_deriv g a L -&gt; is_deriv f a L.</code></pre>
 <p>If <code>f</code> and <code>g</code> agree everywhere within distance
 <code>d</code> of <code>a</code>, and <code>g</code> is known to have
@@ -364,7 +368,7 @@ at the point <code>- a</code> (the left factor), it produces the
 derivative as the <em>composite</em> linear map
 <code>linear_map_comp (lm_scale_map (exp_fn (- a))) lm_neg_map</code>;
 <a
-href="coqdoc/Riktig.Theory.MLDerivatives.html#is_deriv_L_equ"><code>is_deriv_L_equ</code></a>
+href="coqdoc/Riktig.Theory.Derivative.html#is_deriv_L_equ"><code>is_deriv_L_equ</code></a>
 then replaces that composite by the equal single scaling map
 <code>lm_scale_map (- exp_fn (- a))</code> (the last blackboard step,
 proved as <a

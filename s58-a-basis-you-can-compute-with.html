@@ -96,9 +96,9 @@ finite sum over the index set (the computing instance lives with the
 rest of the enumeration machinery, in the implementation layer):</p>
 <pre class="coq"><code>Class HasLincomb (I F V : Type) := lincomb : (I -&gt; V) -&gt; (I -&gt; F) -&gt; V.</code></pre>
 <pre class="coq"><code>    lincomb_def : forall (b : I -&gt; V) (c : I -&gt; F),
-      lincomb b c == bigopI (fun i =&gt; c i *: b i).</code></pre>
-<p>Here <code>bigopI f</code> sums <code>f</code> over the carrier’s
-enumeration of all
+      lincomb b c == bigop_list (fun i =&gt; c i *: b i) enum.</code></pre>
+<p>Here <code>bigop_list f enum</code> sums <code>f</code> over the
+carrier’s enumeration of all
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
 indices, and <code>*:</code> is scaling a vector by a scalar. To exhibit
 an actual basis, we need vectors <code>b</code> and a coordinate map for
@@ -116,20 +116,39 @@ and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
 everywhere else. The branch “am I in position
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>?”
-is not special to <code>Fin.t n</code>; the library states it once, for
-any index carrier <code>I</code> with decidable <code>==</code> and any
-ring <code>R</code> of values, and the standard basis vector is that
-definition read at <code>I = Fin.t n</code>:</p>
-<pre class="coq"><code>  Definition delta (i j : I) : R := if dec (i == j) then 1 else 0.</code></pre>
-<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
-<p>The <code>if dec (i == j) then 1 else 0</code> is the
-decidable-equality idiom: <code>dec (i == j)</code> is not a boolean but
-a <em>proof-carrying</em> decision that either hands back evidence
+is not special to <code>Fin.t n</code>; the library names the operation
+once, for any index carrier <code>I</code> with decidable
+<code>==</code> and any ring <code>R</code> of values — and it says what
+the operation <em>is</em> with two equations rather than with a
+definition. The operation itself is a parameter of the class, not a
+class of its own: there is no notation for a Kronecker delta, and an
+operation class that binds none earns nothing.</p>
+<pre class="coq"><code>Class Delta (I R : Type) {eI : EqRel I}
+    {Re : EqRel R} {Rz : Zero R} {Ro : One R} (delta : I -&gt; I -&gt; R) := {</code></pre>
+<pre class="coq"><code>    is_delta_at_eq  : forall i j : I, i == j -&gt; delta i j == (1 : R);
+    is_delta_at_neq : forall i j : I, ~ (i == j) -&gt; delta i j == (0 : R);</code></pre>
+<p>That is the whole specification:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+where the indices agree,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+where they differ. Because <code>==</code> on the indices is decidable,
+the two cases between them cover every pair, so the pair of equations
+pins a unique operation without ever saying how to compute one.</p>
+<p>Computing one is a separate job, and it is the decidable-equality
+idiom that does it:</p>
+<pre class="coq"><code>Definition delta {I R : Type} {eI : EqRel I} {Ieq : EquDec I}
+    {Rz : Zero R} {Ro : One R} : I -&gt; I -&gt; R :=
+  fun i j =&gt; if dec (i == j) then 1 else 0.</code></pre>
+<p><code>dec (i == j)</code> is not a boolean but a
+<em>proof-carrying</em> decision that either hands back evidence
 <code>i == j</code> or evidence <code>~ (i == j)</code>, and the
 <code>if</code> picks the branch while making that evidence available to
 whatever needs it (this is the subject of <a
 href="s57-abnf-parses-itself.html">the earlier post</a> on decidable
-propositions). So <code>e i</code> is
+propositions). The standard basis vector is that operation read at
+<code>I = Fin.t n</code>:</p>
+<pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
+<p>So <code>e i</code> is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 on the diagonal
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>=</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i = j</annotation></semantics></math>
@@ -138,28 +157,31 @@ and
 off it — which is precisely the Kronecker delta
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>δ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">\delta_{ij}</annotation></semantics></math>
 written as a computable function.</p>
-<p>Two one-line facts read straight off that definition:
-<code>delta i j</code> is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
-when the indices agree and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-when they differ.</p>
-<pre class="coq"><code>  Lemma delta_at_eq : forall i j : I, i == j -&gt; delta i j == 1.
-  Proof.
-    intros i j Hij.
-    unfold delta; destruct (dec (i == j)) as [_ | Hne].
-    - reflexivity.
-    - destruct (Hne Hij).
-  Qed.</code></pre>
-<p>Each unfolds <a
-href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>,
-splits on the decision, and in the impossible branch derives a
-contradiction from the two conflicting proofs (<code>Hne Hij</code> and
-<code>Hij Heq</code> are each a proof of <code>False</code>, which
-<code>destruct</code> turns into anything). One term of the coordinate
-sum,
+<p>Somebody has to check that the branch really satisfies the two
+equations, and that check is the only place in the library that looks at
+the branch at all:</p>
+<pre class="coq"><code>Instance Delta_dec {I R : Type} {eI : EqRel I} {Ieq : EquDec I}
+    {Re : EqRel R} {Rz : Zero R} {Ro : One R}
+    {RE : Reflexive (@equ R Re)} : Delta I R delta.
+Proof.
+  split; intros i j Hij; unfold delta;
+    destruct (dec (i == j)) as [Heq | Hne].
+  - reflexivity.
+  - destruct (Hne Hij).
+  - destruct (Hij Heq).
+  - reflexivity.
+Qed.</code></pre>
+<p>It splits on the decision and, in the two impossible branches,
+derives a contradiction from the two conflicting proofs
+(<code>Hne Hij</code> and <code>Hij Heq</code> are each a proof of
+<code>False</code>, which <code>destruct</code> turns into anything).
+Everything downstream cites the equations instead, under the names <a
+href="coqdoc/Riktig.Theory.BigOp.html#delta_at_eq"><code>delta_at_eq</code></a>
+and <a
+href="coqdoc/Riktig.Theory.BigOp.html#delta_at_neq"><code>delta_at_neq</code></a>.
+One term of the coordinate sum,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>j</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">c_i \cdot e_i(j)</annotation></semantics></math>,
-therefore collapses the same way — it is
+collapses the same way — it is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>c</mi><mi>i</mi></msub><annotation encoding="application/x-tex">c_i</annotation></semantics></math>
 on the diagonal and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
@@ -217,9 +239,20 @@ related” predicates):</p>
     enum_complete    : forall i : I, InA equ i enum;
     enum_length      : length enum = n;
   }.</code></pre>
-<p>and <code>bigopI f</code> sums <code>f</code> over that enumeration —
-an operation class again, pinned down by the single equation</p>
-<pre class="coq"><code>    bigopI_def : forall f : I -&gt; M, bigopI f == bigop_list f enum.</code></pre>
+<p>and <code>bigopI f</code> sums <code>f</code> over that enumeration.
+It is not a second summation operator, and it is not even a definition —
+it is an abbreviation for the sum over a list, read at the one list the
+index carrier comes with.</p>
+<pre class="coq"><code>Notation bigopI f := (bigop_list f enum).</code></pre>
+<p>An abbreviation rather than a definition, because a definition would
+put a second head symbol between a goal and the laws. Everything proved
+below is proved of <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>,
+and <code>rewrite</code> matches on the head symbol: a goal saying
+<code>bigopI f</code> would be one that no law about <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+could rewrite, however equal the two terms are. Written this way the
+name is gone by the time the goal exists.</p>
 <p>The one-survivor argument is then a statement about <em>support</em>:
 if <code>f</code> vanishes at every index other than <code>p</code>, the
 whole sum is the term at <code>p</code>. One hypothesis has no
@@ -299,7 +332,7 @@ href="coqdoc/Riktig.Theory.BigOp.html#mul_delta_eq"><code>mul_delta_eq</code></a
 href="coqdoc/Riktig.Theory.BigOp.html#mul_delta_proper"><code>mul_delta_proper</code></a>
 packages the summand’s respect for <code>==</code> out of
 <code>c</code>’s and <a
-href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>’s.)</p>
+href="coqdoc/Riktig.Impl.FinIndex.html#delta"><code>delta</code></a>’s.)</p>
 <p>No induction anywhere: the enumeration carries the finiteness, and
 the support collapse does the rest. <code>Fin.t n</code> <em>is</em> a
 finite index type — <code>fin_all n</code>, the list
@@ -329,7 +362,7 @@ concrete carrier.</p>
 single surviving coordinate.</p>
 <h2 id="from-the-collapse-to-a-basis">From the collapse to a basis</h2>
 <p>The collapse is stated on a bare sum. Lifting it to <a
-href="coqdoc/Riktig.Theory.Basis.html#lincomb"><code>lincomb</code></a>
+href="coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>
 gives the round-trip law itself — for every coordinate tuple
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>e</mi><mi>i</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>c</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">\sum_i c_i \cdot e_i \;=\; c,</annotation></semantics></math></p>
@@ -389,13 +422,16 @@ href="coqdoc/Riktig.Structure.Fin.html#FinIndex.FinIndex"><code>FinIndex</code><
 class) · <a
 href="coqdoc/Riktig.Theory.Basis.html"><code>Theory/Basis.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.Basis.html#lincomb"><code>lincomb</code></a>
+href="coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>
 and its algebra) · <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
-(<a href="coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>,
-<a
-href="coqdoc/Riktig.Theory.BigOp.html#bigopI"><code>bigopI</code></a>,
-the support collapse) · <a
+(<a
+href="coqdoc/Riktig.Impl.FinIndex.html#delta"><code>delta</code></a>,
+<code>bigopI</code>, the support collapse) · <a
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+(<code>HasDelta_dec</code>, <a
+href="coqdoc/Riktig.Impl.FinIndex.html#Delta_dec"><code>Delta_dec</code></a>)
+· <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
 (the standard basis vector <code>e</code>) · <a
 href="coqdoc/Riktig.Impl.FinVecBasis.html"><code>Impl/FinVecBasis.v</code></a>

@@ -171,13 +171,15 @@ the function that is <code>1</code> at coordinate <code>i</code> and
 <p>Writing it down needs a branch on “is this coordinate the special
 one?”, and that question, <code>i == j</code>, is an equality of indices
 — a proposition. <a
-href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
-states the branch once, for any index type <code>I</code> whose
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+writes the branch once, for any index type <code>I</code> whose
 <code>==</code> is decidable, and <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
 reads the standard basis vector off it at <code>I = Fin.t n</code>,
 where <code>==</code> is plain <code>=</code>:</p>
-<pre class="coq"><code>  Definition delta (i j : I) : R := if dec (i == j) then 1 else 0.</code></pre>
+<pre class="coq"><code>Definition delta {I R : Type} {eI : EqRel I} {Ieq : EquDec I}
+    {Rz : Zero R} {Ro : One R} : I -&gt; I -&gt; R :=
+  fun i j =&gt; if dec (i == j) then 1 else 0.</code></pre>
 <pre class="coq"><code>Definition e {n : nat} (i : Fin.t n) : Fin.t n -&gt; F := delta i.</code></pre>
 <p>This reads exactly like the mathematics: <code>e i</code> at input
 <code>j</code> is <code>if i = j then 1 else 0</code>. It type-checks
@@ -194,12 +196,13 @@ href="coqdoc/Riktig.Impl.Decidable.html#fin_eq_dec"><code>fin_eq_dec</code></a>,
 the <code>sumbool</code> it returns — is transparent, <code>e i j</code>
 <em>computes</em> to <code>1</code> or <code>0</code> on concrete
 indices, so <code>e</code> is a genuine function you can evaluate. And
-when the time comes to prove something about <code>e i j</code> — that
-the basis is orthonormal, that a coordinate expansion collapses to a
-single term — a proof does <code>destruct (dec (i = j))</code> and finds
-<code>i = j</code> waiting in one branch and <code>i &lt;&gt; j</code>
-in the other, the two facts the definition itself was branching on,
-handed over for free.</p>
+when the time comes to prove that it satisfies the two equations <a
+href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
+demands of a Kronecker delta — one where the indices agree, zero where
+they differ — the proof does <code>destruct (dec (i == j))</code> and
+finds <code>i == j</code> waiting in one branch and
+<code>~ (i == j)</code> in the other, the two facts the branch itself
+was reading, handed over for free.</p>
 <p><em>Next: a decidable total order, where a single decision procedure
 gives <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, and
 <code>&gt;=</code> all at once.</em></p>
@@ -222,6 +225,8 @@ href="coqdoc/Riktig.Theory.Decidable.html#dec_if_bool"><code>dec_if_bool</code><
 href="coqdoc/Riktig.Impl.Decidable.html"><code>Impl/Decidable.v</code></a>
 (<code>nat</code>, <code>bool</code>, and <code>Fin.t n</code> as
 carriers) · <a
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+(<code>HasDelta_dec</code>) · <a
 href="coqdoc/Riktig.Impl.FinVec.html"><code>Impl/FinVec.v</code></a>
 (the standard basis vector <code>e</code>).</p>
 </main>

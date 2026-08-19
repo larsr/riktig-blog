@@ -292,12 +292,11 @@ with entries
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mi>v</mi><msub><mo stretchy="false" form="postfix">)</mo><mi>i</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">(Av)_i = \sum_j A_{ij} v_j</annotation></semantics></math>.
 In <a
 href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>,
-over any field, with <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
-the sum over a finite index type:</p>
+over any field, with <code>bigopI</code> the sum over a finite index
+carrier’s enumeration:</p>
 <pre class="coq"><code>Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
     : Fin.t m -&gt; F :=
-  fun i =&gt; bigopF (fun j =&gt; A i j * v j).</code></pre>
+  fun i =&gt; bigopI (fun j =&gt; A i j * v j).</code></pre>
 <p>Additivity is distributivity pushed through the sum, entry by
 entry:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo>+</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mi>i</mi></msub><mo>=</mo><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>v</mi><mi>j</mi></msub><mo>+</mo><msub><mi>w</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><munder><mo>∑</mo><mi>j</mi></munder><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub><mo>+</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>w</mi><mi>j</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mo>=</mo><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub><mo>+</mo><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>w</mi><mi>j</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">\big(A(v+w)\big)_i
@@ -309,29 +308,30 @@ entry:</p>
   mat_vec A (v + w) == mat_vec A v + mat_vec A w.
 Proof.
   intros m n A v w i.
-  calc (mat_vec A (v + w) i)
-    == (bigopF (fun j =&gt; A i j * v j + A i j * w j))
+  unfold mat_vec.
+  calc (bigopI (fun j =&gt; A i j * (v + w) j))
+    == (bigopI (fun j =&gt; A i j * v j + A i j * w j))
     == ((mat_vec A v + mat_vec A w) i).
-  - apply bigopF_ext. intros j.
+  - apply bigopI_ext. intros j.
     exact (left_distributive (A i j) (v j) (w j)).
-  - exact (bigopF_add n (fun j =&gt; A i j * v j) (fun j =&gt; A i j * w j)).
+  - exact (bigopI_add (fun j =&gt; A i j * v j) (fun j =&gt; A i j * w j)).
 Qed.</code></pre>
 <p><code>intros ... i</code> fixes the entry at which the two vectors
 are compared (vector equality here is entrywise). The first
 <code>calc</code> step rewrites each summand by <a
 href="coqdoc/Riktig.Props.html#left_distributive"><code>left_distributive</code></a>
 — the field’s distributivity, via <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_ext"><code>bigopF_ext</code></a>,
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_ext"><code>bigopI_ext</code></a>,
 which may rewrite under a sum precisely because the sum respects
 <code>==</code>. The second step is <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_add"><code>bigopF_add</code></a>,
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_add"><code>bigopI_add</code></a>,
 splitting the sum of pointwise sums into two sums: the last equality of
 the displayed chain.</p>
 <p>Homogeneity is the mirror image, with commutativity of multiplication
 doing the reordering
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>a</mi><msub><mi>v</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>a</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>v</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">A_{ij}(a v_j) = a (A_{ij} v_j)</annotation></semantics></math>
 inside the sum and <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_mul_l"><code>bigopF_mul_l</code></a>
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_mul_l"><code>bigopI_mul_l</code></a>
 pulling the constant
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math>
 out:</p>
@@ -340,12 +340,13 @@ out:</p>
   mat_vec A (a *: v) == a *: mat_vec A v.
 Proof.
   intros m n A a v i.
-  calc (mat_vec A (a *: v) i)
-    == (bigopF (fun j =&gt; a * (A i j * v j)))
+  unfold mat_vec.
+  calc (bigopI (fun j =&gt; A i j * (a *: v) j))
+    == (bigopI (fun j =&gt; a * (A i j * v j)))
     == ((a *: mat_vec A v) i).
-  - apply bigopF_ext. intros j.
+  - apply bigopI_ext. intros j.
     exact (mul_left_commutative (A i j) a (v j)).
-  - exact (bigopF_mul_l n a (fun j =&gt; A i j * v j)).
+  - exact (bigopI_mul_l a (fun j =&gt; A i j * v j)).
 Qed.</code></pre>
 <p>The two laws plus a <code>Proper</code> proof assemble into the
 packaged linear map, through the record’s builder function:</p>
@@ -407,12 +408,12 @@ additive and homogeneous in the right):</p>
 <pre class="coq"><code>Definition mat_mul_bilinear :
     BilinearMap F (Matrix m n F) (Matrix n p F) (Matrix m p F) :=
   bilinear_map_from_laws
-    (mat_mul (F:=F) (m:=m) (n:=n) (p:=p))
-    (mat_mul_proper m n p)
-    (mat_mul_add_l m n p)
-    (mat_mul_scale_l m n p)
-    (mat_mul_add_r m n p)
-    (mat_mul_scale_r m n p).</code></pre>
+    (@mat_mul n (Fin.t n) F _ _ _ _ _ _ (Fin.t m) (Fin.t p))
+    mat_mul_proper
+    mat_mul_add_l
+    mat_mul_scale_l
+    mat_mul_add_r
+    mat_mul_scale_r.</code></pre>
 <p>And the pattern keeps scaling. A <em>multilinear form</em> takes
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
 vector arguments, returns a scalar, and is linear in each argument with

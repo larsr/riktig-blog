@@ -93,13 +93,14 @@ obviously pointing at the fix.</p>
 a cheat sheet, checked by actually writing the code.</p>
 <h2 id="the-preamble-all-of-it-before-anything-else">The preamble, all
 of it, before anything else</h2>
-<p>The checked-in file opens with every import the five examples need,
-and no <code>Section</code> before them:</p>
+<p>The checked-in file gathers every import the five examples need into
+one block, immediately ahead of them and with no <code>Section</code> in
+between:</p>
 <pre class="coq"><code>From Coq Require Import ZArith Morphisms QArith Bool List.
 From Coq.Vectors Require Fin.
 Import ListNotations.
 From Riktig Require Import Theory.AbGroup Impl.Zr Structure.LinearMap
-  Impl.Qf Impl.FinVec Theory.Category Impl.CoqCat Lambda.Church
+  Impl.Qf Impl.FinVec Theory.Category Impl.CoqCat Impl.Lambda.Church
   Channel.Trace.</code></pre>
 <p>Eight names, not the seventeen an earlier version of this file
 listed. <code>Theory.AbGroup</code> carries
@@ -107,8 +108,8 @@ listed. <code>Theory.AbGroup</code> carries
 <code>Ops</code> and <code>Props</code> with it;
 <code>Structure.LinearMap</code> carries <code>Structure.Field</code>
 and <code>Structure.VectorSpace</code>; <code>Impl.CoqCat</code> carries
-<code>Theory.Category</code>; <code>Lambda.Church</code> carries
-<code>Lambda.Syntax</code> and <code>Lambda.Conv</code>;
+<code>Theory.Category</code>; <code>Impl.Lambda.Church</code> carries
+<code>Impl.Lambda.Term</code> and <code>Impl.Lambda.Conv</code>;
 <code>Channel.Trace</code> carries <code>Theory.Subseq</code>. Naming an
 ancestor as well as its descendant compiles perfectly and says nothing —
 the shorter list is the one that tells you what the file is written
@@ -282,7 +283,7 @@ scope.</p>
 <p><strong>Concrete instance</strong>: <code>bool</code> is isomorphic
 to itself via <code>negb</code> (types-as-objects, <a
 href="coqdoc/Riktig.Impl.CoqCat.html"><code>Impl/CoqCat.v</code></a>).
-An <a href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a>
+An <a href="coqdoc/Riktig.Structure.Iso.html#Iso"><code>Iso</code></a>
 holds the two morphisms plus one field saying they are two-sided
 inverses of each other, and <a
 href="coqdoc/Riktig.Theory.Category.html#iso_from_laws"><code>iso_from_laws</code></a>
@@ -298,7 +299,7 @@ Proof. exact (iso_absorb _ _ negb_negb_iso). Qed.</code></pre>
 href="coqdoc/Riktig.Theory.Category.html"><code>Theory/Category.v</code></a>
 writes <code>Global Arguments iso_to {x y}.</code> and not the plain
 <code>Arguments iso_to {x y}.</code> that would look sufficient. <a
-href="coqdoc/Riktig.Theory.Category.html#Iso"><code>Iso</code></a> is
+href="coqdoc/Riktig.Structure.Iso.html#Iso"><code>Iso</code></a> is
 declared inside a <code>Section</code>, and a non-<code>Global</code>
 <code>Arguments</code> directive is section-local: it silently reverts
 the moment the section closes, so anyone who just
@@ -313,7 +314,7 @@ general lesson: if you write <code>Arguments {x y}.</code> inside a
 <code>Global Arguments</code>.</p>
 <h2 id="lambda-calculus">4. Lambda calculus</h2>
 <p><strong>Abstract fact</strong> (the earlier lambda-calculus post’s <a
-href="coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>-style
+href="coqdoc/Riktig.Impl.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>-style
 branch law), instantiated at two concrete closed terms:</p>
 <pre class="coq"><code>Example ifb_true_idt_k : IFB TRUE idt k == idt.
 Proof.
@@ -329,9 +330,10 @@ Proof. apply (conv_by_eval 20 5). reflexivity. Qed.</code></pre>
 <p>Two independent proofs of the same statement — one by the algebraic
 law, one by brute-force evaluation — agreeing, is itself a small sanity
 check on the whole <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a> setoid
-built in that earlier lambda-calculus post. No import surprises here: <a
-href="coqdoc/Riktig.Lambda.Church.html"><code>Lambda/Church.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>
+setoid built in that earlier lambda-calculus post. No import surprises
+here: <a
+href="coqdoc/Riktig.Impl.Lambda.Church.html"><code>Impl/Lambda/Church.v</code></a>
 carries its own comment naming exactly what it needs from
 <code>Ops</code>.</p>
 <h2 id="channels">5. Channels</h2>
@@ -365,9 +367,9 @@ That is why the preamble above repeats
 is the other half of the same story, and it is a consequence of
 gathering all five domains into one file. <code>QArith</code> (example
 2) puts <code>Q_scope</code> on top of the numeral stack, and
-<code>Lambda.Conv</code> (example 4) re-points the lonely <code>1</code>
-at <code>nat</code>’s <code>S O</code>; without re-opening
-<code>nat_scope</code> just before them, the list literals
+<code>Impl.Lambda.Conv</code> (example 4) re-points the lonely
+<code>1</code> at <code>nat</code>’s <code>S O</code>; without
+re-opening <code>nat_scope</code> just before them, the list literals
 <code>[1; 2; 3]</code> elaborate at mixed types. Reopening a scope is
 cheap; hunting the elaboration error that follows from not doing it is
 not.</p>
@@ -439,8 +441,8 @@ product)</td>
 </tr>
 <tr>
 <td>the lambda calculus, runnable</td>
-<td><code>Lambda.Syntax</code> (eval), <code>Lambda.Conv</code> (the
-<code>==</code> setoid), <code>Lambda.Church</code>
+<td><code>Impl.Lambda.Term</code> (eval), <code>Impl.Lambda.Conv</code>
+(the <code>==</code> setoid), <code>Impl.Lambda.Church</code>
 (booleans/pairs)</td>
 </tr>
 <tr>

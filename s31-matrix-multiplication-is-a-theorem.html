@@ -47,24 +47,48 @@ fact as a check that Coq’s instance search assembles the structure
 unaided, with nothing to prove:</p>
 <pre class="coq"><code>Example matrix_vs_check (F : Type) `{FF : Field F} (m n : nat) :
   VectorSpace F (Matrix m n F) := _.</code></pre>
-<p>Multiplication is the familiar sum, written with <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>,
-the finite sum of a family indexed by <code>Fin.t n</code>:</p>
-<pre class="coq"><code>Definition mat_mul {m n p : nat} (A : Matrix m n F) (B : Matrix n p F)
-    : Matrix m p F :=
-  fun i k =&gt; bigopF (fun j =&gt; A i j * B j k).</code></pre>
-<p>Its laws are all finite-sum bookkeeping. <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+<p>Multiplication contracts one index and is polymorphic in the other
+two, so the operation depends on exactly one carrier and the class names
+that one:</p>
+<pre class="coq"><code>Definition mat_mul {n : nat} {J F : Type} {eJ : EqRel J} {dJ : EquDec J}
+    {FJ : FinIndex n J} {zF : Zero F} {aF : HasAdd F} {mF : HasMult F}
+    {I K : Type} (A : I -&gt; J -&gt; F) (B : J -&gt; K -&gt; F) (i : I) (k : K) : F :=</code></pre>
+<p>One equation pins it down — the familiar sum, read off the contracted
+carrier’s enumeration:</p>
+<pre class="coq"><code>    mat_mul_def : forall {I K : Type} (A : I -&gt; J -&gt; F) (B : J -&gt; K -&gt; F)
+                        (i : I) (k : K),
+      mat_mul A B i k == bigop_list (fun j =&gt; A i j * B j k) enum.</code></pre>
+<p><a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+is a parameter of the class, not a fixed function: which summation
+operation the entry is a sum over is left open, and all the equation
+asks of it is the two laws a big sum obeys. Below, where the product is
+computed rather than reasoned about, <code>bigopI f</code> abbreviates
+this same <code>bigop_list f enum</code>.</p>
+<p><a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>
+supplies the product itself, and it is generic in the contracted
+carrier, so <code>Fin.t</code> is a case of the definition rather than
+the definition:</p>
+<pre class="coq"><code>Definition mat_mul {n : nat} {J F : Type} {eJ : EqRel J} {dJ : EquDec J}
+  {FJ : FinIndex n J} {zF : Zero F} {aF : HasAdd F} {mF : HasMult F}
+  {I K : Type} (A : I -&gt; J -&gt; F) (B : J -&gt; K -&gt; F) (i : I) (k : K) : F :=
+  bigopI (fun j =&gt; A i j * B j k).</code></pre>
+<p>Its laws are all finite-sum bookkeeping, and they are proved once
+over the abstract carriers in <a
+href="coqdoc/Riktig.Theory.MatMul.html"><code>Theory/MatMul.v</code></a>.
+<a
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
 is one application of <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>,
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_swap"><code>bigopI_swap</code></a>,
 the interchange
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mo>∑</mo><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>j</mi></msub><msub><mo>∑</mo><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i \sum_j = \sum_j \sum_i</annotation></semantics></math>
-for finite sums, proved by induction in <a
+for finite sums, proved in <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>;
 the unit laws <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>
 and <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_right_identity"><code>mat_mul_right_identity</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_right_identity"><code>mat_mul_right_identity</code></a>
 are the standard-basis delta collapse, since <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a> is
 defined to be that delta. Square matrices therefore form a ring, <a
@@ -189,14 +213,26 @@ entry of the product.</p>
     == mat_mul (mat_of BV BW g) (mat_of BU BV f).
 Proof.
   intros g f i j.
-  exact (mat_of_coords BV BW g (f (Basis.vec BU j)) i).
+  calc (mat_of BU BW (linear_map_comp g f) i j)
+    == (bigopF (fun l =&gt; mat_of BV BW g i l * mat_of BU BV f l j))
+         { (mat_of_coords BV BW g (f (Basis.vec BU j)) i) }
+    == (mat_mul (mat_of BV BW g) (mat_of BU BV f) i j)
+         { (bigopF_bigopI m
+             (fun l =&gt; mat_of BV BW g i l * mat_of BU BV f l j)) }.
 Qed.</code></pre>
 <p><code>intros g f i j</code> opens the pointwise equality of two
-matrices at one entry; what closes it is <a
+matrices at one entry; what closes the first step is <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
-for the outer map, read at the point <code>f (Basis.vec BU j)</code>.
-Both sides of the goal are then the same sum by conversion, so no
-rewriting is needed at all.</p>
+for the outer map, read at the point <code>f (Basis.vec BU j)</code> —
+both sides of that step are the same sum by conversion. The second step
+is bookkeeping about which fold the sum is written with: <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
+speaks the structural fold <a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
+over <code>Fin.t</code>, the general product speaks the enumeration fold
+<code>bigopI</code>, and <a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_bigopI"><code>bigopF_bigopI</code></a>
+says they agree.</p>
 <p>Two lemmas carry the blackboard steps. <a
 href="coqdoc/Riktig.Theory.MatRep.html#lm_lincomb"><code>lm_lincomb</code></a>
 is “push
@@ -237,12 +273,87 @@ Proof.
 Qed.</code></pre>
 <p>Equality of matrices is pointwise, so the proof splits on each of the
 two indices — <a
-href="coqdoc/Riktig.Impl.Matrix.html#fin2_case"><code>fin2_case</code></a>
+href="coqdoc/Riktig.Impl.Fin.html#fin2_case"><code>fin2_case</code></a>,
+from <a href="coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a>,
 is the two-case eliminator for <code>Fin.t 2</code> — and then each of
 the four scalar equations is a closed computation that
 <code>vm_compute</code> decides.
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>⋅</mo><mn>5</mn><mo>+</mo><mn>2</mn><mo>⋅</mo><mn>7</mn><mo>=</mo><mn>19</mn></mrow><annotation encoding="application/x-tex">1\cdot 5 + 2\cdot 7 = 19</annotation></semantics></math>,
 and so on.</p>
+<h2 id="splitting-the-index">Splitting the index</h2>
+<p>The sum in <a
+href="coqdoc/Riktig.Structure.MatMul.html#MatMul.mat_mul_def"><code>mat_mul_def</code></a>
+runs over one carrier, and which carrier that is, is a parameter.
+Suppose it is a <a
+href="https://en.wikipedia.org/wiki/Disjoint_union">disjoint sum</a>
+<code>J1 + J2</code>, so that every index carries a tag saying which
+half it came from. Then the sum over it is the sum over the left half
+plus the sum over the right half — one equation, <a
+href="coqdoc/Riktig.Structure.BigOp.html#BigopSum.bigopI_sum"><code>bigopI_sum</code></a>
+— and that turns straight into a statement about products:</p>
+<pre class="coq"><code>  Theorem mat_mul_split : forall (A : I -&gt; (J1 + J2) -&gt; F)
+      (B : (J1 + J2) -&gt; K -&gt; F),
+    mat_mulS A B
+      == mat_mul1 (fun i j =&gt; A i (inl j)) (fun j k =&gt; B (inl j) k)
+       + mat_mul2 (fun i j =&gt; A i (inr j)) (fun j k =&gt; B (inr j) k).</code></pre>
+<p>Read at grids: cut the left factor into two blocks of columns and the
+right factor into the two matching blocks of rows, multiply each pair,
+add the two results. <a
+href="coqdoc/Riktig.Theory.Biproduct.html#inl"><code>inl</code></a> and
+<a href="coqdoc/Riktig.Theory.Biproduct.html#inr"><code>inr</code></a>
+are the two ways into a disjoint sum, so the two smaller products are
+literally the restrictions of the originals. No <code>Fin.t</code>
+appears, and none is needed.</p>
+<p>A carrier built out of disjoint sums is one a recursion can walk
+down. <code>Ix k</code> is a single point at depth zero and two copies
+of the previous carrier at every further depth:</p>
+<pre class="coq"><code>Fixpoint Ix (k : nat) : Type :=
+  match k with
+  | O    =&gt; unit
+  | S k&#39; =&gt; Ix k&#39; + Ix k&#39;
+  end.</code></pre>
+<p>The <a
+href="https://en.wikipedia.org/wiki/Divide-and-conquer_algorithm">divide-and-conquer</a>
+product over it — split, recurse on both halves, add — is <a
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_split"><code>mat_mul_split</code></a>
+written out as a program:</p>
+<pre class="coq"><code>  Fixpoint mat_mul_rec (k : nat) {I K : Type} {struct k}
+      : (I -&gt; Ix k -&gt; F) -&gt; (Ix k -&gt; K -&gt; F) -&gt; I -&gt; K -&gt; F :=
+    match k as k0 return
+      (I -&gt; Ix k0 -&gt; F) -&gt; (Ix k0 -&gt; K -&gt; F) -&gt; I -&gt; K -&gt; F
+    with
+    | O    =&gt; fun A B i c =&gt; A i tt * B tt c
+    | S k&#39; =&gt; fun A B =&gt;
+        mat_mul_rec k&#39; (fun i j =&gt; A i (inl j)) (fun j c =&gt; B (inl j) c)
+        + mat_mul_rec k&#39; (fun i j =&gt; A i (inr j)) (fun j c =&gt; B (inr j) c)
+    end.</code></pre>
+<p>Nothing in that function mentions a sum. That it computes one is an
+induction on <code>k</code> whose step is <a
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_split"><code>mat_mul_split</code></a>
+and whose base is the sum over a one-point carrier:</p>
+<pre class="coq"><code>  Theorem mat_mul_rec_correct : forall (k : nat) (I K : Type)
+      (A : I -&gt; Ix k -&gt; F) (B : Ix k -&gt; K -&gt; F),
+    mat_mul_rec k A B == mat_mul A B.</code></pre>
+<p>The same decomposition has a form with no indices in it at all. A
+product of two vector spaces is at once a product and a coproduct: a map
+<em>into</em> it is a <a
+href="coqdoc/Riktig.Theory.Biproduct.html#fork"><code>fork</code></a> of
+two maps, a map <em>out of</em> it is a <a
+href="coqdoc/Riktig.Theory.Biproduct.html#join"><code>join</code></a> of
+two, and <a
+href="coqdoc/Riktig.Theory.Biproduct.html#join_fork"><code>join_fork</code></a>
+says <code>join f g ∘ fork h k == f ∘ h + g ∘ k</code>. That is the
+row-times-column rule with the sum replaced by the biproduct’s own
+addition. The 2×2 block product is two steps from it (<a
+href="coqdoc/Riktig.Theory.Biproduct.html"><code>Theory/Biproduct.v</code></a>):</p>
+<pre class="coq"><code>  Theorem block_product : forall
+      (a : LinearMap F X1 Y1) (b : LinearMap F X2 Y1)
+      (c : LinearMap F X1 Y2) (d : LinearMap F X2 Y2)
+      (p : LinearMap F Z1 X1) (q : LinearMap F Z2 X1)
+      (r : LinearMap F Z1 X2) (s : LinearMap F Z2 X2),
+    fork (join a b) (join c d) ∘ fork (join p q) (join r s)
+      == fork (join (a ∘ p + b ∘ r) (a ∘ q + b ∘ s))
+              (join (c ∘ p + d ∘ r) (c ∘ q + d ∘ s)).</code></pre>
 <h2 id="what-the-isomorphism-buys">What the isomorphism buys</h2>
 <p>Because <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of"><code>mat_of</code></a>
@@ -250,7 +361,7 @@ is an isomorphism, a question about matrices may be answered on
 whichever side is easier and the answer transports. Associativity of <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 is provable directly, by the interchange of a double sum — that is <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>
 — or by observing that the product <em>is</em> composition, which is
 associative because function composition is, and transporting along <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>.</p>
@@ -273,13 +384,19 @@ only so the statement can be phrased in derivative language.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
-href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>, <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
-<a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
-<a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>,
+<code>HasMatMul_bigop</code>, <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>, <a
 href="coqdoc/Riktig.Impl.Matrix.html#Matrix_Ring"><code>Matrix_Ring</code></a>,
 the numeric example) · <a
+href="coqdoc/Riktig.Theory.MatMul.html"><code>Theory/MatMul.v</code></a>
+(<code>HasMatMul</code>, <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
+<a
+href="coqdoc/Riktig.Structure.MatMul.html#MatMul.mat_mul_def"><code>mat_mul_def</code></a>,
+<a
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>)
+· <a
 href="coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
 (<a
 href="coqdoc/Riktig.Structure.Basis.html#Basis.Basis"><code>Basis</code></a>,
@@ -301,16 +418,30 @@ href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code>
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_comp"><code>mat_of_comp</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
-(<a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>,
-<a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_swap"><code>bigopF_swap</code></a>)
+(<code>bigopI</code>, <a
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_swap"><code>bigopI_swap</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.Jacobian.html"><code>Theory/Jacobian.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Jacobian.html#jacobian"><code>jacobian</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>).</p>
+href="coqdoc/Riktig.Theory.Jacobian.html#jacobian_chain_rule"><code>jacobian_chain_rule</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.FinIndex.html"><code>Impl/FinIndex.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.FinIndex.html#Sum_FinIndex"><code>Sum_FinIndex</code></a>,
+<a
+href="coqdoc/Riktig.Impl.FinIndex.html#BigopSum_enum"><code>BigopSum_enum</code></a>,
+<a href="coqdoc/Riktig.Impl.FinIndex.html#Ix"><code>Ix</code></a>) · <a
+href="coqdoc/Riktig.Theory.Biproduct.html"><code>Theory/Biproduct.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Biproduct.html#fork"><code>fork</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Biproduct.html#join"><code>join</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Biproduct.html#join_fork"><code>join_fork</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Biproduct.html#block_product"><code>block_product</code></a>).</p>
 </main>
 </body>
 </html>

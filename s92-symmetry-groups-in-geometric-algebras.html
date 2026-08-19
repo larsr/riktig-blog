@@ -128,11 +128,11 @@ imaginary parts:</p>
   Definition complex_to_even (z : C F) : Cl F 2 := mk2 (re z) 0 0 (im z).</code></pre>
 <p>They are mutually inverse exactly on the even part. Round-tripping a
 general element of <code>Cl F 2</code> through <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>
 forgets its vector coordinates, so that direction only holds under <a
 href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>;
 the other direction needs no hypothesis at all, because <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>’s
+href="coqdoc/Riktig.Impl.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>’s
 image is always even:</p>
 <pre class="coq"><code>  Lemma even_round_trip : forall x : Cl F 2,
     cl_even x -&gt; complex_to_even (even_to_complex x) == x.</code></pre>
@@ -194,31 +194,65 @@ angle:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>,</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">c, s</annotation></semantics></math>
 are just field elements, constrained to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>
-only once a rotor is required to preserve length. The Coq statement is
-exactly this equation, checked against the geometric product:</p>
-<pre class="coq"><code>  Lemma rotor_mul : forall c1 s1 c2 s2 : F,
-    rotor c1 s1 * rotor c2 s2
-    == rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2).
-  Proof. intros. apply cl2_ext; by_blade. Qed.</code></pre>
+only once a rotor is required to preserve length.</p>
+<p>Where does that formula come from? Not from the plane algebra: it is
+the multiplication table of any two-dimensional plane spanned by a
+ring’s unit and a square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
+and it can be multiplied out from the ring laws alone, with the square
+root’s defining equation as the only hypothesis:</p>
+<pre class="coq"><code>  Theorem two_term_product : forall (a b c d : F) (e : A),
+    e * e == - (1) -&gt;
+    (a *: 1 + b *: e) * (c *: 1 + d *: e)
+    == (a * c + - (b * d)) *: 1 + (a * d + b * c) *: e.</code></pre>
+<p>To use that here, two things about the plane algebra have to be
+checked, and they are the two that really are about <em>this</em>
+representation: that a rotor is a point of the plane spanned by the unit
+and the bivector,</p>
+<pre class="coq"><code>  Lemma rotor_two_term : forall c s : F,
+    rotor c s == c *: (1 : Cl F 2) + s *: rotor 0 1.</code></pre>
+<p>and that the bivector squares to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>:</p>
+<pre class="coq"><code>  Theorem plane_bivector_square :
+    (rotor (0 : F) 1) * rotor 0 1 == - (1 : Cl F 2).
+  Proof. apply cl2_ext; by_blade. Qed.</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#cl2_ext"><code>cl2_ext</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#cl2_ext"><code>cl2_ext</code></a>
 is the extensionality lemma of the plane algebra: two elements agreeing
 on the four blades are equal, so applying it turns the goal into four
 coefficient equations, one per blade of the result.
 <code>by_blade</code> then unfolds <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor"><code>rotor</code></a>,
-the geometric product, and the unit over each concrete blade, leaving a
-polynomial identity in
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>c</mi><mn>2</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">c_1,s_1,c_2,s_2</annotation></semantics></math>
-and the two zeros a rotor carries in its vector coordinates, which <code
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor"><code>rotor</code></a>,
+the geometric product, the unit and the negation over each concrete
+blade, leaving a polynomial identity in the coefficients, which <code
 class="nolink">ring</code> discharges — the section declares
 <code>Add Ring</code> over the coefficient field, which is what makes
 the tactic available on a setoid equality rather than Coq’s built-in
 <code>eq</code>.</p>
+<p>With those two in hand the rotor product is the general table read
+through the plane’s coordinates, and no blade appears in the
+argument:</p>
+<pre class="coq"><code>  Lemma rotor_mul : forall c1 s1 c2 s2 : F,
+    rotor c1 s1 * rotor c2 s2
+    == rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2).
+  Proof.
+    intros c1 s1 c2 s2.
+    calc ((rotor c1 s1 * rotor c2 s2) : Cl F 2)
+      == (((c1 *: (1 : Cl F 2) + s1 *: rotor 0 1) * rotor c2 s2) : Cl F 2)
+         { (rotor_two_term c1 s1) }
+      == (((c1 *: (1 : Cl F 2) + s1 *: rotor 0 1)
+             * (c2 *: (1 : Cl F 2) + s2 *: rotor 0 1)) : Cl F 2)
+         { (rotor_two_term c2 s2) }
+      == (((c1*c2 + - (s1*s2)) *: (1 : Cl F 2)
+             + (c1*s2 + s1*c2) *: rotor 0 1) : Cl F 2)
+         { (two_term_product c1 s1 c2 s2 (rotor 0 1) plane_bivector_square) }
+      == ((rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)) : Cl F 2)
+         { (rotor_two_term (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)) }.
+  Qed.</code></pre>
 <p>That this matches complex multiplication is not a second coincidence
 — it is one instance of the homomorphism theorem above, since a rotor is
 always even (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_even"><code>rotor_even</code></a>).
+href="coqdoc/Riktig.Structure.Rotor.html#Rotor.rotor_even"><code>rotor_even</code></a>).
 Putting the two together — the image of a product of rotors equals the
 product of images, and the product of rotors is itself the angle-added
 rotor — gives the statement that composing rotors literally is
@@ -231,19 +265,19 @@ multiplying complex numbers:</p>
     calc (even_to_complex (rotor c1 s1) * even_to_complex (rotor c2 s2))
       == (even_to_complex (rotor c1 s1 * rotor c2 s2))
          { (even_to_complex_mul (rotor c1 s1) (rotor c2 s2)
-              (rotor_even c1 s1) (rotor_even c2 s2)) }
+              (rotor_is_even c1 s1) (rotor_is_even c2 s2)) }
       == (even_to_complex (rotor (c1*c2 + - (s1*s2)) (c1*s2 + s1*c2)))
          { rotor_mul }.
   Qed.</code></pre>
 <p>The <code>calc</code> chain has two steps, each justified in braces.
 The first turns the left side, a product of two complex images, back
 into the image of a single product of rotors (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
 read right to left, with <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_even"><code>rotor_even</code></a>
+href="coqdoc/Riktig.Structure.Rotor.html#Rotor.rotor_even"><code>rotor_even</code></a>
 supplying the two evenness hypotheses); the second replaces that product
 of rotors with the already-computed angle-added rotor (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>),
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>),
 landing on the right side exactly. The unit-length elements of the
 complex numbers form a group under multiplication by definition — that
 group is what “U(1)” names — and this theorem says that group’s
@@ -251,7 +285,7 @@ operation is exactly what composing two rotors already does. Unit length
 itself is the condition
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>,
 and it is precisely what makes a rotor invert by its own reversal (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_unit"><code>rotor_unit</code></a>):</p>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_unit"><code>rotor_unit</code></a>):</p>
 <pre class="coq"><code>  Lemma rotor_unit : forall c s : F,
     c*c + s*s == 1 -&gt; rotor c s * cl_reverse (rotor c s) == 1.</code></pre>
 <h2 id="space-spinors-and-the-double-cover">Space, spinors, and the
@@ -283,13 +317,35 @@ bivectors — and its general element is called a <em>spinor</em>:</p>
 <pre class="coq"><code>  Lemma spinor_even : forall r b12 b13 b23 : F,
     cl_even (spinor r b12 b13 b23).</code></pre>
 <p>Just as in the plane, the even part is closed under the geometric
-product — the product of two even elements is even, checked over the
-eight blades:</p>
+product — the product of two even elements is even:</p>
 <pre class="coq"><code>  Lemma even_mul_closed : forall x y : Cl F 3,
-    cl_even x -&gt; cl_even y -&gt; cl_even (x * y).</code></pre>
-<p>so spinors multiply to spinors, and “orientation composed so far”
-never leaves the four even coordinates. (This four-dimensional even
-subalgebra is, classically, the quaternions — the same way the plane’s
+    cl_even x -&gt; cl_even y -&gt; cl_even (x * y).
+  Proof. exact even_mul_even. Qed.</code></pre>
+<p>That one-line proof is worth reading twice. <a
+href="coqdoc/Riktig.Structure.Graded.html#ParityGraded.even_mul_even"><code>even_mul_even</code></a>
+is a law, not a lemma about <code>Cl F 3</code>: a <em>parity
+grading</em> of a ring is an even part and an odd part, each closed
+under addition, whose products obey the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ℤ</mi><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\mathbb{Z}/2</annotation></semantics></math>
+rule — even times even is even, even times odd is odd, odd times odd is
+even again. The Clifford algebras satisfy it in every dimension and at
+every signature, for one reason that fits in a sentence: the product’s
+coefficient at a blade
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>
+is a sum over blades
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mi>A</mi></msub><mspace width="0.167em"></mspace><msub><mi>y</mi><mrow><mi>A</mi><mo>⊕</mo><mi>D</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_A\,y_{A \oplus D}</annotation></semantics></math>,
+and if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+vanishes off one parity and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>y</mi><annotation encoding="application/x-tex">y</annotation></semantics></math>
+off another, then at any
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>
+whose parity is not their sum every single term has a vanishing factor.
+So spinors multiply to spinors, and “orientation composed so far” never
+leaves the four even coordinates. (This four-dimensional even subalgebra
+is, classically, the quaternions — the same way the plane’s
 two-dimensional even part is the complex numbers; the identification is
 not re-proved here.)</p>
 <p>A spinor acts on a vector the way the plane’s rotor will act below:
@@ -382,7 +438,7 @@ proved above, not another instance of the same argument.</p>
 <h2 id="using-it-a-rotation-matrix-with-no-trigonometry">Using it: a
 rotation matrix, with no trigonometry</h2>
 <p>Back in the plane, wrap a rotor around a vector the way <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate"><code>rotate</code></a>
 above wrapped a spinor around one of space’s:</p>
 <pre class="coq"><code>  Definition sandwich (R x : Cl F 2) : Cl F 2 := R * x * cl_reverse R.</code></pre>
 <p>Feed it a pure vector — an element with only its
@@ -431,11 +487,9 @@ in the usual counterclockwise-positive convention rather than
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>1</mn></msub><msub><mi>e</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">e_1e_2</annotation></semantics></math>
 rather than
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mn>2</mn></msub><msub><mi>e</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">e_2e_1</annotation></semantics></math>,
-not an error.) A further theorem, proved from
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>+</mo><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">c^2+s^2=1</annotation></semantics></math>
-alone, checks that the squared length is exactly preserved — the
-sandwich is a genuine rotation, not merely some linear map that happens
-to look like one:</p>
+not an error.) A further theorem checks that the squared length is
+exactly preserved — the sandwich is a genuine rotation, not merely some
+linear map that happens to look like one:</p>
 <pre class="coq"><code>  Lemma rotation_preserves_qform : forall c s v1 v2 : F,
     c*c + s*s == 1 -&gt;
     qform sig2 (plane_vector
@@ -447,9 +501,32 @@ to look like one:</p>
 induces,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>v</mi><mn>1</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>v</mi><mn>2</mn><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">v_1^2+v_2^2</annotation></semantics></math>
 (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#qform_plane"><code>qform_plane</code></a>),
+href="coqdoc/Riktig.Impl.PlaneRotor.html#qform_plane"><code>qform_plane</code></a>),
 so the statement reads: the rotated vector is exactly as long as the
-original.</p>
+original. Six polynomials in four unknowns, and none of them is the
+reason it holds. The reason is one line of algebra available in any
+geometric algebra at all: a vector’s square <em>is</em> its quadratic
+value, so</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>R</mi><mi>v</mi><msup><mi>R</mi><mo>∼</mo></msup><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>R</mi><mi>v</mi><msup><mi>R</mi><mo>∼</mo></msup><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>R</mi><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msup><mi>R</mi><mo>∼</mo></msup><mi>R</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.167em"></mspace><msup><mi>R</mi><mo>∼</mo></msup><mo>=</mo><mi>R</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><msup><mi>R</mi><mo>∼</mo></msup><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>R</mi><msup><mi>R</mi><mo>∼</mo></msup><mo>=</mo><mi>Q</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">(RvR^{\sim})(RvR^{\sim}) = R\,v\,(R^{\sim}R)\,v\,R^{\sim}
+= R\,(Q(v)\,1)\,R^{\sim} = Q(v)\,R R^{\sim} = Q(v)\,1,</annotation></semantics></math></p>
+<p>where the inner pair cancels because a unit rotor is inverted by its
+own reversal, and the scalar walks out through both sides because
+scalars are central. That is the theorem, and the plane’s version is an
+instance of it:</p>
+<pre class="coq"><code>  Theorem sandwich_qform_scale : forall (R : A) (u w : V),
+    R * rev R == 1 -&gt; rev R * R == 1 -&gt;
+    ga_vec w == R * ga_vec u * rev R -&gt;
+    Q w *: (1 : A) == Q u *: 1.</code></pre>
+<p>One gap has to be closed to get from there to an equation between two
+<em>scalars</em>: the displayed argument ends with two multiples of the
+algebra’s unit being equal, and in a one-element algebra that says
+nothing at all. What is needed is that the scalar line is faithful —</p>
+<pre class="coq"><code>Definition one_faithful (F A : Type) {Fe : EqRel F} {Ae : EqRel A}
+    {Ao : One A} {As : HasScale F A} : Prop :=
+  forall a b : F, a *: (1 : A) == b *: 1 -&gt; a == b.</code></pre>
+<p>— and in the plane algebra that is one blade: read both sides at the
+scalar blade <code>pb false false</code> and the scalars are back (<a
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_one_faithful"><code>plane_one_faithful</code></a>).</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>
@@ -459,43 +536,69 @@ href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>,
 <a
 href="coqdoc/Riktig.Impl.Clifford.html#cl_reverse"><code>cl_reverse</code></a>,
 the geometric product <a
-href="coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>)
+href="coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>,
+the parity law <a
+href="coqdoc/Riktig.Impl.Clifford.html#cl_mul_parity"><code>cl_mul_parity</code></a>)
 · <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html"><code>Theory/PlaneRotor.v</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html"><code>Impl/PlaneRotor.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#even_to_complex"><code>even_to_complex</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#even_to_complex"><code>even_to_complex</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#complex_to_even"><code>complex_to_even</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#even_to_complex_mul"><code>even_to_complex_mul</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor"><code>rotor</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor"><code>rotor</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_two_term"><code>rotor_two_term</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_unit"><code>rotor_unit</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_bivector_square"><code>plane_bivector_square</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_composition_is_u1"><code>rotor_composition_is_u1</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich"><code>sandwich</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_unit"><code>rotor_unit</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>,
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_composition_is_u1"><code>rotor_composition_is_u1</code></a>,
 <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotation_preserves_qform"><code>rotation_preserves_qform</code></a>)
+href="coqdoc/Riktig.Impl.PlaneRotor.html#sandwich"><code>sandwich</code></a>,
+<a
+href="coqdoc/Riktig.Impl.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>,
+<a
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_one_faithful"><code>plane_one_faithful</code></a>,
+<a
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotation_preserves_qform"><code>rotation_preserves_qform</code></a>)
 · <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html"><code>Theory/SpaceRotor.v</code></a>
+href="coqdoc/Riktig.Impl.SpaceRotor.html"><code>Impl/SpaceRotor.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor"><code>spinor</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#spinor"><code>spinor</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#spinor_even"><code>spinor_even</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#spinor_even"><code>spinor_even</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#even_mul_closed"><code>even_mul_closed</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#even_mul_closed"><code>even_mul_closed</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate"><code>rotate</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate"><code>rotate</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_coordinates_correct"><code>rotate_coordinates_correct</code></a>,
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate_coordinates_correct"><code>rotate_coordinates_correct</code></a>,
 <a
-href="coqdoc/Riktig.Theory.SpaceRotor.html#rotate_spinor_vec"><code>rotate_spinor_vec</code></a>).</p>
+href="coqdoc/Riktig.Impl.SpaceRotor.html#rotate_spinor_vec"><code>rotate_spinor_vec</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Algebra.html"><code>Theory/Algebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Algebra.html#two_term_product"><code>two_term_product</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html"><code>Theory/GeometricAlgebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#one_faithful"><code>one_faithful</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#sandwich_qform_scale"><code>sandwich_qform_scale</code></a>,
+<a
+href="coqdoc/Riktig.Theory.GeometricAlgebra.html#sandwich_preserves_qform"><code>sandwich_preserves_qform</code></a>)
+· <a
+href="coqdoc/Riktig.Structure.Graded.html"><code>Structure/Graded.v</code></a>
+(<a
+href="coqdoc/Riktig.Structure.Graded.html#ParityGraded.ParityGraded"><code>ParityGraded</code></a>,
+<a
+href="coqdoc/Riktig.Structure.Graded.html#ParityGraded.even_mul_even"><code>even_mul_even</code></a>).</p>
 </main>
 </body>
 </html>

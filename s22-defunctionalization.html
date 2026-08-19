@@ -54,8 +54,8 @@ exactly that:</p>
   | Abs : tm -&gt; tm
   | App : tm -&gt; tm -&gt; tm.</code></pre>
 <p>For this post <a
-href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a> is just
-the <em>data</em> our higher-order program builds; we will not need
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a> is
+just the <em>data</em> our higher-order program builds; we will not need
 reduction, only that two terms come out equal.</p>
 <h2 id="a-higher-order-program-a-term-builder">A higher-order program: a
 term-builder</h2>
@@ -64,8 +64,8 @@ a function. It walks a list of instructions and, at each step, extends a
 continuation <code>k : tm -&gt; tm</code> that records “the term context
 assembled so far”. Two instructions: <code>IArg t</code> says “apply the
 running result to <code>t</code>”, and <a
-href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> says
-“wrap the running result in a lambda”. At the end it feeds a
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#ILam"><code>ILam</code></a>
+says “wrap the running result in a lambda”. At the end it feeds a
 <code>base</code> term to the continuation.</p>
 <pre class="coq"><code>Inductive instr : Type :=
   | IArg : tm -&gt; instr
@@ -89,21 +89,22 @@ passes at the top;</li>
 <code>IArg t</code> step, capturing <code>t</code> and the enclosing
 <code>k</code>;</li>
 <li><code>fun r =&gt; k (Abs r)</code>, built at an <a
-href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> step,
-capturing the enclosing <code>k</code>.</li>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#ILam"><code>ILam</code></a>
+step, capturing the enclosing <code>k</code>.</li>
 </ul>
 <p>Three shapes. That finiteness is what makes the technique work.</p>
 <h2 id="the-datatype-and-the-apply-dispatcher">The datatype and the
 apply dispatcher</h2>
 <p>Turn each of the three shapes into a constructor of a first-order
 type <a
-href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a>,
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#cont"><code>cont</code></a>,
 carrying exactly what that shape captured:</p>
 <pre class="coq"><code>Inductive cont : Type :=
   | Kid  : cont
   | Kapp : tm -&gt; cont -&gt; cont
   | Kabs : cont -&gt; cont.</code></pre>
-<p><a href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>
+<p><a
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#Kid"><code>Kid</code></a>
 is the identity; <code>Kapp t k</code> is
 <code>fun r =&gt; k (App r t)</code> with its captured argument
 <code>t</code> and enclosing continuation <code>k</code>;
@@ -118,7 +119,8 @@ the original abstraction did:</p>
   | Kapp t k&#39; =&gt; apply_clo k&#39; (App v t)
   | Kabs k&#39;   =&gt; apply_clo k&#39; (Abs v)
   end.</code></pre>
-<p><a href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>
+<p><a
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#Kid"><code>Kid</code></a>
 returns its argument, as <code>fun x =&gt; x</code> did.
 <code>Kapp t k'</code> forms <code>App v t</code> and hands it to the
 enclosing <code>k'</code>, as <code>fun r =&gt; k (App r t)</code> did.
@@ -126,9 +128,9 @@ enclosing <code>k'</code>, as <code>fun r =&gt; k (App r t)</code> did.
 function is structurally recursive on the closure, so it is total — no
 fuel, no well-founded recursion. The defunctionalized program is the
 original walk with the function space replaced by <a
-href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a> and
-the final call replaced by <a
-href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>:</p>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#cont"><code>cont</code></a>
+and the final call replaced by <a
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>:</p>
 <pre class="coq"><code>Fixpoint build_d (base : tm) (is : list instr) (k : cont) : tm :=
   match is with
   | []             =&gt; apply_clo k base
@@ -136,20 +138,21 @@ href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>:</p
   | ILam   :: is&#39;  =&gt; build_d base is&#39; (Kabs k)
   end.</code></pre>
 <p>Compare it line for line with <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>:
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build"><code>build</code></a>:
 <code>k base</code> became <code>apply_clo k base</code>, the lambda
 <code>fun r =&gt; k (App r t)</code> became the constructor
 <code>Kapp t k</code>, and <code>fun r =&gt; k (Abs r)</code> became
 <code>Kabs k</code>. There is not a single function value left in <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
-— <a href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+— <a
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#cont"><code>cont</code></a>
 is plain data.</p>
 <h2 id="the-two-programs-compute-the-same-term">The two programs compute
 the same term</h2>
 <p>The claim to prove: <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build_d"><code>build_d</code></a>
 with the identity closure and <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build"><code>build</code></a>
 with the identity function return the same term.</p>
 <p>Blackboard version. Write
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⌈</mo><mi>k</mi><mo stretchy="false" form="postfix">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil k \rceil</annotation></semantics></math>
@@ -168,7 +171,7 @@ equals running the higher-order walk under
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">⌈</mo><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mo stretchy="false" form="postfix">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil \mathsf{Kid} \rceil</annotation></semantics></math>
 is the identity.</p>
 <p>The bridge is a function <a
-href="coqdoc/Riktig.Lambda.Defunc.html#denote"><code>denote</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#denote"><code>denote</code></a>
 that reads a closure back as the function it stands for — used only in
 the proof, never in the program:</p>
 <pre class="coq"><code>Fixpoint denote (k : cont) : tm -&gt; tm :=
@@ -179,7 +182,7 @@ the proof, never in the program:</p>
   end.</code></pre>
 <p>First, dispatching on a closure computes exactly what applying its
 denotation would — <a
-href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>
 is the first-order image of application. On the blackboard, for every
 closure
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
@@ -201,8 +204,8 @@ Proof.
   - rewrite IH. reflexivity.
 Qed.</code></pre>
 <p>Induction on the closure <code>k</code>. For <a
-href="coqdoc/Riktig.Lambda.Defunc.html#Kid"><code>Kid</code></a>, both
-sides are <code>v</code> — <code>reflexivity</code>. For
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#Kid"><code>Kid</code></a>,
+both sides are <code>v</code> — <code>reflexivity</code>. For
 <code>Kapp t k'</code>, both sides step to the <code>k'</code> case on
 <code>App v t</code>, and the induction hypothesis <code>IH</code>
 closes it; <code>Kabs k'</code> is the same on <code>Abs v</code>.</p>
@@ -220,19 +223,19 @@ Qed.</code></pre>
 <p>The empty list: <code>build_d base [] k</code> is
 <code>apply_clo k base</code> and <code>build base [] (denote k)</code>
 is <code>denote k base</code>, so the goal is exactly <a
-href="coqdoc/Riktig.Lambda.Defunc.html#apply_denote"><code>apply_denote</code></a>.
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#apply_denote"><code>apply_denote</code></a>.
 For a non-empty list, split on the instruction. On <code>IArg t</code>,
 the defunctionalized side recurses with <code>Kapp t k</code> and the
 higher-order side with <code>denote (Kapp t k)</code> — but that is
 <em>definitionally</em> <code>fun r =&gt; denote k (App r t)</code>, the
 very lambda <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build"><code>build</code></a>
 builds, so the two recursive calls line up and the induction hypothesis
 <code>IH</code> finishes. <a
-href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> is
-the same with <code>Kabs k</code>. The whole proof is two
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#ILam"><code>ILam</code></a>
+is the same with <code>Kabs k</code>. The whole proof is two
 <code>apply IH</code>s because the datatype’s <a
-href="coqdoc/Riktig.Lambda.Defunc.html#denote"><code>denote</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#denote"><code>denote</code></a>
 was chosen to match the source abstractions exactly.</p>
 <p>The top-level equality is the identity-closure instance:</p>
 <pre class="coq"><code>Corollary build_defunc_correct_id : forall base is,
@@ -241,22 +244,22 @@ Proof.
   intros base is. exact (build_defunc_correct is base Kid).
 Qed.</code></pre>
 <p><code>denote Kid</code> is <code>fun x =&gt; x</code>, so this is <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build_defunc_correct"><code>build_defunc_correct</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build_defunc_correct"><code>build_defunc_correct</code></a>
 at <code>k := Kid</code>, handed over directly.</p>
 <h2 id="one-term-both-ways">One term, both ways</h2>
 <p>Take the instruction list <code>[IArg (Var 1); ILam]</code> over the
 base <code>Var 0</code>. The higher-order <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build"><code>build</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build"><code>build</code></a>
 threads: <code>IArg (Var 1)</code> makes
 <code>fun r =&gt; App r (Var 1)</code>, then <a
-href="coqdoc/Riktig.Lambda.Defunc.html#ILam"><code>ILam</code></a> makes
-<code>fun r =&gt; App (Abs r) (Var 1)</code>, then <code>base</code> is
-fed in, giving <code>App (Abs (Var 0)) (Var 1)</code>. The
-defunctionalized <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#ILam"><code>ILam</code></a>
+makes <code>fun r =&gt; App (Abs r) (Var 1)</code>, then
+<code>base</code> is fed in, giving
+<code>App (Abs (Var 0)) (Var 1)</code>. The defunctionalized <a
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build_d"><code>build_d</code></a>
 instead accumulates the closure <code>Kabs (Kapp (Var 1) Kid)</code> and
 lets <a
-href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>
 unwind it to the same term. As a chain of equalities, with each step’s
 justification alongside:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mrow><mi>𝖨</mi><mi>𝖠</mi><mi>𝗋</mi><mi>𝗀</mi></mrow><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>1</mn></msub><mo>;</mo><mspace width="0.222em"></mspace><mrow><mi>𝖨</mi><mi>𝖫</mi><mi>𝖺</mi><mi>𝗆</mi></mrow><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.278em"></mspace><msub><mi>v</mi><mn>0</mn></msub><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">[</mo><mrow><mi>𝖨</mi><mi>𝖠</mi><mi>𝗋</mi><mi>𝗀</mi></mrow><mspace width="0.167em"></mspace><msub><mi>v</mi><mn>1</mn></msub><mo>;</mo><mspace width="0.222em"></mspace><mrow><mi>𝖨</mi><mi>𝖫</mi><mi>𝖺</mi><mi>𝗆</mi></mrow><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mrow><mtext mathvariant="normal">correctness at </mtext><mspace width="0.333em"></mspace></mrow><mi>k</mi><mo>=</mo><mrow><mi>𝖪</mi><mi>𝗂</mi><mi>𝖽</mi></mrow><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">
@@ -293,17 +296,17 @@ Qed.</code></pre>
 computation. The result <code>App (Abs (Var 0)) (Var 1)</code> is the
 identity lambda applied to <code>Var 1</code> — a term the first-order
 <a
-href="coqdoc/Riktig.Lambda.Defunc.html#build_d"><code>build_d</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#build_d"><code>build_d</code></a>
 produced without ever holding a function.</p>
 <p><em>Next: the same lambda terms, put into A-normal form, where every
 intermediate result is named by a let.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.Defunc.html"><code>Lambda/Defunc.v</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html"><code>Programs/Lambda/Defunc.v</code></a>
 (the term-builder, the <a
-href="coqdoc/Riktig.Lambda.Defunc.html#cont"><code>cont</code></a>
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#cont"><code>cont</code></a>
 datatype, <a
-href="coqdoc/Riktig.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>,
+href="coqdoc/Riktig.Programs.Lambda.Defunc.html#apply_clo"><code>apply_clo</code></a>,
 and the correctness theorem with its worked example).</p>
 </main>
 </body>

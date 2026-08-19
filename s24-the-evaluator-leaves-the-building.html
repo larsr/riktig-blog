@@ -93,22 +93,22 @@ spent:</p>
 <p>The budget is there because the language being interpreted has terms
 with no normal form, not because the iteration is hard to justify. That
 distinction matters for what can be proved next: <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>
 cannot promise to deliver a value, so the theorem has to say something
 weaker, and say it exactly.</p>
 <h2 id="what-the-answer-means">What the answer means</h2>
 <p>The weaker thing is <em>reachability</em>. Write <a
-href="coqdoc/Riktig.Lambda.Syntax.html#star"><code>star</code></a> for
-the reflexive-transitive closure of the step relation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> —
+href="coqdoc/Riktig.Impl.Lambda.Term.html#star"><code>star</code></a>
+for the reflexive-transitive closure of the step relation <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a> —
 zero or more genuine call-by-value steps:</p>
 <pre class="coq"><code>Inductive star : tm -&gt; tm -&gt; Prop :=
   | star_refl : forall t, star t t
   | star_step : forall t u v, step t u -&gt; star u v -&gt; star t v.</code></pre>
 <p>Then whatever <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a> hands
-back, for any budget at all, is a term the input really does reduce
-to:</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>
+hands back, for any budget at all, is a term the input really does
+reduce to:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∀</mo><mi>n</mi><mo>,</mo><mspace width="0.167em"></mspace><mi>t</mi><mi>.</mi><mspace width="2.0em"></mspace><mi>t</mi><mspace width="0.278em"></mspace><msup><mo>→</mo><mo>*</mo></msup><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">e</mi><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>,</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\forall n,\, t.\qquad t \;\longrightarrow^{*}\; \mathrm{eval}(n,t)</annotation></semantics></math></p>
 <p>On the blackboard the argument is an induction on the budget
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
@@ -127,9 +127,9 @@ and the induction hypothesis gives
 so prefixing the single step yields the chain from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>.
 The one thing the argument needs from outside is that the executable <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>
 only ever reports steps the relation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>
 agrees with:</p>
 <pre class="coq"><code>Lemma step_fn_sound : forall t t&#39;, step_fn t = Some t&#39; -&gt; step t t&#39;.</code></pre>
 <p>The Coq proof is that induction, four lines long:</p>
@@ -145,22 +145,22 @@ Proof.
 Qed.</code></pre>
 <p><code>induction fuel</code> splits the two cases, and
 <code>simpl</code> unfolds <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a> in
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a> in
 each. Zero fuel: the goal is <code>star t t</code>, which is <a
-href="coqdoc/Riktig.Lambda.Syntax.html#star_refl"><code>star_refl</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#star_refl"><code>star_refl</code></a>,
 so <code>constructor</code> closes it. Successor fuel:
 <code>destruct</code> on <code>step_fn t</code> asks whether a step
 exists, remembering the answer as <code>H</code>. When it does,
 <code>econstructor</code> picks <a
-href="coqdoc/Riktig.Lambda.Syntax.html#star_step"><code>star_step</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#star_step"><code>star_step</code></a>,
 leaving the single step — supplied by <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn_sound"><code>step_fn_sound</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn_sound"><code>step_fn_sound</code></a>
 applied to <code>H</code> — and the rest of the chain, which is the
 induction hypothesis <code>IH</code> at <code>t'</code>. When it does
 not, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>
 returns <code>t</code> and <a
-href="coqdoc/Riktig.Lambda.Syntax.html#star_refl"><code>star_refl</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#star_refl"><code>star_refl</code></a>
 closes it again.</p>
 <p>Notice what the theorem does not say. It does not say the result is a
 normal form; if the budget runs out mid-reduction, the half-reduced term
@@ -188,14 +188,14 @@ Extract Constant Nat.ltb =&gt; &quot;(Prelude.&lt;)&quot;.
 
 Extraction &quot;programs/lambda-eval/Eval.hs&quot; eval step_fn cps psi.</code></pre>
 <p>The last line names four functions — the driver <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>, the
-single step <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>,
+the single step <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>,
 and, from the call-by-value continuation-passing transform, <a
-href="coqdoc/Riktig.Lambda.CPS.html#cps"><code>cps</code></a> and its
-value translation <a
-href="coqdoc/Riktig.Lambda.CPS.html#psi"><code>psi</code></a> — and
-extraction pulls in everything they depend on.</p>
+href="coqdoc/Riktig.Programs.Lambda.CPS.html#cps"><code>cps</code></a>
+and its value translation <a
+href="coqdoc/Riktig.Programs.Lambda.CPS.html#psi"><code>psi</code></a> —
+and extraction pulls in everything they depend on.</p>
 <p>The <code>nat</code> line is the representation change described at
 the top. Inside Coq a de Bruijn index is a unary numeral: <code>3</code>
 is <code>S (S (S O))</code>, three heap cells, and comparing two indices
@@ -209,15 +209,15 @@ Haskell’s own operators instead of the extracted unary definitions.
 Every theorem above was proved about the inductive <code>nat</code>; the
 code that runs uses machine arithmetic.</p>
 <p>The proofs themselves do not appear in the output at all. <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval_sound"><code>eval_sound</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval_sound"><code>eval_sound</code></a>
 and <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn_sound"><code>step_fn_sound</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn_sound"><code>step_fn_sound</code></a>
 live in <code>Prop</code>, the universe extraction erases wholesale, so
 there is no trace of them in the generated Haskell — they are statements
 <em>about</em> the Coq functions, and what carries them across is
 extraction’s own claim to preserve meaning. What does appear is the
 program, essentially unchanged. Here is the extracted <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>,
 next to which you can hold the Coq definition from earlier:</p>
 <pre class="haskell"><code>step_fn :: Tm -&gt; Prelude.Maybe Tm
 step_fn t =
@@ -242,9 +242,9 @@ command-line wrapper, <code>Main.hs</code>: a tokenizer and parser from
 named syntax like <code>\x. x x</code> to de Bruijn terms, a printer
 that invents fresh names on the way back, and a <code>main</code> that
 calls <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a> with
-a budget of a million steps. <code>make lambda-eval</code> compiles the
-two files together with GHC, and then:</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>
+with a budget of a million steps. <code>make lambda-eval</code> compiles
+the two files together with GHC, and then:</p>
 <pre><code>$ ./programs/lambda-eval/lambda-eval &#39;(\x. x x) (\y. y)&#39;
 \x. x
 $ ./programs/lambda-eval/lambda-eval --cps &#39;\x. x&#39;
@@ -254,13 +254,13 @@ identity, applies it to itself, and settles at the identity, printed
 with a fresh name as <code>\x. x</code>.</p>
 <p>The second is worth reading slowly, because <code>--cps</code> does
 not print the transformed program. It applies <a
-href="coqdoc/Riktig.Lambda.CPS.html#cps"><code>cps</code></a> to the
-term, hands the result the identity continuation, and <em>evaluates
-that</em>. In continuation-passing style a function does not return; it
-calls a continuation with its result. What comes back is therefore not
-the value the direct evaluator would give, but that value’s converted
-twin, the one <a
-href="coqdoc/Riktig.Lambda.CPS.html#psi"><code>psi</code></a>
+href="coqdoc/Riktig.Programs.Lambda.CPS.html#cps"><code>cps</code></a>
+to the term, hands the result the identity continuation, and
+<em>evaluates that</em>. In continuation-passing style a function does
+not return; it calls a continuation with its result. What comes back is
+therefore not the value the direct evaluator would give, but that
+value’s converted twin, the one <a
+href="coqdoc/Riktig.Programs.Lambda.CPS.html#psi"><code>psi</code></a>
 computes:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Ψ</mi><mo stretchy="false" form="prefix">(</mo><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>λ</mi><mi>x</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>λ</mi><mi>k</mi><mi>.</mi><mspace width="0.167em"></mspace><mi>k</mi><mspace width="0.167em"></mspace><mi>x</mi></mrow><annotation encoding="application/x-tex">\Psi(\lambda x.\,x) \;=\; \lambda x.\,\lambda k.\,k\,x</annotation></semantics></math></p>
 <p>— a function that takes an argument and then a continuation, and
@@ -272,9 +272,9 @@ terminal.</p>
 <h2 id="what-carries-a-proof-and-what-does-not">What carries a proof and
 what does not</h2>
 <p>The evaluator is the verified part: <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>
 is proved to agree with the step relation in both directions, and <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval_sound"><code>eval_sound</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval_sound"><code>eval_sound</code></a>
 says every answer is reachable from the input. Those facts describe the
 Haskell in <code>Eval.hs</code> to exactly the extent that extraction is
 faithful — which is assumed here, not proved.</p>
@@ -285,7 +285,7 @@ is the extraction machinery itself. And the step budget means a printed
 answer is guaranteed reachable but not guaranteed final: a term that
 needs more than a million steps prints whatever it had reached, and
 nothing in <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval_sound"><code>eval_sound</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval_sound"><code>eval_sound</code></a>
 distinguishes that from a finished reduction. Every one of these is a
 place where the chain from theorem to output can break, and naming them
 is the point — the unproved code is a thin, dull layer at the edge, and
@@ -295,16 +295,21 @@ than as constructions, and <code>0 &lt;= 1</code> derived from
 them.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html"><code>Impl/Lambda/Term.v</code></a>
 (the terms, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step_fn"><code>step_fn</code></a>,
-<a href="coqdoc/Riktig.Lambda.Syntax.html#eval"><code>eval</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step_fn"><code>step_fn</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.Syntax.html#eval_sound"><code>eval_sound</code></a>)
-· <a href="coqdoc/Riktig.Lambda.CPS.html"><code>Lambda/CPS.v</code></a>
-(<a href="coqdoc/Riktig.Lambda.CPS.html#cps"><code>cps</code></a> and <a
-href="coqdoc/Riktig.Lambda.CPS.html#psi"><code>psi</code></a>) · <a
-href="coqdoc/Riktig.Lambda.Extract.html"><code>Lambda/Extract.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#eval_sound"><code>eval_sound</code></a>)
+· <a
+href="coqdoc/Riktig.Programs.Lambda.CPS.html"><code>Programs/Lambda/CPS.v</code></a>
+(<a
+href="coqdoc/Riktig.Programs.Lambda.CPS.html#cps"><code>cps</code></a>
+and <a
+href="coqdoc/Riktig.Programs.Lambda.CPS.html#psi"><code>psi</code></a>)
+· <a
+href="coqdoc/Riktig.Programs.Lambda.Extract.html"><code>Programs/Lambda/Extract.v</code></a>
 (the extraction recipe) · <a
 href="https://git.ri.se/lars.rasmusson/riktig/-/tree/main/programs/lambda-eval"><code>programs/lambda-eval/</code></a>
 (the CLI, its parser and printer, and the extracted core).</p>

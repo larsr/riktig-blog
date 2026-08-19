@@ -44,13 +44,12 @@ so a <em>coordinate vector</em> of length
 is a function <code>Fin.t n -&gt; F</code>. Such functions form a vector
 space with no extra work — add and scale them pointwise.</p>
 <p>Applying a matrix to a coordinate vector is the textbook dot product
-of each row against the vector, written as a finite sum <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>
-over the shared index (<a
+of each row against the vector, written as a finite sum
+<code>bigopI</code> over the shared index (<a
 href="coqdoc/Riktig.Theory.MatVec.html"><code>Theory/MatVec.v</code></a>):</p>
 <pre class="coq"><code>  Definition mat_vec {m n : nat} (A : Matrix m n F) (v : Fin.t n -&gt; F)
       : Fin.t m -&gt; F :=
-    fun i =&gt; bigopF (fun j =&gt; A i j * v j).</code></pre>
+    fun i =&gt; bigopI (fun j =&gt; A i j * v j).</code></pre>
 <p>Entry
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
 of
@@ -73,20 +72,20 @@ is distributivity pushed under the sum:</p>
     mat_vec A (v + w) == mat_vec A v + mat_vec A w.
   Proof.
     intros m n A v w i.
-    calc (mat_vec A (v + w) i)
-      == (bigopF (fun j =&gt; A i j * v j + A i j * w j))
+    calc (bigopI (fun j =&gt; A i j * (v + w) j))
+      == (bigopI (fun j =&gt; A i j * v j + A i j * w j))
       == ((mat_vec A v + mat_vec A w) i).
-    - apply bigopF_ext. intros j.
+    - apply bigopI_ext. intros j.
       exact (left_distributive (A i j) (v j) (w j)).
-    - exact (bigopF_add n (fun j =&gt; A i j * v j) (fun j =&gt; A i j * w j)).
+    - exact (bigopI_add (fun j =&gt; A i j * v j) (fun j =&gt; A i j * w j)).
   Qed.</code></pre>
 <p>Walking it: <code>intros ... i</code> fixes an output index, since
 two coordinate vectors are equal when they agree at every index. The
 <code>calc</code> chain has two steps, one per line of the blackboard
 chain — <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_ext"><code>bigopF_ext</code></a>
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_ext"><code>bigopI_ext</code></a>
 rewrites the summand by distributivity, and <a
-href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_add"><code>bigopF_add</code></a>
+href="coqdoc/Riktig.Theory.BigOp.html#bigopI_add"><code>bigopI_add</code></a>
 splits the sum of two summands into a sum of two sums.</p>
 <p>Homogeneity is the same shape with a commutativity swap instead of
 distributivity:</p>
@@ -162,8 +161,7 @@ exchange:</p>
     mat_vec (mat_mul A B) v == mat_vec A (mat_vec B v).
   Proof.
     intros m n p A B v i.
-    exact (mat_mul_assoc m n p 1 A B
-             (fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k) i Fin.F1).
+    exact (mat_mul_assoc A B (fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k) i Fin.F1).
   Qed.</code></pre>
 <p>Walking it: <code>intros ... i</code> again reduces to one output
 index. The term <code>fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k</code>
@@ -177,11 +175,13 @@ entry
 of the two bracketings of the triple product
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mspace width="0.167em"></mspace><mi>B</mi><mspace width="0.167em"></mspace><mi>v</mi></mrow><annotation encoding="application/x-tex">A\,B\,v</annotation></semantics></math>
 — so <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
-applied at the shapes <code>m n p 1</code> and read at row
-<code>i</code> and the sole column <code>Fin.F1</code>, is already the
-proof. The same one-column view gives the identity law from <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>:</p>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+read at row <code>i</code> and the sole column <code>Fin.F1</code>, is
+already the proof. It needs no shape arguments: the general statement is
+about any index carriers at all, and the two it contracts here are read
+off the matrices it is applied to. The same one-column view gives the
+identity law from <a
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>:</p>
 <pre class="coq"><code>  Theorem mat_vec_id : forall (n : nat) (v : Fin.t n -&gt; F),
     mat_vec mat_id v == v.</code></pre>
 <p>And at the level of the packaged maps, <a
@@ -274,12 +274,15 @@ href="coqdoc/Riktig.Theory.MatVec.html#mat_vec_id"><code>mat_vec_id</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
 href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>, <a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>,
+<code>HasMatMul_bigop</code>) · <a
+href="coqdoc/Riktig.Theory.MatMul.html"><code>Theory/MatMul.v</code></a>
+(<a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>,
-<a href="coqdoc/Riktig.Impl.Matrix.html#mat_id"><code>mat_id</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
 <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>)
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_left_identity"><code>mat_mul_left_identity</code></a>)
 · <a
 href="coqdoc/Riktig.Structure.LinearMap.html"><code>Structure/LinearMap.v</code></a>
 (<a

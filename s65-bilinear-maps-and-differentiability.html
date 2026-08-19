@@ -404,17 +404,16 @@ and the other from the two lemmas above:</p>
       intros eps Heps.
       exists (eps * inv (1 + C)).
       split.
-      + apply mul_pos.
-        * exact Heps.
-        * apply pos_inv. apply one_plus_nonneg_pos. exact HC.
+      + exact (pad_div_pos eps C Heps HC).
       + intros [du dv] Hh.
+        rewrite (prod_norm_at du dv) in Hh.
         simpl.
         unfold LinearMap.map, bilinear_deriv_lm, bilinear_deriv_fun; simpl.
         calc (‖ B (u0 + du) (v0 + dv) + - (B u0 v0 + (B du v0 + B u0 dv)) ‖)
           == (‖ B du dv ‖)
           == (eps * ‖ (du, dv) ‖).
         * apply eq_le. apply vnorm_proper. exact (bilinear_remainder_eq du dv).
-        * unfold vnorm, Prod_HasNorm, prod_norm; simpl.
+        * rewrite (prod_norm_at du dv).
           exact (bilinear_remainder_bound C HC HCb eps Heps du dv Hh).
   Qed.</code></pre>
 <p>Reading it: <a
@@ -427,11 +426,12 @@ gives the constant
 then for a given <code>eps</code> the proof <em>offers the radius</em>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>ε</mi><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>C</mi><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\delta = \varepsilon\,(1+C)^{-1}</annotation></semantics></math>
 with <code>exists (eps * inv (1 + C))</code>, shows it is positive (<a
-href="coqdoc/Riktig.Theory.Order.html#mul_pos"><code>mul_pos</code></a>
-— a positive scalar times a positive inverse), and takes an arbitrary
-displacement <code>(du, dv)</code> inside that radius. The closing
-<code>calc</code> chain is the two-step estimate laid out above: the
-norm of the leftover <em>equals</em> the norm of the cross term
+href="coqdoc/Riktig.Theory.Order.html#pad_div_pos"><code>pad_div_pos</code></a>
+— a positive numerator over a padded divisor is positive whatever
+<code>C</code> is), and takes an arbitrary displacement
+<code>(du, dv)</code> inside that radius. The closing <code>calc</code>
+chain is the two-step estimate laid out above: the norm of the leftover
+<em>equals</em> the norm of the cross term
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>u</mi><mspace width="0.167em"></mspace><mi>d</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">B\,du\,dv</annotation></semantics></math>
 (that is <a
 href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_eq"><code>bilinear_remainder_eq</code></a>,
@@ -441,11 +441,12 @@ since equal vectors have equal norms), and that cross term is bounded by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mspace width="0.167em"></mspace><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\varepsilon\,\lVert (du,dv)\rVert</annotation></semantics></math>
 (that is <a
 href="coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_remainder_bound"><code>bilinear_remainder_bound</code></a>).
-The unfolding of <a
-href="coqdoc/Riktig.Theory.ProdVS.html#prod_norm"><code>prod_norm</code></a>
+<a
+href="coqdoc/Riktig.Theory.ProdVS.html#prod_norm_at"><code>prod_norm_at</code></a>
 is where the sum norm
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">‖</mo><mo stretchy="false" form="prefix">(</mo><mi>d</mi><mi>u</mi><mo>,</mo><mi>d</mi><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>u</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">‖</mo><mi>d</mi><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow></mrow><annotation encoding="application/x-tex">\lVert (du,dv)\rVert = \lVert du\rVert + \lVert dv\rVert</annotation></semantics></math>
-meets the shape the bound was proved in.</p>
+meets the shape the bound was proved in — an equation cited, not an
+instance unfolded.</p>
 <p>So bilinearity is not merely <em>compatible</em> with
 differentiability — it forces it. Once a map is shown linear in each
 slot and bounded, its derivative is written down explicitly (vary one

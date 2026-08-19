@@ -138,57 +138,71 @@ and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>e</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N_e(w)</annotation></semantics></math>
 for its final expectation,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">p</mi></mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><msub><mrow><mi mathvariant="normal">b</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>m</mi><mo>,</mo><mi>k</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="0.167em"></mspace><mi>w</mi><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><mi>w</mi><mo>≠</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><msub><mi>D</mi><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mi>m</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>∧</mo><mspace width="0.278em"></mspace><msub><mi>N</mi><mi>b</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo>¬</mo><mi>b</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">\mathrm{lossy\_dup}\bigl(\mathrm{burst}_b(m,k),\, w\bigr) \;\wedge\; w \neq [\,] \;\Longrightarrow\; D_b(w) = [m] \;\wedge\; N_b(w) = \neg b.</annotation></semantics></math></p>
-<pre class="coq"><code>Lemma burst_delivery_fair : forall (b : bit) (m : M) (k : nat) (w : list Packet),
-  lossy_dup (sender_burst b m k) w -&gt; w &lt;&gt; [] -&gt;
-  deliver b w = [m] /\ next_bit b w = negb b.
-Proof.
-  intros b m k w H Hne.
-  assert (Hall : forall p, In p w -&gt; p = {| pkt_bit := b; pkt_msg := m |}).
-  { apply (lossy_dup_preserves_all_eq {| pkt_bit := b; pkt_msg := m |}
-             (sender_burst b m k) w H).
-    intros p Hp. apply (sender_burst_all_eq b m k p Hp). }
-  destruct w as [| p w&#39;].
-  - destruct (Hne eq_refl).
-  - assert (Hp : p = {| pkt_bit := b; pkt_msg := m |}).
-    { apply Hall. simpl. left. reflexivity. }
-    rewrite Hp. simpl.
-    rewrite (eqb_bit_true b b eq_refl). simpl.
-    assert (Hall&#39; : forall q, In q w&#39; -&gt; q = {| pkt_bit := b; pkt_msg := m |}).
-    { intros q Hq. apply Hall. simpl. right. exact Hq. }
-    assert (Hneq : pkt_bit ({| pkt_bit := b; pkt_msg := m |}) &lt;&gt; negb b).
-    { simpl. intros Heq. apply (negb_neq b). symmetry. exact Heq. }
-    destruct (deliver_homog_neq {| pkt_bit := b; pkt_msg := m |} w&#39; (negb b) Hall&#39; Hneq)
-      as [Hd Hn].
-    rewrite Hd. rewrite Hn.
-    split; reflexivity.
-Qed.</code></pre>
+<p>Like the safety argument, this one never looks at the bit as a bit —
+it needs only that the packets are all alike and that the tag the
+receiver moves to is not the one they carry. So it is proved once in <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a>,
+over the abstract tag, where <code>pro</code> is the protocol record
+supplying the comparison, the successor and the packet framing:</p>
+<pre class="coq"><code>  Lemma burst_delivery_hit : forall (t : Tag) (m : M) (k : nat) (w : list Packet),
+    lossy_dup (burst t m k) w -&gt; w &lt;&gt; [] -&gt;
+    deliver t w = [m] /\ next t w = tag_next pro t.
+  Proof.
+    intros t m k w H Hne.
+    assert (Hall : forall p, In p w -&gt; p = mk pro t m).
+    { apply (lossy_dup_preserves_all_eq (mk pro t m) (burst t m k) w H).
+      intros p Hp. apply (burst_all_eq t m k p Hp). }
+    destruct w as [| p w&#39;].
+    - destruct (Hne eq_refl).
+    - assert (Hp : p = mk pro t m).
+      { apply Hall. simpl. left. reflexivity. }
+      rewrite Hp. simpl.
+      rewrite (tag_eqb_true pro (tag_of pro (mk pro t m)) t (tag_of_mk pro t m)).
+      simpl.
+      assert (Hall&#39; : forall q, In q w&#39; -&gt; q = mk pro t m).
+      { intros q Hq. apply Hall. simpl. right. exact Hq. }
+      assert (Hneq : tag_of pro (mk pro t m) &lt;&gt; tag_next pro t).
+      { rewrite (tag_of_mk pro t m). exact (tag_next_neq pro t). }
+      destruct (deliver_homog_neq (mk pro t m) w&#39; (tag_next pro t) Hall&#39; Hneq)
+        as [Hd Hn].
+      rewrite Hd. rewrite Hn. rewrite (msg_of_mk pro t m).
+      split; reflexivity.
+  Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
 <li><code>Hall</code> is homogeneity again: every packet in the received
-fragment <code>w</code> is the record
-<code>{| pkt_bit := b; pkt_msg := m |}</code>, from <a
+fragment <code>w</code> is the packet the sender built, from <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_preserves_all_eq"><code>lossy_dup_preserves_all_eq</code></a>
 fed <a
-href="coqdoc/Riktig.Channel.ABP.html#sender_burst_all_eq"><code>sender_burst_all_eq</code></a>.</li>
+href="coqdoc/Riktig.Channel.ARQ.html#burst_all_eq"><code>burst_all_eq</code></a>.</li>
 <li><code>destruct w</code>. The empty case contradicts the nonemptiness
 hypothesis <code>Hne</code> directly (<code>Hne eq_refl</code>) — this
 is the one place the survival clause is consumed at the burst
 level.</li>
-<li>In the <code>p :: w'</code> case, <code>p</code> is the record (from
-<code>Hall</code>), its bit is <code>b</code>, so <a
-href="coqdoc/Riktig.Channel.ABP.html#eqb_bit_true"><code>eqb_bit_true</code></a>
+<li>In the <code>p :: w'</code> case, <code>p</code> is that packet
+(from <code>Hall</code>), whose tag is <code>t</code> (<a
+href="coqdoc/Riktig.Channel.ARQ.html#tag_of_mk"><code>tag_of_mk</code></a>),
+so <a
+href="coqdoc/Riktig.Channel.ARQ.html#tag_eqb_true"><code>tag_eqb_true</code></a>
 fires the match: <a
 href="coqdoc/Riktig.Channel.ABP.html#deliver"><code>deliver</code></a>
-emits <code>pkt_msg = m</code> and recurses with the flipped bit
-<code>negb b</code>.</li>
-<li>The tail <code>w'</code> is still all copies of the same record
-(<code>Hall'</code>), whose bit <code>b</code> no longer matches the
-flipped expectation <code>negb b</code> (<code>Hneq</code>), so <a
+emits the message and recurses with the advanced tag
+<code>tag_next pro t</code>.</li>
+<li>The tail <code>w'</code> is still all copies of the same packet
+(<code>Hall'</code>), whose tag no longer matches the advanced
+expectation (<code>Hneq</code>, which is exactly the alphabet’s <a
+href="coqdoc/Riktig.Channel.ARQ.html#tag_next_neq"><code>tag_next_neq</code></a>),
+so <a
 href="coqdoc/Riktig.Channel.ABP.html#deliver_homog_neq"><code>deliver_homog_neq</code></a>
-says the tail delivers nothing and leaves the bit at
-<code>negb b</code>. Result: <code>deliver b w = [m]</code> and
-<code>next_bit b w = negb b</code>.</li>
+says the tail delivers nothing and leaves the expectation where it
+is.</li>
 </ul>
+<p>At the alternating bit that reads as the statement this section
+promised, and the proof is the citation:</p>
+<pre class="coq"><code>  Lemma burst_delivery_fair : forall (b : bit) (m : M) (k : nat) (w : list Packet),
+    lossy_dup (sender_burst b m k) w -&gt; w &lt;&gt; [] -&gt;
+    deliver b w = [m] /\ next_bit b w = negb b.
+  Proof. exact (ARQ.burst_delivery_hit abp_protocol). Qed.</code></pre>
 <h2 id="the-liveness-theorem-proved-and-walked">The liveness theorem,
 proved and walked</h2>
 <p>Now the induction over the message list, carrying the running bit
@@ -305,8 +319,12 @@ href="coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>,
 <a
 href="coqdoc/Riktig.Channel.Trace.html#lossy_dup_app"><code>lossy_dup_app</code></a>)
 · <a
-href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
-(the sender and receiver, the safety theorem) · <a
+href="coqdoc/Riktig.Channel.ARQ.html"><code>Channel/ARQ.v</code></a> (<a
+href="coqdoc/Riktig.Channel.ARQ.html#burst_delivery_hit"><code>burst_delivery_hit</code></a>,
+shared with Go-Back-N) · <a
+href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a> (<a
+href="coqdoc/Riktig.Channel.ABP.html#abp_protocol"><code>abp_protocol</code></a>,
+the sender and receiver, the safety theorem) · <a
 href="coqdoc/Riktig.Channel.Fairness.html"><code>Channel/Fairness.v</code></a>
 (<a
 href="coqdoc/Riktig.Channel.Fairness.html#fair_wire"><code>fair_wire</code></a>,

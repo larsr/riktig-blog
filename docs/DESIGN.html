@@ -67,19 +67,27 @@ operational class per symbol. <a
 href="../coqdoc/Riktig.Props.html"><code>Props.v</code></a>: one law per
 class. <code>Structure/</code>: one structure per file, assembled from
 laws. <code>Theory/</code>: everything proved — and NO function
-definitions: Theory never defines a standalone operation. An operation
-enters as a class parameter — its behavior a class of equations (<a
-href="../coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>’s
-<a
-href="../coqdoc/Riktig.Theory.Fin.html#Swap.Swap"><code>Swap</code></a>),
-the function and its instance in <code>Impl/</code> (<a
+definitions: Theory never defines a standalone operation. THE OPERATIONS
+AND LAWS THAT PIN A THING DOWN UNIQUELY GO IN <code>Structure/</code>;
+WHAT CAN THEN BE PROVED ABOUT IT GOES IN <code>Theory/</code> (Lars,
+2026-08-17, on being asked to state it once more). So an operation
+enters as a class parameter and its behavior is a class of equations in
+<code>Structure/</code> (<a
+href="../coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>
+pins <code>exp</code> by four laws, <a
+href="../coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>
+pins the determinant, <a
+href="../coqdoc/Riktig.Structure.Power.html"><code>Structure/Power.v</code></a>
+pins a monoid power by two); the function and its instance are in
+<code>Impl/</code> (<a
 href="../coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a>’s <a
-href="../coqdoc/Riktig.Impl.Fin.html#swap"><code>swap</code></a>),
-Theory reasoning from the equations alone; to compute, import Impl — or
-as a witness inside an instance field; and when it instantiates a
-general structure’s operation, the instance is exhibited and the general
-name cited: linear maps are the arrows of the category of vector spaces
-(<code>LinearMap F U V</code> is Hom(U, V) in Vect, <a
+href="../coqdoc/Riktig.Impl.Swap.html#swap"><code>swap</code></a>);
+<code>Theory/</code> reasons from the equations alone and holds no class
+of its own; to compute, import Impl — or as a witness inside an instance
+field; and when it instantiates a general structure’s operation, the
+instance is exhibited and the general name cited: linear maps are the
+arrows of the category of vector spaces (<code>LinearMap F U V</code> is
+Hom(U, V) in Vect, <a
 href="../coqdoc/Riktig.Impl.VectCat.html"><code>Impl/VectCat.v</code></a>),
 <a
 href="../coqdoc/Riktig.Theory.LinearMap.html#linear_map_comp"><code>linear_map_comp</code></a>
@@ -95,11 +103,10 @@ href="../coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>)
 is this rule’s violation in its most common form. <code>Impl/</code>:
 something to compute with (<code>Z</code>, <code>Q</code>, matrices,
 records) and every function definition. One file, one job.
-<code>Programs/</code>, <code>Channel/</code>, <code>Lambda/</code>,
-<code>Examples/</code> are self-contained tracks; decidability reaches
-programs as plain <code>=</code> and stdlib <code>sumbool</code>,
-nothing from the algebra tower. Properties proved about a program go in
-<code>Theory/</code> (<a
+<code>Programs/</code>, <code>Channel/</code> and <code>Examples/</code>
+are self-contained tracks; decidability reaches programs as plain
+<code>=</code> and stdlib <code>sumbool</code>, nothing from the algebra
+tower. Properties proved about a program go in <code>Theory/</code> (<a
 href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>),
 except a track’s own example file (<code>Programs/RobotArm/</code>). A
 Prop-valued relation or predicate is specification vocabulary, not an
@@ -107,15 +114,74 @@ operation, and may stay a Definition (<a
 href="../coqdoc/Riktig.Structure.Bilinear.html#famEq"><code>famEq</code></a>,
 <a
 href="../coqdoc/Riktig.Theory.GramSchmidt.html#PairwiseOrth"><code>PairwiseOrth</code></a>).
-Grandfathered pending migration (decided 2026-08-14, enumerated in
-docs/TODO.md): <a
-href="../coqdoc/Riktig.Theory.BigOp.html#delta"><code>delta</code></a>,
-<a
-href="../coqdoc/Riktig.Theory.BigOp.html#list_lincomb"><code>list_lincomb</code></a>
+The three cases grandfathered on 2026-08-14 — <a
+href="../coqdoc/Riktig.Impl.FinIndex.html#delta"><code>delta</code></a>
 and <a
-href="../coqdoc/Riktig.Theory.InnerGeometry.html#proj"><code>proj</code></a>
-(Theory/BigOp.v, Theory/InnerGeometry.v — surfaced during the
-migrations, not in the decided list).</p></li>
+href="../coqdoc/Riktig.Structure.ListLincomb.html#list_lincomb"><code>list_lincomb</code></a>
+(Theory/BigOp.v) and <a
+href="../coqdoc/Riktig.Structure.Proj.html#proj"><code>proj</code></a>
+(Theory/InnerGeometry.v) — were migrated 2026-08-17. The rule is not yet
+true of the whole tree: a grep of <code>Theory/</code> still finds
+function definitions outside the categories named above (<a
+href="../coqdoc/Riktig.Theory.Exterior.html#wedge"><code>wedge</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.GAWedgeDot.html#half_wedge"><code>half_wedge</code></a>,
+<code>fswap</code>, <a
+href="../coqdoc/Riktig.Theory.MatVec.html#mat_vec"><code>mat_vec</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.MatVec.html#mat_transpose"><code>mat_transpose</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Derivative.html#partial_at"><code>partial_at</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.QuadraticForm.html#square_form"><code>square_form</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.QuadraticForm.html#neg_form"><code>neg_form</code></a>,
+and the Hamiltonian worked example). They were never on the decided
+list; they are enumerated and triaged in docs/TODO.md. NOTE ON THIS
+RULE’S OWN HISTORY: until 2026-08-17 the paragraph above named
+<code>Theory/</code> as the home of a characterising class, citing <a
+href="../coqdoc/Riktig.Theory.Fin.html"><code>Theory/Fin.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Structure.Swap.html#Swap.Swap"><code>Swap</code></a>.
+That was the exception written as the rule, and it is why <a
+href="../coqdoc/Riktig.Structure.Power.html#Power.Power"><code>Power</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.NatCast.html#NatCast.NatCast"><code>NatCast</code></a>
+and <a
+href="../coqdoc/Riktig.Structure.DerivSpec.html#DerivSpec.DerivSpec"><code>DerivSpec</code></a>
+were all filed in <code>Theory/</code> on the day they were written,
+against the practice of <a
+href="../coqdoc/Riktig.Structure.Exp.html"><code>Structure/Exp.v</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Integral.html"><code>Structure/Integral.v</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.QuadraticForm.html"><code>Structure/QuadraticForm.v</code></a>
+and <a
+href="../coqdoc/Riktig.Structure.Reals.html"><code>Structure/Reals.v</code></a>,
+each of which holds exactly one class while its <code>Theory/</code>
+counterpart holds none. Amend this sentence, not around it — where <a
+href="../coqdoc/Riktig.Theory.MatVec.html#mat_vec"><code>mat_vec</code></a>
+turns out to be the carrier fed to a <code>*_from_laws</code> builder,
+so it falls under the instance-witness category already permitted below
+rather than needing a new ruling. The worked-example DATA over concrete
+carriers left Theory on 2026-08-17 — Jacobian’s <a
+href="../coqdoc/Riktig.Programs.Matrix.Jacobian.html#matQ2"><code>matQ2</code></a>/<a
+href="../coqdoc/Riktig.Programs.Matrix.Jacobian.html#Af"><code>Af</code></a>/<a
+href="../coqdoc/Riktig.Programs.Matrix.Jacobian.html#Bg"><code>Bg</code></a>,
+DelayedFusion’s <a
+href="../coqdoc/Riktig.Programs.DelayedFusion.html#ztree"><code>ztree</code></a>,
+KleisliIso’s <a
+href="../coqdoc/Riktig.Programs.NatPairCodec.html#split_n"><code>split_n</code></a>/<a
+href="../coqdoc/Riktig.Programs.NatPairCodec.html#sum_pair"><code>sum_pair</code></a>
+and Quicksort’s FunMem section are now in <code>Programs/</code>. The
+Hamiltonian example is not of that kind and still wants a ruling: its <a
+href="../coqdoc/Riktig.Theory.Hamiltonian.html#energy"><code>energy</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Hamiltonian.html#hamiltonian"><code>hamiltonian</code></a>
+are over an abstract field, so they are standalone operations in Theory
+rather than concrete data.</p></li>
 <li><p><strong>Operational classes carry notation.</strong></p>
 <p>Problem: proofs written against structure field projections read as
 plumbing, and a statement cannot even be written down before a full
@@ -216,7 +282,7 @@ A vocabulary dependency of a specification is allowed downward and
 documented (<a
 href="../coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>
 on <a
-href="../coqdoc/Riktig.Theory.Basis.html#lincomb"><code>lincomb</code></a>).</p></li>
+href="../coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>).</p></li>
 <li><p><strong>Structure classes are assembled from law
 classes.</strong></p>
 <p>Problem: a monolithic structure record restates its ancestors’ laws
@@ -320,7 +386,7 @@ that supplies a law field spells the law out, so both sides of
 <code>hom_idl</code>); <code>_idl _idr _invl _invr _assoc _comm</code>
 are the banned abbreviations. Names mirroring the Coq standard library
 keep its spelling (<a
-href="../coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+href="../coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
 <code>app_assoc</code>), and <code>_refl _sym _trans</code> stay short
 for the same reason; <code>_commutes</code> is for two operations
 commuting with each other.</p></li>
@@ -480,6 +546,106 @@ construction. Measured reason: the <a
 href="../coqdoc/Riktig.Theory.VSIso.html#vsiso_refl"><code>vsiso_refl</code></a>
 divergence noted in <a
 href="../coqdoc/Riktig.Theory.VSIso.html"><code>Theory/VSIso.v</code></a>.</p></li>
+<li><p><strong>A specification names no implementation
+type.</strong></p>
+<p>Problem: when a structure or one of its laws mentions a type like
+<code>Vector.t</code>, the meaning of the structure is whatever that
+type does when it runs. The equations become consequences of the code
+instead of the definition, so the code is the source of truth — and
+rewriting it, or picking a different representation, breaks proofs that
+were never about the representation.</p>
+<p>Example — <a
+href="../coqdoc/Riktig.Impl.Blade.html"><code>Impl/Blade.v</code></a>
+has <code>Blade n := Vector.t bool n</code>, and the sign lemmas are
+inductions on <code>Vector.cons</code>. A blade is a set of generators:
+an empty set, symmetric difference, intersection, a size. Those
+operations and their laws are the specification; a vector is one way to
+store it and a bitmask is another, and only proofs written against the
+laws survive the swap.</p>
+<p>Fix: operations are class parameters, laws are equations, and a
+concrete type appears in <code>Impl/</code> as an instance. Proofs stay
+parameterized over the instance. <code>nat</code>, <code>bool</code>,
+<code>list</code>, pairs and their kin are ambient vocabulary rather
+than implementations, and may appear anywhere.</p>
+<p>Computation in a proof is not the defect, and the direction is what
+tells them apart. Laws specify; an implementation is proved to satisfy
+them; that bridge then makes discharging a goal by computation
+legitimate, because the meaning still comes from the laws. The reverse —
+define the type, prove how it computes, and let the theorems be about
+that type — leaves the definition as the specification and nothing to
+transport.</p>
+<p>What this buys, and the reason for the whole layering: an equational
+specification can be reused, can have several implementations at once,
+and can be rewritten — a program may change how it computes while the
+equations pin what it means.</p></li>
+<li><p><strong>A specification names no term that computes, and a second
+spelling is a <code>Notation</code>.</strong></p>
+<p>Problem: rule 16’s defect at the level of terms rather than types. A
+law that mentions a particular function is a law only that function can
+satisfy, so nothing it implies transfers to a second implementation —
+which is what having a specification was for. It is easy to do by
+accident, because the function is usually already in scope and already
+correct.</p>
+<p>Example — six <code>Structure/</code> classes stated a law with a
+term that unfolded to <code>fold_right</code>: <a
+href="../coqdoc/Riktig.Structure.BigOp.html#BigopSum.BigopSum"><code>BigopSum</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.MatMul.html#MatMul.MatMul"><code>MatMul</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Lincomb.html#Lincomb.Lincomb"><code>Lincomb</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Graded.html#Graded.Graded"><code>Graded</code></a>’s
+completeness, <a
+href="../coqdoc/Riktig.Structure.Series.html#Series.Series"><code>Series</code></a>’s
+Cauchy product and <a
+href="../coqdoc/Riktig.Structure.GradedProducts.html#GradedProducts.GradedProducts"><code>GradedProducts</code></a>’s
+two. <a
+href="../coqdoc/Riktig.Structure.MatMul.html#MatMul.mat_mul_def"><code>mat_mul_def</code></a>
+said an entry of the product is what <em>that recursion</em> computes,
+so a matrix product built on any other summation, however correct, was
+not a matrix product by that definition.</p>
+<p>Fix: the operation enters as a class parameter carrying its own laws,
+exactly as an operation without an implementation would. <a
+href="../coqdoc/Riktig.Structure.BigOp.html"><code>Structure/BigOp.v</code></a>’s
+two equations are the sum; a class needing a sum takes
+<code>(bigop_list : forall J, (J -&gt; M) -&gt; list J -&gt; M)</code>
+with <code>{BL : BigOp M bigop_list}</code> and states its law about
+that. The test is whether a second implementation could satisfy what you
+wrote — <a
+href="../coqdoc/Riktig.Impl.BigopAcc.html"><code>Impl/BigopAcc.v</code></a>
+exists to answer it for the sum, and its cons equation needs an
+induction where the fold’s needs none.</p>
+<p>The mechanical corollary, which cost a day to learn: when the same
+term has a short spelling, that spelling must be a
+<code>Notation</code>, never a <code>Definition</code> and never a
+section <code>Let</code>. <code>rewrite</code> matches on the head
+symbol, so a goal saying <code>bigopI f</code> is one that no law about
+<a
+href="../coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>
+can rewrite with, however definitionally equal the two are. A
+<code>Notation</code> is gone by the time the goal exists; a
+<code>Definition</code> stands between every goal and every law.
+Measured 2026-08-18: as <code>Definition</code>s, <code>bigopI</code>
+and <code>bigop</code> broke <a
+href="../coqdoc/Riktig.Theory.MatMul.html"><code>Theory/MatMul.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Basis.html"><code>Theory/Basis.v</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.TwistedAlgebra.html"><code>Impl/TwistedAlgebra.v</code></a>
+the moment the laws became abstract, each time as
+<code>No applicable tactic</code> a long way from the cause.</p>
+<p>Two proofs that had been closing by computation surfaced when the
+fold stopped being nameable, and that is the rule’s real value: <a
+href="../coqdoc/Riktig.Theory.BigOp.html#bigop_0"><code>bigop_0</code></a>
+was <code>reflexivity</code>, since <code>seq 0 0</code> is
+<code>nil</code> and the fold at <code>nil</code> IS zero, and over an
+arbitrary sum it is the nil law. <a
+href="../coqdoc/Riktig.Theory.DualBasis.html"><code>Theory/DualBasis.v</code></a>
+reasons through <a
+href="../coqdoc/Riktig.Structure.Lincomb.html#lincomb"><code>lincomb</code></a>’s
+value rather than through <a
+href="../coqdoc/Riktig.Structure.Lincomb.html#Lincomb.lincomb_def"><code>lincomb_def</code></a>
+and still does; the file says so.</p></li>
 </ol>
 <h2 id="the-sandbox">The sandbox</h2>
 <p><code>DesignExample.v</code> at the repository root is untracked,

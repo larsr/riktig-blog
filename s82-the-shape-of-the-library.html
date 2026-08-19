@@ -245,57 +245,57 @@ once for <a
 href="coqdoc/Riktig.Structure.Group.html#Group.Group"><code>Group</code></a>,
 and integers, rationals, complex numbers, linear maps and matrices all
 have it, unconditionally, forever.</p>
-<h2 id="three-things-the-plain-rule-does-not-cover">Three things the
-plain rule does not cover</h2>
+<h2 id="where-the-rule-stops-and-where-it-is-not-yet-kept">Where the
+rule stops, and where it is not yet kept</h2>
 <p>The three-way split is a good rule precisely because it is sharp, and
-a sharp rule has edges. <code>docs/DESIGN.md</code> names three.</p>
-<p><strong>A <code>Theory/</code> file may define an algorithm.</strong>
-<a
-href="coqdoc/Riktig.Theory.BigOp.html"><code>Theory/BigOp.v</code></a>
-defines <a
-href="coqdoc/Riktig.Theory.BigOp.html#bigop"><code>bigop</code></a>, the
-generic summation <code>Fixpoint</code>; <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
-defines <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>.
-Neither is a derived theorem, so strictly neither belongs in
-<code>Theory/</code>. But there is no “Summation” or “Orthogonalization”
-interface for them to satisfy, and no concrete carrier they belong to —
-each is generic over an existing interface (<a
+a sharp rule has an edge. It also has a backlog, which is a different
+thing and worth separating from it.</p>
+<p><strong>An algorithm generic over an interface is not an
+exception.</strong> Summation and orthogonalization look like ones. Each
+is an algorithm rather than a derived theorem, and neither belongs to a
+concrete carrier — each is generic over an existing interface (<a
 href="coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>,
 <a
 href="coqdoc/Riktig.Structure.PosInner.html#PosInner.PosInner"><code>PosInner</code></a>).
-The algorithm <em>is</em> the mathematics being studied, so it lives
-with the theory about it.</p>
-<p><strong>A <code>Theory/</code> file may import a specific
-<code>Impl/</code> file</strong> when its content is theory <em>about
-that named representation</em>. <a
-href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Trace.html"><code>Theory/Trace.v</code></a>
-and <a
-href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
-all import <a
-href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>,
-because their theorems cannot even be stated without naming matrices.
-The test is exactly that: could the file’s theorems be phrased without
-mentioning that representation? If not, the import is the point rather
-than a leak. The other direction stays forbidden — a generic
-construction over an abstract interface must not reach into a concrete
-representation.</p>
+The way out is not an exemption but an interface: summation is pinned by
+two equations, orthogonalization by five, and once those are written
+down the split applies unchanged. The equations are in
+<code>Structure/</code>, the terms that compute them in
+<code>Lib/</code> and <code>Impl/</code>, and what follows from the
+equations alone in <code>Theory/</code>. An algorithm that is the
+mathematics being studied still says what it means before it says how it
+runs.</p>
 <p><strong>Some tracks sit outside the split entirely.</strong>
-<code>theories/Channel/</code>, <code>theories/Lambda/</code> and
-<code>theories/Programs/</code> each study one concrete object — traces
-and protocols, a calculus, executable programs — rather than an abstract
-structure with many instances. There is exactly one alternating-bit
-protocol; giving it an <code>Structure/</code> that some other
-<code>Impl/</code> might satisfy differently would add layers without
-adding instances. So <a
+<code>theories/Channel/</code> and <code>theories/Programs/</code> each
+study one concrete object — traces and protocols, executable programs —
+rather than an abstract structure with many instances. There is exactly
+one alternating-bit protocol; giving it an <code>Structure/</code> that
+some other <code>Impl/</code> might satisfy differently would add layers
+without adding instances. So <a
 href="coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
 keeps its data, its algorithm and its theorems in one file, in clearly
 separated sections, and states in its own header what it proves and what
 it deliberately does not. That is a different discipline applied
 consistently, not the absence of one.</p>
+<p><strong>And one corner of the tree has not caught up.</strong> <a
+href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Trace.html"><code>Theory/Trace.v</code></a>
+and <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
+state theorems that name <a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>, a
+type <a
+href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>
+owns. Their theorems genuinely cannot be phrased without naming
+matrices, which is why they were written that way — but that argument
+would license the leak anywhere, and <code>docs/DESIGN.md</code> calls a
+<code>Theory/</code> file stating lemmas about an
+<code>Impl/</code>-owned type this rule’s violation in its most common
+form. The repair is not to rephrase the theorems but to move the matrix
+layer into <code>Impl/</code> as a whole. Until then it is a debt, not
+an edge, and the difference between the two is whether anyone intends to
+pay it.</p>
 <p>The rule earns its keep exactly where many different things can
 satisfy one abstract contract, and has nothing to offer where the object
 of study is a single concrete thing.</p>

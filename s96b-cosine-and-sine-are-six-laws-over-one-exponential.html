@@ -66,12 +66,12 @@ href="coqdoc/Riktig.Impl.Clifford.html#cl_even"><code>cl_even</code></a>:</p>
 <p>Every even element is <code>rotor a b</code>, the combination
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mspace width="0.167em"></mspace><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">a + b\,e_{12}</annotation></semantics></math>
 (<a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#even_is_rotor"><code>even_is_rotor</code></a>),
+href="coqdoc/Riktig.Impl.PlaneRotor.html#even_is_rotor"><code>even_is_rotor</code></a>),
 and the two-term product law <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotor_mul"><code>rotor_mul</code></a>
 is the complex multiplication table. The square of the bivector is
 checked directly:</p>
-<pre class="coq"><code>  Definition e12 : Even2 F := exist cl_even (rotor 0 1) (rotor_even 0 1).
+<pre class="coq"><code>  Definition e12 : Even2 F := exist cl_even (rotor 0 1) (rotor_is_even 0 1).
 
   Example e12_squared_in_even : e12 * e12 == - (1).</code></pre>
 <p>An inverse for
@@ -346,7 +346,7 @@ Proof. reflexivity. Qed.</code></pre>
 equation</h2>
 <p>Now the consequences, from the six laws alone. Two scalings of one
 element commute (<a
-href="coqdoc/Riktig.Theory.Circular.html#collinear_commute"><code>collinear_commute</code></a>,
+href="coqdoc/Riktig.Theory.Algebra.html#collinear_commute"><code>collinear_commute</code></a>,
 three uses of centrality), which discharges the guard on <a
 href="coqdoc/Riktig.Structure.Circular.html#Circular.cexp_add"><code>cexp_add</code></a>
 along a line and gives <a
@@ -360,10 +360,15 @@ by
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>
 (<a
-href="coqdoc/Riktig.Theory.Circular.html#two_term_product"><code>two_term_product</code></a>,
-which is the complex table again, derived here from
+href="coqdoc/Riktig.Theory.Algebra.html#two_term_product"><code>two_term_product</code></a>,
+which is the complex table again, derived from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>e</mi><mn>2</mn></msup><mo>=</mo><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">e^2 = -1</annotation></semantics></math>
-and nothing else) gives angle addition. On the blackboard:</p>
+and nothing else — and derived one layer down, in <a
+href="coqdoc/Riktig.Theory.Algebra.html"><code>Theory/Algebra.v</code></a>,
+over the ring and scaling laws that a <a
+href="coqdoc/Riktig.Structure.Circular.html#Circular.Circular"><code>Circular</code></a>
+algebra and a geometric algebra both carry) gives angle addition. On the
+blackboard:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">x</mi><mi mathvariant="normal">p</mi></mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo>+</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">x</mi><mi mathvariant="normal">p</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo>⋅</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">x</mi><mi mathvariant="normal">p</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo>⋅</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mspace width="1.0em"></mspace><mo stretchy="false" form="prefix">{</mo><mtext mathvariant="normal">collinear addition</mtext><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\mathrm{cexp}((t+u)\cdot e)
 \;=\; \mathrm{cexp}(t\cdot e)\,\mathrm{cexp}(u\cdot e)
 \quad \{\text{collinear addition}\}</annotation></semantics></math></p>
@@ -396,7 +401,7 @@ href="coqdoc/Riktig.Theory.Circular.html#euler_product"><code>euler_product</cod
 which is <a
 href="coqdoc/Riktig.Structure.Circular.html#Circular.euler"><code>euler</code></a>
 applied to each factor followed by <a
-href="coqdoc/Riktig.Theory.Circular.html#two_term_product"><code>two_term_product</code></a>.
+href="coqdoc/Riktig.Theory.Algebra.html#two_term_product"><code>two_term_product</code></a>.
 That is angle addition in full — as <em>one</em> equation in the
 algebra.</p>
 <p>Splitting it into the two scalar identities the tables print takes
@@ -415,7 +420,7 @@ and taken as a hypothesis:</p>
     {As : HasScale F A} (e : A) : Prop :=
   forall a b : F, a *: 1 + b *: e == 0 -&gt; a == 0 /\ b == 0.</code></pre>
 <p><a
-href="coqdoc/Riktig.Theory.Circular.html#independent_separates"><code>independent_separates</code></a>
+href="coqdoc/Riktig.Theory.ComplexPlane.html#independent_separates"><code>independent_separates</code></a>
 turns that into uniqueness of coordinates, and the two familiar
 identities follow by comparing the two sides of <a
 href="coqdoc/Riktig.Theory.Circular.html#euler_angle_addition"><code>euler_angle_addition</code></a>
@@ -423,16 +428,16 @@ coordinate by coordinate:</p>
 <pre class="coq"><code>  Theorem cos_angle_addition : forall t u : F,
     cos (t + u) == cos t * cos u + - (sin t * sin u).</code></pre>
 <p>The hypothesis is a real one, discharged where it holds: <a
-href="coqdoc/Riktig.Theory.Circular.html#plane_independent_from_one"><code>plane_independent_from_one</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_independent_from_one"><code>plane_independent_from_one</code></a>
 proves it for the plane algebra’s own bivector <code>rotor 0 1</code> (a
 square root of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
 by <a
-href="coqdoc/Riktig.Theory.Circular.html#plane_bivector_square"><code>plane_bivector_square</code></a>),
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_bivector_square"><code>plane_bivector_square</code></a>),
 reading off the two blades, and <a
 href="coqdoc/Riktig.Impl.CircleModel.html#bool_circle_i_independent"><code>bool_circle_i_independent</code></a>
 proves it in the characteristic-two model, where <a
-href="coqdoc/Riktig.Impl.CircleModel.html#scale_one_scale_i"><code>scale_one_scale_i</code></a>
+href="coqdoc/Riktig.Impl.Complex.html#scale_one_scale_i"><code>scale_one_scale_i</code></a>
 says
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mn>1</mn><mo>+</mo><mi>b</mi><mo>⋅</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">a\cdot 1 + b \cdot i</annotation></semantics></math>
 is literally the pair <code>mkC a b</code>. In that model the separated
@@ -448,15 +453,21 @@ href="coqdoc/Riktig.Theory.Circular.html#rotor_angle_addition"><code>rotor_angle
 says
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mi>R</mi><mo stretchy="false" form="prefix">(</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>R</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo>+</mo><mi>u</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">R(t)R(u) = R(t+u)</annotation></semantics></math>
 for
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>cos</mi><mo>&#8289;</mo></mrow><mi>t</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mrow><mi>sin</mi><mo>&#8289;</mo></mrow><mi>t</mi><mo stretchy="false" form="postfix">)</mo><msub><mi>e</mi><mn>12</mn></msub></mrow><annotation encoding="application/x-tex">R(t) = \cos t + (\sin t)e_{12}</annotation></semantics></math>,
-with <a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>cos</mi><mo>&#8289;</mo></mrow><mi>t</mi><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mrow><mi>sin</mi><mo>&#8289;</mo></mrow><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mi>e</mi></mrow><annotation encoding="application/x-tex">R(t) = \cos t + (\sin t)e</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>
+is any square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>
+in the algebra, with <a
 href="coqdoc/Riktig.Theory.Circular.html#rotor_angle_unit"><code>rotor_angle_unit</code></a>
 (a rotor at an angle has unit norm) being exactly <a
 href="coqdoc/Riktig.Structure.Circular.html#Circular.pythagoras"><code>pythagoras</code></a>
 and <a
 href="coqdoc/Riktig.Theory.Circular.html#rotor_angle_reverse"><code>rotor_angle_reverse</code></a>
-(reversal negates the angle) being exactly the two parity laws. And the
-polar form: for two vectors of the plane,</p>
+(reversal negates the angle) being exactly the two parity laws — that
+last one asking, in addition, for a reversal that negates
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>.
+And the polar form: for two vectors of the plane,</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mspace width="0.167em"></mspace><mi>v</mi><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>u</mi><mo stretchy="false" form="postfix">∥</mo><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">∥</mo><mi>v</mi><mo stretchy="false" form="postfix">∥</mo><mspace width="0.278em"></mspace><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">x</mi><mi mathvariant="normal">p</mi></mrow><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo>⋅</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">u\,v \;=\; \|u\|\,\|v\|\;\mathrm{cexp}(t\cdot e),</annotation></semantics></math></p>
 <p>where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>cos</mi><mo>&#8289;</mo></mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">\cos t</annotation></semantics></math>
@@ -513,8 +524,10 @@ The prototype file <code>SeriesLab.v</code> at the repository root
 proves exactly this contradiction
 (<code>unconditional_parity_is_false</code>), which is why the class
 reads:</p>
-<pre class="coq"><code>  Class Series (A : Type) `{Ring A} {Ab : HasBigop A}
-      {Ss : HasSsum A} {Sm : HasSummable A} := {
+<pre class="coq"><code>  Class Series (A : Type) `{Ring A}
+      {Ss : HasSsum A} {Sm : HasSummable A}
+      (bigop_list : forall J : Type, (J -&gt; A) -&gt; list J -&gt; A)
+      {BL : BigOp A bigop_list} := {
     ssum_proper     :: Proper (equ ==&gt; equ) Ss;
     summable_proper :: Proper (equ ==&gt; iff) Sm;
 
@@ -528,10 +541,12 @@ reads:</p>
       summable f -&gt; summable (fun k =&gt; f (S (2 * k)%nat));
     summable_cauchy : forall f g : nat -&gt; A,
       summable f -&gt; summable g -&gt;
-      summable (fun n =&gt; bigop (S n) (fun k =&gt; f k * g (n - k)%nat));
+      summable (fun n =&gt;
+        bigop_list _ (fun k =&gt; f k * g (n - k)%nat) (seq 0 (S n)));
 
     sum_supported : forall (f : nat -&gt; A) (n : nat),
-      (forall m : nat, (n &lt;= m)%nat -&gt; f m == 0) -&gt; ssum f == bigop n f;
+      (forall m : nat, (n &lt;= m)%nat -&gt; f m == 0) -&gt;
+      ssum f == bigop_list _ f (seq 0 n);
     sum_add       : forall f g : nat -&gt; A,
       summable f -&gt; summable g -&gt;
       ssum (fun n =&gt; f n + g n) == ssum f + ssum g;
@@ -542,9 +557,11 @@ reads:</p>
       ssum f == ssum (fun k =&gt; f (2 * k)%nat) + ssum (fun k =&gt; f (S (2 * k)%nat));
     sum_cauchy    : forall f g : nat -&gt; A,
       summable f -&gt; summable g -&gt;
-      ssum f * ssum g == ssum (fun n =&gt; bigop (S n) (fun k =&gt; f k * g (n - k)%nat));
+      ssum f * ssum g ==
+        ssum (fun n =&gt;
+          bigop_list _ (fun k =&gt; f k * g (n - k)%nat) (seq 0 (S n)));
   }.</code></pre>
-<p><code>bigop n f</code> is the finite section
+<p><code>bigop_list f (seq 0 n)</code> is the finite section
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>⋯</mi><mo>+</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(0) + \cdots + f(n-1)</annotation></semantics></math>,
 and <a
 href="coqdoc/Riktig.Structure.Series.html#Series.sum_supported"><code>sum_supported</code></a>
@@ -554,7 +571,10 @@ it: a family that vanishes from
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
 on has its
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>-th
-section as its sum. The closure fields (<a
+section as its sum. The finite sum enters as a class parameter carrying
+its two equations rather than as a fixed function, so that these laws
+are about <em>a</em> summation and not about one particular way of
+computing one. The closure fields (<a
 href="coqdoc/Riktig.Structure.Series.html#Series.summable_add"><code>summable_add</code></a>
 and its four siblings) are there because a proof that rearranges a sum
 must know the rearranged family is still in the domain. A second class,
@@ -714,32 +734,73 @@ building a <a
 href="coqdoc/Riktig.Structure.Series.html#Series.Series"><code>Series</code></a>
 instance over a complete ordered field. <a
 href="coqdoc/Riktig.Impl.SeriesReals.html"><code>Impl/SeriesReals.v</code></a>
-holds the part of that job which needs no choice principle: the sum
-<em>relation</em> — <code>SumTo f L</code> reads “the finite sections of
-<code>f</code> converge to <code>L</code>” — and the laws that are
-already true of it.</p>
+does that. It starts from the sum <em>relation</em> —
+<code>SumTo f L</code> reads “the finite sections of <code>f</code>
+converge to <code>L</code>”:</p>
 <pre class="coq"><code>  Definition SumTo (f : nat -&gt; R) (L : R) : Prop :=
     seq_lim (fun n =&gt; bigop n f) L.</code></pre>
 <p>Uniqueness of the limit, linearity, and the sum of a finitely
-supported family are proved there for an arbitrary ordered field —
-completeness is never used. Two things stop the file short of an
-instance, and both are named in its header. Existence — a nonnegative
-family with bounded finite sections has a sum — is monotone convergence,
-whose proof must turn a least upper bound into an index, and that step
-needs <code>Classical_Prop.classic</code>. And a total
-<code>ssum : (nat -&gt; R) -&gt; R</code> is data, so packaging the
-relation into the <a
-href="coqdoc/Riktig.Structure.Series.html#HasSsum"><code>HasSsum</code></a>
-operation needs the limit extracted from an existence proof, which is
-<code>IndefiniteDescription.constructive_indefinite_description</code>.
-The rest of the analytic work sits behind those same two principles: the
-Cauchy criterion, which carries existence to families of mixed sign and
-supplies absolute summability as the instance’s <a
-href="coqdoc/Riktig.Structure.Series.html#summable"><code>summable</code></a>;
-the parity split, a reindexing once the criterion is available; Mertens’
-theorem for the Cauchy product; and the estimate behind <a
-href="coqdoc/Riktig.Structure.Circular.html#Circular.sin_nontrivial"><code>sin_nontrivial</code></a>.</p>
-<p>Everything above them is equations.</p>
+supported family are proved for an arbitrary ordered field —
+completeness is never used, and Coq’s generalization records it. Past
+that line the file crosses two thresholds, both named in its header. <a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sections_lub"><code>sections_lub</code></a>
+applies completeness to the set of finite sections; <a
+href="coqdoc/Riktig.Impl.SeriesReals.html#lub_section_index"><code>lub_section_index</code></a>
+turns
+“<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>−</mo><mi>ε</mi></mrow><annotation encoding="application/x-tex">s - \varepsilon</annotation></semantics></math>
+is not an upper bound of them” into the section that exceeds it, which
+is <code>Classical_Prop.classic</code> — an ordered field decides each
+single comparison by <a
+href="coqdoc/Riktig.Structure.Order.html#OrderedField.le_total"><code>le_total</code></a>,
+but nothing in it turns a negated universal over the indices into a
+witness. Monotone convergence follows, and with it <a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_exists_abs_summable"><code>sum_exists_abs_summable</code></a>,
+since an absolutely summable family is the difference of two increasing
+ones, term by term:</p>
+<pre class="coq"><code>    apply (sum_to_ext (fun i =&gt; (abs (f i) + f i) + - abs (f i)) f).</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_to_parity"><code>sum_to_parity</code></a>
+is then a reindexing — a section of even length is the pair of
+half-length sections, and those are a subsequence of all the sections —
+and <a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_to_cauchy"><code>sum_to_cauchy</code></a>
+is Mertens’ theorem, whose section of the Cauchy product is the triangle
+of index pairs read by rows. The second threshold is the packaging: a
+total <code>ssum : (nat -&gt; R) -&gt; R</code> is data, so it is read
+off an existence proof by
+<code>IndefiniteDescription.constructive_indefinite_description</code>,
+against a specification with two clauses — the sum where there is one,
+and <code>0</code> where there is none, which is what makes it a
+function of the family and not of a proof. <a
+href="coqdoc/Riktig.Impl.SeriesReals.html#reals_series"><code>reals_series</code></a>
+is the instance, and <code>Print Assumptions</code> in the file checks
+that those two axioms are all it uses.</p>
+<p><a
+href="coqdoc/Riktig.Structure.Circular.html#Circular.sin_nontrivial"><code>sin_nontrivial</code></a>
+is discharged in <a
+href="coqdoc/Riktig.Impl.TrigReals.html"><code>Impl/TrigReals.v</code></a>
+by one estimate: the terms of <code>sin_term 1</code> shrink by at most
+a quarter at each step, because the two-step recursion divides by two
+consecutive naturals from <code>2</code> on. That is summability by the
+ratio test, and it also makes the tail from index one on smaller than
+the first term, which is <code>1</code>:</p>
+<pre class="coq"><code>  Theorem sin_one_positive : 0 &lt; sin_sum (1 : R).</code></pre>
+<p>What is left before <a
+href="coqdoc/Riktig.Structure.Circular.html#Circular.Circular"><code>Circular</code></a>
+holds over the reals outright is the same estimate at an arbitrary
+argument, and an algebra to hold the exponential. The ratio for
+<code>exp_term x</code> falls below one only past an index that depends
+on <code>x</code>, so the ratio test has to start there, and finding the
+index is the Archimedean property. And <a
+href="coqdoc/Riktig.Structure.Circular.html#Circular.euler"><code>euler</code></a>
+and <a
+href="coqdoc/Riktig.Structure.Circular.html#Circular.pythagoras"><code>pythagoras</code></a>
+speak about an algebra with a square root of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>,
+which over the reals means the complex numbers carrying a <a
+href="coqdoc/Riktig.Structure.Series.html#Series.Series"><code>Series</code></a>
+instance of their own — summability component by component, and a Cauchy
+product that mixes the components.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
 href="coqdoc/Riktig.Impl.CliffordComplex.html"><code>Impl/CliffordComplex.v</code></a>
@@ -786,15 +847,33 @@ href="coqdoc/Riktig.Impl.CircleModel.html#Bool_Circular"><code>Bool_Circular</co
 <a
 href="coqdoc/Riktig.Impl.CircleModel.html#bool_sin_moves"><code>bool_sin_moves</code></a>)
 · <a
+href="coqdoc/Riktig.Theory.Algebra.html"><code>Theory/Algebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Algebra.html#collinear_commute"><code>collinear_commute</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Algebra.html#two_term_product"><code>two_term_product</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.PlaneRotor.html"><code>Impl/PlaneRotor.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_bivector_square"><code>plane_bivector_square</code></a>,
+<a
+href="coqdoc/Riktig.Impl.PlaneRotor.html#plane_independent_from_one"><code>plane_independent_from_one</code></a>)
+· <a
+href="coqdoc/Riktig.Structure.ComplexPlane.html"><code>Structure/ComplexPlane.v</code></a>
+(<a
+href="coqdoc/Riktig.Structure.ComplexPlane.html#independent_from_one"><code>independent_from_one</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.ComplexPlane.html"><code>Theory/ComplexPlane.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.ComplexPlane.html#independent_separates"><code>independent_separates</code></a>,
+<a
+href="coqdoc/Riktig.Theory.ComplexPlane.html#reversal_two_term"><code>reversal_two_term</code></a>)
+· <a
 href="coqdoc/Riktig.Theory.Circular.html"><code>Theory/Circular.v</code></a>
 (<a
 href="coqdoc/Riktig.Theory.Circular.html#cexp_collinear_add"><code>cexp_collinear_add</code></a>,
 <a
-href="coqdoc/Riktig.Theory.Circular.html#two_term_product"><code>two_term_product</code></a>,
-<a
 href="coqdoc/Riktig.Theory.Circular.html#cexp_angle_addition"><code>cexp_angle_addition</code></a>,
-<a
-href="coqdoc/Riktig.Theory.Circular.html#independent_from_one"><code>independent_from_one</code></a>,
 <a
 href="coqdoc/Riktig.Theory.Circular.html#cos_angle_addition"><code>cos_angle_addition</code></a>,
 <a
@@ -836,7 +915,31 @@ href="coqdoc/Riktig.Impl.SeriesReals.html#SumTo"><code>SumTo</code></a>,
 <a
 href="coqdoc/Riktig.Impl.SeriesReals.html#sum_to_supported"><code>sum_to_supported</code></a>,
 <a
-href="coqdoc/Riktig.Impl.SeriesReals.html#sections_monotone"><code>sections_monotone</code></a>).</p>
+href="coqdoc/Riktig.Impl.SeriesReals.html#sections_monotone"><code>sections_monotone</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sections_lub"><code>sections_lub</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#lub_section_index"><code>lub_section_index</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_exists_nonneg"><code>sum_exists_nonneg</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_exists_abs_summable"><code>sum_exists_abs_summable</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_to_parity"><code>sum_to_parity</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#sum_to_cauchy"><code>sum_to_cauchy</code></a>,
+<a
+href="coqdoc/Riktig.Impl.SeriesReals.html#reals_series"><code>reals_series</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.TrigReals.html"><code>Impl/TrigReals.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.TrigReals.html#sin_term_one_step"><code>sin_term_one_step</code></a>,
+<a
+href="coqdoc/Riktig.Impl.TrigReals.html#sin_one_summable"><code>sin_one_summable</code></a>,
+<a
+href="coqdoc/Riktig.Impl.TrigReals.html#sin_one_positive"><code>sin_one_positive</code></a>,
+<a
+href="coqdoc/Riktig.Impl.TrigReals.html#reals_sin_nontrivial"><code>reals_sin_nontrivial</code></a>).</p>
 </main>
 </body>
 </html>

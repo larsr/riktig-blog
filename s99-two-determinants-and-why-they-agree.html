@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two determinants, and why they must agree</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="two-determinants-and-why-they-must-agree">Two determinants, and
+why they must agree</h1>
+<p>There are several ways to compute a determinant. Expand along a
+column in minors and cofactors. Sum over all permutations with signs.
+Row-reduce and multiply the pivots. Or, in a <a
+href="https://en.wikipedia.org/wiki/Geometric_algebra">geometric
+algebra</a>, multiply the columns together and read off one
+coefficient.</p>
+<p>Write two of those down as programs and you have two functions. Run
+them on the same matrix and they agree. Run them on a thousand matrices
+and they still agree. That is evidence, not a reason — and if you want
+the reason, testing more matrices will never supply it.</p>
+<p>The reason has to come from somewhere else: from a description of
+what a determinant <em>is</em> that neither program mentions, and that
+both can be shown to satisfy.</p>
+<h2 id="what-the-determinant-is">What the determinant is</h2>
+<p>Three properties pin it down. It takes <code>n</code> vectors of an
+<code>n</code>-dimensional space and returns a scalar; it is
+<strong>multilinear</strong> — linear in each argument with the others
+held fixed; it is <strong>alternating</strong> — zero whenever two of
+its arguments are equal; and it is <strong>normalised</strong> — it
+returns <code>1</code> on the basis.</p>
+<p>No formula there, and no matrix. In Coq that is three fields:</p>
+<pre class="coq"><code>Class Determinant (n : nat) (I F V : Type)
+    {eI : EqRel I} {Ieq : EquDec I} {Vu : HasUpd I V} {IFin : FinIndex n I}
+    {Fe : EqRel F} {Fz : Zero F} {Fa : HasAdd F} {Fn : HasNeg F} {Fo : One F}
+    {Fm : HasMult F} {Fi : HasInv F} {FF : Field F}
+    {eV : EqRel V} {zV : Zero V} {aV : HasAdd V} {nV : HasNeg V} {sV : HasScale F V}
+    {VV : VectorSpace F V} {Vl : HasLincomb I F V} (B : Basis n I F V) := {
+  determinant_form : MultilinearForm I F V;
+  determinant_is_alternating :: Alternating determinant_form;
+  determinant_normalization : determinant_form (Basis.vec B) == 1;
+}.</code></pre>
+<p>The long list in braces is the ambient equipment — that the index is
+finite and has a decidable equality, that the scalars form a field, that
+the vectors form a vector space over them. Coq fills those in by search
+at each use. The three lines after <code>:= {</code> are the content,
+and they are the three properties above.</p>
+<p>A <em>class</em> in Coq declares a family of facts indexed by types,
+and an <em>instance</em> registers one such fact in a database the proof
+search consults. So <code>Determinant n I F V B</code> is the claim
+“here is a form on <code>V</code> with these three properties”, and an
+instance is something that supplies one.</p>
+<p>But read that sentence again: <strong>here is <em>a</em>
+form</strong>. Nothing yet says there is only one. Until that is proved,
+the class is a <em>property</em> that things may happen to have, and two
+things having it are under no obligation to agree. The whole plan rests
+on a theorem that was, until recently, not in the library at all.</p>
+<h2 id="the-top-exterior-power-is-one-dimensional">The top exterior
+power is one-dimensional</h2>
+<p>The theorem says any two alternating multilinear <code>n</code>-forms
+are proportional. The usual statement introduces a scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mi>c</mi><mspace width="0.167em"></mspace><mi>w</mi></mrow><annotation encoding="application/x-tex">u = c\,w</annotation></semantics></math>,
+which forces you to worry about
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+being zero. Cross-multiplying avoids that entirely: for a basis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math>,
+and any family of vectors
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>w</mi><mo stretchy="false" form="prefix">(</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>w</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>u</mi><mo stretchy="false" form="prefix">(</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">u(v)\cdot w(e) \;=\; w(v)\cdot u(e).</annotation></semantics></math></p>
+<p>No scalar to invert, no non-vanishing hypothesis. In Coq:</p>
+<pre class="coq"><code>  Theorem alternating_forms_proportional : forall (u w : MultilinearForm I F V),
+    Alternating u -&gt; Alternating w -&gt;
+    forall vs : I -&gt; V, Proper (equ ==&gt; equ) vs -&gt;
+      u vs * w (Basis.vec B) == w vs * u (Basis.vec B).</code></pre>
+<p>The <code>Proper (equ ==&gt; equ) vs</code> says the family of
+vectors respects the index’s own notion of equality — it does not hand
+back different vectors for two indices the index type considers the
+same. It is free whenever that equality is ordinary equality.</p>
+<p>Uniqueness is now three lines of arithmetic. Set
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mi>D</mi></mrow><annotation encoding="application/x-tex">u = D</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><msup><mi>D</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">w = D&#39;</annotation></semantics></math>,
+two determinants over the same basis. Both normalisations are
+<code>1</code>, so the two products collapse:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><msup><mi>D</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msup><mi>D</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>D</mi><mo stretchy="false" form="prefix">(</mo><mi>e</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msup><mi>D</mi><mo>′</mo></msup><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">D(v) \;=\; D(v)\cdot D&#39;(e) \;=\; D&#39;(v)\cdot D(e) \;=\; D&#39;(v)</annotation></semantics></math></p>
+<p>and in Coq that is exactly what the proof says, one step per
+equality:</p>
+<pre class="coq"><code>  Theorem determinant_unique : forall (D D&#39; : Determinant n I F V B)
+      (vs : I -&gt; V), Proper (equ ==&gt; equ) vs -&gt; D vs == D&#39; vs.
+  Proof.
+    intros D D&#39; vs Pvs.
+    calc (D vs)
+      == (D vs * D&#39; (Basis.vec B))
+      == (D&#39; vs * D (Basis.vec B))
+      == (D&#39; vs).
+    - rewrite (determinant_basis_normalization D&#39;). ring.
+    - exact (alternating_forms_proportional B (determinant_multilinear_form D)
+               (determinant_multilinear_form D&#39;) (determinant_alternating D)
+               (determinant_alternating D&#39;) vs Pvs).
+    - rewrite (determinant_basis_normalization D). ring.
+  Qed.</code></pre>
+<p>The first and third steps multiply by a normalisation that is
+<code>1</code>; the middle step is the proportionality theorem.
+<code>calc</code> chains equalities and discharges them by transitivity,
+one justification per step.</p>
+<p>With that, the class stops being a property and becomes a definition.
+“The determinant” now names a single function, and anything proved to
+have the three properties <em>is</em> it.</p>
+<h2 id="the-second-implementation">The second implementation</h2>
+<p>In a geometric algebra, vectors can be multiplied. The product of
+<code>n</code> vectors decomposes into pieces of different grades, and
+the top piece — the one spanning the whole space — is what the wedge
+product would give. Reading off its coefficient turns <code>n</code>
+vectors into a scalar.</p>
+<p>That is a determinant, and the library proves so over an
+<em>abstract</em> algebra: given a linear functional <code>top</code>
+that vanishes on everything below the top grade, the map sending a
+family of vectors to <code>top (their product)</code> is multilinear,
+alternating and normalised. No dimension, no coordinates, no matrix
+appears in that theorem.</p>
+<p>At a concrete Clifford algebra it becomes a program:</p>
+<pre class="coq"><code>  Definition det_ga (A : Matrix n n F) : F :=
+    cl_top (cl_product s (map (fun j i =&gt; A i j) (fin_all n))).</code></pre>
+<p>Take the matrix’s columns, embed each as a vector, multiply them
+together, read the coefficient at the full blade. The fold runs over
+<code>fin_all n</code>, the index type’s own enumeration, so no bound
+and no index arithmetic appears — and there are no minors, no signs and
+no permutations anywhere in it.</p>
+<p>It computes:</p>
+<pre class="coq"><code>Example det_ga_3x3 : det_ga (sig_euclid 3) m3 == (-3)#1.
+Proof. vm_compute. reflexivity. Qed.</code></pre>
+<p>for <a
+href="coqdoc/Riktig.Impl.CliffordDet.html#m3"><code>m3</code></a> the
+matrix with rows <code>1 2 3</code>, <code>4 5 6</code>,
+<code>7 8 10</code>.</p>
+<h2 id="why-they-agree">Why they agree</h2>
+<p>The library’s other determinant is a recursive cofactor expansion,
+and it too is proved to satisfy the three properties. So now there are
+two instances of one class — and uniqueness applies:</p>
+<pre class="coq"><code>  Theorem det_ga_is_detM : forall A : Matrix n n F,
+    det_ga A == detM (fun j i =&gt; A i j).
+  Proof.
+    intros A.
+    exact (detM_is_the_determinant n det_ga_Determinant (fun j i =&gt; A i j)).
+  Qed.</code></pre>
+<p>One line, and no induction on matrices, no comparison of the two
+algorithms, no shared code between them — one multiplies multivectors,
+the other recurses on minors. The transposition in the statement is
+bookkeeping: <a
+href="coqdoc/Riktig.Impl.CliffordDet.html#det_ga"><code>det_ga</code></a>
+reads a matrix by its columns and the cofactor expansion reads the
+family as rows.</p>
+<p>This is the pattern worth taking away. Two programs agree not because
+anyone checked them against each other, but because each was separately
+shown to meet a specification that admits only one answer. Adding a
+third — row reduction, say — costs one proof of the three properties,
+and its agreement with the other two is immediate.</p>
+<p>One consequence fell out that was not designed for: <a
+href="coqdoc/Riktig.Impl.CliffordDet.html#det_ga"><code>det_ga</code></a>
+is a determinant for <strong>every</strong> signature of the Clifford
+algebra, not only the Euclidean one. What the generators square to only
+shifts weight into grades below the top, and the functional does not
+look there.</p>
+<hr />
+<p><strong>Follow along in the code:</strong> <a
+href="coqdoc/Riktig.Structure.Determinant.html"><code>Structure/Determinant.v</code></a>
+(<a
+href="coqdoc/Riktig.Structure.Determinant.html#Determinant"><code>Determinant</code></a>,
+<a
+href="coqdoc/Riktig.Structure.Determinant.html#determinant_from_laws"><code>determinant_from_laws</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.AlternatingForm.html"><code>Theory/AlternatingForm.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.AlternatingForm.html#alternating_forms_proportional"><code>alternating_forms_proportional</code></a>,
+<a
+href="coqdoc/Riktig.Theory.AlternatingForm.html#alternating_reindex_sign"><code>alternating_reindex_sign</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Determinant.html"><code>Theory/Determinant.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Determinant.html#determinant_unique"><code>determinant_unique</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Determinant.html#determinant_composition"><code>determinant_composition</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Determinant.html#determinant_linear_substitution"><code>determinant_linear_substitution</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.Exterior.html"><code>Theory/Exterior.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Exterior.html#ga_top_determinant"><code>ga_top_determinant</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Exterior.html#ga_top_form_alternating"><code>ga_top_form_alternating</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.CliffordDet.html"><code>Impl/CliffordDet.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.CliffordDet.html#det_ga"><code>det_ga</code></a>,
+<a
+href="coqdoc/Riktig.Impl.CliffordDet.html#det_ga_Determinant"><code>det_ga_Determinant</code></a>,
+<a
+href="coqdoc/Riktig.Impl.CliffordDet.html#det_ga_is_detM"><code>det_ga_is_detM</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.DetInterface.html"><code>Impl/DetInterface.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.DetInterface.html#detM_Determinant"><code>detM_Determinant</code></a>,
+<a
+href="coqdoc/Riktig.Impl.DetInterface.html#detM_is_the_determinant"><code>detM_is_the_determinant</code></a>)
+· <a href="coqdoc/Riktig.Impl.Det.html"><code>Impl/Det.v</code></a> (<a
+href="coqdoc/Riktig.Impl.Det.html#detM"><code>detM</code></a>).</p>
+</main>
+</body>
+</html>

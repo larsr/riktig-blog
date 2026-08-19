@@ -67,25 +67,30 @@ href="coqdoc/Riktig.Theory.MatMulBilinear.html"><code>Theory/MatMulBilinear.v</c
 <pre class="coq"><code>  Definition mat_mul_bilinear :
       BilinearMap F (Matrix m n F) (Matrix n p F) (Matrix m p F) :=
     bilinear_map_from_laws
-      (mat_mul (F:=F) (m:=m) (n:=n) (p:=p))
-      (mat_mul_proper m n p)
-      (mat_mul_add_l m n p)
-      (mat_mul_scale_l m n p)
-      (mat_mul_add_r m n p)
-      (mat_mul_scale_r m n p).</code></pre>
+      (@mat_mul n (Fin.t n) F _ _ _ _ _ _ (Fin.t m) (Fin.t p))
+      mat_mul_proper
+      mat_mul_add_l
+      mat_mul_scale_l
+      mat_mul_add_r
+      mat_mul_scale_r.</code></pre>
 <p><a
 href="coqdoc/Riktig.Structure.Bilinear.html#bilinear_map_from_laws"><code>bilinear_map_from_laws</code></a>
-takes the function first and then the five proofs. The four at the end
-are the two-slots-of-linearity spelled out: <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_add_l"><code>mat_mul_add_l</code></a>
+takes the function first and then the five proofs. The function is
+written <code>@mat_mul (Fin.t n) F _ (Fin.t m) (Fin.t p)</code> because
+<a
+href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
+names the contracted carrier first — that is the only carrier the
+operation depends on — and the two outer ones after it. The four at the
+end are the two-slots-of-linearity spelled out: <a
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_add_l"><code>mat_mul_add_l</code></a>
 and <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_scale_l"><code>mat_mul_scale_l</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_scale_l"><code>mat_mul_scale_l</code></a>
 are additivity and homogeneity in the left matrix, <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_add_r"><code>mat_mul_add_r</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_add_r"><code>mat_mul_add_r</code></a>
 and <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_scale_r"><code>mat_mul_scale_r</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_scale_r"><code>mat_mul_scale_r</code></a>
 the same in the right, and <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_proper"><code>mat_mul_proper</code></a>
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_proper"><code>mat_mul_proper</code></a>
 is the fact that replacing either matrix by an equal one gives an equal
 product.</p>
 <h2
@@ -215,8 +220,7 @@ and its proof is just associativity viewed through a single column:</p>
   mat_vec (mat_mul A B) v == mat_vec A (mat_vec B v).
 Proof.
   intros m n p A B v i.
-  exact (mat_mul_assoc m n p 1 A B
-           (fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k) i Fin.F1).
+  exact (mat_mul_assoc A B (fun (k : Fin.t p) (_ : Fin.t 1) =&gt; v k) i Fin.F1).
 Qed.</code></pre>
 <p>The two bracketings of the three-Jacobian product are the two
 strategies of automatic differentiation. Reverse mode — backpropagation
@@ -247,7 +251,7 @@ Qed.</code></pre>
 forward mode compute the same derivative reads almost exactly like the
 associativity law itself, one level up — and its proof <em>is</em> that
 law, <a
-href="coqdoc/Riktig.Impl.Matrix.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
+href="coqdoc/Riktig.Theory.MatMul.html#mat_mul_assoc"><code>mat_mul_assoc</code></a>,
 applied to the three Jacobians:</p>
 <pre class="coq"><code>Theorem backprop_eq_forward_mode :
   forall (f1 : U -&gt; V) (f2 : V -&gt; W) (f3 : W -&gt; X) (a : U)
@@ -261,7 +265,7 @@ applied to the three Jacobians:</p>
        (mat_mul (jacobian m p BV BW Hd2) (jacobian n m BU BV Hd1)).
 Proof.
   intros f1 f2 f3 a L1 L2 L3 P2 P3 Hd1 Hd2 Hd3.
-  exact (mat_mul_assoc q p m n (jacobian p q BW BX Hd3)
+  exact (mat_mul_assoc (jacobian p q BW BX Hd3)
            (jacobian m p BV BW Hd2) (jacobian n m BU BV Hd1)).
 Qed.</code></pre>
 <p>The long list of hypotheses just says what the setup is: three

@@ -19,18 +19,19 @@ equality is a setoid, and optimizations are rewrites</h1>
 <code>Var n</code> names the variable bound by the <code>n</code>-th
 enclosing lambda, counting from <code>0</code> inward. A call-by-value
 step relation <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> says
-how a term reduces: <code>App (Abs b) v</code> with <code>v</code> a
-value substitutes <code>v</code> for index <code>0</code> in the body
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>
+says how a term reduces: <code>App (Abs b) v</code> with <code>v</code>
+a value substitutes <code>v</code> for index <code>0</code> in the body
 <code>b</code>, and two congruence rules let a step happen in the
 function or argument position of an application. This post takes that
 relation and grows it into an <em>equality</em> — one under which
 simplifying a program is a rewrite.</p>
 <h2 id="from-one-step-to-an-equality">From one step to an equality</h2>
-<p><a href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>
-is a good notion of “reduces to” but a poor notion of “equal to”. It
-only ever moves forward, and only at the one place call-by-value allows.
-What an optimizer wants is different: it wants to say two programs are
+<p><a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a> is
+a good notion of “reduces to” but a poor notion of “equal to”. It only
+ever moves forward, and only at the one place call-by-value allows. What
+an optimizer wants is different: it wants to say two programs are
 <em>the same program</em>, and to replace either by the other wherever
 it appears — including inside a function body it has not called and
 cannot call, because the argument is not known yet.</p>
@@ -38,10 +39,11 @@ cannot call, because the argument is not known yet.</p>
 need not be syntactic identity — two distinct terms can be declared
 equal, as long as the relation is reflexive, symmetric, and transitive.
 The relation <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a> makes
-<a href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a> a
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>
+makes <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a> a
 setoid: it takes a single <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> as
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a> as
 one instance of equality and closes it up.</p>
 <pre class="coq"><code>Inductive conv : tm -&gt; tm -&gt; Prop :=
   | conv_step : forall t t&#39;, step t t&#39; -&gt; conv t t&#39;
@@ -53,36 +55,36 @@ one instance of equality and closes it up.</p>
   | conv_trans : forall t u v, conv t u -&gt; conv u v -&gt; conv t v.</code></pre>
 <p>The last three constructors are exactly reflexivity, symmetry, and
 transitivity — they make <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a> an
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a> an
 equivalence. The middle three are <em>congruence</em>: <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_abs"><code>conv_abs</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_abs"><code>conv_abs</code></a>
 lets a conversion happen underneath an <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a>, in the
-body of a function; <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_appl"><code>conv_appl</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Abs"><code>Abs</code></a>, in
+the body of a function; <a
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_appl"><code>conv_appl</code></a>
 and <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_appr"><code>conv_appr</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_appr"><code>conv_appr</code></a>
 let it happen on either side of an application. This is the capability
 plain evaluation lacks. <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> will
-never reduce under an <a
-href="coqdoc/Riktig.Lambda.Syntax.html#Abs"><code>Abs</code></a> (a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>
+will never reduce under an <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#Abs"><code>Abs</code></a> (a
 lambda is already a value, it stops there), but <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_abs"><code>conv_abs</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_abs"><code>conv_abs</code></a>
 says that if two bodies are convertible then the two functions are
 convertible. An optimizer can simplify a function body without ever
 supplying an argument.</p>
 <p>Registering <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a> as the
-type’s equality lets Coq’s rewriting machinery use it. In this codebase
-<code>t == u</code> is notation for <code>equ t u</code>, where <a
-href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is whatever
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a> as
+the type’s equality lets Coq’s rewriting machinery use it. In this
+codebase <code>t == u</code> is notation for <code>equ t u</code>, where
+<a href="coqdoc/Riktig.Ops.html#equ"><code>equ</code></a> is whatever
 relation a type’s <a
 href="coqdoc/Riktig.Ops.html#EqRel"><code>EqRel</code></a> instance
 provides; for <a
-href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a>, that
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a>, that
 instance <em>is</em> <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a>:</p>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>:</p>
 <pre class="coq"><code>Instance Tm_EqRel : EqRel tm := conv.
 
 Instance Tm_Equivalence : Equivalence conv.
@@ -102,7 +104,7 @@ for convertibility:</p>
 \qquad
 f = f&#39; \;\text{and}\; a = a&#39; \implies f\,a = f&#39;\,a&#39;.</annotation></semantics></math></p>
 <p><a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_abs"><code>conv_abs</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_abs"><code>conv_abs</code></a>
 and the two application rules are precisely those facts, packaged:</p>
 <pre class="coq"><code>Instance Abs_Proper : Proper (equ ==&gt; equ) Abs.
 Proof.
@@ -117,17 +119,17 @@ Proof.
   - apply conv_appr. exact Ha.
 Qed.</code></pre>
 <p><a
-href="coqdoc/Riktig.Lambda.Conv.html#Abs_Proper"><code>Abs_Proper</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#Abs_Proper"><code>Abs_Proper</code></a>
 reads “if <code>b == b'</code> then <code>Abs b == Abs b'</code>” —
 rewriting under a binder is allowed. <a
-href="coqdoc/Riktig.Lambda.Conv.html#App_Proper"><code>App_Proper</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#App_Proper"><code>App_Proper</code></a>
 handles both positions at once, rewriting the function then the argument
 and chaining the two with <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_trans"><code>conv_trans</code></a>.
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_trans"><code>conv_trans</code></a>.
 With these in place, <code>rewrite</code> on a <a
-href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a> behaves
-exactly as it does on a group element: replace a subterm by an equal
-one, anywhere it sits.</p>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a>
+behaves exactly as it does on a group element: replace a subterm by an
+equal one, anywhere it sits.</p>
 <h2 id="a-boolean-is-the-choice-it-would-make">A boolean is the choice
 it would make</h2>
 <p>The lambda calculus has no built-in booleans, but it does not need
@@ -135,31 +137,33 @@ any. A boolean’s entire job is to choose between two alternatives, so
 encode it <em>as</em> that choice: a function of two arguments that
 returns one of them. True returns the first, false returns the
 second.</p>
-<pre class="coq"><code>Definition TRUE : tm := Abs (Abs (Var 1)).
-Definition FALSE : tm := Abs (Abs (Var 0)).</code></pre>
+<p>Three notations make the terms readable — <code>λ a</code> for an
+abstraction, <code># a</code> for the variable at de Bruijn index
+<code>a</code>, and <code>⦅ f x y ⦆</code> for a left-nested
+application:</p>
+<pre class="coq"><code>Definition TRUE : tm := λ λ #1.
+Definition FALSE : tm := λ λ #0.</code></pre>
 <p>Read <a
-href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> as
-<code>\t. \e. t</code>: given a then-branch <code>t</code> and an
-else-branch <code>e</code>, hand back <code>t</code>. In de Bruijn terms
-the then-branch is index <code>1</code> (one lambda further out than
-<code>e</code>), so <a
-href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> is
-<code>Abs (Abs (Var 1))</code> and <a
-href="coqdoc/Riktig.Lambda.Church.html#FALSE"><code>FALSE</code></a> is
-<code>Abs (Abs (Var 0))</code>. A conditional is then nothing but
-applying the boolean to its two branches:</p>
-<pre class="coq"><code>Definition IFB (b t e : tm) : tm := App (App b t) e.</code></pre>
+href="coqdoc/Riktig.Impl.Lambda.Church.html#TRUE"><code>TRUE</code></a>
+as <code>\t. \e. t</code>: given a then-branch <code>t</code> and an
+else-branch <code>e</code>, hand back <code>t</code>. A de Bruijn index
+counts how many lambdas outward the binder sits, so the then-branch —
+bound one lambda further out than <code>e</code> — is index
+<code>1</code>, and the else-branch is index <code>0</code>. A
+conditional is then nothing but applying the boolean to its two
+branches:</p>
+<pre class="coq"><code>Definition IFB (b t e : tm) : tm := ⦅b t e⦆.</code></pre>
 <p><code>IFB b t e</code> feeds <code>t</code> and <code>e</code> to
 <code>b</code> and lets <code>b</code> pick. There is no <code>if</code>
 primitive and no case analysis — the boolean carries out the selection
 by being applied. And because <a
-href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a> is
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IFB"><code>IFB</code></a> is
 built from <a
-href="coqdoc/Riktig.Lambda.Syntax.html#App"><code>App</code></a>, which
-we proved <code>Proper</code>, <a
-href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#App"><code>App</code></a>,
+which we proved <code>Proper</code>, <a
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IFB"><code>IFB</code></a>
 respects <code>==</code> too (the source registers this as <a
-href="coqdoc/Riktig.Lambda.Church.html#IFB_Proper"><code>IFB_Proper</code></a>):
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IFB_Proper"><code>IFB_Proper</code></a>):
 a conversion in any of <code>b</code>, <code>t</code>, <code>e</code> is
 a conversion of the whole conditional.</p>
 <h2 id="branch-selection-is-a-rewrite">Branch selection is a
@@ -167,10 +171,10 @@ rewrite</h2>
 <p>Here is the payoff, and it is the same move as cancelling in a group.
 The theorem: if a boolean-valued subprogram <code>b</code> is
 convertible to <a
-href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a>, then
-the conditional built on it collapses to its then-branch. The optimizer
-knows only <code>b == TRUE</code> — not what <code>b</code> <em>is</em>
-— and simplifies anyway.</p>
+href="coqdoc/Riktig.Impl.Lambda.Church.html#TRUE"><code>TRUE</code></a>,
+then the conditional built on it collapses to its then-branch. The
+optimizer knows only <code>b == TRUE</code> — not what <code>b</code>
+<em>is</em> — and simplifies anyway.</p>
 <p>Writing the conditional as plain application — <code>IFB b g h</code>
 is the term
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.167em"></mspace><mi>g</mi><mspace width="0.167em"></mspace><mi>h</mi></mrow><annotation encoding="application/x-tex">b\,g\,h</annotation></semantics></math>
@@ -186,13 +190,13 @@ Proof.
 Qed.</code></pre>
 <p>Two steps. <code>rewrite Hb</code> uses the hypothesis
 <code>b == TRUE</code> to replace <code>b</code> by <a
-href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Church.html#TRUE"><code>TRUE</code></a>
 <em>inside</em> <code>IFB b g h</code> — legitimate only because <a
-href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a> is
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IFB"><code>IFB</code></a> is
 <code>Proper</code> for <code>==</code>, so the rewrite reaches into the
 subterm. The goal is now <code>IFB TRUE g h == g</code>, closed by the
 lemma <a
-href="coqdoc/Riktig.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>.
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>.
 (<code>value g</code> and <code>value h</code> are call-by-value’s
 requirement that the branches be evaluated before selection.)</p>
 <p>This is the identical discipline as the group proof <a
@@ -207,14 +211,14 @@ href="coqdoc/Riktig.Props.html#associative"><code>associative</code></a>,
 with the hypothesis itself supplying one link of the chain. Both proofs
 work because the surrounding operations are congruences for
 <code>==</code> — there, <code>+</code> and <code>-</code>; here, <a
-href="coqdoc/Riktig.Lambda.Church.html#IFB"><code>IFB</code></a> — so a
-rewrite of one piece is a rewrite of the whole.</p>
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IFB"><code>IFB</code></a> —
+so a rewrite of one piece is a rewrite of the whole.</p>
 <p>The lemma <a
-href="coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>
 leans on does the actual computing, and it is worth seeing, because it
 shows the setoid earning the reduction one <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a> at a
-time. On the blackboard, writing
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a> at
+a time. On the blackboard, writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>g</mi><mo>↑</mo></msup><annotation encoding="application/x-tex">g^{\uparrow}</annotation></semantics></math>
 for
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
@@ -224,81 +228,98 @@ with its free indices raised by one:</p>
 =\; g^{\uparrow}[0 \mapsto h]
 \quad\{\beta\}\quad
 =\; g \quad\{\text{substitution undoes the lift}\}</annotation></semantics></math></p>
+<p>Nothing in that chain is about de Bruijn terms. It uses β, and it
+uses “substituting into a freshly shifted term changes nothing” — two
+equations that any calculus with substitution satisfies. So it is proved
+once, of an arbitrary carrier with the operations and equations of the
+lambda calculus, and the raising of indices is written
+<code>.[sub_shift]</code> and the substitution
+<code>.[h .: sub_id]</code>:</p>
+<pre class="coq"><code>  Theorem church_if_true : forall g h : T, val g -&gt; val h -&gt;
+    church_if church_true g h == g.
+  Proof.
+    intros g h Hg Hh.
+    calc (church_if church_true g h)
+      == (app (lam (g.[sub_shift])) h)   { (app_church_true g Hg) }
+      == ((g.[sub_shift]).[h .: sub_id]) { (beta _ _ Hh) }
+      == g                               { substitute_cancel }.
+  Qed.</code></pre>
+<p>Three steps, three justifications, and the blackboard chain read
+downwards. The first says what applying the true constant to one
+argument leaves — the abstraction whose body is the shifted
+<code>g</code>. The second is <a
+href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>,
+an equation of the model rather than a step of an evaluator, available
+because <code>h</code> is a value. The third, <a
+href="coqdoc/Riktig.Theory.Lambda.html#substitute_cancel"><code>substitute_cancel</code></a>,
+is exactly “substitution undoes the lift”, and it too is derived from
+the equations: shifting and then consuming the shift with a cons is the
+identity substitution.</p>
+<p><a href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a>
+with its conversion satisfies those equations, and the concrete lemma is
+that theorem read at <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a> — <a
+href="coqdoc/Riktig.Impl.Lambda.Church.html#TRUE"><code>TRUE</code></a>
+<em>is</em> <a
+href="coqdoc/Riktig.Structure.Lambda.html#church_true"><code>church_true</code></a>
+there, <a
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IFB"><code>IFB</code></a>
+<em>is</em> application twice, <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#value"><code>value</code></a>
+<em>is</em> the model’s notion of value, so there is nothing left to
+prove:</p>
 <pre class="coq"><code>Lemma IF_TRUE : forall g h, value g -&gt; value h -&gt; IFB TRUE g h == g.
-Proof.
-  intros g h Hg Hh.
-  (* fire the outer redex (TRUE selects its first branch), then the
-     inner one, then cancel the lift the substitution opened. *)
-  calc (IFB TRUE g h)
-    == (App (Abs (lift 1 0 g)) h)
-    == (subst 0 h (lift 1 0 g))
-    == g.
-  - apply conv_appl. apply conv_beta. exact Hg.
-  - apply conv_beta. exact Hh.
-  - rewrite subst_lift. reflexivity.
-Qed.</code></pre>
-<p><code>IFB TRUE g h</code> is <code>App (App TRUE g) h</code>. The
-<code>calc</code> block names the two intermediate terms of the
-blackboard chain, and each bullet then proves one step. First bullet: <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_appl"><code>conv_appl</code></a>
-aims at the function position <code>App TRUE g</code>, where <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>
-— a single CBV step as a conversion — fires <a
-href="coqdoc/Riktig.Lambda.Church.html#TRUE"><code>TRUE</code></a> on
-<code>g</code>, leaving <code>App (Abs (lift 1 0 g)) h</code>. Second
-bullet: <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>
-fires that abstraction on <code>h</code>, producing
-<code>subst 0 h (lift 1 0 g)</code>. Third bullet:
-<code>rewrite subst_lift</code> applies the law
-<code>subst k u (lift 1 k t) = t</code> — substituting into a
-freshly-lifted term changes nothing, because <code>g</code> never
-mentions the variable <code>h</code> would fill. So <code>g</code> comes
-back untouched, and <code>reflexivity</code> closes. The discarded
-else-branch is discarded precisely because the lift it would have landed
-in is undone by the substitution.</p>
-<p>The same file proves <a
-href="coqdoc/Riktig.Lambda.Church.html#IF_FALSE"><code>IF_FALSE</code></a>,
+Proof. exact church_if_true. Qed.</code></pre>
+<p><a
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IF_FALSE"><code>IF_FALSE</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.Church.html#FST_PAIR"><code>FST_PAIR</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Church.html#FST_PAIR"><code>FST_PAIR</code></a>
 and <a
-href="coqdoc/Riktig.Lambda.Church.html#SND_PAIR"><code>SND_PAIR</code></a>
-the same way, and for fully concrete programs it needs no lemmas at all
-— running the evaluator on both sides and comparing normal forms
-suffices:</p>
-<pre class="coq"><code>Example fst_pair_closed : FST (App (App PAIR idt) k) == idt.
+href="coqdoc/Riktig.Impl.Lambda.Church.html#SND_PAIR"><code>SND_PAIR</code></a>
+arrive the same way, one line each. For fully concrete programs even
+that is more than is needed — running the evaluator on both sides and
+comparing normal forms suffices:</p>
+<pre class="coq"><code>Example fst_pair_closed : FST ⦅PAIR idt k⦆ == idt.
 Proof. apply (conv_by_eval 20 10). reflexivity. Qed.</code></pre>
 <p><a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_by_eval"><code>conv_by_eval</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_by_eval"><code>conv_by_eval</code></a>
 evaluates each side to a normal form (here with fuel <code>20</code> and
 <code>10</code>) and, finding them identical, concludes the two programs
 are convertible. Where the branches are symbolic, congruence and the <a
-href="coqdoc/Riktig.Lambda.Syntax.html#subst_lift"><code>subst_lift</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst_lift"><code>subst_lift</code></a>
 law do the reasoning; where everything is closed, plain computation
 does. Either way, program equality is <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a>, and
-simplifying a program is a rewrite under it.</p>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>,
+and simplifying a program is a rewrite under it.</p>
 <p><em>Next: eliminating variables entirely, compiling a term to the SKI
 combinators and running it.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.Conv.html"><code>Lambda/Conv.v</code></a>
-(the <a href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html"><code>Impl/Lambda/Conv.v</code></a>
+(the <a
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>
 setoid, the <code>Proper</code> instances, <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_by_eval"><code>conv_by_eval</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_by_eval"><code>conv_by_eval</code></a>)
 · <a
-href="coqdoc/Riktig.Lambda.Church.html"><code>Lambda/Church.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Church.html"><code>Impl/Lambda/Church.v</code></a>
 (Church booleans and pairs, <a
-href="coqdoc/Riktig.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Church.html#if_of_true"><code>if_of_true</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>)
 · <a
-href="coqdoc/Riktig.Lambda.Syntax.html"><code>Lambda/Syntax.v</code></a>
-(the <a href="coqdoc/Riktig.Lambda.Syntax.html#tm"><code>tm</code></a>
+href="coqdoc/Riktig.Theory.Lambda.html"><code>Theory/Lambda.v</code></a>
+(<a
+href="coqdoc/Riktig.Theory.Lambda.html#church_if_true"><code>church_if_true</code></a>,
+<a
+href="coqdoc/Riktig.Theory.Lambda.html#substitute_cancel"><code>substitute_cancel</code></a>,
+and the rest over any model) · <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html"><code>Impl/Lambda/Term.v</code></a>
+(the <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#tm"><code>tm</code></a>
 datatype, <a
-href="coqdoc/Riktig.Lambda.Syntax.html#step"><code>step</code></a>, and
-the <a
-href="coqdoc/Riktig.Lambda.Syntax.html#subst_lift"><code>subst_lift</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Term.html#step"><code>step</code></a>,
+and the <a
+href="coqdoc/Riktig.Impl.Lambda.Term.html#subst_lift"><code>subst_lift</code></a>
 law).</p>
 </main>
 </body>

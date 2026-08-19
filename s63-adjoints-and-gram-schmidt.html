@@ -146,7 +146,7 @@ Proof.
         { Hg1 }
       == (⟪ u , LinearMap.map f w ⟫ + - ⟪ u , LinearMap.map f w ⟫)
         { Hg2 }.
-  - apply right_inverse.
+  - exact (right_inverse _).
 Qed.</code></pre>
 <p>Reading the proof:</p>
 <ul>
@@ -277,9 +277,11 @@ space but with every pair orthogonal. The standard recipe processes the
 input left to right, and for each new vector subtracts off its
 <em>projection</em> onto every vector already produced, leaving only the
 part pointing in a genuinely new direction. The projection of a vector
-onto the axis through another one is</p>
-<pre class="coq"><code>Definition proj {F V : Type} `{InnerProductSpace F V} (v u : V) : V :=
-  (⟪ u , v ⟫ * inv (norm2 v)) *: v.</code></pre>
+onto the axis through another one is an operation with one defining
+equation, and the term satisfying it lives in <a
+href="coqdoc/Riktig.Impl.InnerGeometry.html"><code>Impl/InnerGeometry.v</code></a>:</p>
+<pre class="coq"><code>    is_proj_def : forall u v : V,
+      proj v u == (⟪ u , v ⟫ * inv (norm2 v)) *: v.</code></pre>
 <p>— note the argument order: <code>proj v u</code> returns a multiple
 of its <em>first</em> argument, so it is the projection of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>u</mi><annotation encoding="application/x-tex">u</annotation></semantics></math>
@@ -293,7 +295,7 @@ where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>v</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mn>2</mn></msup><mo>=</mo><mo stretchy="false" form="prefix">⟨</mo><mi>v</mi><mo>,</mo><mi>v</mi><mo stretchy="false" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\lVert v\rVert^2 = \langle v,v\rangle</annotation></semantics></math>.
 The inner loop subtracts one projection per already-processed vector.
 The recursion itself lives in the implementation layer (<a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
+href="coqdoc/Riktig.Structure.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
 is an operation class in the theory, pinned down by two equations; the
 <code>_fix</code> function below is its computing instance):</p>
 <pre class="coq"><code>  Fixpoint gram_schmidt_aux_fix (done : list V) (v : V) : V :=
@@ -304,7 +306,7 @@ is an operation class in the theory, pinned down by two equations; the
 <p>and the outer loop folds that over the input, growing an accumulator
 <code>acc</code> of finished vectors and passing each new input through
 <a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
+href="coqdoc/Riktig.Structure.GramSchmidt.html#gram_schmidt_aux"><code>gram_schmidt_aux</code></a>
 against everything produced so far, with <code>gram_schmidt vs</code>
 starting the fold on an empty accumulator:</p>
 <pre class="coq"><code>  Fixpoint gram_schmidt_step_fix (acc vs : list V) : list V :=
@@ -572,16 +574,21 @@ href="coqdoc/Riktig.Theory.InnerGeometry.html"><code>Theory/InnerGeometry.v</cod
 href="coqdoc/Riktig.Theory.InnerGeometry.html#adjoint_unique"><code>adjoint_unique</code></a>,
 <a
 href="coqdoc/Riktig.Theory.InnerGeometry.html#orthogonal"><code>orthogonal</code></a>,
-<a
-href="coqdoc/Riktig.Theory.InnerGeometry.html#proj"><code>proj</code></a>,
+<a href="coqdoc/Riktig.Structure.Proj.html#proj"><code>proj</code></a>,
 <a
 href="coqdoc/Riktig.Theory.InnerGeometry.html#inner_nondegenerate"><code>inner_nondegenerate</code></a>)
 · <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html"><code>Theory/GramSchmidt.v</code></a>
 (<a
-href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>,
+href="coqdoc/Riktig.Structure.GramSchmidt.html#gram_schmidt"><code>gram_schmidt</code></a>,
 <a
 href="coqdoc/Riktig.Theory.GramSchmidt.html#gram_schmidt_pairwise_orthogonal"><code>gram_schmidt_pairwise_orthogonal</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.InnerGeometry.html"><code>Impl/InnerGeometry.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.InnerGeometry.html#HasProj_scale"><code>HasProj_scale</code></a>,
+<a
+href="coqdoc/Riktig.Impl.InnerGeometry.html#Proj_scale"><code>Proj_scale</code></a>)
 · <a
 href="coqdoc/Riktig.Impl.GramSchmidt.html"><code>Impl/GramSchmidt.v</code></a>
 (<a

@@ -96,11 +96,11 @@ href="https://en.wikipedia.org/wiki/Rotor_(mathematics)"><em>rotor</em></a>,
 composing by ordinary multiplication instead of by dimension-specific
 trigonometry.</p>
 <p>The plane case of that is formalized: <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#sandwich_rotor_vec"><code>sandwich_rotor_vec</code></a>
 and <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html#rotation_preserves_qform"><code>rotation_preserves_qform</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html#rotation_preserves_qform"><code>rotation_preserves_qform</code></a>
 in <a
-href="coqdoc/Riktig.Theory.PlaneRotor.html"><code>Theory/PlaneRotor.v</code></a>
+href="coqdoc/Riktig.Impl.PlaneRotor.html"><code>Impl/PlaneRotor.v</code></a>
 say that the sandwich turns a vector by twice the rotor’s angle and
 leaves its length alone, and <a
 href="s95-a-robot-arm-with-no-gimbal-lock.html">the robot-arm post</a>
@@ -204,15 +204,9 @@ with vectors on the imaginary axis and the negative-definite form, as a
 genuine geometric algebra:</p>
 <pre class="coq"><code>  Definition GA_Cliff1 : GeometricAlgebra F F (C F) (Q := neg_form square_form) :=
     {| GeometricAlgebra.ring         := C_Ring;
-       GeometricAlgebra.scaling      := Cliff1_ScaleLaws;
-       GeometricAlgebra.mul_linear_l := fun y =&gt;
-         {| Linear.proper := fun x x&#39; Hx =&gt; op_proper x x&#39; Hx y y (reflexivity y);
-            Linear.is_additive := fun x x&#39; =&gt; right_distributive x x&#39; y;
-            Linear.is_homogeneous := fun a x =&gt; cliff1_ga_scale_mul_l a x y |};
-       GeometricAlgebra.mul_linear_r := fun x =&gt;
-         {| Linear.proper := fun y y&#39; Hy =&gt; op_proper x x (reflexivity x) y y&#39; Hy;
-            Linear.is_additive := fun y y&#39; =&gt; left_distributive x y y&#39;;
-            Linear.is_homogeneous := fun a y =&gt; cliff1_ga_scale_mul_r a x y |};
+       GeometricAlgebra.scaling      := C_ScaleLaws;
+       GeometricAlgebra.mul_linear_l := C_mul_linear_l;
+       GeometricAlgebra.mul_linear_r := C_mul_linear_r;
        GeometricAlgebra.ga_vec       := cliff1_ga_vec;
        GeometricAlgebra.vec_linear :=
          {| Linear.proper         := cliff1_ga_vec_proper;
@@ -251,9 +245,13 @@ every lemma about rings applies to
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ℂ</mi><mi>F</mi></mrow><annotation encoding="application/x-tex">\mathbb{C}F</annotation></semantics></math>
 read as a geometric algebra, with no second copy of the additive laws
 anywhere. The two <code>mul_linear_*</code> fields say multiplication is
-linear in each argument, and <a
+linear in each argument; they too are named, because linearity of the
+product in each argument is a property of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ℂ</mi><mi>F</mi></mrow><annotation encoding="application/x-tex">\mathbb{C}F</annotation></semantics></math>
+and not of this reading of it. <a
 href="coqdoc/Riktig.Structure.GeometricAlgebra.html#GeometricAlgebra.vec_linear"><code>vec_linear</code></a>
-says the embedding is; each is a three-line <a
+says the embedding is linear, and that one is specific enough to be a
+three-line <a
 href="coqdoc/Riktig.Structure.Linear.html#Linear.Linear"><code>Linear</code></a>
 literal whose fields are lemmas from the same file. Only <a
 href="coqdoc/Riktig.Structure.GeometricAlgebra.html#GeometricAlgebra.contraction"><code>contraction</code></a>

@@ -67,7 +67,7 @@ with Anf : tm -&gt; Prop :=
   | anf_let  : forall a1 a2 body,
       Atom a1 -&gt; Atom a2 -&gt; Anf body -&gt; Anf (App (Abs body) (App a1 a2)).</code></pre>
 <p>Read <a
-href="coqdoc/Riktig.Lambda.ANF.html#anf_let"><code>anf_let</code></a>:
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#anf_let"><code>anf_let</code></a>:
 <code>App (Abs body) (App a1 a2)</code> is the encoding of
 <code>let x := (a1 a2) in body</code>, and it is in ANF when the bound
 computation <code>a1 a2</code> is two atoms and the <code
@@ -77,7 +77,7 @@ operand</em> — every argument is already a name.</p>
 <h2 id="the-transform">The transform</h2>
 <p>The transform flattens a term into a telescope of lets ending in an
 atom. <a
-href="coqdoc/Riktig.Lambda.ANF.html#assemble"><code>assemble</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#assemble"><code>assemble</code></a>
 builds the telescope, folding a binding list into nested
 immediate-application lets:</p>
 <pre class="coq"><code>Definition assemble (binds : list tm) (atom : tm) : tm :=
@@ -129,36 +129,38 @@ Proof.
 Qed.</code></pre>
 <p>It rests on two facts about the flattener, both proved by induction.
 The invariant <a
-href="coqdoc/Riktig.Lambda.ANF.html#flat_inv"><code>flat_inv</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#flat_inv"><code>flat_inv</code></a>
 says <code>flat t</code>’s returned atom is an <a
-href="coqdoc/Riktig.Lambda.ANF.html#Atom"><code>Atom</code></a> and
-every binding it returns is a computation
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#Atom"><code>Atom</code></a>
+and every binding it returns is a computation
 (<code>Forall Comp</code>):</p>
 <pre class="coq"><code>Lemma flat_inv : forall t,
   Atom (snd (flat t)) /\ Forall Comp (fst (flat t)).</code></pre>
 <p>And <a
-href="coqdoc/Riktig.Lambda.ANF.html#assemble_Anf"><code>assemble_Anf</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#assemble_Anf"><code>assemble_Anf</code></a>
 says a telescope of computations ending in an atom is in ANF:</p>
 <pre class="coq"><code>Lemma assemble_Anf : forall binds atom,
   Atom atom -&gt; Forall Comp binds -&gt; Anf (assemble binds atom).</code></pre>
 <p>So <a
-href="coqdoc/Riktig.Lambda.ANF.html#anf_is_anf"><code>anf_is_anf</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#anf_is_anf"><code>anf_is_anf</code></a>
 reads off directly: <a
-href="coqdoc/Riktig.Lambda.ANF.html#flat_inv"><code>flat_inv</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#flat_inv"><code>flat_inv</code></a>
 supplies the two hypotheses <a
-href="coqdoc/Riktig.Lambda.ANF.html#assemble_Anf"><code>assemble_Anf</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#assemble_Anf"><code>assemble_Anf</code></a>
 needs, and <code>anf t</code> <em>is</em> <a
-href="coqdoc/Riktig.Lambda.ANF.html#assemble"><code>assemble</code></a>
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#assemble"><code>assemble</code></a>
 of <code>flat t</code>. The one subtlety the proofs handle is that the
 de Bruijn <a
-href="coqdoc/Riktig.Lambda.Syntax.html#lift"><code>lift</code></a>s in
-<a href="coqdoc/Riktig.Lambda.ANF.html#flat"><code>flat</code></a> must
-not spoil ANF-ness — but <a
-href="coqdoc/Riktig.Lambda.ANF.html#Atom"><code>Atom</code></a> and <a
-href="coqdoc/Riktig.Lambda.ANF.html#Anf"><code>Anf</code></a> look only
-at a term’s <em>shape</em>, never at index values, so lifting preserves
-both (<a
-href="coqdoc/Riktig.Lambda.ANF.html#lift_pred"><code>lift_pred</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Term.html#lift"><code>lift</code></a>s
+in <a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#flat"><code>flat</code></a>
+must not spoil ANF-ness — but <a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#Atom"><code>Atom</code></a>
+and <a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#Anf"><code>Anf</code></a>
+look only at a term’s <em>shape</em>, never at index values, so lifting
+preserves both (<a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#lift_pred"><code>lift_pred</code></a>,
 proved by mutual induction on the derivation).</p>
 <h2 id="a-let-is-transparent-when-it-names-a-value">A let is transparent
 when it names a value</h2>
@@ -168,10 +170,10 @@ statement: a <code>let</code> whose bound computation runs to a value
 <code>v</code> is convertible to its body with <code>v</code>
 substituted in.</p>
 <p>Here <code>==</code> is <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a>, the
-least equivalence on terms containing call-by-value reduction and closed
-under the term constructors — program equality, on which optimizations
-are rewrites. Blackboard version: writing
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>,
+the least equivalence on terms containing call-by-value reduction and
+closed under the term constructors — program equality, on which
+optimizations are rewrites. Blackboard version: writing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>b</mi><annotation encoding="application/x-tex">b</annotation></semantics></math>
 for the body,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>
@@ -202,15 +204,16 @@ Qed.</code></pre>
 <p>The <code>calc</code> chain writes the two blackboard objects and
 leaves one obligation per link. The first link,
 <code>App (Abs body) rhs == App (Abs body) v</code>: <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_of_star"><code>conv_of_star</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_of_star"><code>conv_of_star</code></a>
 turns the reduction <code>rhs →* v</code> into the conversion
 <code>rhs == v</code>, and <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_appr"><code>conv_appr</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_appr"><code>conv_appr</code></a>
 lifts it under the application’s argument position (a congruence rule of
-<a href="coqdoc/Riktig.Lambda.Conv.html#conv"><code>conv</code></a>).
+<a
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv"><code>conv</code></a>).
 The second link, <code>App (Abs body) v == subst 0 v body</code>: this
 is <a
-href="coqdoc/Riktig.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>,
 the call-by-value beta law, which needs <code>v</code> to be a value —
 exactly the hypothesis <code>Hv</code>. Each administrative
 <code>let</code> the transform inserts binds a computation that, when
@@ -250,16 +253,17 @@ agree.</p>
 style and closure conversion have a tractable input to work on.</em></p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.ANF.html"><code>Lambda/ANF.v</code></a> (the
-<a href="coqdoc/Riktig.Lambda.ANF.html#Atom"><code>Atom</code></a>/<a
-href="coqdoc/Riktig.Lambda.ANF.html#Anf"><code>Anf</code></a> grammar,
-the <a
-href="coqdoc/Riktig.Lambda.ANF.html#flat"><code>flat</code></a>/<a
-href="coqdoc/Riktig.Lambda.ANF.html#anf"><code>anf</code></a> transform,
+href="coqdoc/Riktig.Programs.Lambda.ANF.html"><code>Programs/Lambda/ANF.v</code></a>
+(the <a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#Atom"><code>Atom</code></a>/<a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#Anf"><code>Anf</code></a>
+grammar, the <a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#flat"><code>flat</code></a>/<a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#anf"><code>anf</code></a>
+transform, <a
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#anf_is_anf"><code>anf_is_anf</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.ANF.html#anf_is_anf"><code>anf_is_anf</code></a>,
-<a
-href="coqdoc/Riktig.Lambda.ANF.html#let_correct"><code>let_correct</code></a>,
+href="coqdoc/Riktig.Programs.Lambda.ANF.html#let_correct"><code>let_correct</code></a>,
 and the worked examples).</p>
 </main>
 </body>

@@ -382,8 +382,8 @@ and state the permutation half; both are strong inductions on length
 with the same shape.</p>
 <pre class="coq"><code>Theorem msort_sorted : forall l : list nat, Sorted le (msort l).
 Proof.
-  induction l as [l IH]
-    using (well_founded_ind (well_founded_ltof (list nat) (@length nat))).
+  apply (measure_ind (@length nat)).
+  intros l IH.
   destruct l as [|x [|y rest]].
   - rewrite msort_nil. constructor.
   - rewrite msort_single. constructor; constructor.
@@ -393,9 +393,13 @@ Proof.
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
-<li><code>well_founded_ind</code> on <code>length</code> gives an
-induction hypothesis <code>IH</code> usable at any strictly shorter
-list. <code>destruct l</code> splits into the three shapes <a
+<li><a
+href="coqdoc/Riktig.Lib.MeasureInd.html#measure_ind"><code>measure_ind</code></a>
+at the measure <code>length</code> gives an induction hypothesis
+<code>IH</code> usable at any strictly shorter list — the same principle
+the program’s own termination argument uses, stated once and applied
+wherever a proof needs it. <code>destruct l</code> splits into the three
+shapes <a
 href="coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>
 itself distinguishes.</li>
 <li>Empty: <code>rewrite msort_nil</code> then <code>constructor</code>

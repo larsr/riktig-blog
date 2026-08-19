@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit: algebra core (Structure/ and the algebra/analysis Theory
+files)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="audit-algebra-core-structure-and-the-algebraanalysis-theory-files">Audit:
+algebra core (Structure/ and the algebra/analysis Theory files)</h1>
+<p>Area: all of <code>theories/Structure/*.v</code> and the 33 assigned
+<code>theories/Theory/</code> files (Monoid, Group, AbGroup, Ring,
+Field, FieldVS, VectorSpace, Order, DecTotalOrder, Norm,
+InnerProductSpace, Exp, Log, Exponential, Limits, Continuity,
+Derivative, BilinearDeriv, MLDerivatives, Integral, QuadraticForm,
+Decidable, Pointwise, Product, ProdVS, UnitVS, Monad, Category,
+InitialTerminal, KleisliIso, Action, Hamiltonian, Maxwell —
+<code>Theory/Magma.v</code>, <code>Theory/Semigroup.v</code> and
+<code>Theory/PosInner.v</code> do not exist).</p>
+<p>32 findings: <strong>4 high</strong>, <strong>21 medium</strong>,
+<strong>7 low</strong>. The high ones are all one shape — two Theory
+files (<code>Maxwell.v</code>, <code>KleisliIso.v</code>) import
+<code>Impl</code> and state their theorems about the concrete carrier
+that lives there, which rule 1 names as its most common violation. The
+medium band splits three ways: eight lemmas stated at one carrier or one
+filter whose proofs use nothing specific to it (the
+<code>is_deriv_*_equ</code> family, the
+<code>Limits</code>/<code>Continuity</code> twins), four missing
+corollaries that make every epsilon argument in
+<code>Limits</code>/<code>Continuity</code>/<code>Derivative</code>
+repeat the same six lines of bookkeeping, and four proofs that reach
+through a product or option representation instead of an equation.
+<code>Structure/</code> itself is almost entirely clean: nothing in it
+names an implementation type, and its 37 files hold no proofs to weld.
+Two claims below were checked by compiling them against the built
+library (<a
+href="../coqdoc/Riktig.Theory.Order.html#lt_of_not_le"><code>lt_of_not_le</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_L_equ"><code>is_deriv_L_equ</code></a>
+at <code>U -&gt; V</code>, <code>Group.monoid := Prod_Monoid</code>, <a
+href="../coqdoc/Riktig.Theory.Group.html#add_sub_cancel_r"><code>add_sub_cancel_r</code></a>);
+the rest are read, not run.</p>
+<h2
+id="1-a-specification-names-an-implementation-type-rule-16-or-theory-owns-an-operation-rule-1">1.
+A specification names an implementation type (rule 16), or Theory owns
+an operation (rule 1)</h2>
+<ul>
+<li><strong>theories/Theory/Maxwell.v:7</strong> — a Theory file does
+<code>From Riktig Require Import Impl.Clifford</code> and states every
+one of its twelve theorems about <code>Cl F 4</code>, which
+<code>Impl/Clifford.v:141</code> defines as the concrete function type
+<code>Blade 4 -&gt; F</code>; the meaning of each statement comes from
+how that representation computes. <em>(high)</em> <em>Fix:</em> move the
+file to <code>Impl/</code> or <code>Examples/</code>, or restate the
+results over <code>GeometricAlgebra F V A</code> with a <a
+href="../coqdoc/Riktig.Structure.Graded.html#Graded.Graded"><code>Graded</code></a>
+projection and leave the blade arithmetic behind in
+<code>Impl/</code>.</li>
+<li><strong>theories/Theory/Maxwell.v:76</strong> —
+<code>spacetime_vector : Fin.t 4 -&gt; F</code> is a Theory-level
+function definition whose domain is stdlib <code>Fin.t</code>, the index
+type this tree deliberately keeps behind <code>FinIndex n I</code> (<a
+href="../coqdoc/Riktig.Structure.Fin.html"><code>Structure/Fin.v</code></a>,
+whose header says so). <em>(high)</em> <em>Fix:</em> take the four
+components as a family over an abstract <code>FinIndex 4 I</code>, or
+move the definition to <code>Impl/</code>.</li>
+<li><strong>theories/Theory/Maxwell.v:16,63,84,150</strong> — <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#fb"><code>fb</code></a>, <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#F_field"><code>F_field</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Maxwell.html#Nabla"><code>Nabla</code></a>
+and <code>J</code> are data and function definitions over the Impl
+carrier, built by <code>match</code> on <a
+href="../coqdoc/Riktig.Impl.Blade.html#bhead"><code>bhead</code></a>/<a
+href="../coqdoc/Riktig.Impl.Blade.html#btail"><code>btail</code></a>;
+Theory defines no operations. <em>(high, same relocation as above)</em>
+<em>Fix:</em> they travel with the file.</li>
+<li><strong>theories/Theory/KleisliIso.v:83</strong> — the file’s
+abstract half ends at line 80, then it imports
+<code>Impl.OptionMonad</code> and <code>Coq.Cantor</code> and defines <a
+href="../coqdoc/Riktig.Programs.NatPairCodec.html#nat_pair_codec"><code>nat_pair_codec</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.NatPairCodec.html#split_n"><code>split_n</code></a>
+and <a
+href="../coqdoc/Riktig.Programs.NatPairCodec.html#sum_pair"><code>sum_pair</code></a>
+(lines 103, 110,
+<ol start="111" type="1">
+<li>over the concrete <code>option</code> monad, purely to feed the
+<code>Example</code> at line 113. <em>(high)</em> <em>Fix:</em> move
+lines 82-114 to <a
+href="../coqdoc/Riktig.Impl.OptionMonad.html"><code>Impl/OptionMonad.v</code></a>
+or a test file; <a
+href="../coqdoc/Riktig.Theory.KleisliIso.html"><code>Theory/KleisliIso.v</code></a>
+keeps the monad-generic part.</li>
+</ol></li>
+<li><strong>theories/Theory/Order.v:285,321</strong> —
+<code>two : F</code> and <code>half (a : F) : F</code> are standalone
+operations defined in Theory and used as operations everywhere
+downstream (<code>Limits.v</code>, <code>Continuity.v</code>,
+<code>Derivative.v</code>, <code>Hamiltonian.v</code>); they are neither
+class parameters nor instance witnesses. <em>(medium)</em> <em>Fix:</em>
+make halving an operation class with its defining equation
+(<code>half a + half a == a</code>) and put the <code>a * inv two</code>
+witness in <code>Impl/</code>.</li>
+<li><strong>theories/Theory/Log.v:12</strong> — <a
+href="../coqdoc/Riktig.Theory.Log.html#log_fn"><code>log_fn</code></a>
+is a transparent function definition in Theory (confirmed by
+<code>About</code>: it is <code>transparent</code> and takes the
+surjectivity witness as an argument). <em>(medium)</em> <em>Fix:</em>
+same treatment as <a
+href="../coqdoc/Riktig.Theory.Order.html#half"><code>half</code></a> —
+the equations <code>exp_fn (log_fn y) == y</code> are the class, the
+<code>proj1_sig</code> witness is an implementation.</li>
+<li><strong>theories/Theory/Derivative.v:559</strong> —
+<code>partial_at L B i := L (Basis.vec B i)</code> is a function
+definition in Theory; the file’s own comment (“Coordinates enter here
+and nowhere above”) marks it as the outlier. <em>(medium)</em>
+<em>Fix:</em> state <a
+href="../coqdoc/Riktig.Theory.Derivative.html#partial_at_welldef"><code>partial_at_welldef</code></a>
+directly as <code>L1 (Basis.vec B i) == L2 (Basis.vec B i)</code>, which
+is what its one-line proof already proves, and drop the definition.</li>
+<li><strong>theories/Theory/Monad.v:11</strong> —
+<code>map f m := bind m (fun x =&gt; ret (f x))</code> is an operation
+defined in Theory; <code>docs/DESIGN.md</code> rule 6 already refers to
+it by name, so the violation is known but unrecorded. <em>(medium)</em>
+<em>Fix:</em> <code>HasMap</code> in <a
+href="../coqdoc/Riktig.Ops.html"><code>Ops.v</code></a> with the two
+equations as its law class, the <a
+href="../coqdoc/Riktig.Structure.Monad.html#bind"><code>bind</code></a>/<a
+href="../coqdoc/Riktig.Structure.Monad.html#ret"><code>ret</code></a>
+witness in <code>Impl/</code>.</li>
+<li><strong>theories/Theory/Hamiltonian.v:224,307</strong> — <a
+href="../coqdoc/Riktig.Theory.Hamiltonian.html#energy"><code>energy</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Hamiltonian.html#hamiltonian"><code>hamiltonian</code></a>
+are <code>F</code>-valued function definitions in Theory. <em>(low —
+they are the subject of the file’s theorems rather than reusable
+vocabulary)</em> <em>Fix:</em> pass them as section parameters
+constrained by their defining equations, as <code>V</code>,
+<code>q</code>, <code>p</code>, <code>v</code> already are.</li>
+<li><strong>theories/Theory/Exponential.v:55</strong> —
+<code>uncurry k := eval_morphism ∘ (k ×× cat_id)</code> is a
+Theory-level definition, though it only names a composite of existing
+arrows. <em>(low)</em> <em>Fix:</em> leave it, or make it a
+notation.</li>
+</ul>
+<p>Not reported, having been read and judged permitted:
+<code>scale_map</code> and <a
+href="../coqdoc/Riktig.Theory.MLDerivatives.html#neg_map"><code>neg_map</code></a>
+(<code>MLDerivatives.v:56,93</code>), <a
+href="../coqdoc/Riktig.Theory.QuadraticForm.html#square_form"><code>square_form</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.QuadraticForm.html#neg_form"><code>neg_form</code></a>
+(<code>QuadraticForm.v:12,58</code>), <a
+href="../coqdoc/Riktig.Theory.BilinearDeriv.html#bilinear_deriv_fun"><code>bilinear_deriv_fun</code></a>
+(<code>BilinearDeriv.v:30</code>), <code>pair_fun</code>/<a
+href="../coqdoc/Riktig.Theory.Hamiltonian.html#lm_pair"><code>lm_pair</code></a>/<a
+href="../coqdoc/Riktig.Theory.Hamiltonian.html#mul_bm"><code>mul_bm</code></a>
+(<code>Hamiltonian.v:89,119,49</code>) — each is a witness handed
+straight to <a
+href="../coqdoc/Riktig.Structure.LinearMap.html#linear_map_from_laws"><code>linear_map_from_laws</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Bilinear.html#bilinear_map_from_laws"><code>bilinear_map_from_laws</code></a>
+or a class that takes the function as a parameter, which rule 1 admits
+as a construction of instance data. The <code>nat</code>s in <a
+href="../coqdoc/Riktig.Structure.Series.html"><code>Structure/Series.v</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Graded.html"><code>Structure/Graded.v</code></a>
+and <a
+href="../coqdoc/Riktig.Structure.Lambda.html"><code>Structure/Lambda.v</code></a>
+are sequence, grade and de Bruijn indices used as ambient primitives,
+not carriers.</p>
+<h2 id="2-a-general-law-re-derived-by-hand-rule-8">2. A general law
+re-derived by hand (rule 8)</h2>
+<ul>
+<li><strong>theories/Theory/Order.v:576-587</strong> — <a
+href="../coqdoc/Riktig.Theory.Order.html#add_le_cancel_r"><code>add_le_cancel_r</code></a>
+spends a seven-step chain, twice inserting <code>c + - c</code> under
+<code>{ right_inverse }</code>, to do what
+<code>(x + c) + - c == x</code> says; that group lemma does not exist in
+<a
+href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
+or <a
+href="../coqdoc/Riktig.Theory.AbGroup.html"><code>Theory/AbGroup.v</code></a>
+(the closest, <a
+href="../coqdoc/Riktig.Theory.Group.html#sub_add_cancel"><code>sub_add_cancel</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.AbGroup.html#add_neg_cancel_l"><code>add_neg_cancel_l</code></a>,
+cancel on the other side). <em>(medium)</em> <em>Fix:</em> add
+<code>add_sub_cancel_r : (a + b) + - b == a</code> to <a
+href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
+— a two-step calc, checked — and this proof becomes three steps.</li>
+<li><strong>theories/Theory/ProdVS.v:96-107,118-131</strong>,
+<strong>theories/Theory/Pointwise.v:85-96,106-119</strong>,
+<strong>theories/Theory/UnitVS.v:41-52,57-70</strong> — each file proves
+its <a
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
+instance as a nested literal and then re-spells that same literal
+verbatim inside its <a
+href="../coqdoc/Riktig.Structure.Group.html#Group.Group"><code>Group</code></a>
+instance, and both again inside <a
+href="../coqdoc/Riktig.Structure.AbGroup.html#AbGroup.AbGroup"><code>AbGroup</code></a>:
+roughly sixty lines of copied record syntax across the three files. The
+comment at <code>ProdVS.v:64</code> justifies naming the fields
+explicitly rather than leaving them to search, which naming the
+already-proved instance also does. <em>(medium)</em> <em>Fix:</em> write
+<code>Group.monoid := Prod_Monoid</code> (compiled and checked) and
+<code>AbGroup.group := Prod_Group</code>, likewise for <code>PW_</code>
+and <code>Unit_</code>.</li>
+<li><strong>theories/Theory/Group.v:75-80</strong> — inside <a
+href="../coqdoc/Riktig.Theory.Group.html#neg_add_flip"><code>neg_add_flip</code></a>,
+four of the five steps re-derive the same
+<code>(a + b) + - b == a</code> cancellation by hand. <em>(low — it is
+the exemplar file, and the lemma it wants does not exist yet)</em>
+<em>Fix:</em> falls out of the <a
+href="../coqdoc/Riktig.Theory.Group.html#add_sub_cancel_r"><code>add_sub_cancel_r</code></a>
+above.</li>
+<li><strong>theories/Theory/Order.v:194-202</strong> — <a
+href="../coqdoc/Riktig.Theory.Order.html#lt_add_pos_r"><code>lt_add_pos_r</code></a>
+asserts <code>(a + 0 + b) == (a + b)</code> inline and proves it with a
+two-step calc; that is <a
+href="../coqdoc/Riktig.Theory.Monoid.html#add_zero_r"><code>add_zero_r</code></a>
+under a congruence. <em>(low)</em> <em>Fix:</em> cite
+<code>(op_proper (right_identity a) (reflexivity b))</code>, or name the
+congruence step once.</li>
+</ul>
+<h2
+id="3-a-special-case-proved-where-the-general-theorem-exists-or-should-rules-4-13">3.
+A special case proved where the general theorem exists or should (rules
+4, 13)</h2>
+<ul>
+<li><strong>theories/Theory/MLDerivatives.v:177</strong> — <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_L_equ"><code>is_deriv_L_equ</code></a>
+is stated for <code>f : F -&gt; F</code> and
+<code>L1 L2 : LinearMap F F F</code>, but its proof uses only <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>’s
+definition and the pointwise <a
+href="../coqdoc/Riktig.Structure.LinearMap.html#LinearMap.LinearMap"><code>LinearMap</code></a>
+equality; the identical proof text closes the <code>U -&gt; V</code>
+statement (compiled and checked). Its four call sites in
+<code>Hamiltonian.v</code> and <code>Action.v</code> are all scalar
+today, but <code>Derivative.v</code> is not. <em>(medium)</em>
+<em>Fix:</em> restate it in <a
+href="../coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
+over <code>U</code>, <code>V</code> beside <a
+href="../coqdoc/Riktig.Theory.Derivative.html#deriv_unique"><code>deriv_unique</code></a>.</li>
+<li><strong>theories/Theory/MLDerivatives.v:237</strong> — <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_of_local_eq"><code>is_deriv_of_local_eq</code></a>,
+same shape: only the <code>‖ 0 ‖ &lt; d</code> step touches
+<code>F</code>-as-its-own-norm, and <a
+href="../coqdoc/Riktig.Theory.Norm.html#norm_zero"><code>norm_zero</code></a>
+gives that for any normed <code>U</code>. <em>(medium)</em>
+<em>Fix:</em> generalize alongside the previous one.</li>
+<li><strong>theories/Theory/Hamiltonian.v:13</strong> — <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_fun_equ"><code>is_deriv_fun_equ</code></a>
+is the third member of that family (transport <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv"><code>is_deriv</code></a>
+along pointwise equality of the function instead of the map), again at
+<code>F -&gt; F</code> only, and it lives in a third file.
+<em>(medium)</em> <em>Fix:</em> the three belong together in <a
+href="../coqdoc/Riktig.Theory.Derivative.html"><code>Theory/Derivative.v</code></a>
+as <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_L_equ"><code>is_deriv_L_equ</code></a>
+/ <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_fun_equ"><code>is_deriv_fun_equ</code></a>
+/ <a
+href="../coqdoc/Riktig.Theory.Derivative.html#is_deriv_of_local_eq"><code>is_deriv_of_local_eq</code></a>.</li>
+<li><strong>theories/Theory/Limits.v:21,46,65,89 vs
+theories/Theory/Continuity.v:24,57,80,106</strong> — <a
+href="../coqdoc/Riktig.Theory.Limits.html#lim_unique"><code>lim_unique</code></a>/<a
+href="../coqdoc/Riktig.Theory.Limits.html#lim_add"><code>lim_add</code></a>/<a
+href="../coqdoc/Riktig.Theory.Limits.html#lim_scale"><code>lim_scale</code></a>/<a
+href="../coqdoc/Riktig.Theory.Limits.html#lim_neg"><code>lim_neg</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Continuity.html#limit_at_unique"><code>limit_at_unique</code></a>/<a
+href="../coqdoc/Riktig.Theory.Continuity.html#limit_at_add"><code>limit_at_add</code></a>/<a
+href="../coqdoc/Riktig.Theory.Continuity.html#limit_at_scale"><code>limit_at_scale</code></a>/<a
+href="../coqdoc/Riktig.Theory.Continuity.html#limit_at_neg"><code>limit_at_neg</code></a>
+are eight lemmas making four statements: each pair has the same proof
+skeleton (<code>half eps</code> twice, <a
+href="../coqdoc/Riktig.Theory.Norm.html#norm_sub_triangle"><code>norm_sub_triangle</code></a>
+or <a
+href="../coqdoc/Riktig.Theory.Norm.html#norm_sub_pair"><code>norm_sub_pair</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Order.html#add_lt_mono"><code>add_lt_mono</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Order.html#half_sum"><code>half_sum</code></a>),
+differing only in whether the index is a <code>nat</code> with
+<code>Nat.max</code> or a <a
+href="../coqdoc/Riktig.Impl.FinIndex.html#delta"><code>delta</code></a>
+with <a
+href="../coqdoc/Riktig.Theory.Order.html#pos_min_exists"><code>pos_min_exists</code></a>.
+The <code>deriv_*</code> theorems in
+<code>Derivative.v:201,227,260</code> repeat the skeleton a third time.
+<em>(medium)</em> <em>Fix:</em> state the four laws once against an
+abstract “eventually” predicate (a filter) and instantiate it at the
+sequence, the punctured ball and the derivative remainder.</li>
+<li><strong>theories/Theory/Log.v:78</strong> — <a
+href="../coqdoc/Riktig.Theory.Exp.html#exp_lt_reflect"><code>exp_lt_reflect</code></a>
+is a fact about <code>Exp</code> alone, filed in the <code>Log</code>
+section under the <code>exp_surj</code> hypothesis; <code>About</code>
+confirms the compiled constant does not depend on <code>exp_surj</code>.
+It also repeats, in eight lines, the same <a
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.le_total"><code>le_total</code></a>
++ <a
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.le_stable"><code>le_stable</code></a>
+argument as <a
+href="../coqdoc/Riktig.Theory.Exp.html#exp_le_of_eq"><code>exp_le_of_eq</code></a>
+at <code>Theory/Exp.v:65</code>. <em>(medium)</em> <em>Fix:</em> move it
+to <a
+href="../coqdoc/Riktig.Theory.Exp.html"><code>Theory/Exp.v</code></a>
+next to <a
+href="../coqdoc/Riktig.Theory.Exp.html#exp_le_of_eq"><code>exp_le_of_eq</code></a>.</li>
+<li><strong>theories/Theory/MLDerivatives.v:286,297</strong> —
+<code>pos_neg_of_neg</code> and <code>neg_of_pos_neg</code>
+(<code>a &lt; 0 &lt;-&gt; 0 &lt; - a</code>) are ordered-field facts
+sitting in the machine-learning derivatives file; <a
+href="../coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
+already has their non-strict halves (<a
+href="../coqdoc/Riktig.Theory.Order.html#neg_nonneg"><code>neg_nonneg</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Order.html#sub_nonneg_of_le"><code>sub_nonneg_of_le</code></a>).
+<em>(medium)</em> <em>Fix:</em> move both to <a
+href="../coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
+and state them as one <code>iff</code>.</li>
+<li><strong>theories/Theory/Maxwell.v:19,32</strong> — <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#blade4_case"><code>blade4_case</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Maxwell.html#cl4_ext"><code>cl4_ext</code></a>
+are the dimension-4 instances of blade case analysis and extensionality,
+the latter written out as sixteen hypotheses and closed by a four-way
+<code>destruct</code>; nothing in either proof is about four.
+<em>(medium)</em> <em>Fix:</em> a general <code>Cl F n</code>
+extensionality (pointwise equality of blade coefficients) in <a
+href="../coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>
+subsumes both.</li>
+<li><strong>theories/Theory/VectorSpace.v:95,113</strong> — <a
+href="../coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a>
+(<code>a *: (b *: u) == b *: (a *: u)</code>) and <a
+href="../coqdoc/Riktig.Theory.VectorSpace.html#scale_flip"><code>scale_flip</code></a>
+(<code>a *: (b *: u) == (b * a) *: u</code>) are the same two-step chain
+with the last step dropped. <em>(low — both spellings have call
+sites)</em> <em>Fix:</em> derive <a
+href="../coqdoc/Riktig.Theory.VectorSpace.html#scale_swap"><code>scale_swap</code></a>
+from <a
+href="../coqdoc/Riktig.Theory.VectorSpace.html#scale_flip"><code>scale_flip</code></a>
+and <a
+href="../coqdoc/Riktig.Props.html#associative"><code>associative</code></a>.</li>
+</ul>
+<h2 id="4-a-proof-welded-to-a-representation">4. A proof welded to a
+representation</h2>
+<ul>
+<li><strong>theories/Theory/Maxwell.v:91-97</strong> —
+<code>blade_reduce</code> unfolds
+<code>Spacetime_Mult, cl_mul, sig13, bsign, parity_sign, fb, bxor, bdiff, band</code>
+and calls <code>simpl</code>, and every theorem in the file is
+<code>by_blade</code>, i.e. that unfolding plus <code>ring</code>. The
+proofs hold because of how <a
+href="../coqdoc/Riktig.Impl.Clifford.html"><code>Impl/Clifford.v</code></a>
+computes, not because of any law. <em>(high)</em> <em>Fix:</em> the file
+belongs in <code>Impl/</code>; if the results are wanted abstractly,
+they need blade-coefficient equations stated as lemmas and cited, not an
+unfolding tactic.</li>
+<li><strong>theories/Theory/BilinearDeriv.v:81,181</strong> —
+<code>unfold vnorm, Prod_HasNorm, prod_norm; simpl</code> reaches
+through <a
+href="../coqdoc/Riktig.Theory.ProdVS.html"><code>Theory/ProdVS.v</code></a>’s
+norm to get <code>‖ (u, v) ‖ == ‖ u ‖ + ‖ v ‖</code>. <em>(medium)</em>
+<em>Fix:</em> the missing equation — see 5 below.</li>
+<li><strong>theories/Theory/ProdVS.v:205,213,222,233,243</strong> — the
+construction’s own file unfolds its norm five times rather than proving
+the read-off equation once; <code>Theory/Pointwise.v:22-30</code> does
+exactly the right thing for <a
+href="../coqdoc/Riktig.Theory.Pointwise.html#PW_Add"><code>PW_Add</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Pointwise.html#PW_Scale"><code>PW_Scale</code></a>
+with <a
+href="../coqdoc/Riktig.Theory.Pointwise.html#pw_add_at"><code>pw_add_at</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Pointwise.html#pw_scale_at"><code>pw_scale_at</code></a>,
+and says why in its comment. <em>(medium)</em> <em>Fix:</em> add <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_norm_at"><code>prod_norm_at</code></a>
+beside <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_add_at"><code>prod_add_at</code></a>/<a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_scale_at"><code>prod_scale_at</code></a>,
+all by <code>reflexivity</code>.</li>
+<li><strong>theories/Theory/Hamiltonian.v:139-140,166-168</strong> — two
+steps are closed by bare <code>reflexivity</code> on a norm reshaping,
+and the comments say why: “‖ lm_pair u ‖ is DEFINITIONALLY ‖ Lf u ‖ + ‖
+Lg u ‖ under the sum norm”. A Theory proof that holds by conversion
+through the product norm breaks the moment that norm is redefined.
+<em>(medium)</em> <em>Fix:</em> cite the <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_norm_at"><code>prod_norm_at</code></a>
+equation instead.</li>
+<li><strong>theories/Theory/KleisliIso.v:89,98</strong> —
+<code>unfold bind, Option_HasBind, equ, Option_EqRel</code> opens the
+option monad’s implementation inside a Theory proof. <em>(medium)</em>
+<em>Fix:</em> goes away with the relocation in 1.</li>
+<li><strong>theories/Theory/BilinearDeriv.v:35,45,54</strong> —
+<code>intros [du1 dv1] [du2 dv2] ...; unfold bilinear_deriv_fun; simpl</code>
+destructs the pair and computes, where <code>fst</code>/<code>snd</code>
+on <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#Prod_Add"><code>Prod_Add</code></a>
+would state the same thing. <em>(low)</em> <em>Fix:</em> <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_add_at"><code>prod_add_at</code></a>-style
+equations again.</li>
+<li><strong>theories/Theory/MLDerivatives.v:141</strong> —
+<code>unfold vnorm, Field_HasNorm</code> in <a
+href="../coqdoc/Riktig.Theory.MLDerivatives.html#lm_neg_map_bounded"><code>lm_neg_map_bounded</code></a>,
+though <a
+href="../coqdoc/Riktig.Theory.MLDerivatives.html#field_vnorm_eq_abs"><code>field_vnorm_eq_abs</code></a>
+at line 12 of the same file is precisely the named equation for that
+conversion, added for that purpose. <em>(low)</em> <em>Fix:</em> rewrite
+with <a
+href="../coqdoc/Riktig.Theory.MLDerivatives.html#field_vnorm_eq_abs"><code>field_vnorm_eq_abs</code></a>.</li>
+</ul>
+<h2 id="5-a-missing-corollary-that-makes-callers-repeat-bookkeeping">5.
+A missing corollary that makes callers repeat bookkeeping</h2>
+<ul>
+<li><strong>theories/Theory/Order.v (absent)</strong> — there is no
+<code>lt_of_not_le : ~ a &lt;= b -&gt; b &lt; a</code>, so every proof
+that needs the strict side of <a
+href="../coqdoc/Riktig.Structure.Order.html#OrderedField.le_total"><code>le_total</code></a>
+builds it inline: <code>Theory/Exp.v:65-82</code> (<a
+href="../coqdoc/Riktig.Theory.Exp.html#exp_le_of_eq"><code>exp_le_of_eq</code></a>),
+<code>Theory/Log.v:78-95</code> (<a
+href="../coqdoc/Riktig.Theory.Exp.html#exp_lt_reflect"><code>exp_lt_reflect</code></a>),
+<code>Theory/Order.v:308-312</code> (<a
+href="../coqdoc/Riktig.Theory.Order.html#pos_inv"><code>pos_inv</code></a>)
+each spend four to eight lines on the same
+<code>destruct (le_total ...)</code> plus disequality argument.
+<em>(medium)</em> <em>Fix:</em> add the four-line lemma to <a
+href="../coqdoc/Riktig.Theory.Order.html"><code>Theory/Order.v</code></a>
+(compiled and checked).</li>
+<li><strong>theories/Theory/Order.v (absent)</strong> — no corollary
+packages <a
+href="../coqdoc/Riktig.Theory.Order.html#half_sum"><code>half_sum</code></a>/<a
+href="../coqdoc/Riktig.Theory.Order.html#half_mul_sum"><code>half_mul_sum</code></a>
+for the two-epsilon split, so the block
+<code>apply (lt_le_trans _ (half eps + half eps) eps); [apply add_lt_mono; ...| apply eq_le; apply half_sum]</code>
+appears verbatim at <code>Limits.v:36-43,56-60</code>,
+<code>Continuity.v:39-48,71-75</code>,
+<code>Derivative.v:220-224,306-317,483-548</code> and
+<code>Hamiltonian.v:169-173</code> — eight sites. <em>(medium)</em>
+<em>Fix:</em>
+<code>add_half_lt : a &lt; half e -&gt; b &lt; half e -&gt; a + b &lt; e</code>
+and its <code>* ‖ h ‖</code> variant.</li>
+<li><strong>theories/Theory/Order.v:477 (<a
+href="../coqdoc/Riktig.Theory.Order.html#mul_pad_div_le"><code>mul_pad_div_le</code></a>)
+is there, its consequence is not</strong> — the “pad the constant to
+<code>1 + c</code>, divide, then cancel” argument still costs six to
+eight lines at each use: <code>Limits.v:69-87</code>,
+<code>Continuity.v:84-104</code>, <code>Continuity.v:137-155</code>,
+<code>Derivative.v:235-258</code>, <code>Derivative.v:352-388</code>,
+<code>Derivative.v:460-548</code>. <em>(medium)</em> <em>Fix:</em> one
+corollary,
+<code>mul_lt_of_lt_pad_div : 0 &lt;= c -&gt; 0 &lt;= t -&gt; t &lt; eps * inv (1 + c) -&gt; c * t &lt; eps</code>,
+replaces the whole block.</li>
+<li><strong>theories/Theory/ProdVS.v (absent)</strong> — no <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_norm_at"><code>prod_norm_at</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_add_at"><code>prod_add_at</code></a>
+or <a
+href="../coqdoc/Riktig.Theory.ProdVS.html#prod_scale_at"><code>prod_scale_at</code></a>,
+so five sites in the file itself and four in
+<code>BilinearDeriv.v</code>/<code>Hamiltonian.v</code> reach for the
+definition (see 4). <em>(medium)</em> <em>Fix:</em> three
+<code>reflexivity</code> lemmas, exactly as
+<code>Theory/Pointwise.v:22-30</code>.</li>
+</ul>
+<h2 id="what-is-clean">What is clean</h2>
+<p><code>Structure/</code> came through the whole checklist without a
+finding: all 37 files were read, and none names a concrete or Impl-owned
+type — the index carrier is <code>FinIndex n I</code> rather than
+<code>Fin.t</code> (<a
+href="../coqdoc/Riktig.Structure.Fin.html"><code>Structure/Fin.v</code></a>,
+<a
+href="../coqdoc/Riktig.Structure.Basis.html"><code>Structure/Basis.v</code></a>,
+both of which explain the choice in a comment), the arity of a
+multilinear form is an instantiation rather than a parameter
+(<code>Structure/Bilinear.v:137-142</code>), and <a
+href="../coqdoc/Riktig.Structure.Series.html"><code>Structure/Series.v</code></a>
+and <a
+href="../coqdoc/Riktig.Structure.Graded.html"><code>Structure/Graded.v</code></a>
+use <code>nat</code> only as a sequence or grade index. The law-class
+assembly is uniform: <a
+href="../coqdoc/Riktig.Structure.Magma.html#Magma.Magma"><code>Magma</code></a>
+through <a
+href="../coqdoc/Riktig.Structure.Field.html#Field.Field"><code>Field</code></a>
+restate nothing their substructure field implies, and the
+<code>Hint Mode</code>s put <code>!</code> on the carrier alone. <a
+href="../coqdoc/Riktig.Theory.Group.html"><code>Theory/Group.v</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.Monoid.html"><code>Theory/Monoid.v</code></a>
+are what the rest should look like — no inline re-derivations, every
+step a named law, and the <code>AdditiveTheory</code> section at
+<code>Group.v:142-168</code> is exactly the general form (<a
+href="../coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Group.html#additive_negation"><code>additive_negation</code></a>)
+that <a
+href="../coqdoc/Riktig.Theory.Ring.html"><code>Theory/Ring.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.VectorSpace.html"><code>Theory/VectorSpace.v</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.InnerProductSpace.html"><code>Theory/InnerProductSpace.v</code></a>
+then cite instead of reproving; that mechanism is working. The <a
+href="../coqdoc/Riktig.Theory.AbGroup.html"><code>Theory/AbGroup.v</code></a>
+cancellation family (<a
+href="../coqdoc/Riktig.Theory.AbGroup.html#sub_pair"><code>sub_pair</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.AbGroup.html#sub_mid_cancel"><code>sub_mid_cancel</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.AbGroup.html#four_term_cancel"><code>four_term_cancel</code></a>
+and the rest) looked at first like lemma sprawl, but every one has a
+real call site in <code>Derivative.v</code>,
+<code>BilinearDeriv.v</code>, <code>Norm.v</code> or
+<code>Circular.v</code>, which is rule 4 working as intended, not
+against it. <a
+href="../coqdoc/Riktig.Theory.Field.html"><code>Theory/Field.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Theory.Field.html#mul_commutative"><code>mul_commutative</code></a>
+is a legitimate disambiguation, not a restatement, since <a
+href="../coqdoc/Riktig.Props.html#commutative"><code>commutative</code></a>
+is ambiguous on a field’s two operations. Nothing in the area contains
+an <code>Axiom</code>, an <code>Admitted</code>, or an undisclosed
+classical import.</p>
+</main>
+</body>
+</html>

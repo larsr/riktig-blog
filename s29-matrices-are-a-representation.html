@@ -250,19 +250,30 @@ fixed, the same vector space wearing two notations.</p>
 <h2 id="composition-is-multiplication">Composition is
 multiplication</h2>
 <p>Here is why matrix multiplication has the shape it does.
-Multiplication of matrices is defined in <a
-href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> as
-a double-indexed sum, with no reference to linear maps at all:</p>
-<pre class="coq"><code>Definition mat_mul {m n p : nat} (A : Matrix m n F) (B : Matrix n p F)
-    : Matrix m p F :=
-  fun i k =&gt; bigopF (fun j =&gt; A i j * B j k).</code></pre>
+Multiplication of matrices is a double-indexed sum, with no reference to
+linear maps at all. It contracts one index carrier and is polymorphic in
+the other two, so that is what the operation is parameterized by, and
+one equation says what it computes:</p>
+<pre class="coq"><code>Definition mat_mul {n : nat} {J F : Type} {eJ : EqRel J} {dJ : EquDec J}
+    {FJ : FinIndex n J} {zF : Zero F} {aF : HasAdd F} {mF : HasMult F}
+    {I K : Type} (A : I -&gt; J -&gt; F) (B : J -&gt; K -&gt; F) (i : I) (k : K) : F :=</code></pre>
+<pre class="coq"><code>    mat_mul_def : forall {I K : Type} (A : I -&gt; J -&gt; F) (B : J -&gt; K -&gt; F)
+                        (i : I) (k : K),
+      mat_mul A B i k == bigop_list (fun j =&gt; A i j * B j k) enum.</code></pre>
 <p>Entry <code>(i, k)</code> sums <code>A i j * B j k</code> over the
 shared index <code>j</code> — the familiar row-times-column rule, and
-nothing more; <a
+nothing more. The sum itself, <a
+href="coqdoc/Riktig.Lib.BigopList.html#bigop_list"><code>bigop_list</code></a>,
+is a parameter of the class: the equation says what the entry is without
+saying how the summing is done. <a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a>
-proves its bookkeeping laws (associativity, units, distributivity)
-purely as facts about sums. The claim that this operation <em>means</em>
-composition is a theorem, and it belongs to the representation, in <a
+supplies the instance that computes it, generic in the contracted
+carrier, and <a
+href="coqdoc/Riktig.Theory.MatMul.html"><code>Theory/MatMul.v</code></a>
+proves the bookkeeping laws (associativity, units, distributivity)
+purely as facts about sums, once, for every carrier. The claim that this
+operation <em>means</em> composition is a theorem, and it belongs to the
+representation, in <a
 href="coqdoc/Riktig.Theory.MatRep.html"><code>Theory/MatRep.v</code></a>:
 reading off a composite <code>g ∘ f</code> in bases gives the product of
 the two matrices read off separately.</p>
@@ -286,7 +297,12 @@ computes. Verbatim:</p>
     == mat_mul (mat_of BV BW g) (mat_of BU BV f).
 Proof.
   intros g f i j.
-  exact (mat_of_coords BV BW g (f (Basis.vec BU j)) i).
+  calc (mat_of BU BW (linear_map_comp g f) i j)
+    == (bigopF (fun l =&gt; mat_of BV BW g i l * mat_of BU BV f l j))
+         { (mat_of_coords BV BW g (f (Basis.vec BU j)) i) }
+    == (mat_mul (mat_of BV BW g) (mat_of BU BV f) i j)
+         { (bigopF_bigopI m
+             (fun l =&gt; mat_of BV BW g i l * mat_of BU BV f l j)) }.
 Qed.</code></pre>
 <p>Walking it:</p>
 <ul>
@@ -299,12 +315,20 @@ unfolds to
 <code>hom_of_coeff (mat_of BV BW g) (f (Basis.vec BU j)) i</code>.</li>
 <li>Those two are precisely the two sides of <a
 href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
-for <code>g</code> at the point <code>f (Basis.vec BU j)</code>. The
-single <a
-href="coqdoc/Riktig.Impl.Parser.html#exact"><code>exact</code></a>
-supplies it. Composition and multiplication were never two facts to be
-reconciled — they are one computation read in two notations.</li>
+for <code>g</code> at the point <code>f (Basis.vec BU j)</code>, which
+is the chain’s first step.</li>
+<li>The second step only changes which fold the sum is written with: <a
+href="coqdoc/Riktig.Theory.MatRep.html#mat_of_coords"><code>mat_of_coords</code></a>
+speaks <a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF"><code>bigopF</code></a>,
+the structural fold over <code>Fin.t</code>, and the general product
+speaks <code>bigopI</code>, the fold over a finite carrier’s
+enumeration. <a
+href="coqdoc/Riktig.Impl.FinIndex.html#bigopF_bigopI"><code>bigopF_bigopI</code></a>
+says the two agree.</li>
 </ul>
+<p>Composition and multiplication were never two facts to be reconciled
+— they are one computation read in two notations.</p>
 <h2 id="using-the-representation">Using the representation</h2>
 <p>On paper, <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
@@ -371,7 +395,12 @@ href="coqdoc/Riktig.Theory.MatRep.html#vsiso_matrix"><code>vsiso_matrix</code></
 (the dual space and evaluation pairing — the coordinate-free row vector)
 · <a
 href="coqdoc/Riktig.Impl.Matrix.html"><code>Impl/Matrix.v</code></a> (<a
-href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>, <a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix"><code>Matrix</code></a>,
+<code>HasMatMul_bigop</code>, <a
+href="coqdoc/Riktig.Impl.Matrix.html#Matrix_Ring"><code>Matrix_Ring</code></a>)
+· <a
+href="coqdoc/Riktig.Theory.MatMul.html"><code>Theory/MatMul.v</code></a>
+(<code>HasMatMul</code>, <a
 href="coqdoc/Riktig.Impl.Matrix.html#mat_mul"><code>mat_mul</code></a>
 and its laws).</p>
 </main>

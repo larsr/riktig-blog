@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit 2026-08-16 — the self-contained tracks</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1 id="audit-2026-08-16--the-self-contained-tracks">Audit 2026-08-16 —
+the self-contained tracks</h1>
+<p>Scope: <code>theories/Programs/**</code>,
+<code>theories/Channel/**</code>, <code>theories/Impl/Lambda/**</code>,
+<code>theories/Examples/**</code>, <code>theories/Lib/**</code>, and the
+track-facing theory files
+<code>theories/Theory/{Merge,MergeSort,Quicksort,BinarySearch,Sorted,Subseq,Gcd,Parser,DelayedFusion}.v</code>
+plus <code>theories/Theory/Memprog/*.v</code> — about 14 400 lines,
+judged against both docs/DESIGN.md’s Program-style rules 1–6 and its
+structure rules. The tree compiles clean at this commit
+(<code>make</code> exit 0, 210 <code>.vo</code>), and every axiom claim
+below was checked with <code>Print Assumptions</code> against that build
+rather than inferred from the source. <strong>49 findings: 6 high, 16
+medium, 27 low.</strong> The one soundness-relevant finding is an
+undisclosed stdlib axiom under <a
+href="../coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>
+that every theorem in <a
+href="../coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>
+inherits. The other five high findings are structural: four large
+duplications (the Church theorems, the two ARQ protocols, the two ABNF
+grammars, and — at medium — the planar/spatial robot arm), and a
+datatype-plus-algorithm file filed in <code>Theory/</code>. The long
+tail of low findings is dominated by one pattern: <code>Lib/</code> is
+not used. <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>
+is imported by exactly one file in the whole tree while six files in
+scope keep private copies of general list facts.</p>
+<h2 id="1-program-style-rules-16">1. Program style (rules 1–6)</h2>
+<p>The grandfathered set is unchanged: <a
+href="../coqdoc/Riktig.Programs.BinarySearch.html"><code>Programs/BinarySearch.v</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>
+and <a
+href="../coqdoc/Riktig.Programs.MergeSort.html"><code>Programs/MergeSort.v</code></a>
+are still the only three programs that depart from the <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+shape. No new <code>Program Fixpoint</code>, no Equations plugin, and no
+new fuel outside an interpreter of possibly-looping input has appeared —
+<code>Machine.v</code>’s <code>interp</code>, <code>MC.v</code>’s
+<code>mc_run</code>, <code>X86.v</code>’s <code>x86_run</code>,
+<code>Syntax.v</code>’s <a
+href="../coqdoc/Riktig.Impl.Lambda.Term.html#eval"><code>eval</code></a>,
+<code>SKI.v</code>’s <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#nf"><code>nf</code></a>,
+<code>FirstOrder.v</code>’s <a
+href="../coqdoc/Riktig.Programs.Lambda.FirstOrder.html#eval_body"><code>eval_body</code></a>
+and <code>Interp.v</code>’s <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#resolve_rule"><code>resolve_rule</code></a>
+are all honest interpreters and all say so in a comment. <a
+href="../coqdoc/Riktig.Programs.Gcd.html"><code>Programs/Gcd.v</code></a>,
+<a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+and <code>Programs/Memprog/Quicksort.v</code>’s four builders follow the
+model exactly.</p>
+<p><strong>theories/Programs/Quicksort.v:20</strong> — <em>high.</em>
+<code>Require Export Coq.Logic.FunctionalExtensionality</code> puts the
+<code>functional_extensionality_dep</code> axiom into the export closure
+of every importer of the quicksort program, and the file header does not
+disclose it (rule 5). <em>Fix:</em> disclose it in the header now and
+drop the require when <a
+href="../coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a>
+is rewritten.</p>
+<p><strong>theories/Programs/Quicksort.v:59</strong> — <em>high.</em> <a
+href="../coqdoc/Riktig.Programs.Quicksort.html#part_step"><code>part_step</code></a>
+discharges <code>Fix_eq</code>’s congruence premise with
+<code>do 2 (apply functional_extensionality; intro)</code>, which rule 6
+forbids by name (“clause equations are derived via <code>Fix_eq</code>,
+without functional extensionality”), and
+<code>Print Assumptions qsort_correct</code> duly reports
+<code>functional_extensionality_dep</code> where <a
+href="../coqdoc/Riktig.Theory.MergeSort.html#msort_correct"><code>msort_correct</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.BinarySearch.html#bsearch_sound"><code>bsearch_sound</code></a>
+are closed under the global context. <em>Fix:</em> curry <a
+href="../coqdoc/Riktig.Programs.Quicksort.html#part"><code>part</code></a>
+so its <code>Fix</code> is over the scan cursor alone, as <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+does, leaving a first-order equality of tuples. <em>Done 2026-08-16</em>
+— packed as <code>(m, (store, i))</code> with measure
+<code>hi - snd (snd q)</code>; both findings (line 20 and line 59) are
+closed.</p>
+<p><strong>theories/Programs/MergeSort.v:71</strong> — <em>medium.</em>
+<a
+href="../coqdoc/Riktig.Programs.MergeSort.html#merge_cons_cons"><code>merge_cons_cons</code></a>
+states the clause equation of the mergesort <code>merge</code> through
+<code>dec (Nat.leb x y = true)</code>, so the specification of a program
+written over <a
+href="../coqdoc/Riktig.Structure.DecTotalOrder.html#DecTotalOrder.DecTotalOrder"><code>DecTotalOrder</code></a>
+is phrased in one carrier’s boolean, and the proof then has to
+<code>unfold olt, Nat_HasOlt</code> (line 76) to reconcile them.
+<em>Fix:</em> state it with <code>dec (ole x y)</code> and keep the
+<code>Nat.leb</code> form as a corollary, mirroring
+<code>Programs/Merge.v:55</code>’s <a
+href="../coqdoc/Riktig.Programs.Merge.html#merge_cons_ltb"><code>merge_cons_ltb</code></a>.</p>
+<p><strong>theories/Programs/ABNF/Interp.v:125</strong> —
+<em>medium.</em> <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#interp_core_rule"><code>interp_core_rule</code></a>
+decides which of the twenty RFC 5234 core rules a name denotes with a
+twenty-deep <code>if string_eqb_nocase name "…" then … else if …</code>
+chain, which is rule 2’s “behavior from scattered ifs” and rule 5’s
+“boilerplate means a concept is missing” — and the missing concept is
+already in the same file, at line 97, as <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#lookup_rule"><code>lookup_rule</code></a>
+over an association list. <em>Fix:</em> make the core rules a
+<code>list (string * (string -&gt; Parser string ParseTree))</code> and
+reuse that case-insensitive lookup.</p>
+<p><strong>theories/Programs/MergeSort.v:88</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Programs.MergeSort.html#msort"><code>msort</code></a>
+is built by
+<code>apply (Fix …); intros l rec; destruct l as [|x [|y rest]]</code>
+in tactic mode rather than as one <code>refine</code> under a single
+convoy, which is the grandfathered departure; the header explains why
+the tactic <code>destruct</code> refines <code>rec</code>’s type, but
+the convoy form <code>match l as x return l = x -&gt; …</code> achieves
+the same and is what <code>Merge.v</code> uses. <em>Fix:</em> rewrite
+with the convoy match and <code>subst</code> in the termination
+holes.</p>
+<p><strong>theories/Programs/Memprog/X86.v:536</strong> — <em>low.</em>
+<code>decode_all</code> takes fuel although its recursion is over a
+shrinking byte list; the header’s defence is honest (a zero-length
+decode claim would not terminate), but <code>length bs</code> is the
+obvious measure and rule 6 reserves fuel for genuinely looping input.
+<em>Fix:</em> <code>Fix</code> on <code>length bs</code> with the
+<code>0 &lt; len</code> obligation from <code>decode</code>’s
+postcondition, or leave it and keep the comment.</p>
+<h2 id="2-a-general-law-re-derived-by-hand-rule-8">2. A general law
+re-derived by hand (rule 8)</h2>
+<p><strong>Honest negative result: the fingerprint the audit was told to
+look for is not in these tracks.</strong> No file in scope contains a
+<code>calc</code> chain whose mid-chain <code>{ right_inverse }</code> /
+<code>{ left_inverse }</code> step re-derives <a
+href="../coqdoc/Riktig.Theory.Group.html#neg_unique_l"><code>neg_unique_l</code></a>
+by hand, and there is no inline re-derivation of <a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_l"><code>cancel_l</code></a>/<a
+href="../coqdoc/Riktig.Theory.Group.html#cancel_r"><code>cancel_r</code></a>
+(<code>Theory/Group.v:29,42</code>), <a
+href="../coqdoc/Riktig.Theory.Group.html#additive_zero"><code>additive_zero</code></a>
+(<code>Theory/Group.v:149</code>) or the <a
+href="../coqdoc/Riktig.Theory.Monoid.html#add_zero_l"><code>add_zero_l</code></a>/<a
+href="../coqdoc/Riktig.Theory.Monoid.html#add_zero_r"><code>add_zero_r</code></a>
+droppers (<code>Theory/Monoid.v:33,41</code>). The tracks contain almost
+no group or ring algebra, and the two files that touch the tower — <a
+href="../coqdoc/Riktig.Examples.Lecture.html"><code>Examples/Lecture.v</code></a>
+and <a
+href="../coqdoc/Riktig.Programs.RobotArm.RobotArm.html"><code>Programs/RobotArm/RobotArm.v</code></a>
+— cite <a
+href="../coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>,
+<a
+href="../coqdoc/Riktig.Props.html#left_identity"><code>left_identity</code></a>
+and <a
+href="../coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+by their bare general projections, which is what rules 8 and 10 ask for.
+What follows are the weaker analogues that do occur: a monoid fact filed
+locally, a category’s laws re-derived, and strong induction on a measure
+re-derived three times in files that already import it.</p>
+<p><strong>theories/Impl/Lambda/Scoped.v:514</strong> — <em>medium.</em>
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_assoc"><code>comp_assoc</code></a>
+is the associativity of substitution composition, proved by hand from <a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>;
+with <a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#ids"><code>ids</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#sub_eq"><code>sub_eq</code></a>
+this is exactly a category (objects <code>nat</code>, arrows
+<code>Sub m n</code>), whose law <a
+href="../coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>
+already names. <em>Fix:</em> exhibit the <a
+href="../coqdoc/Riktig.Structure.Category.html#Category.Category"><code>Category</code></a>
+instance and cite <a
+href="../coqdoc/Riktig.Props.html#associative"><code>associative</code></a>,
+or state in the header why the track declines the tower here.</p>
+<p><strong>theories/Programs/MergeSort.v:27</strong> — <em>medium.</em>
+<code>split_length_le_bounded</code> re-derives strong induction on list
+length by threading an explicit bound <code>n</code>, under a comment
+calling it “bounded induction”; <code>Lib/MeasureInd.v:6</code>’s
+<code>measure_ind (@length A)</code> is precisely that principle,
+already proved. <em>Fix:</em>
+<code>apply (measure_ind (@length A))</code> and delete the
+<code>_bounded</code> wrapper.</p>
+<p><strong>theories/Theory/MergeSort.v:10</strong> — <em>medium.</em>
+<code>split_perm_bounded</code> is the same bounded-induction workaround
+a second time, in a file that transitively imports
+<code>Lib.MeasureInd</code> through <code>Theory.Merge</code>.
+<em>Fix:</em> same as above; the two <code>_bounded</code> lemmas and
+their wrappers collapse to two direct <a
+href="../coqdoc/Riktig.Lib.MeasureInd.html#measure_ind"><code>measure_ind</code></a>
+proofs.</p>
+<p><strong>theories/Theory/DelayedFusion.v:179</strong> — <em>low.</em>
+<code>zero_add_swap : 0 + m == m + 0</code> is a plain monoid fact
+proved in the fusion file; rule 13 puts a lemma in the theory of the
+weakest structure that states it. <em>Fix:</em> move it beside <a
+href="../coqdoc/Riktig.Theory.Monoid.html#zero_unique_l"><code>zero_unique_l</code></a>/<a
+href="../coqdoc/Riktig.Theory.Monoid.html#zero_unique_r"><code>zero_unique_r</code></a>
+in <a
+href="../coqdoc/Riktig.Theory.Monoid.html"><code>Theory/Monoid.v</code></a>.</p>
+<p><strong>theories/Impl/Lambda/Scoped.v:523</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_ids_l"><code>comp_ids_l</code></a>
+is the substitution category’s left identity law, re-derived.
+<em>Fix:</em> it becomes an instance field once <a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_assoc"><code>comp_assoc</code></a>
+is handled.</p>
+<p><strong>theories/Impl/Lambda/Scoped.v:529</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_ids_r"><code>comp_ids_r</code></a>
+is the same category’s right identity law, re-derived. <em>Fix:</em> as
+above.</p>
+<p><strong>theories/Theory/MergeSort.v:70</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Theory.MergeSort.html#msort_perm"><code>msort_perm</code></a>
+(and <a
+href="../coqdoc/Riktig.Theory.MergeSort.html#msort_sorted"><code>msort_sorted</code></a>
+at :90) open with
+<code>induction l using (well_founded_ind (well_founded_ltof (list nat) (@length nat)))</code>,
+a third spelling of the induction the same file already writes twice in
+bounded form. <em>Fix:</em> one spelling — <a
+href="../coqdoc/Riktig.Lib.MeasureInd.html#measure_ind"><code>measure_ind</code></a>
+— across the mergesort files.</p>
+<p><strong>theories/Channel/Fairness.v:25</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Channel.Fairness.html#burst_delivery_exact"><code>burst_delivery_exact</code></a>
+is <a
+href="../coqdoc/Riktig.Channel.Fairness.html#burst_delivery_fair"><code>burst_delivery_fair</code></a>
+(line 92) at the identity wire, but is re-proved from
+<code>deliver_homog_neq</code> with the same six-line homogeneity
+argument. <em>Fix:</em>
+<code>exact (burst_delivery_fair b m k _ (lossy_dup_refl _) ltac:(discriminate))</code>.</p>
+<h2 id="3-a-specification-naming-an-implementation-type-rule-16">3. A
+specification naming an implementation type (rule 16)</h2>
+<p><a
+href="../coqdoc/Riktig.Structure.Lambda.html"><code>Structure/Lambda.v</code></a>
+is a clean class of equations, and <a
+href="../coqdoc/Riktig.Theory.Lambda.html"><code>Theory/Lambda.v</code></a>
+derives ten Church results from those equations alone with no induction
+over any syntax. <code>Impl/Lambda/Conv.v:130</code> builds the
+<code>tm</code> instance and <code>Conv.v:172–183</code> demonstrates in
+two <code>Example</code>s that the abstract theorems specialize. The
+defect is that the rest of the track does not walk through that
+door.</p>
+<p><strong>theories/Impl/Lambda/Church.v:38</strong> — <em>high.</em> <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#IF_TRUE"><code>IF_TRUE</code></a>
+(and <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#IF_FALSE"><code>IF_FALSE</code></a>
+at :50, <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#FST_PAIR"><code>FST_PAIR</code></a>
+at :62, <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#SND_PAIR"><code>SND_PAIR</code></a>
+at :80) states and proves the Church-boolean and Church-pair results
+about the inductive <code>tm</code>, by chains of <a
+href="../coqdoc/Riktig.Impl.Lambda.Conv.html#conv_beta"><code>conv_beta</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Term.html#subst_lift"><code>subst_lift</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Lambda.Term.html#subst_lift_lower"><code>subst_lift_lower</code></a>,
+while <code>Theory/Lambda.v:90,110,228,245</code> proves the same four
+facts over any <a
+href="../coqdoc/Riktig.Structure.Lambda.html#LambdaModel.LambdaModel"><code>LambdaModel</code></a>
+and <code>Impl/Lambda/Conv.v:172</code> already shows they instantiate
+at <code>tm</code> in one line each. <em>Fix:</em> keep <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#TRUE"><code>TRUE</code></a>/<a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#FALSE"><code>FALSE</code></a>/<a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#PAIR"><code>PAIR</code></a>
+as concrete notation and define the four lemmas as instantiations of <a
+href="../coqdoc/Riktig.Theory.Lambda.html#church_if_true"><code>church_if_true</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Lambda.html#church_if_false"><code>church_if_false</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Lambda.html#church_fst_pair"><code>church_fst_pair</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Lambda.html#church_snd_pair"><code>church_snd_pair</code></a>.
+FIXED 2026-08-17: all four are now
+<code>Proof. exact church_if_true. Qed.</code> and their siblings, and
+the file’s header says the selection laws are not proved there.</p>
+<p><strong>theories/Impl/Lambda/Scoped.v:443</strong> — <em>medium.</em>
+The whole sigma-calculus law suite from here to :577 (<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#up_ids"><code>up_ids</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_ids"><code>subst_ids</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#cons_shift"><code>cons_shift</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#cons_comp"><code>cons_comp</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#sub_eta"><code>sub_eta</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.Scoped.html#up_as_cons"><code>up_as_cons</code></a>)
+is stated about the inductive <code>Exp n</code> and its
+<code>Sub m n</code>, with no <a
+href="../coqdoc/Riktig.Structure.Lambda.html#LambdaModel.LambdaModel"><code>LambdaModel</code></a>
+instance anywhere, so the calculus’s equations are consequences of this
+code rather than a specification the code meets. <em>Fix:</em> either
+exhibit the instance (the scoped calculus has no value guard, so <a
+href="../coqdoc/Riktig.Structure.Lambda.html#LambdaModel.beta"><code>beta</code></a>
+takes <code>val := fun _ =&gt; True</code>) or say in the header that
+<code>Exp n</code> is deliberately outside the model.</p>
+<p><strong>theories/Examples/Lecture.v:110</strong> — <em>medium.</em>
+<code>lecture_reduce</code> unfolds <a
+href="../coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Clifford.html#cl_one"><code>cl_one</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.CliffordGrade.html#cl_blade"><code>cl_blade</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Clifford.html#bsign"><code>bsign</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Clifford.html#parity_sign"><code>parity_sign</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Clifford.html#sig3"><code>sig3</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Blade.html#blade3"><code>blade3</code></a>,
+<a href="../coqdoc/Riktig.Impl.SpaceRotor.html#sb"><code>sb</code></a>,
+<a href="../coqdoc/Riktig.Impl.Blade.html#bxor"><code>bxor</code></a>,
+<a href="../coqdoc/Riktig.Impl.Blade.html#bdiff"><code>bdiff</code></a>,
+<a href="../coqdoc/Riktig.Impl.Blade.html#band"><code>band</code></a>
+and then <code>simpl</code>s, so every basis-blade equation in the
+lecture is a fact about <a
+href="../coqdoc/Riktig.Impl.Blade.html"><code>Impl/Blade.v</code></a>’s
+<code>Vector.t bool n</code> rather than about a set of generators —
+rule 16’s own worked example, verbatim. <em>Fix:</em> prove the blade
+multiplication table once in <code>Theory/</code> from the graded
+product laws and have the lecture cite it; the tactic then
+disappears.</p>
+<p><strong>theories/Impl/Lambda/EnvAlgebra.v:39</strong> — <em>low.</em>
+<code>denote : DEnv m n -&gt; Sub m n</code> and its theorems (<a
+href="../coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dfuse"><code>dfuse</code></a>)
+are stated about <code>Exp</code>/<code>Sub</code>, so the
+defunctionalized environment is verified against one representation of
+substitution rather than against the equations substitution satisfies.
+<em>Fix:</em> state <a
+href="../coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>
+against the <code>Sub</code> laws proved in <code>Scoped.v</code> — a
+smaller change than instancing the class, and it buys the same
+independence.</p>
+<h2 id="4-a-proof-welded-to-a-representation-rule-3">4. A proof welded
+to a representation (rule 3)</h2>
+<p>Two of the three interpreters in scope are handled correctly and
+deserve saying first: <code>Theory/Memprog/Semantics.v</code> builds
+<code>eval_interp</code> as exactly the equivalence lemma rule 3 demands
+and its header instructs downstream files never to invert
+<code>Eval</code>; <code>Theory/Memprog/Equiv.v:1</code> repeats the
+instruction and obeys it. <code>Theory/BinarySearch.v:1</code> states
+the same discipline for <a
+href="../coqdoc/Riktig.Programs.BinarySearch.html#bsearch_step"><code>bsearch_step</code></a>,
+and <code>Theory/Gcd.v:7</code> routes every property through <a
+href="../coqdoc/Riktig.Theory.Gcd.html#gcd_eq_stdlib"><code>gcd_eq_stdlib</code></a>.</p>
+<p><strong>theories/Channel/Mealy.v:112</strong> — <em>medium.</em> <a
+href="../coqdoc/Riktig.Channel.Mealy.html#composed_trace_perfect_relay"><code>composed_trace_perfect_relay</code></a>
+(and <a
+href="../coqdoc/Riktig.Channel.Mealy.html#composed_trace_relay_transparent"><code>composed_trace_relay_transparent</code></a>
+at :201, <a
+href="../coqdoc/Riktig.Channel.Mealy.html#composed_trace_perfect_codec"><code>composed_trace_perfect_codec</code></a>
+at :250) begins
+<code>unfold run_from_init in Hsent, Hrecv; rewrite run_relay …; simpl in …</code>,
+opening the composite-trace definition before reasoning, when <a
+href="../coqdoc/Riktig.Channel.Mealy.html#run_relay"><code>run_relay</code></a>
+and <a
+href="../coqdoc/Riktig.Channel.Mealy.html#run_mapper"><code>run_mapper</code></a>
+are the equations and only the <code>unfold</code> is doing real work.
+<em>Fix:</em> add
+<code>run_from_init_relay : snd (run_from_init relay_m is) = is</code>
+and its mapper sibling, and cite those.</p>
+<p><strong>theories/Theory/Memprog/View.v:186</strong> —
+<em>medium.</em> <code>mem_read_cells_insert_inside</code> reasons under
+<code>cbn [option_map]</code>, <code>cbn [upd_nth]</code> and a
+<code>replace</code> chosen so that (per the comment at :197)
+“<code>cbn</code> must keep its hands off <code>Z.of_nat (S i)</code>”;
+rule 14 reads a proof needing <code>cbn</code> at a named head as a
+missing lemma. <em>Fix:</em> name <code>upd_nth_cons</code> and a
+<code>mem_read_cells</code> index-shift lemma and let the induction
+rewrite by head symbol.</p>
+<p><strong>theories/Examples/Lecture.v:121</strong> — <em>low.</em>
+<code>lecture_blade := lecture_reduce; ring</code> proves six
+<code>Example</code>s by reducing the blade representation — the same
+defect as the item-3 entry above, read as a proof technique rather than
+as a statement. <em>Fix:</em> as above.</p>
+<p><strong>theories/Programs/MergeSort.v:76</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Programs.MergeSort.html#merge_cons_cons"><code>merge_cons_cons</code></a>’s
+proof does <code>unfold olt, Nat_HasOlt in L</code>, reaching through
+the order class to <code>Peano.lt</code>, where the class’s own <a
+href="../coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.DecTotalOrder.html#nolt_ole"><code>nolt_ole</code></a>
+(<a
+href="../coqdoc/Riktig.Theory.DecTotalOrder.html"><code>Theory/DecTotalOrder.v</code></a>)
+are the intended route. <em>Fix:</em> see the item-1 entry for line 71;
+both go away together.</p>
+<p><strong>theories/Impl/Lambda/Church.v:59</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#IF_FALSE"><code>IF_FALSE</code></a>
+closes with <code>cbn. rewrite lift_0.</code>, opening
+<code>subst 0 h (Var 0)</code> by reduction where <a
+href="../coqdoc/Riktig.Impl.Lambda.Term.html#subst_zero_as_psub"><code>subst_zero_as_psub</code></a>
+plus <a
+href="../coqdoc/Riktig.Structure.Lambda.html#LambdaModel.var_zero_cons"><code>var_zero_cons</code></a>
+is the equation. <em>Fix:</em> moot once the lemma is an instantiation
+of <a
+href="../coqdoc/Riktig.Theory.Lambda.html#church_if_false"><code>church_if_false</code></a>.
+FIXED 2026-08-17 with the finding above.</p>
+<p><strong>theories/Examples/GettingStarted.v:21</strong> —
+<em>low.</em> <a
+href="../coqdoc/Riktig.Examples.GettingStarted.html#swap_cancel"><code>swap_cancel</code></a>
+is a five-rewrite one-liner rather than a <code>calc</code> chain (rule
+10); the file header discloses that the proofs are kept in blog post
+#19’s shape, so this is deliberate. <em>Fix:</em> none unless the post
+is rewritten, in which case both should become a chain.</p>
+<h2 id="5-duplication-across-the-tracks">5. Duplication across the
+tracks</h2>
+<p><strong>theories/Channel/ABP.v:103</strong> — <em>high.</em> <a
+href="../coqdoc/Riktig.Channel.ABP.html"><code>Channel/ABP.v</code></a>
+and <a
+href="../coqdoc/Riktig.Channel.GoBackN.html"><code>Channel/GoBackN.v</code></a>
+are the same development twice, section header for section header:
+<code>deliver_app</code>/<a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_app"><code>gbn_deliver_app</code></a>
+(ABP.v:103, GoBackN.v:84), <a
+href="../coqdoc/Riktig.Channel.ABP.html#sender_burst_all_eq"><code>sender_burst_all_eq</code></a>/<a
+href="../coqdoc/Riktig.Channel.GoBackN.html#sender_burst_gbn_all_eq"><code>sender_burst_gbn_all_eq</code></a>
+(:116, :98), <code>deliver_homog_neq</code>/<code>_eq</code> against <a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_homog_neq"><code>gbn_deliver_homog_neq</code></a>/<code>_eq</code>
+(:130,:146 against :112,:128), <code>burst_delivery</code>/<a
+href="../coqdoc/Riktig.Channel.GoBackN.html#burst_delivery_gbn"><code>burst_delivery_gbn</code></a>
+(:174, :153) and <a
+href="../coqdoc/Riktig.Channel.ABP.html#abp_deliver_subseq"><code>abp_deliver_subseq</code></a>/<a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_deliver_subseq"><code>gbn_deliver_subseq</code></a>
+(:202, :181), differing only in the tag alphabet (<code>bool</code> with
+<code>negb</code> versus <code>nat</code> with <code>S</code>) and its
+equality test — and <code>GoBackN.v:3</code> names the missing
+abstraction itself: “the safety argument below needs only a totally
+ordered alphabet with decidable equality and a successor”. <em>Fix:</em>
+one <code>Section</code> over
+<code>(Tag : Type) (tag_eqb) (tag_next)</code> with a decidable-equality
+hypothesis, instantiated twice; roughly 260 of the two files’ 407 lines
+collapse.</p>
+<p><strong>theories/Programs/ABNF/Pretty.v:198</strong> — <em>high.</em>
+The RFC 5234 grammar is implemented twice — once producing an AST in <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html"><code>Programs/ABNF/Parser.v</code></a>
+(<a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_alpha"><code>p_alpha</code></a>
+… <a
+href="../coqdoc/Riktig.Programs.ABNF.Parser.html#p_rulelist"><code>p_rulelist</code></a>,
+with the mutually recursive core at Parser.v:256) and once producing a
+parse tree here (<a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#pt_ALPHA"><code>pt_ALPHA</code></a>
+… <a
+href="../coqdoc/Riktig.Programs.ABNF.Pretty.html#pt_rulelist"><code>pt_rulelist</code></a>);
+twenty rule names occur in both files under the two prefixes.
+<em>Fix:</em> parametrize the grammar over the result algebra — a record
+of <code>leaf</code>/<code>node</code> builders — and get both by
+instantiation, so the two <code>Fixpoint</code>s become one.</p>
+<p><strong>theories/Programs/RobotArm/RobotArm.v:96</strong> —
+<em>medium.</em> <code>chain_rotor_is_product2</code> and
+<code>chain_rotor_is_product3</code> (:229) are the identical five-step
+<code>calc</code> with <code>2</code> replaced by <code>3</code>, and
+both use only <a
+href="../coqdoc/Riktig.Props.html#associative"><code>associative</code></a>
+and <a
+href="../coqdoc/Riktig.Props.html#right_identity"><code>right_identity</code></a>
+— the content is “folding a monoid over a list from an accumulator
+equals the accumulator times the fold”. <em>Fix:</em> state that lemma
+once over any <a
+href="../coqdoc/Riktig.Structure.Monoid.html#Monoid.Monoid"><code>Monoid</code></a>
+and have both parts cite it; the four
+<code>chain_rotor*_nil/_cons</code> lemmas become the fold’s two
+equations.</p>
+<p><strong>theories/Impl/Lambda/SKI.v:295</strong> — <em>medium.</em> <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#cshift"><code>cshift</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#cshift_0"><code>cshift_0</code></a>
+(:302) reproduce <code>Impl/Lambda/Term.v:18</code>’s <code>lift</code>
+and <code>:45</code>’s <a
+href="../coqdoc/Riktig.Impl.Lambda.Term.html#lift_0"><code>lift_0</code></a>
+on a different inductive, and <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#csub"><code>csub</code></a>
+(:215) and <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#csubst2"><code>csubst2</code></a>
+(:468) likewise reproduce <code>subst</code> — the de Bruijn shift and
+its unit law are one idea written twice. <em>Fix:</em> a
+<code>HasShift</code>/<code>HasSubstitute</code> operational class with
+the two laws, instantiated at <code>tm</code> and <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#comb"><code>comb</code></a>.</p>
+<p><strong>theories/Channel/ABP.v:146</strong> — <em>medium.</em> Four
+statements of “a wire fragment <a
+href="../coqdoc/Riktig.Channel.Trace.html#lossy_dup"><code>lossy_dup</code></a>-related
+to a homogeneous burst delivers nothing or exactly the one message”
+coexist: <code>deliver_homog_eq</code> here (the disjunction),
+<code>burst_delivery</code> (:174, the same at a burst), <a
+href="../coqdoc/Riktig.Channel.Fairness.html#burst_delivery_fair"><code>burst_delivery_fair</code></a>
+(Fairness.v:92, with nonemptiness resolving the disjunction) and <a
+href="../coqdoc/Riktig.Channel.Fairness.html#burst_delivery_exact"><code>burst_delivery_exact</code></a>
+(Fairness.v:25, at the identity wire). <em>Fix:</em> keep
+<code>burst_delivery</code> and derive the other two from it.</p>
+<p><strong>theories/Theory/DelayedFusion.v:6</strong> — <em>low.</em>
+<code>Tree A</code> and <code>DTree M A</code> (:13) are declared here,
+so the tracks now hold three unrelated tree types (this one,
+<code>Programs/ABNF/Interp.v:20</code>’s <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#ParseTree"><code>ParseTree</code></a>,
+and <code>Impl/</code>’s); only this one carries a setoid and
+<code>Proper</code> instances on its constructors. <em>Fix:</em> not
+obviously worth unifying, but the datatype belongs in <code>Impl/</code>
+(see item 6) where a second user could find it.</p>
+<p><strong>theories/Programs/Memprog/Quicksort.v:60</strong> —
+<em>low.</em> <code>qsort_l1</code> and its three siblings (:88, :118,
+:183) are four near-identical <code>Fix</code> bodies over
+<code>range_measure</code>, differing only in how the two recursion
+indices are produced; the four-levels presentation is the file’s
+declared point, so this is duplication by design. <em>Fix:</em> one
+higher-order builder taking the index computation, with four one-line
+instantiations.</p>
+<p><strong>theories/Examples/AttentionLayer.v:25</strong> —
+<em>low.</em> <a
+href="../coqdoc/Riktig.Examples.AttentionLayer.html#attention_simple"><code>attention_simple</code></a>
+and <a
+href="../coqdoc/Riktig.Examples.AttentionLayer.html#attention_efficient"><code>attention_efficient</code></a>
+(:30) re-define <a
+href="../coqdoc/Riktig.Impl.Attention.html"><code>Impl/Attention.v</code></a>’s
+<a
+href="../coqdoc/Riktig.Impl.Attention.html#attention_naive"><code>attention_naive</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Attention.html#attention_fast"><code>attention_fast</code></a>,
+immediately proved equal by <code>reflexivity</code> at :33 and :36.
+<em>Fix:</em> use the Impl names, or make the aliases
+<code>Notation</code>.</p>
+<p><strong>theories/Programs/ABNF/Pretty.v:316</strong> — <em>low.</em>
+<code>tree_text t := pretty_print t</code> is a pure alias, used at five
+call sites in the same file. <em>Fix:</em> delete it and call <a
+href="../coqdoc/Riktig.Programs.ABNF.Interp.html#pretty_print"><code>pretty_print</code></a>.</p>
+<p><strong>theories/Programs/Lambda/Defunc.v:53</strong> — <em>low.</em>
+This <code>denote</code> and <code>Impl/Lambda/EnvAlgebra.v:39</code>’s
+<code>denote</code> are two unrelated top-level functions of the same
+name in one track; nothing breaks today because no file imports both.
+<em>Fix:</em> <code>denote_cont</code> and <code>denote_env</code>.</p>
+<p><strong>theories/Theory/Quicksort.v:428</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Lib.NatFacts.html#nat_leb_total"><code>nat_leb_total</code></a>
+is a <code>Nat.leb</code> fact stated in the quicksort theory, where <a
+href="../coqdoc/Riktig.Lib.NatFacts.html"><code>Lib/NatFacts.v</code></a>
+is the tree’s home for nat side conditions (rule 4’s exemplar).
+<em>Fix:</em> move it, or note that it exists only to feed the
+<code>FunMem</code> example.</p>
+<h2 id="6-lib-hygiene">6. Lib hygiene</h2>
+<p>The real defect is not that <code>Lib/</code> holds the wrong things
+— it is that the tracks do not use it. <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>
+is imported by <strong>exactly one file in the whole tree</strong>
+(<code>Theory/Fin.v:1</code>) while six files in scope keep private
+general list facts, and three files put functions in
+<code>Theory/</code> that rule 1 forbids there.</p>
+<p><strong>theories/Theory/DelayedFusion.v:81</strong> — <em>high.</em>
+<a
+href="../coqdoc/Riktig.Impl.DelayedTree.html#map_act"><code>map_act</code></a>,
+<a
+href="../coqdoc/Riktig.Impl.DelayedTree.html#force_acc"><code>force_acc</code></a>
+(:110), <a
+href="../coqdoc/Riktig.Impl.DelayedTree.html#force"><code>force</code></a>
+(:117), <a
+href="../coqdoc/Riktig.Impl.DelayedTree.html#delay"><code>delay</code></a>
+(:119) and <code>lift</code> (:125) are five computational functions
+over two inductive datatypes also declared in this file — a program with
+its correctness proof filed as a theory, which rule 1 forbids outright
+(“Theory never defines a standalone operation”). <em>Fix:</em> datatypes
+and functions to <a
+href="../coqdoc/Riktig.Impl.DelayedTree.html"><code>Impl/DelayedTree.v</code></a>,
+fusion theorems stay in <a
+href="../coqdoc/Riktig.Theory.DelayedFusion.html"><code>Theory/DelayedFusion.v</code></a>
+and import it, on the <a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+↔︎ <a
+href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
+split.</p>
+<p><strong>theories/Channel/Trace.v:94</strong> — <em>medium.</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#cons_eq_head"><code>cons_eq_head</code></a>
+and <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#cons_eq_tail"><code>cons_eq_tail</code></a>
+(:101) are the two projections of cons injectivity, proved by hand
+inside the fault-class section and used five times in <a
+href="../coqdoc/Riktig.Channel.Trace.html#lossy_dup_app_split"><code>lossy_dup_app_split</code></a>.
+<em>Fix:</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>,
+or simply <code>injection</code>.</p>
+<p><strong>theories/Theory/Memprog/View.v:57</strong> — <em>medium.</em>
+<a
+href="../coqdoc/Riktig.Lib.ListFacts.html#upd_nth"><code>upd_nth</code></a>
+is a plain list-update <code>Fixpoint</code> defined in
+<code>Theory/</code>, with <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#upd_nth_length"><code>upd_nth_length</code></a>
+and two <code>nth_error_upd_nth_*</code> lemmas beside it; it is not
+even about memory. <em>Fix:</em> the function and its three lemmas to <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>
+— list update is ambient vocabulary, not an algorithm.</p>
+<p><strong>theories/Theory/Memprog/View.v:106</strong> —
+<em>medium.</em> <code>mach_write</code> is a function definition in
+<code>Theory/</code>. <em>Fix:</em> move it to
+<code>Programs/Memprog/Machine.v</code>, next to the
+<code>store_insert</code> it wraps.</p>
+<p><strong>theories/Theory/Quicksort.v:406</strong> — <em>medium.</em>
+The <code>FunMem</code> section defines <a
+href="../coqdoc/Riktig.Impl.FunMem.html#fread"><code>fread</code></a>
+and <code>fswap</code> (:408), a concrete function-backed memory, in a
+theory file; the header explains why the <em>example</em> is wanted, not
+why the implementation lives here. <em>Fix:</em> <a
+href="../coqdoc/Riktig.Impl.FunMem.html"><code>Impl/FunMem.v</code></a>,
+with <a
+href="../coqdoc/Riktig.Theory.Quicksort.html"><code>Theory/Quicksort.v</code></a>
+importing it for the closing <code>Example</code>.</p>
+<p><strong>theories/Channel/Mealy.v:178</strong> — <em>low.</em>
+<code>map_roundtrip : (forall a, dec (enc a) = a) -&gt; map dec (map enc l) = l</code>
+is a general list fact about a retraction, proved in a channel file.
+<em>Fix:</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>.</p>
+<p><strong>theories/Theory/Memprog/View.v:89</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#perm_by_count"><code>perm_by_count</code></a>
+turns a closed <code>forallb</code>/<code>count_occ</code> computation
+into a <code>Permutation</code> and mentions nothing about memory.
+<em>Fix:</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>.</p>
+<p><strong>theories/Theory/Quicksort.v:6</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#perm_transpose"><code>perm_transpose</code></a>
+(swapping two elements across a three-way split is a permutation) is a
+general <code>Permutation</code> fact stated above the quicksort
+section. <em>Fix:</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>.</p>
+<p><strong>theories/Theory/Parser.v:144</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Lib.StringFacts.html#string_append_assoc"><code>string_append_assoc</code></a>
+is associativity of <code>String.append</code>. <em>Fix:</em> <a
+href="../coqdoc/Riktig.Lib.StringFacts.html"><code>Lib/StringFacts.v</code></a>,
+or <a
+href="../coqdoc/Riktig.Lib.ListFacts.html"><code>Lib/ListFacts.v</code></a>
+while the string helpers stay few.</p>
+<p><strong>theories/Theory/Quicksort.v:41</strong> — <em>low.</em>
+<code>slice m lo n := map (read m) (seq lo n)</code> is a value-valued
+function definition in <code>Theory/</code>; unlike <a
+href="../coqdoc/Riktig.Impl.FunMem.html#fread"><code>fread</code></a>/<code>fswap</code>
+it is genuinely specification vocabulary — the observation every theorem
+is stated through — and rule 1’s exemption covers Prop-valued predicates
+only. <em>Fix:</em> judgement call for the rule’s owner: widen the
+exemption to name observation functions, or move <a
+href="../coqdoc/Riktig.Theory.Quicksort.html#slice"><code>slice</code></a>
+beside the program.</p>
+<p><strong>theories/Channel/ABP.v:67</strong> — <em>low.</em>
+<code>negb_neq</code>, <code>bit_dec</code> (:73),
+<code>eqb_bit_true</code> (:83) and <code>eqb_bit_false</code> (:90),
+together with <code>GoBackN.v:71</code>’s <code>eqb_seq_true</code> and
+<code>:76</code>’s <code>eqb_seq_false</code>, are hand-rolled or
+one-line restatements of <code>Bool.no_fixpoint_negb</code>,
+<code>Bool.bool_dec</code>,
+<code>Bool.eqb_true_iff</code>/<code>eqb_false_iff</code> and
+<code>Nat.eqb_eq</code>/<code>Nat.eqb_neq</code>; rule 4 wants a named
+lemma where a side condition recurs, not a rename of an existing one.
+<em>Fix:</em> cite the stdlib (which satisfies rule 1’s “plain
+<code>=</code> and stdlib <code>sumbool</code>” restriction on tracks);
+all six disappear when the ABP/GoBackN skeleton is factored.</p>
+<p><strong>theories/Lib/ListFacts.v:2</strong> — <em>low.</em>
+<code>From Riktig Require Import Structure.Decidable</code>
+parameterizes the <code>RemoveFacts</code> section by the tower’s <a
+href="../coqdoc/Riktig.Structure.Decidable.html#EqDec"><code>EqDec</code></a>,
+so a track file wanting <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#remove_preserves_NoDup"><code>remove_preserves_NoDup</code></a>
+must pull <a
+href="../coqdoc/Riktig.Structure.Decidable.html"><code>Structure/Decidable.v</code></a>
+— against rule 1’s “decidability reaches programs as plain
+<code>=</code> and stdlib <code>sumbool</code>, nothing from the algebra
+tower”. <em>Fix:</em> take
+<code>forall x y, {x = y} + {x &lt;&gt; y}</code> as a plain section
+variable and leave the class-based wrapper in <a
+href="../coqdoc/Riktig.Theory.Decidable.html"><code>Theory/Decidable.v</code></a>.</p>
+<p><strong>theories/Lib/ListFacts.v:39</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#NoDup_flat_map"><code>NoDup_flat_map</code></a>,
+<a
+href="../coqdoc/Riktig.Lib.ListFacts.html#PermutationA_length"><code>PermutationA_length</code></a>
+(:115) and <a
+href="../coqdoc/Riktig.Lib.ListFacts.html#NoDupA_map_injectiveA"><code>NoDupA_map_injectiveA</code></a>
+(:140) are finite combinatorics, which by the letter of the checklist is
+mathematics and belongs in <code>Theory/</code>; the file header defends
+them as gaps in the stdlib’s <code>List</code>/<code>SetoidList</code>
+vocabulary, which is a fair reading of “neither mathematics nor
+algorithms”. <em>Fix:</em> none — recorded so the next auditor does not
+re-open it.</p>
+<p><strong>theories/Lib/Fun.v:7</strong> — <em>low.</em> <a
+href="../coqdoc/Riktig.Lib.Fun.html#compose"><code>compose</code></a>
+duplicates the stdlib’s <code>Basics.compose</code>, and its
+<code>∘</code> at level 50 clashes with <a
+href="../coqdoc/Riktig.Structure.Category.html"><code>Structure/Category.v</code></a>’s
+at level 40; the header discloses the clash and defers it to the first
+file needing both. <em>Fix:</em> none now, but the disclosure should add
+that <code>Basics.compose</code> is the same function, so a reader does
+not assume they differ.</p>
+<h2 id="what-is-clean">What is clean</h2>
+<p>Most of what was checked is in good order, and the tracks are in
+better shape than “less attention than the algebra tower” would predict.
+<a
+href="../coqdoc/Riktig.Programs.Merge.html"><code>Programs/Merge.v</code></a>
+is a genuine exemplar and <a
+href="../coqdoc/Riktig.Programs.Gcd.html"><code>Programs/Gcd.v</code></a>
+follows it exactly, <code>abstract lia</code> and all;
+<code>Programs/Memprog/Quicksort.v</code>’s four builders reproduce the
+model’s shape at a much harder termination argument, with the
+guard-as-<code>match</code>-on-<a
+href="../coqdoc/Riktig.Structure.Decidable.html#dec"><code>dec</code></a>
+reason written down. <a
+href="../coqdoc/Riktig.Theory.Gcd.html"><code>Theory/Gcd.v</code></a> is
+the best small file in scope — one equivalence to <code>Nat.gcd</code>,
+then everything through it, which is what rule 5’s “specs owe an
+equivalence proof to a canonical formulation” asks for. The Memprog
+semantics layer is the rule-3 exemplar the tracks needed:
+<code>interp_mono</code>, <code>interp_sound</code>,
+<code>interp_adequate</code>, <code>eval_interp</code>, with both
+<code>Semantics.v</code> and <code>Equiv.v</code> opening by telling the
+reader not to invert <code>Eval</code> and giving the
+<code>Type</code>-index reason. <a
+href="../coqdoc/Riktig.Theory.Lambda.html"><code>Theory/Lambda.v</code></a>
+derives ten results from the <a
+href="../coqdoc/Riktig.Structure.Lambda.html#LambdaModel.LambdaModel"><code>LambdaModel</code></a>
+equations with no induction over syntax at all, in <code>calc</code>
+chains that stay under seven steps and carry the carrier ascriptions
+rule 10 prescribes. <a
+href="../coqdoc/Riktig.Programs.RobotArm.RobotArm.html"><code>Programs/RobotArm/RobotArm.v</code></a>
+names every clause equation and cites the ring laws by their bare
+general projections. <a
+href="../coqdoc/Riktig.Theory.Sorted.html"><code>Theory/Sorted.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Subseq.html"><code>Theory/Subseq.v</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.Merge.html"><code>Theory/Merge.v</code></a>
+and <a
+href="../coqdoc/Riktig.Theory.BinarySearch.html"><code>Theory/BinarySearch.v</code></a>
+are small, general and correctly layered, and
+<code>Theory/Memprog/View.v</code>’s
+<code>mem_read_cells_0</code>/<code>_S</code> are introduced with the
+explicit note “so no proof below unfolds the fixpoint”. The disclosure
+culture is strong throughout: <code>Channel/ABP.v:239</code> ships the
+counterexample showing why <a
+href="../coqdoc/Riktig.Theory.Subseq.html#subseq"><code>subseq</code></a>
+cannot be strengthened to <a
+href="../coqdoc/Riktig.Theory.Subseq.html#prefix"><code>prefix</code></a>,
+<code>Impl/Lambda/SKI.v:276</code> states that no simulation theorem
+exists for <a
+href="../coqdoc/Riktig.Impl.Lambda.SKI.html#translate"><code>translate</code></a>
+and computes the two normal forms that refute it,
+<code>Channel/GoBackN.v:1</code> says what never-wrapping sequence
+numbers do not model, <code>Channel/Ack.v:1</code> flags that its
+per-round model cannot pose the cross-round reordering question, and
+<code>Theory/DelayedFusion.v:306</code> prints its own assumptions.
+Outside <a
+href="../coqdoc/Riktig.Programs.Quicksort.html"><code>Programs/Quicksort.v</code></a>
+the tracks are axiom-free — <a
+href="../coqdoc/Riktig.Theory.MergeSort.html#msort_correct"><code>msort_correct</code></a>,
+<a
+href="../coqdoc/Riktig.Theory.BinarySearch.html#bsearch_sound"><code>bsearch_sound</code></a>,
+<a
+href="../coqdoc/Riktig.Channel.Ack.html#abp_ack_prefix"><code>abp_ack_prefix</code></a>,
+<a
+href="../coqdoc/Riktig.Channel.GoBackN.html#gbn_prefix"><code>gbn_prefix</code></a>
+and <a
+href="../coqdoc/Riktig.Impl.Lambda.Church.html#FST_PAIR"><code>FST_PAIR</code></a>
+all report “closed under the global context” — and there is no
+<code>Axiom</code>, no <code>Admitted</code> and no <code>admit</code>
+anywhere in scope.</p>
+</main>
+</body>
+</html>

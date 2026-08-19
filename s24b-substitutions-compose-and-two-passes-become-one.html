@@ -26,7 +26,7 @@ scope errors are type errors, and an algebra of substitutions over
 it.</p>
 <h2 id="terms-that-carry-their-scope">Terms that carry their scope</h2>
 <p>The setting, from <a
-href="coqdoc/Riktig.Lambda.Scoped.html"><code>Lambda/Scoped.v</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html"><code>Impl/Lambda/Scoped.v</code></a>,
 is the lambda calculus in <a
 href="https://en.wikipedia.org/wiki/De_Bruijn_index">de Bruijn index</a>
 style — variables are numbers counting binders outward, as in <a
@@ -44,8 +44,8 @@ indexed by the count.</p>
 body lives one scope higher. A substitution from scope <code>m</code>
 into scope <code>n</code> assigns a term to each of the <code>m</code>
 variables, and applying one is the structural walk, with <a
-href="coqdoc/Riktig.Lambda.Scoped.html#up"><code>up</code></a> pushing
-the substitution under a binder:</p>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#up"><code>up</code></a>
+pushing the substitution under a binder:</p>
 <pre class="coq"><code>Definition Sub (m n : nat) : Type := Fin.t m -&gt; Exp n.</code></pre>
 <pre class="coq"><code>Fixpoint subst {m n : nat} (s : Sub m n) (e : Exp m) {struct e} : Exp n :=
   match e in Exp m0 return Sub m0 n -&gt; Exp n with
@@ -64,14 +64,14 @@ is substituting once with the composition,</p>
   subst s (subst r e) = subst (comp_sub r s) e.</code></pre>
 <p>by induction on the term; the only case with content is the binder,
 where the composition must be shown to commute with <a
-href="coqdoc/Riktig.Lambda.Scoped.html#up"><code>up</code></a>, which is
-the file’s ladder of renaming/substitution interchange lemmas. Note the
-equality is Coq’s plain <code>=</code>: terms here are first-order data
-with decidable equality, so no setoid is needed.</p>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#up"><code>up</code></a>,
+which is the file’s ladder of renaming/substitution interchange lemmas.
+Note the equality is Coq’s plain <code>=</code>: terms here are
+first-order data with decidable equality, so no setoid is needed.</p>
 <h2 id="a-substitution-language-on-which-composition-computes">A
 substitution language on which composition computes</h2>
 <p><a
-href="coqdoc/Riktig.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>
 composes functions, so nothing about it simplifies: the composed
 substitution is a closure, and asking what it does at a variable re-runs
 both parts. The move that changes this is <a
@@ -80,7 +80,7 @@ href="https://en.wikipedia.org/wiki/Defunctionalization">defunctionalization</a>
 substitutions actually used, exactly the technique of <a
 href="s22-defunctionalization.html">the defunctionalization post</a>,
 applied this time to the substitutions themselves. From <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html"><code>Lambda/EnvAlgebra.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html"><code>Impl/Lambda/EnvAlgebra.v</code></a>
 — the shape is the <a
 href="https://en.wikipedia.org/wiki/Explicit_substitution">explicit
 substitution</a> calculus, with scopes indexed:</p>
@@ -91,19 +91,19 @@ substitution</a> calculus, with scopes indexed:</p>
 <p><code>DShift k</code> renumbers every variable up by <code>k</code>,
 <code>DCons t r</code> puts <code>t</code> at position zero and
 <code>r</code> everywhere above, <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
 records a composition. <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#denote"><code>denote</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#denote"><code>denote</code></a>
 reads a code back as a real substitution — <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DShift"><code>DShift</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DShift"><code>DShift</code></a>
 as the variable-shifting function, <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DCons"><code>DCons</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DCons"><code>DCons</code></a>
 as <a
-href="coqdoc/Riktig.Lambda.Scoped.html#cons_sub"><code>cons_sub</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#cons_sub"><code>cons_sub</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
 as <a
-href="coqdoc/Riktig.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>:</p>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>:</p>
 <pre class="coq"><code>Fixpoint denote {m n : nat} (e : DEnv m n) {struct e} : Sub m n :=
   match e in DEnv m0 n0 return Sub m0 n0 with
   | DShift k n0 =&gt; fun x =&gt; EVar (fin_add k x)
@@ -111,7 +111,7 @@ href="coqdoc/Riktig.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>:</p>
   | DComp r s =&gt; comp_sub (denote r) (denote s)
   end.</code></pre>
 <p>Now composition can be a <em>program</em>. <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
 pushes a composition into the structure instead of recording it:</p>
 <pre class="coq"><code>Fixpoint dcomp {m n p : nat} (r : DEnv m n) (s : DEnv n p) {struct r}
     : DEnv m p :=
@@ -121,35 +121,35 @@ pushes a composition into the structure instead of recording it:</p>
   | @DComp m0 n0 p0 r1 r2 =&gt; fun s0 =&gt; dcomp r1 (dcomp r2 s0)
   end s.</code></pre>
 <p>The <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DCons"><code>DCons</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DCons"><code>DCons</code></a>
 case substitutes into the stored term and recurses; the <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
 case reassociates. The content hides in <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#shift_comp"><code>shift_comp</code></a>:
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#shift_comp"><code>shift_comp</code></a>:
 composing <code>DShift k</code> with <code>s</code> <em>consumes the
 first <code>k</code> entries of <code>s</code></em> — a shift followed
 by a cons cancels, entry by entry, the <a
 href="coqdoc/Riktig.Structure.Lambda.html#LambdaModel.shift_cons"><code>shift_cons</code></a>
 law of the substitution calculus running as code. The result of <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
 carries no <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>
 node on its spine, so looking a variable up through it is a single
 pass.</p>
 <p>Soundness says the program computes what the semantics says —
 denotation turns <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>
 into <a
-href="coqdoc/Riktig.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>,
 pointwise on variables (<a
-href="coqdoc/Riktig.Lambda.Scoped.html#sub_eq"><code>sub_eq</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#sub_eq"><code>sub_eq</code></a>
 is pointwise equality):</p>
 <pre class="coq"><code>Theorem dcomp_sound : forall (m n p : nat) (r : DEnv m n) (s : DEnv n p),
   sub_eq (denote (dcomp r s)) (comp_sub (denote r) (denote s)).</code></pre>
 <p>by induction on <code>r</code>, the shift case being the cancellation
 argument. And the two fusion laws snap together. On the blackboard: two
 passes are one pass with the function composition, by <a
-href="coqdoc/Riktig.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>;
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>;
 and the function composition is the <em>computed</em> code’s denotation,
 by soundness —</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo stretchy="false" form="prefix">[</mo><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.167em"></mspace><mi>r</mi><mo stretchy="false" form="postfix">]</mo><mo stretchy="false" form="prefix">[</mo><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.167em"></mspace><mi>s</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>e</mi><mo stretchy="false" form="prefix">[</mo><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.167em"></mspace><mi>s</mi><mo>∘</mo><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.167em"></mspace><mi>r</mi><mo stretchy="false" form="postfix">]</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>e</mi><mo stretchy="false" form="prefix">[</mo><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">p</mi></mrow><mspace width="0.167em"></mspace><mi>r</mi><mspace width="0.167em"></mspace><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">]</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">e[\mathrm{denote}\,r][\mathrm{denote}\,s]
@@ -170,9 +170,9 @@ Proof.
               (fun x =&gt; eq_sym (dcomp_sound m n p r s x)) e) }.
 Qed.</code></pre>
 <p>Two steps, one per fusion law, with <a
-href="coqdoc/Riktig.Lambda.Scoped.html#subst_ext"><code>subst_ext</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_ext"><code>subst_ext</code></a>
 transporting the pointwise soundness fact under <a
-href="coqdoc/Riktig.Lambda.Scoped.html#subst"><code>subst</code></a>.</p>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#subst"><code>subst</code></a>.</p>
 <h2 id="running-it">Running it</h2>
 <p>Everything is first-order, so <code>vm_compute</code> decides
 concrete cases. The cancellation happens: shifting into scope 2 and then
@@ -187,50 +187,54 @@ Proof. vm_compute. reflexivity. Qed.</code></pre>
   = subst (denote (dcomp ex_r2 ex_s2)) ex_e2.
 Proof. vm_compute. reflexivity. Qed.</code></pre>
 <p>and the composed code itself normalizes to a <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>-free
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DComp"><code>DComp</code></a>-free
 spine (<a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp_ex2_normal_form"><code>dcomp_ex2_normal_form</code></a>).
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_ex2_normal_form"><code>dcomp_ex2_normal_form</code></a>).
 The file ends with <code>Print Assumptions</code> on <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>
 and <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dfuse"><code>dfuse</code></a>:
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dfuse"><code>dfuse</code></a>:
 both closed under the global context — the scope-index transports the <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DShift"><code>DShift</code></a>
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DShift"><code>DShift</code></a>
 arithmetic needs are all destructed against universally quantified
 indices, so no equality axiom sneaks in.</p>
 <hr />
 <p><strong>Follow along in the code:</strong> <a
-href="coqdoc/Riktig.Lambda.Scoped.html"><code>Lambda/Scoped.v</code></a>
-(<a href="coqdoc/Riktig.Lambda.Scoped.html#Exp"><code>Exp</code></a>, <a
-href="coqdoc/Riktig.Lambda.Scoped.html#Sub"><code>Sub</code></a>, <a
-href="coqdoc/Riktig.Lambda.Scoped.html#subst"><code>subst</code></a>, <a
-href="coqdoc/Riktig.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>,
-<a
-href="coqdoc/Riktig.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>,
-<a
-href="coqdoc/Riktig.Lambda.Scoped.html#sub_eq"><code>sub_eq</code></a>,
-<a
-href="coqdoc/Riktig.Lambda.Scoped.html#subst_ext"><code>subst_ext</code></a>)
-· <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html"><code>Lambda/EnvAlgebra.v</code></a>
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html"><code>Impl/Lambda/Scoped.v</code></a>
 (<a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#DEnv"><code>DEnv</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#Exp"><code>Exp</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#denote"><code>denote</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#Sub"><code>Sub</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#shift_comp"><code>shift_comp</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#subst"><code>subst</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#comp_sub"><code>comp_sub</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_subst"><code>subst_subst</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dfuse"><code>dfuse</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#sub_eq"><code>sub_eq</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp_cancellation"><code>dcomp_cancellation</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.Scoped.html#subst_ext"><code>subst_ext</code></a>)
+· <a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html"><code>Impl/Lambda/EnvAlgebra.v</code></a>
+(<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#DEnv"><code>DEnv</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dfuse_ex"><code>dfuse_ex</code></a>,
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#denote"><code>denote</code></a>,
 <a
-href="coqdoc/Riktig.Lambda.EnvAlgebra.html#dcomp_ex2_normal_form"><code>dcomp_ex2_normal_form</code></a>)
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#shift_comp"><code>shift_comp</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp"><code>dcomp</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_sound"><code>dcomp_sound</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dfuse"><code>dfuse</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_cancellation"><code>dcomp_cancellation</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dfuse_ex"><code>dfuse_ex</code></a>,
+<a
+href="coqdoc/Riktig.Impl.Lambda.EnvAlgebra.html#dcomp_ex2_normal_form"><code>dcomp_ex2_normal_form</code></a>)
 · <a href="coqdoc/Riktig.Impl.Fin.html"><code>Impl/Fin.v</code></a> (<a
 href="coqdoc/Riktig.Impl.Fin.html#fin_to_nat"><code>fin_to_nat</code></a>).</p>
 </main>
