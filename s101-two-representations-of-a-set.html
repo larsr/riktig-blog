@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two representations of a set, and a theorem only one of them
+satisfies</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="folio"><span><b><a href="index.html">riktig</a></b> — correct, real, proper</span><span><a href="https://git.ri.se/lars.rasmusson/riktig">source</a></span></div>
+<main>
+<h1
+id="two-representations-of-a-set-and-a-theorem-only-one-of-them-satisfies">Two
+representations of a set, and a theorem only one of them satisfies</h1>
+<p>Fix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+possible generators, numbered
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math>,
+and consider the subsets of them. There are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mn>2</mn><mi>n</mi></msup><annotation encoding="application/x-tex">2^n</annotation></semantics></math>.
+Here are two ways to store one.</p>
+<p>The first is a row of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+bits, one per generator: bit
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+says whether generator
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+is in the set. The second is a single natural number, whose binary
+digits are those same bits — the subset
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">{</mo><mn>0</mn><mo>,</mo><mn>2</mn><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\{0, 2\}</annotation></semantics></math>
+becomes the number
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>5</mn><annotation encoding="application/x-tex">5</annotation></semantics></math>.</p>
+<p>The two schemes store exactly the same
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mn>2</mn><mi>n</mi></msup><annotation encoding="application/x-tex">2^n</annotation></semantics></math>
+subsets, and both answer “is generator
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+in this set?” in one step. But they differ in a way that is easy to
+overlook. A row of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+bits has exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+bits. A natural number has as many binary digits as it likes, and only
+the first
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+are part of the subset. So at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n = 1</annotation></semantics></math>,
+the numbers
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>
+store the same subset — the empty one — because bit
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+is clear in both and bit
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+is not part of the subset at all.</p>
+<p>In the row scheme, then, two storage values denote the same subset
+exactly when they are the same value. In the number scheme they need not
+be. The question this post answers is whether any mathematical statement
+about subsets can tell the difference. It can, and the statements that
+can are a recognizable family: the ones that quantify over all
+<em>functions</em> out of the subsets.</p>
+<h2 id="saying-what-a-subset-is-once">Saying what a subset is, once</h2>
+<p>Both schemes should be able to share their theorems, so the theorems
+must be stated about neither one. What both schemes have is a membership
+test, and everything else follows from it: the empty subset is the one
+nothing belongs to, symmetric difference is the subset whose members
+belong to exactly one of two others, and so on.</p>
+<p>That is enough to pin down the notion. A <a
+href="https://en.wikipedia.org/wiki/Type_class">type class</a> — a
+declaration of a family of facts indexed by a type, with instances
+registering one such fact for Coq to find by search — collects the
+membership function together with the equations it satisfies:</p>
+<pre class="coq"><code>  Class Blade (I K B : Type)
+      {eK : EqRel K} {zK : Zero K} {aK : HasAdd K} {nK : HasNeg K}
+      {oK : One K} {mK : HasMult K} {bits : Boolean K}
+      {eB : EqRel B} {zB : Zero B} {aB : HasAdd B} {nB : HasNeg B}
+      {oB : One B} {mB : HasMult B} := {
+    setoid          :: Equivalence (@equ B eB);
+    member          : B -&gt; I -&gt; K;
+    member_proper   :: Proper (equ ==&gt; eq ==&gt; equ) member;
+    member_faithful : forall x y : B,
+                        (forall i : I, member x i == member y i) -&gt; x == y;
+    member_empty    : forall i : I, member 0 i == (0 : K);
+    member_full     : forall i : I, member 1 i == (1 : K);
+    member_symmetric_difference : forall (x y : B) (i : I),
+                        member (x + y) i == member x i + member y i;
+    member_intersection : forall (x y : B) (i : I),
+                        member (x * y) i == member x i * member y i;
+    member_complement : forall (x : B) (i : I),
+                        member (- x) i == - member x i;
+  }.</code></pre>
+<p><code>B</code> is the storage type, <code>I</code> the generator
+index, and <code>K</code> the type of bits. <code>member x i</code> is
+the membership test. The subsets carry
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>+</mi><annotation encoding="application/x-tex">+</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>×</mi><annotation encoding="application/x-tex">\times</annotation></semantics></math>
+— the empty subset, the full one, symmetric difference and intersection
+— and the four <code>member_</code> equations say that membership
+carries each of them to the bit operation of the same name. <a
+href="coqdoc/Riktig.Structure.Blade.html#Blade.member_faithful"><code>member_faithful</code></a>
+is the one that does the work below: two subsets with the same members
+are the same subset.</p>
+<p>The equality being written <code>==</code> rather than <code>=</code>
+is what everything below turns on. A type paired with an equivalence
+relation standing in for equality is a <a
+href="https://en.wikipedia.org/wiki/Setoid">setoid</a>, and each scheme
+brings its own. The row scheme compares positions:</p>
+<pre class="coq"><code>  (* Two rows are the same blade when they hold the same generators. *)
+  #[export] Instance VectorBlade_EqRel : EqRel (Vector.t K n) :=
+    fun v w =&gt; forall i : Fin.t n, Vector.nth v i == Vector.nth w i.</code></pre>
+<p>The number scheme compares the first
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+bits, and says nothing about the rest:</p>
+<pre class="coq"><code>  #[export] Instance MaskBlade_EqRel : EqRel (Mask n) :=
+    fun x y =&gt; forall i : Fin.t n,
+      N.testbit x (mask_bit i) = N.testbit y (mask_bit i).</code></pre>
+<p><code>Mask n</code> is a machine word — the definition is
+<code>Definition Mask (n : nat) : Type := N</code>, an unbounded binary
+natural, with <code>n</code> recorded only in the type so that instance
+search can find the right equality.</p>
+<h2 id="the-row-scheme-has-no-slack">The row scheme has no slack</h2>
+<p>Two rows that agree at every position are the same row. That is not a
+restatement of the definition: the definition says they agree
+<em>pointwise</em>, and the conclusion is that they are equal as data.
+For vectors of a fixed length, <code>Vector.eq_nth_iff</code> closes the
+gap.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo minsize="120%" maxsize="120%" stretchy="true" form="prefix">(</mo><mo>∀</mo><mi>i</mi><mi>.</mi><mspace width="0.222em"></mspace><msub><mi>v</mi><mi>i</mi></msub><mo>=</mo><msub><mi>w</mi><mi>i</mi></msub><mo minsize="120%" maxsize="120%" stretchy="true" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>v</mi><mo>=</mo><mi>w</mi></mrow><annotation encoding="application/x-tex">\bigl(\forall i.\ v_i = w_i\bigr) \;\Longrightarrow\; v = w</annotation></semantics></math></p>
+<pre class="coq"><code>Lemma vector_bool_equ_eq : forall (n : nat) (v w : Vector.t bool n),
+  v == w -&gt; v = w.
+Proof.
+  intros n v w Hvw.
+  apply Vector.eq_nth_iff. intros p q Hpq. rewrite &lt;- Hpq. exact (Hvw p).
+Qed.</code></pre>
+<p><code>Vector.eq_nth_iff</code> wants agreement at any two indices
+known to be equal, which is slightly more than agreement at each index;
+<code>rewrite &lt;- Hpq</code> turns the one into the other, and
+<code>Hvw p</code> is the hypothesis at that position.</p>
+<p>One consequence is worth stating on its own. If subset equality is
+plain equality, then <em>every</em> function out of the subsets respects
+subset equality, whatever the function does — because there is nothing
+for it to fail to respect:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∀</mo><mi>f</mi><mi>.</mi><mspace width="0.222em"></mspace><mo>∀</mo><mi>v</mi><mo>,</mo><mi>w</mi><mi>.</mi><mspace width="1.0em"></mspace><mi>v</mi><mo>≡</mo><mi>w</mi><mspace width="0.278em"></mspace><mo>⇒</mo><mspace width="0.278em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>≡</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>w</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\forall f.\ \forall v, w.\quad v \equiv w \;\Longrightarrow\;
+f(v) \equiv f(w)</annotation></semantics></math></p>
+<p>In Coq, a function respecting an equivalence is written
+<code>Proper (equ ==&gt; equ) f</code>, and the quantifier over
+<code>f</code> is the outermost one:</p>
+<pre class="coq"><code>Lemma vector_blade_families_proper {F : Type} {eF : EqRel F}
+    {RF : Reflexive (@equ F eF)} (n : nat) :
+  forall f : Vector.t bool n -&gt; F, Proper (equ ==&gt; equ) f.
+Proof.
+  intros f v w Hvw. rewrite (vector_bool_equ_eq n v w Hvw). reflexivity.
+Qed.</code></pre>
+<p>The proof rewrites the two equal rows into each other and appeals to
+reflexivity. It is quantified over <em>all</em> <code>f</code>, and
+assumes nothing about it.</p>
+<h2 id="the-number-scheme-has-slack-and-it-is-visible">The number scheme
+has slack, and it is visible</h2>
+<p>At width
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+the numbers
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>
+denote the same subset, since bit
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+is clear in both. Now take the function that asks whether its argument
+is the number zero. It says yes to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+and no to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>.
+So it is a function on storage values that is not a function on
+subsets:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≡</mo><mn>2</mn><mo>,</mo><mspace width="2.0em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">[</mo><mspace width="0.167em"></mspace><mi>x</mi><mo>=</mo><mn>0</mn><mspace width="0.167em"></mspace><mo stretchy="false" form="postfix">]</mo><mo>,</mo><mspace width="2.0em"></mspace><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mrow><mi>𝗍</mi><mi>𝗋</mi><mi>𝗎</mi><mi>𝖾</mi></mrow><mo>≠</mo><mrow><mi>𝖿</mi><mi>𝖺</mi><mi>𝗅</mi><mi>𝗌</mi><mi>𝖾</mi></mrow><mo>=</mo><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">0 \equiv 2, \qquad f(x) = [\,x = 0\,], \qquad f(0) = \mathsf{true}
+\neq \mathsf{false} = f(2)</annotation></semantics></math></p>
+<p>That refutes, at this carrier, the statement the row scheme proved
+for every <code>f</code>:</p>
+<pre class="coq"><code>Example word_families_are_not_all_proper :
+  ~ (forall f : Mask 1 -&gt; bool, Proper (equ ==&gt; equ) f).
+Proof.
+  intros Hproper.
+  assert (Hsame : (0%N : Mask 1) == 2%N)
+    by (apply mask_agree_after_truncation; vm_compute; reflexivity).
+  pose proof (Hproper (fun x : Mask 1 =&gt; N.eqb x 0) _ _ Hsame) as Hbit.
+  vm_compute in Hbit. discriminate Hbit.
+Qed.</code></pre>
+<p>The proof assumes the statement, feeds it the offending function, and
+computes. <code>Hsame</code> is the observation that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2</mn><annotation encoding="application/x-tex">2</annotation></semantics></math>
+agree on bit
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>;
+<code>Hproper</code> applied to <code>N.eqb x 0</code> then claims
+<code>N.eqb 0 0 = N.eqb 2 0</code>, which <code>vm_compute</code>
+reduces to <code>true = false</code>.</p>
+<p>Both carriers satisfy the same <a
+href="coqdoc/Riktig.Structure.Blade.html#Blade.Blade"><code>Blade</code></a>
+class, and therefore every theorem proved from the class’s equations
+holds at both. The statement just refuted is not one of them: it
+quantifies over functions out of the carrier, so its subject is the
+storage, not the subsets.</p>
+<h2 id="where-it-is-needed-and-what-it-buys">Where it is needed, and
+what it buys</h2>
+<p>Here is a theorem that needs it. Sum a quantity over all
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mn>2</mn><mi>n</mi></msup><annotation encoding="application/x-tex">2^n</annotation></semantics></math>
+subsets, then reindex the sum by taking the symmetric difference of
+every subset with one fixed subset
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>.
+Symmetric difference with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>
+is its own inverse, so it permutes the subsets, and the sum is
+unchanged:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo>∑</mo><mi>A</mi></munder><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>D</mi><mo>△</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>A</mi></munder><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sum_{A} f(D \mathbin{\triangle} A) \;=\; \sum_{A} f(A)</annotation></semantics></math></p>
+<p>The general reindexing lemma for such a sum asks for three things:
+that the reindexing be an involution, that it respect subset equality,
+and that the summand <code>f</code> respect subset equality. The first
+two are facts about symmetric difference. The third is a hypothesis
+about an arbitrary <code>f</code> — exactly the shape just shown to be
+carrier-dependent — and at the row carrier it is supplied by the lemma
+above:</p>
+<pre class="coq"><code>  Lemma bsum_reindex : forall n (D : Blade n) (f : Blade n -&gt; F),
+    bsum (fun A =&gt; f (bxor D A)) == bsum f.
+  Proof.
+    intros n D f.
+    calc (bsum (fun A =&gt; f (bxor D A)))
+      == (bigopI (fun A =&gt; f (bxor D A))) { bsum_is_bigopI }
+      == (bigopI (fun A =&gt; f (D + A)))
+           { (bigopI_ext (fun A =&gt; f (bxor D A)) (fun A =&gt; f (D + A))
+                (fun A =&gt; bsum_summand_at_eq f (bxor_is_add n D A))) }
+      == (bigopI f)
+           { (bigopI_reindex f (fun A =&gt; D + A) (fun A =&gt; D + A)
+                (vector_blade_families_proper n f)
+                (blade_add_left_proper n D) (blade_add_left_proper n D)
+                (blade_shift D) (blade_shift D)) }
+      == (bsum f) { bsum_is_bigopI }.
+  Qed.</code></pre>
+<p>Each <code>==</code> line is one step of the displayed chain and the
+braces name its justification. The first and last convert between two
+spellings of the same sum. The second reads <a
+href="coqdoc/Riktig.Impl.Blade.html#bxor"><code>bxor</code></a>, the
+bitwise exclusive-or of the storage, as the subsets’ <code>+</code>. The
+third is the reindexing lemma, and its middle argument is
+<code>vector_blade_families_proper n f</code> — the place where the row
+scheme’s lack of slack is spent.</p>
+<p>Note what the statement does <em>not</em> say: it has no hypothesis
+about <code>f</code>. That is affordable here and only here. The same
+theorem at the number carrier would have to carry
+<code>Proper (equ ==&gt; equ) f</code> as a hypothesis, because there it
+is not derivable, and callers would have to prove it for each summand
+they use.</p>
+<p>Everything stated in terms of membership does hold at both, and both
+can be used at once. <a
+href="coqdoc/Riktig.Theory.Blade.html#blade_shift"><code>blade_shift</code></a>
+is the law that symmetric difference with a fixed subset is its own
+inverse, proved once from the class’s equations; here it is applied at a
+row and at a number in the same term, with instance search picking the
+right equality for each:</p>
+<pre class="coq"><code>Example shift_at_both_carriers (n : nat)
+    (v w : Vector.t bool n) (x y : Mask n) :
+  (v + (v + w) == w) /\ (x + (x + y) == y) :=
+  conj (blade_shift v w) (blade_shift x y).</code></pre>
+<p>Neither half mentions rows or bits. The <code>+</code> on the left is
+<code>Vector.map2</code> on booleans and the <code>+</code> on the right
+is <code>N.lxor</code>, and <a
+href="coqdoc/Riktig.Theory.Blade.html#blade_shift"><code>blade_shift</code></a>
+knows about neither.</p>
+<p>So the two representations are interchangeable for every theorem
+stated in terms of membership, and part company exactly when a statement
+quantifies over functions out of the carrier. That is a useful thing to
+be able to see in a statement before choosing a representation to prove
+it at.</p>
+</main>
+</body>
+</html>

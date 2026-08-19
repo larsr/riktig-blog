@@ -749,18 +749,18 @@ href="../coqdoc/Riktig.Impl.BladeCocycle.html#band_bempty_r"><code>band_bempty_r
 Three bridge lemmas connect Impl/Blade.v’s <a
 href="../coqdoc/Riktig.Impl.Blade.html#bzip"><code>bzip</code></a>
 operations to the blade carrier’s ring operations (<a
-href="../coqdoc/Riktig.Impl.BladeCocycle.html#bzip_map2"><code>bzip_map2</code></a>,
+href="../coqdoc/Riktig.Impl.Clifford.html#bzip_map2"><code>bzip_map2</code></a>,
 hence <a
-href="../coqdoc/Riktig.Impl.BladeCocycle.html#bxor_is_add"><code>bxor_is_add</code></a>
+href="../coqdoc/Riktig.Impl.Clifford.html#bxor_is_add"><code>bxor_is_add</code></a>
 and <a
-href="../coqdoc/Riktig.Impl.BladeCocycle.html#band_is_mult"><code>band_is_mult</code></a>).
+href="../coqdoc/Riktig.Impl.Clifford.html#band_is_mult"><code>band_is_mult</code></a>).
 And the third layer, which was expected to be the hard one and was not:
 <a
 href="../coqdoc/Riktig.Impl.BladeCocycle.html#twist_is_cl_mul"><code>twist_is_cl_mul</code></a>
 — the twisted product at this cocycle IS Impl/Clifford.v’s <a
 href="../coqdoc/Riktig.Impl.Clifford.html#cl_mul"><code>cl_mul</code></a>.
 The sums agree (<a
-href="../coqdoc/Riktig.Impl.BladeCocycle.html#bsum_bigop_list"><code>bsum_bigop_list</code></a>:
+href="../coqdoc/Riktig.Impl.Clifford.html#bsum_bigop_list"><code>bsum_bigop_list</code></a>:
 the enumeration doubles exactly where <a
 href="../coqdoc/Riktig.Impl.Clifford.html#bsum"><code>bsum</code></a>
 branches) and the coefficients agree (<a
@@ -828,14 +828,19 @@ record (neither does Vector.t bool n), and the third is refutable at a
 word carrier — Impl/BladeMask.v’s word_families_are_not_all_proper. A
 word carrier can index a twisted algebra only in a form holding
 canonical words alone, or after families_proper is replaced by families
-that carry their own respect proof. Also, Structure/Cocycle.v still has
-no instance at any carrier, so the twisted Clifford product is not
-computable anywhere yet; Impl/Clifford.v’s product is the old one, over
-Impl/Blade.v’s vectors and its structural bsum. Also: member_complement
-is misnamed. In a Boolean ring - k == k, so the equation forces negation
-on the blades to be the identity, not set complement. Measured
-2026-08-17, the cocycle half (#126, landed). The open question above is
-answered: the order stays in the CONSTRUCTION. <a
+that carry their own respect proof. (The clause that followed here said
+Structure/Cocycle.v had no instance at any carrier; #126 landed
+Impl/BladeCocycle.v’s Blade_Cocycle after that was measured, so the
+cocycle now has one.) Impl/Clifford.v’s product is still the old one,
+over Impl/Blade.v’s vectors and its structural bsum: it imports
+Impl.Blade, not Theory.Blade, and defines its own sigprod and bsign
+fixpoints on Vector.cons, so the abstract layer sits beside it rather
+than under it. That file, 1450 lines with 41 Fin.t and 36 Vector.t, is
+what the consumer step of this task is about. Also: member_complement is
+misnamed. In a Boolean ring - k == k, so the equation forces negation on
+the blades to be the identity, not set complement. Measured 2026-08-17,
+the cocycle half (#126, landed). The open question above is answered:
+the order stays in the CONSTRUCTION. <a
 href="../coqdoc/Riktig.Impl.Blade.html#bpar"><code>bpar</code></a>, <a
 href="../coqdoc/Riktig.Impl.Clifford.html#sigprod"><code>sigprod</code></a>
 and <a
@@ -856,8 +861,65 @@ href="../coqdoc/Riktig.Structure.Fin.html#FinIndex.FinIndex"><code>FinIndex</cod
 and its own cocycle. What (b) and (d) of the plan promised is what
 happened; (c), the grading, is still open, and
 <code>Signature F n</code> is still <code>Vector.t F n</code> rather
-than an <code>I -&gt; F</code> over the generator
-index.</label></p></li>
+than an <code>I -&gt; F</code> over the generator index.</label></p>
+<pre><code>Consumer step, first wave, done 2026-08-19: `bsum`&#39;s laws.
+`Impl/Clifford.v`&#39;s `bsum` is to the blades what
+`Impl/FinIndex.v`&#39;s `bigopF` is to `Fin.t` — the computing face,
+recursing on the number of generators so no enumeration has to be
+inverted and `bsum_S` holds by reflexivity — but it carried its
+own inductive proof of every sum law, where `FinIndex.v`&#39;s header
+already states the discipline: each `bigopF` law is the `bigopI`
+law transported through `bigopF_bigopI`, and only the laws naming
+the carrier&#39;s structure keep structural proofs.  `bsum` now
+follows it.  `bsum_ext`, `_zero`, `_add`, `_mul_l`, `_mul_r`,
+`_neg`, `_swap` and `_reindex` are citations through
+`bsum_is_bigopI`; `bsum_S` and `bxor_cons_split` keep structural
+proofs, being the defining equation and a statement about
+`bcons`.  All ten statements are byte-identical to before, which
+is the point: none of the 127 sites citing them changed, and the
+whole tree builds.  Prototyped in `BladeSumLab.v` first, which
+earned its keep by finding both obstacles.
+
+Two obstacles, both worth knowing.  (a) `Structure/Blade.v`&#39;s
+CLASS is also called `Blade` and arrives through
+`BladeEnum -&gt; BladeVector -&gt; Theory.Blade`, shadowing
+`Impl/Blade.v`&#39;s TYPE `Blade n`; requiring the abstract stack
+first and `Impl.Blade` last resolves it, and `Impl/Clifford.v`
+now orders its imports that way and says why.  This is why
+`Impl/BladeCocycle.v` writes `Vector.t bool n` throughout.
+(b) `bigopI_reindex` asks its summand to respect blade equality,
+which `bsum_reindex` never had to.  It is dischargeable at this
+carrier and only here: pointwise agreement of rows IS row
+equality, so `Impl/BladeEnum.v`&#39;s `vector_blade_families_proper`
+supplies it and the statement needs no new hypothesis.  The same
+proof is refutable at the word carrier
+(`word_families_are_not_all_proper`), so this is #125 showing up
+a third time.
+
+Moved while there, both toward the file that owns the thing:
+`bigop_list_blade_enum_S`, `bsum_bigop_list` and
+`bsum_is_bigopI` from `Impl/BladeCocycle.v` into
+`Impl/Clifford.v`, beside the fold they are about, as
+`Impl/FinIndex.v` keeps `bigopF_bigopI` beside `bigopF`; and
+`bzip_map2`, `bxor_is_add`, `band_is_mult`, `bempty_is_zero`
+likewise, `Impl/Clifford.v` being where `Impl/Blade.v`&#39;s
+operations and the `Blade` instance first meet.  No axioms:
+`Print Assumptions` on `bsum_reindex`, `bsum_swap`,
+`bsum_is_bigopI`, `twist_is_cl_mul` and `cl_mul_assoc` is closed
+under the global context.
+
+NOT this wave, and the reason is structural: the ring laws.
+`cl_mul_assoc` is still 53 lines of induction on rows where
+`Impl/TwistedAlgebra.v` proves associativity once from the
+cocycle equation, and `cl_mul_assoc_by_cocycle` already lands it
+on the concrete product.  Making `Impl/Clifford.v` cite it needs
+the cocycle instance, and `Blade_Cocycle` is built from
+`bsign` and `sigprod`, which `Impl/Clifford.v` itself defines —
+so the citation is circular as the files stand.  Either those two
+move upstream of `Impl/Clifford.v` or the product&#39;s laws move
+downstream of `Impl/BladeCocycle.v`.  That is the second wave,
+and packaging the result as a `Ring` on `Cl F n` additionally
+wants #125.</code></pre></li>
 </ul>
 <p>The Euler/rotor track, designed 2026-08-16. Layer order is the work
 order; each layer is useful before the next lands.</p>

@@ -1068,6 +1068,39 @@ prevents: a specification that names a term which computes is a
 specification only one implementation can satisfy, shown at <a
 href="../coqdoc/Riktig.Structure.MatMul.html#MatMul.mat_mul_def"><code>mat_mul_def</code></a>.</li>
 </ol>
+<p>61b. <strong>Two representations of a set, and a theorem only one of
+them satisfies</strong> [has code: Structure/Blade.v,
+Impl/BladeVector.v, Impl/BladeMask.v, Impl/BladeEnum.v, Impl/Clifford.v]
+— written 2026-08-19 as
+<code>blog/s101-two-representations-of-a-set.md</code>. The problem: a
+subset of n generators can be stored as a row of n bits or as one binary
+number, and the second has slack — at width 1 the numbers 0 and 2 store
+the same subset, since bit 1 is not part of it. Can any statement about
+subsets notice? The formalization: <code>Blade</code>, membership plus
+the equations carrying the empty subset, the full one, symmetric
+difference and intersection to the bit operation of the same name, with
+<a
+href="../coqdoc/Riktig.Structure.Blade.html#Blade.member_faithful"><code>member_faithful</code></a>
+saying that subsets with the same members are equal; then the two setoid
+equalities, positions for the row and first-n-bits for the number. The
+proof: <a
+href="../coqdoc/Riktig.Impl.BladeEnum.html#vector_bool_equ_eq"><code>vector_bool_equ_eq</code></a>
+(agreement at every position IS row equality, via
+<code>Vector.eq_nth_iff</code>), hence <a
+href="../coqdoc/Riktig.Impl.BladeEnum.html#vector_blade_families_proper"><code>vector_blade_families_proper</code></a>
+— every function out of the rows respects subset equality, assuming
+nothing about the function — against <a
+href="../coqdoc/Riktig.Impl.BladeMask.html#word_families_are_not_all_proper"><code>word_families_are_not_all_proper</code></a>,
+which refutes the same statement at the number carrier with
+<code>fun x =&gt; N.eqb x 0</code>. The usage: <a
+href="../coqdoc/Riktig.Impl.Clifford.html#bsum_reindex"><code>bsum_reindex</code></a>,
+reindexing a sum over all 2^n subsets by symmetric difference with a
+fixed one, whose general reindexing lemma wants the summand to respect
+subset equality and gets it free at the row carrier — so the statement
+carries no hypothesis about the summand, which at the number carrier it
+would have to. The lesson the post ends on: theorems stated in terms of
+membership hold at both representations, and part company exactly when a
+statement quantifies over functions out of the carrier.</p>
 <h2 id="notes-for-whoever-writes-these">Notes for whoever writes
 these</h2>
 <ul>
