@@ -39,16 +39,21 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">now</span> (<span class="id" title="tactic">symmetry</span>; <span class="id" title="tactic">exact</span> <span class="id" title="var">r</span>) ].<br/>
 
 <br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">calc_step</span> <span class="id" title="var">r</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">tryif</span> <span class="id" title="var">assert_succeeds</span> (<span class="id" title="keyword">let</span> <span class="id" title="var">c</span> := <span class="id" title="var">open_constr</span>:(<span class="id" title="var">r</span>) <span class="id" title="tactic">in</span> <span class="id" title="var">is_evar</span> <span class="id" title="var">c</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">then</span> <span class="id" title="tactic">idtac</span> <span class="id" title="keyword">else</span> <span class="id" title="var">calc_by</span> <span class="id" title="var">r</span>.<br/>
+
+<br/>
 <span class="id" title="keyword">Tactic Notation</span> "step" "==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r</span> | ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r</span> | ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "step" "&lt;=" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r</span> | ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r</span> | ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "step" "&lt;" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r</span> | ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r</span> | ].<br/>
 
 <br/>
 
@@ -87,13 +92,13 @@
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x1</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r1</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x1</span>; <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x1</span>; <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span>.<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x1</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r1</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x2</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r2</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>; <span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> ].<br/>
+&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>; <span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -101,8 +106,8 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x2</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r2</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x3</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r3</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x3</span>;<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> ] ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -111,9 +116,9 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x3</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r3</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x4</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r4</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x4</span>;<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> ] ] ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -123,10 +128,10 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x4</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r4</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x5</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r5</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x5</span>;<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x4</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r5</span> ] ] ] ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x4</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r5</span> ] ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -137,11 +142,11 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x5</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r5</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x6</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r6</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x6</span>;<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x4</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x5</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r5</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r6</span> ] ] ] ] ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x4</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x5</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r5</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r6</span> ] ] ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -153,12 +158,12 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x6</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r6</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x7</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r7</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x7</span>;<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x4</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x5</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r5</span> |<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x6</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r6</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r7</span> ] ] ] ] ] ].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x2</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x3</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x4</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x5</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r5</span> |<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">x6</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r6</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r7</span> ] ] ] ] ] ].<br/>
 
 <br/>
 
@@ -242,7 +247,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x2</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r2</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) ?[<span class="id" title="var">a1</span>] <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ | <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> ].<br/>
+&nbsp;&nbsp;[ | <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -250,7 +255,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" "[" <span class="id" title="var">ident</span>(<span class="id" title="var">a2</span>) "]" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x2</span>) :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a2</span>]);<br/>
-&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | ].<br/>
+&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -259,7 +264,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x3</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r3</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x3</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) ?[<span class="id" title="var">a1</span>] <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>); [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> ] ].<br/>
+&nbsp;&nbsp;[ | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>); [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -268,7 +273,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x3</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r3</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x3</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) ?[<span class="id" title="var">a2</span>] <span class="id" title="var">_</span>); [ | <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> ] ].<br/>
+&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) ?[<span class="id" title="var">a2</span>] <span class="id" title="var">_</span>); [ | <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -277,7 +282,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" "[" <span class="id" title="var">ident</span>(<span class="id" title="var">a3</span>) "]" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x3</span>) :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x3</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a3</span>]); [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | ] ].<br/>
+&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a3</span>]); [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -288,7 +293,7 @@
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x4</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) ?[<span class="id" title="var">a1</span>] <span class="id" title="var">_</span>);<br/>
 &nbsp;&nbsp;[ | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>); [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> ] ] ].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>); [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -298,8 +303,8 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x4</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r4</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x4</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) ?[<span class="id" title="var">a2</span>] <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>); [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> ] ] ].<br/>
+&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) ?[<span class="id" title="var">a2</span>] <span class="id" title="var">_</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>); [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -309,8 +314,8 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x4</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r4</span>) "}" :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x4</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) ?[<span class="id" title="var">a3</span>] <span class="id" title="var">_</span>); [ | <span class="id" title="var">calc_by</span> <span class="id" title="var">r4</span> ] ] ].<br/>
+&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) ?[<span class="id" title="var">a3</span>] <span class="id" title="var">_</span>); [ | <span class="id" title="var">calc_step</span> <span class="id" title="var">r4</span> ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -320,8 +325,8 @@
 &nbsp;&nbsp;&nbsp;&nbsp;"==" "[" <span class="id" title="var">ident</span>(<span class="id" title="var">a4</span>) "]" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x4</span>) :=<br/>
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x4</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a4</span>]); [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> | ] ] ].<br/>
+&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a4</span>]); [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> | ] ] ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
@@ -332,7 +337,7 @@
 &nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x4</span>;<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x1</span>) ?[<span class="id" title="var">a1</span>] <span class="id" title="var">_</span>);<br/>
 &nbsp;&nbsp;[ | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x2</span>) <span class="id" title="var">_</span> <span class="id" title="var">_</span>);<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a4</span>]); [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r3</span> | ] ] ].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> | <span class="id" title="tactic">refine</span> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> (<span class="id" title="var">y</span>:=<span class="id" title="var">x3</span>) <span class="id" title="var">_</span> ?[<span class="id" title="var">a4</span>]); [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r3</span> | ] ] ].<br/>
 
 <br/>
 
@@ -365,13 +370,13 @@
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x1</span>) "{" "tac" ":" <span class="id" title="var">tactic3</span>(<span class="id" title="var">t1</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x2</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r2</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>; <span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">t1</span> | <span class="id" title="var">calc_by</span> <span class="id" title="var">r2</span> ].<br/>
+&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>; <span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">t1</span> | <span class="id" title="var">calc_step</span> <span class="id" title="var">r2</span> ].<br/>
 
 <br/>
 <span class="id" title="keyword">Tactic Notation</span> "calc" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x0</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x1</span>) "{" <span class="id" title="var">uconstr</span>(<span class="id" title="var">r1</span>) "}"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"==" <span class="id" title="keyword">constr</span>(<span class="id" title="var">x2</span>) "{" "tac" ":" <span class="id" title="var">tactic3</span>(<span class="id" title="var">t2</span>) "}" :=<br/>
-&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>; <span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_by</span> <span class="id" title="var">r1</span> | <span class="id" title="var">t2</span> ].<br/>
+&nbsp;&nbsp;<span class="id" title="var">calc_ends</span> <span class="id" title="var">x0</span> <span class="id" title="var">x2</span>; <span class="id" title="tactic">transitivity</span> <span class="id" title="var">x1</span>; [ <span class="id" title="var">calc_step</span> <span class="id" title="var">r1</span> | <span class="id" title="var">t2</span> ].<br/>
 </div>
 </div>
 
