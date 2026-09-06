@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>Riktig.Examples.LambdaReader</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library Riktig.Examples.LambdaReader</h1>
+
+<div class="code">
+<span class="id" title="keyword">From</span> <span class="id" title="var">Riktig.Programs</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Riktig.Programs.LambdaParser.html#"><span class="id" title="library">LambdaParser</span></a>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Riktig.Impl</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Riktig.Impl.LexiconAscii.html#"><span class="id" title="library">LexiconAscii</span></a> <a class="idref" href="Riktig.Impl.ListList.html#"><span class="id" title="library">ListList</span></a> <a class="idref" href="Riktig.Impl.ListRecList.html#"><span class="id" title="library">ListRecList</span></a> <a class="idref" href="Riktig.Impl.ParserStream.html#"><span class="id" title="library">ParserStream</span></a> <a class="idref" href="Riktig.Impl.SequenceString.html#"><span class="id" title="library">SequenceString</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="Riktig.Impl.PeanoArithNat.html#"><span class="id" title="library">PeanoArithNat</span></a> <a class="idref" href="Riktig.Impl.NatRecNat.html#"><span class="id" title="library">NatRecNat</span></a> <a class="idref" href="Riktig.Impl.DictionaryList.html#"><span class="id" title="library">DictionaryList</span></a> <a class="idref" href="Riktig.Impl.LambdaTermLambda.html#"><span class="id" title="library">LambdaTermLambda</span></a> <a class="idref" href="Riktig.Impl.LambdaTermOps.html#"><span class="id" title="library">LambdaTermOps</span></a> <a class="idref" href="Riktig.Impl.LambdaTerm.html#"><span class="id" title="library">LambdaTerm</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+The abstract reader, run at ascii strings.  The same grammar fills
+    a dictionary with de Bruijn terms of whichever representation the
+    context supplies: below, both the datatype-derived <span class="inlinecode"><a class="idref" href="Riktig.Lib.Coq.LambdaN.html#lambda"><span class="id" title="inductive">lambda</span></a></span> <span class="inlinecode"><a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a></span> and
+    the hand-written <span class="inlinecode"><a class="idref" href="Riktig.Lib.Coq.Lambda.html#term"><span class="id" title="inductive">term</span></a></span>. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a id="prelude" class="idref" href="#prelude"><span class="id" title="definition">prelude</span></a> : <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a> := "
+id     = \x. x ;
+true   = \a b. a ;
+false  = \a b. b ;
+not    = \p. p false true ;
+apply  = \f x. f x ;
+twice  = \f x. f (f x) ;
+".<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+At the datatype-derived representation. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <a id="G1" class="idref" href="#G1"><span class="id" title="definition">G1</span></a> : <a class="idref" href="Riktig.Impl.DictionaryList.html#assoc"><span class="id" title="abbreviation">assoc</span></a> <a class="idref" href="Riktig.Lib.Coq.String.html#name"><span class="id" title="abbreviation">name</span></a> (<a class="idref" href="Riktig.Lib.Coq.LambdaN.html#lambda"><span class="id" title="inductive">lambda</span></a> <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) :=<br/>
+&nbsp;&nbsp;<a class="idref" href="Riktig.Ops.html#parse_first"><span class="id" title="definition">parse_first</span></a> (<a class="idref" href="Riktig.Programs.LambdaParser.html#defs_p"><span class="id" title="definition">defs_p</span></a> (<span class="id" title="var">P</span> := <a class="idref" href="Riktig.Lib.Coq.Parser.html#parser"><span class="id" title="definition">parser</span></a> <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a>) (<span class="id" title="var">E</span> := <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="Riktig.Lib.Coq.String.html#name"><span class="id" title="abbreviation">name</span></a>) 64) <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> <a class="idref" href="Riktig.Examples.LambdaReader.html#prelude"><span class="id" title="definition">prelude</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Compute</span> <a class="idref" href="Riktig.Ops.html#find"><span class="id" title="definition">find</span></a> <a class="idref" href="Riktig.Examples.LambdaReader.html#G1"><span class="id" title="definition">G1</span></a> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Strings.String.html#list_ascii_of_string"><span class="id" title="definition">list_ascii_of_string</span></a> "not").<br/>
+<span class="id" title="keyword">Compute</span> <a class="idref" href="Riktig.Ops.html#find"><span class="id" title="definition">find</span></a> <a class="idref" href="Riktig.Examples.LambdaReader.html#G1"><span class="id" title="definition">G1</span></a> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Strings.String.html#list_ascii_of_string"><span class="id" title="definition">list_ascii_of_string</span></a> "twice").<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+At the hand-written de Bruijn terms, unchanged. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <a id="G2" class="idref" href="#G2"><span class="id" title="definition">G2</span></a> : <a class="idref" href="Riktig.Impl.DictionaryList.html#assoc"><span class="id" title="abbreviation">assoc</span></a> <a class="idref" href="Riktig.Lib.Coq.String.html#name"><span class="id" title="abbreviation">name</span></a> <a class="idref" href="Riktig.Lib.Coq.Lambda.html#term"><span class="id" title="inductive">term</span></a> :=<br/>
+&nbsp;&nbsp;<a class="idref" href="Riktig.Ops.html#parse_first"><span class="id" title="definition">parse_first</span></a> (<a class="idref" href="Riktig.Programs.LambdaParser.html#defs_p"><span class="id" title="definition">defs_p</span></a> (<span class="id" title="var">P</span> := <a class="idref" href="Riktig.Lib.Coq.Parser.html#parser"><span class="id" title="definition">parser</span></a> <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a>) (<span class="id" title="var">E</span> := <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="Riktig.Lib.Coq.String.html#name"><span class="id" title="abbreviation">name</span></a>) 64) <a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> <a class="idref" href="Riktig.Examples.LambdaReader.html#prelude"><span class="id" title="definition">prelude</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Compute</span> <a class="idref" href="Riktig.Ops.html#find"><span class="id" title="definition">find</span></a> <a class="idref" href="Riktig.Examples.LambdaReader.html#G2"><span class="id" title="definition">G2</span></a> (<a class="idref" href="https://coq.inria.fr/doc/V8.20.1/stdlib/Coq.Strings.String.html#list_ascii_of_string"><span class="id" title="definition">list_ascii_of_string</span></a> "not").<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>
